@@ -7,9 +7,9 @@ Please see LICENSE files in the repository root for full details.
 
 import type { Room } from "matrix-js-sdk/src/matrix";
 import { type Sorter, SortingAlgorithm } from ".";
-import { getLastTs } from "../../../room-list/algorithms/tag-sorting/RecentAlgorithm";
 import { RoomNotificationStateStore } from "../../../notifications/RoomNotificationStateStore";
 import { DefaultTagID } from "../../../room-list/models";
+import { getLastTimestamp } from "./utils/getLastTimestamp";
 
 export class RecencySorter implements Sorter {
     public constructor(private myUserId: string) {}
@@ -57,7 +57,7 @@ export class RecencySorter implements Sorter {
     }
 
     private getTs(room: Room, cache?: { [roomId: string]: number }): number {
-        const ts = cache?.[room.roomId] ?? getLastTs(room, this.myUserId);
+        const ts = cache?.[room.roomId] ?? getLastTimestamp(room, this.myUserId);
         if (cache) {
             cache[room.roomId] = ts;
         }
