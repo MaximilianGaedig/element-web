@@ -46,12 +46,16 @@ describe("ListView", () => {
         getItemKey: (item) => (typeof item === "string" ? item : item.id),
     };
 
-    const getListViewComponent = (props: Partial<IListViewProps<TestItemWithSeparator, any>> = {}) => {
+    const getListViewComponent = (
+        props: Partial<IListViewProps<TestItemWithSeparator, any>> = {},
+    ): React.JSX.Element => {
         const mergedProps = { ...defaultProps, ...props };
         return <ListView {...mergedProps} role="grid" aria-rowcount={props.items?.length} aria-colcount={1} />;
     };
 
-    const renderListViewWithHeight = (props: Partial<IListViewProps<TestItemWithSeparator, any>> = {}) => {
+    const renderListViewWithHeight = (
+        props: Partial<IListViewProps<TestItemWithSeparator, any>> = {},
+    ): ReturnType<typeof render> => {
         const mergedProps = { ...defaultProps, ...props };
         return render(getListViewComponent(mergedProps), {
             wrapper: ({ children }) => (
@@ -68,7 +72,7 @@ describe("ListView", () => {
             const itemKey = typeof item === "string" ? item : item.id;
             const isFocused = context.tabIndexKey === itemKey;
             return (
-                <div className="mx_item" data-testid={`row-${index}`} tabIndex={isFocused ? 0 : -1}>
+                <div className="mx_item" data-testid={`row-${index}`} tabIndex={isFocused ? 0 : -1} role="gridcell">
                     {item === SEPARATOR_ITEM ? "---" : (item as TestItem).name}
                 </div>
             );
@@ -384,7 +388,13 @@ describe("ListView", () => {
                             className="mx_item"
                             data-testid={`row-${index}`}
                             tabIndex={isFocused ? 0 : -1}
+                            role="button"
                             onClick={() => mockOnClick(item)}
+                            onKeyDown={(e) => {
+                                if (e.key === "Enter" || e.key === " ") {
+                                    mockOnClick(item);
+                                }
+                            }}
                             onFocus={(e) => onFocus(item, e)}
                         >
                             {item === SEPARATOR_ITEM ? "---" : (item as TestItem).name}

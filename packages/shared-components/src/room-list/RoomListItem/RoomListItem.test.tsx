@@ -49,7 +49,7 @@ describe("<RoomListItemView />", () => {
     ): ReturnType<typeof render> => {
         const defaultProps = {
             vm: mockViewModel,
-            avatar: mockAvatar,
+            renderAvatar: () => mockAvatar,
             isSelected: false,
             isFocused: false,
             onFocus: jest.fn(),
@@ -65,6 +65,7 @@ describe("<RoomListItemView />", () => {
 
         mockSnapshot = {
             id: "!room:server",
+            room: { roomId: "!room:server" } as any,
             name: "Test Room",
             a11yLabel: "Open room Test Room",
             isBold: false,
@@ -190,7 +191,7 @@ describe("<RoomListItemView />", () => {
             <TooltipProvider>
                 <RoomListItemView
                     vm={mockViewModel}
-                    avatar={mockAvatar}
+                    renderAvatar={() => mockAvatar}
                     isSelected={false}
                     isFocused={false}
                     onFocus={jest.fn()}
@@ -208,7 +209,7 @@ describe("<RoomListItemView />", () => {
             <TooltipProvider>
                 <RoomListItemView
                     vm={mockViewModel}
-                    avatar={mockAvatar}
+                    renderAvatar={() => mockAvatar}
                     isSelected={false}
                     isFocused={false}
                     onFocus={jest.fn()}

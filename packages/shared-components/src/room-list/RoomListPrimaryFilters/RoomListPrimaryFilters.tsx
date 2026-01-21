@@ -88,9 +88,9 @@ export const RoomListPrimaryFilters: React.FC<RoomListPrimaryFiltersProps> = ({
                 className={styles.list}
                 ref={ref}
             >
-                {visibleFilters.map((filter) => (
+                {visibleFilters.map((filter, index) => (
                     <ChatFilter
-                        key={filter.id}
+                        key={`${filter.id}-${index}`}
                         role="option"
                         selected={filter.active}
                         onClick={() => onToggleFilter(filter)}

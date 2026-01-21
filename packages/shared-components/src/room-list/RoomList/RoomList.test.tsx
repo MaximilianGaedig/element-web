@@ -38,6 +38,7 @@ describe("<RoomList />", () => {
         if (!roomSnapshots.has(roomId)) {
             roomSnapshots.set(roomId, {
                 id: roomId,
+                room: { roomId, name: `Room ${roomId}` } as any,
                 name: `Room ${roomId}`,
                 a11yLabel: `Open room ${roomId}`,
                 isBold: false,
