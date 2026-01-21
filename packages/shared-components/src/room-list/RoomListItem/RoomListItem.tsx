@@ -24,6 +24,8 @@ import { type ViewModel } from "../../viewmodel/ViewModel";
 export interface RoomListItemSnapshot {
     /** Unique identifier for the room (used for list keying) */
     id: string;
+    /** The opaque Room object from the client (e.g., matrix-js-sdk Room) */
+    room: any;
     /** The name of the room */
     name: string;
     /** Accessibility label for the room list item */
@@ -67,8 +69,6 @@ export interface RoomListItemActions {
     onLeaveRoom: () => void;
     /** Called when setting the room notification state */
     onSetRoomNotifState: (state: RoomNotifState) => void;
-    /** Get the opaque Room object for this item */
-    getRoom: () => any;
 }
 
 /**
@@ -80,20 +80,20 @@ export type RoomItemViewModel = ViewModel<RoomListItemSnapshot> & RoomListItemAc
  * Props for RoomListItemView component
  */
 export interface RoomListItemViewProps extends Omit<React.HTMLAttributes<HTMLButtonElement>, "onFocus"> {
-    /** The view model containing all data and callbacks */
+    /** The room item view model */
     vm: RoomItemViewModel;
-    /** Whether the room is currently selected */
+    /** Whether the room is selected */
     isSelected: boolean;
-    /** Whether the room is currently focused */
+    /** Whether the room should be focused */
     isFocused: boolean;
-    /** Callback when the item receives focus */
-    onFocus: (e: React.FocusEvent) => void;
-    /** The index of the room in the list (for accessibility) */
+    /** Callback when item receives focus */
+    onFocus: (room: any, e: React.FocusEvent) => void;
+    /** Index of this room in the list (for accessibility) */
     roomIndex: number;
-    /** The total number of rooms in the list (for accessibility) */
+    /** Total number of rooms in the list (for accessibility) */
     roomCount: number;
-    /** Custom avatar component to render */
-    avatar: ReactNode;
+    /** Function to render the room avatar */
+    renderAvatar: (room: any) => ReactNode;
 }
 
 /**
@@ -107,7 +107,7 @@ export const RoomListItemView = memo(function RoomListItemView({
     onFocus,
     roomIndex,
     roomCount,
-    avatar,
+    renderAvatar,
     ...props
 }: RoomListItemViewProps): JSX.Element {
     const ref = useRef<HTMLButtonElement>(null);
@@ -136,11 +136,11 @@ export const RoomListItemView = memo(function RoomListItemView({
             aria-selected={isSelected}
             aria-label={item.a11yLabel}
             onClick={vm.onOpenRoom}
-            onFocus={onFocus}
+            onFocus={(e: React.FocusEvent<HTMLButtonElement>) => onFocus(item.room, e)}
             tabIndex={isFocused ? 0 : -1}
             {...props}
         >
-            {avatar}
+            {renderAvatar(item.room)}
             <Flex className={styles.content} gap="var(--cpd-space-2x)" align="center" justify="space-between">
                 {/* We truncate the room name when too long. Title here is to show the full name on hover */}
                 <div className={styles.text}>

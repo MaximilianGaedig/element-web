@@ -5,7 +5,7 @@
  * Please see LICENSE files in the repository root for full details.
  */
 
-import React, { type JSX, type ReactNode } from "react";
+import React, { useCallback, type JSX, type ReactNode } from "react";
 import { RoomListView as SharedRoomListView, useCreateAutoDisposedViewModel } from "@element-hq/web-shared-components";
 
 import { RoomListViewViewModel } from "../../../viewmodels/roomlist/RoomListViewViewModel";
@@ -21,10 +21,10 @@ export function RoomListView(): JSX.Element {
     // Create and auto-dispose ViewModel instance
     const vm = useCreateAutoDisposedViewModel(() => new RoomListViewViewModel({ client: matrixClient }));
 
-    // Render avatar for each room
-    const renderAvatar = (room: any): ReactNode => {
+    // Render avatar for each room - memoized to prevent re-renders
+    const renderAvatar = useCallback((room: any): ReactNode => {
         return <RoomAvatarView room={room} />;
-    };
+    }, []);
 
     return <SharedRoomListView vm={vm} renderAvatar={renderAvatar} />;
 }

@@ -259,6 +259,7 @@ export class RoomListItemViewModel
 
         return {
             id: room.roomId,
+            room,
             name: room.name,
             a11yLabel,
             isBold: notifState.hasAnyNotificationOrActivity,
@@ -393,12 +394,5 @@ export class RoomListItemViewModel
         // Set the notification state using EchoChamber
         const echoChamber = EchoChamber.forRoom(this.props.room);
         echoChamber.notificationVolume = elementNotifState;
-    };
-
-    /**
-     * Get the opaque Room object for this item
-     */
-    public getRoom = (): Room => {
-        return this.props.room;
     };
 }

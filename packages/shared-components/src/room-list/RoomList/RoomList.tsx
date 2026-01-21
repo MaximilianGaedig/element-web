@@ -109,8 +109,6 @@ export function RoomList({ vm, renderAvatar }: RoomListProps): JSX.Element {
         ): JSX.Element => {
             const isSelected = activeRoomIndex === index;
             const roomItemVM = vm.getRoomItemViewModel(roomId);
-            const room = roomItemVM.getRoom();
-            const avatar = renderAvatar(room);
 
             // Item is focused when the list has focus AND this item's key matches tabIndexKey
             // This matches the old RoomList implementation's roving tabindex pattern
@@ -120,10 +118,10 @@ export function RoomList({ vm, renderAvatar }: RoomListProps): JSX.Element {
                 <RoomListItemView
                     key={roomId}
                     vm={roomItemVM}
-                    avatar={avatar}
+                    renderAvatar={renderAvatar}
                     isSelected={isSelected}
                     isFocused={isFocused}
-                    onFocus={(e) => onFocus(roomId, e)}
+                    onFocus={onFocus}
                     roomIndex={index}
                     roomCount={roomCount}
                 />
@@ -152,7 +150,7 @@ export function RoomList({ vm, renderAvatar }: RoomListProps): JSX.Element {
     const scrollIntoViewOnChange = useCallback(
         (params: {
             context: ListContext<{ spaceId: string; filterKeys: FilterKey[] | undefined }>;
-        }): ScrollIntoViewLocation | null | undefined | false | void => {
+        }): ScrollIntoViewLocation | null | undefined | false => {
             const { spaceId, filterKeys } = params.context.context;
             const shouldScrollIndexIntoView =
                 lastSpaceId.current !== spaceId || !isEqual(lastFilterKeys.current, filterKeys);
