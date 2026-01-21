@@ -144,7 +144,7 @@ export const RoomListItemView = memo(function RoomListItemView({
             <Flex className={styles.content} gap="var(--cpd-space-2x)" align="center" justify="space-between">
                 {/* We truncate the room name when too long. Title here is to show the full name on hover */}
                 <div className={styles.text}>
-                    <div className={styles.roomName} title={item.name}>
+                    <div className={styles.roomName} title={item.name} data-testid="room-name">
                         {item.name}
                     </div>
                     {item.messagePreview && (
