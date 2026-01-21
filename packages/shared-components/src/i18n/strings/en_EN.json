@@ -1,5 +1,15 @@
 {
     "a11y": {
+        "room_messsage_not_sent": "Open room %(roomName)s with an unsent message.",
+        "room_n_unread_invite": "Open room %(roomName)s invitation.",
+        "room_n_unread_messages": {
+            "one": "Open room %(roomName)s with 1 unread message.",
+            "other": "Open room %(roomName)s with %(count)s unread messages."
+        },
+        "room_n_unread_messages_mentions": {
+            "one": "Open room %(roomName)s with 1 unread mention.",
+            "other": "Open room %(roomName)s with %(count)s unread messages including mentions."
+        },
         "seek_bar_label": "Audio seek bar"
     },
     "action": {
