@@ -22,6 +22,10 @@ export interface IToast<C extends ComponentClass> {
     component: C;
     className?: string;
     bodyClassName?: string;
+
+    /** If defined, the toast has a close button in the top right */
+    onClose?: () => void;
+
     props?: Omit<React.ComponentProps<C>, "toastKey">; // toastKey is injected by ToastContainer
 }
 

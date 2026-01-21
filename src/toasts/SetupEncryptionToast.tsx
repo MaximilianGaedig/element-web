@@ -65,6 +65,16 @@ const getIcon = (state: DeviceStateForToast): IToast<any>["icon"] => {
     }
 };
 
+const getOnClose = (state: DeviceStateForToast): (() => void) | undefined => {
+    switch (state) {
+        case "key_storage_out_of_sync":
+        case "identity_needs_reset":
+            return () => DeviceListener.sharedInstance().dismissEncryptionSetup();
+        default:
+            return undefined;
+    }
+};
+
 const getSetupCaption = (state: DeviceStateForToast): string => {
     switch (state) {
         case "set_up_recovery":
@@ -303,6 +313,7 @@ export const showToast = (state: DeviceStateForToast): void => {
         key: TOAST_KEY,
         title: getTitle(state),
         icon: getIcon(state),
+        onClose: getOnClose(state),
         props: {
             description: getDescription(state),
             primaryLabel: getSetupCaption(state),
