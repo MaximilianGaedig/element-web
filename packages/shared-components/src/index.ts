@@ -28,6 +28,7 @@ export * from "./room-list/RoomListPrimaryFilters";
 export * from "./room-list/RoomList";
 export * from "./utils/Box";
 export * from "./utils/Flex";
+export * from "./utils/ListView";
 
 // Utils
 export * from "./utils/i18n";

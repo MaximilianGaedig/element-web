@@ -7,3 +7,7 @@
 
 export { ListView, Key, isModifiedKeyEvent } from "./ListView";
 export type { IListViewProps, ListContext } from "./ListView";
+
+// Re-export VirtuosoMockContext for testing purposes
+// Tests should import this from shared-components to ensure context compatibility
+export { VirtuosoMockContext } from "react-virtuoso";
