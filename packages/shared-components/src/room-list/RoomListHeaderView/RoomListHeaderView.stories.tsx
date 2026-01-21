@@ -14,7 +14,7 @@ import {
     type RoomListHeaderViewActions,
     type RoomListHeaderViewSnapshot,
 } from "./RoomListHeaderView";
-import { useMockedViewModel } from "../../useMockedViewModel";
+import { useMockedViewModel } from "../../viewmodel";
 import { defaultSnapshot } from "./test-utils";
 
 type RoomListHeaderProps = RoomListHeaderViewSnapshot & RoomListHeaderViewActions;
