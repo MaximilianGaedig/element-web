@@ -5,6 +5,8 @@
  * Please see LICENSE files in the repository root for full details.
  */
 
+import { fn } from "storybook/test";
+
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { RoomListPrimaryFilters } from "./RoomListPrimaryFilters";
 import type { Filter, FilterId } from "./useVisibleFilters";
@@ -14,7 +16,7 @@ const meta: Meta<typeof RoomListPrimaryFilters> = {
     component: RoomListPrimaryFilters,
     tags: ["autodocs"],
     args: {
-        onToggleFilter: () => {},
+        onToggleFilter: fn(),
     },
 };
 
