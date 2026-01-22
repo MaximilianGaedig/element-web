@@ -77,6 +77,7 @@ describe("<RoomListItemView />", () => {
                 isMention: false,
                 isActivityNotification: false,
                 isNotification: false,
+                hasUnreadCount: false,
                 count: 0,
                 muted: false,
             },

@@ -50,6 +50,7 @@ describe("<RoomList />", () => {
                     isMention: false,
                     isActivityNotification: false,
                     isNotification: false,
+                    hasUnreadCount: false,
                     count: 0,
                     muted: false,
                 },
@@ -122,9 +123,9 @@ describe("<RoomList />", () => {
         // All rooms should be rendered as options in the listbox
         const items = screen.getAllByRole("option");
         expect(items).toHaveLength(3);
-        expect(items[0]).toHaveAccessibleName("Open room room1");
-        expect(items[1]).toHaveAccessibleName("Open room room2");
-        expect(items[2]).toHaveAccessibleName("Open room room3");
+        expect(items[0]).toHaveAccessibleName("Open room Room room1");
+        expect(items[1]).toHaveAccessibleName("Open room Room room2");
+        expect(items[2]).toHaveAccessibleName("Open room Room room3");
     });
 
     it("should call renderAvatar for each room", () => {

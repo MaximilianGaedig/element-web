@@ -16,7 +16,7 @@ import { type RoomNotifState } from "./RoomNotifs";
 import styles from "./RoomListItem.module.css";
 import { useViewModel } from "../../useViewModel";
 import { type ViewModel } from "../../viewmodel/ViewModel";
-import { _t } from "../../i18n/translation";
+import { _t } from "../../utils/i18n";
 
 /**
  * Generate an accessible label for a room based on its notification state.

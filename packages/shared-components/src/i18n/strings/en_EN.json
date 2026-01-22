@@ -51,13 +51,13 @@
     },
     "room_list": {
         "a11y": {
-            "default": "Open room {{roomName}}",
-            "invitation": "Open room {{roomName}} invitation.",
-            "mention_one": "Open room {{roomName}} with 1 unread mention.",
-            "mention_other": "Open room {{roomName}} with {{count}} unread mentions.",
-            "unread_one": "Open room {{roomName}} with 1 unread message.",
-            "unread_other": "Open room {{roomName}} with {{count}} unread messages.",
-            "unsent_message": "Open room {{roomName}} with an unsent message."
+            "default": "Open room %(roomName)s",
+            "invitation": "Open room %(roomName)s invitation.",
+            "mention_one": "Open room %(roomName)s with 1 unread mention.",
+            "mention_other": "Open room %(roomName)s with %(count)s unread mentions.",
+            "unread_one": "Open room %(roomName)s with 1 unread message.",
+            "unread_other": "Open room %(roomName)s with %(count)s unread messages.",
+            "unsent_message": "Open room %(roomName)s with an unsent message."
         },
         "appearance": "Appearance",
         "collapse_filters": "Collapse filter list",

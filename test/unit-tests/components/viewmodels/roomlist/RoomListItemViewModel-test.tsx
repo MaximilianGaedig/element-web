@@ -376,7 +376,7 @@ describe("RoomListItemViewModel", () => {
     });
 
     describe("Accessibility labels", () => {
-        it("should generate label for room with unread count", async () => {
+        it("should provide room name for a11y label (full label computed in view)", async () => {
             jest.spyOn(notificationState, "hasUnreadCount", "get").mockReturnValue(true);
             jest.spyOn(notificationState, "count", "get").mockReturnValue(5);
 
@@ -384,10 +384,10 @@ describe("RoomListItemViewModel", () => {
 
             await new Promise((resolve) => setTimeout(resolve, 0));
 
-            expect(viewModel.getSnapshot().a11yLabel).toBe("Open room Test Room with 5 unread messages.");
+            expect(viewModel.getSnapshot().a11yLabel).toBe("Test Room");
         });
 
-        it("should generate label for room with mentions", async () => {
+        it("should provide room name for mentions (full label computed in view)", async () => {
             jest.spyOn(notificationState, "isMention", "get").mockReturnValue(true);
             jest.spyOn(notificationState, "count", "get").mockReturnValue(3);
 
@@ -395,35 +395,35 @@ describe("RoomListItemViewModel", () => {
 
             await new Promise((resolve) => setTimeout(resolve, 0));
 
-            expect(viewModel.getSnapshot().a11yLabel).toBe("Open room Test Room with 3 unread mentions.");
+            expect(viewModel.getSnapshot().a11yLabel).toBe("Test Room");
         });
 
-        it("should generate label for invited room", async () => {
+        it("should provide room name for invited room (full label computed in view)", async () => {
             jest.spyOn(notificationState, "invited", "get").mockReturnValue(true);
 
             viewModel = new RoomListItemViewModel({ room, client: matrixClient });
 
             await new Promise((resolve) => setTimeout(resolve, 0));
 
-            expect(viewModel.getSnapshot().a11yLabel).toBe("Open room Test Room invitation.");
+            expect(viewModel.getSnapshot().a11yLabel).toBe("Test Room");
         });
 
-        it("should generate label for room with unsent message", async () => {
+        it("should provide room name for room with unsent message (full label computed in view)", async () => {
             jest.spyOn(notificationState, "isUnsentMessage", "get").mockReturnValue(true);
 
             viewModel = new RoomListItemViewModel({ room, client: matrixClient });
 
             await new Promise((resolve) => setTimeout(resolve, 0));
 
-            expect(viewModel.getSnapshot().a11yLabel).toBe("Open room Test Room with an unsent message.");
+            expect(viewModel.getSnapshot().a11yLabel).toBe("Test Room");
         });
 
-        it("should generate default label", async () => {
+        it("should provide room name as default (full label computed in view)", async () => {
             viewModel = new RoomListItemViewModel({ room, client: matrixClient });
 
             await new Promise((resolve) => setTimeout(resolve, 0));
 
-            expect(viewModel.getSnapshot().a11yLabel).toBe("Open room Test Room");
+            expect(viewModel.getSnapshot().a11yLabel).toBe("Test Room");
         });
     });
 
