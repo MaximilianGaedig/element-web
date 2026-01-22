@@ -29,7 +29,6 @@ Please see LICENSE files in the repository root for full details.
     color: inherit;
     background: unset;
     border: unset;
-    flex: 1;
     display: flex;
     flex-direction: row;
     align-items: center;
@@ -37,7 +36,6 @@ Please see LICENSE files in the repository root for full details.
     cursor: pointer;
     gap: var(--cpd-space-3x);
     text-align: left;
-    height: 100%;
     padding: 0;
 }
 
@@ -45,16 +43,51 @@ Please see LICENSE files in the repository root for full details.
     /* We want the spacing to be 64px, 13x = 52px but we have a flex gap of
        12px set on the flex container, which sums up to 64 */
     padding-right: var(--cpd-space-13x);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    min-width: 0;
+    flex: 1;
+    overflow: hidden;
+}
+
+.mx_RoomHeaderPath {
+    font: var(--cpd-font-body-xs-regular);
+    color: var(--cpd-color-text-secondary);
+    display: flex;
+    align-items: center;
+    gap: var(--cpd-space-1x);
+    margin-top: var(--cpd-space-0-5x);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+
+    .mx_RoomHeaderPath_entry {
+        display: flex;
+        align-items: center;
+        gap: var(--cpd-space-0-5x);
+        color: inherit;
+        text-decoration: none;
+
+        &:hover {
+            text-decoration: underline;
+            color: var(--cpd-color-text-primary);
+        }
+    }
+
+    .mx_RoomHeaderPath_icon {
+        flex-shrink: 0;
+    }
+
+    .mx_RoomHeaderPath_separator {
+        opacity: 0.5;
+    }
 }
 
 .mx_RoomHeader_truncated {
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 1;
-
     overflow: hidden;
-    word-break: break-all;
     text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .mx_RoomHeader_heading {

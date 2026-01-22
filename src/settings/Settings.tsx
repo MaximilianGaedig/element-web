@@ -334,6 +334,9 @@ export interface Settings {
     "fallbackICEServerAllowed": IBaseSetting<boolean | null>;
     "RoomList.preferredSorting": IBaseSetting<SortingAlgorithm>;
     "RoomList.showMessagePreview": IBaseSetting<boolean>;
+    "RoomList.showSpacePath": IBaseSetting<string>;
+    "RoomList.showSpacePathIcons": IBaseSetting<boolean>;
+    "RoomHeader.showSpacePath": IBaseSetting<boolean>;
     "RightPanel.phasesGlobal": IBaseSetting<IRightPanelForRoomStored | null>;
     "RightPanel.phases": IBaseSetting<IRightPanelForRoomStored | null>;
     "enableEventIndexing": IBaseSetting<boolean>;
@@ -1196,7 +1199,7 @@ export const SETTINGS: Settings = {
     "breadcrumbs": {
         supportedLevels: LEVELS_ACCOUNT_SETTINGS,
         displayName: _td("settings|show_breadcrumbs"),
-        default: true,
+        default: false,
     },
     "showHiddenEventsInTimeline": {
         displayName: _td("devtools|show_hidden_events"),
@@ -1287,6 +1290,26 @@ export const SETTINGS: Settings = {
     "Widgets.layout": {
         supportedLevels: LEVELS_ROOM_OR_ACCOUNT,
         default: {},
+    },
+    "RoomList.showSpacePath": {
+        displayName: _td("settings|room_list|show_space_path"),
+        supportedLevels: LEVELS_DEVICE_ONLY_SETTINGS_WITH_CONFIG,
+        default: "under",
+        options: [
+            { value: "none", label: _td("common|none") },
+            { value: "under", label: _td("settings|room_list|show_space_path_under") },
+            { value: "inline", label: _td("settings|room_list|show_space_path_inline") },
+        ],
+    },
+    "RoomList.showSpacePathIcons": {
+        displayName: _td("settings|room_list|show_space_path_icons"),
+        supportedLevels: LEVELS_DEVICE_ONLY_SETTINGS_WITH_CONFIG,
+        default: true,
+    },
+    "RoomHeader.showSpacePath": {
+        displayName: _td("settings|room_header|show_space_path"),
+        supportedLevels: LEVELS_DEVICE_ONLY_SETTINGS_WITH_CONFIG,
+        default: true,
     },
     "Spaces.allRoomsInHome": {
         displayName: _td("settings|all_rooms_home"),

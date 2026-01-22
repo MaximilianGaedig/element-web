@@ -46,6 +46,7 @@ import { UIComponent } from "../../../settings/UIFeature";
 import { isKnockDenied } from "../../../utils/membership";
 import SettingsStore from "../../../settings/SettingsStore";
 import { getNotificationIcon } from "../dialogs/spotlight/RoomResultContextMenus.tsx";
+import { RoomPath } from "./RoomPath";
 
 interface Props {
     room: Room;
@@ -411,11 +412,17 @@ class RoomTile extends React.PureComponent<Props, State> {
             mx_RoomTile_titleHasUnreadEvents: this.notificationState.isUnread,
         });
 
+        const showPath = SettingsStore.getValue("RoomList.showSpacePath");
+
         const titleContainer = this.props.isMinimized ? null : (
             <div className="mx_RoomTile_titleContainer">
-                <div title={name} className={titleClasses} tabIndex={-1}>
-                    <span dir="auto">{name}</span>
+                <div className="mx_RoomTile_nameContainer">
+                    <div title={name} className={titleClasses} tabIndex={-1}>
+                        <span dir="auto">{name}</span>
+                    </div>
+                    {showPath === "inline" && <RoomPath room={this.props.room} showSeparatorBefore={true} />}
                 </div>
+                {showPath === "under" && <RoomPath room={this.props.room} />}
                 {subtitle}
             </div>
         );

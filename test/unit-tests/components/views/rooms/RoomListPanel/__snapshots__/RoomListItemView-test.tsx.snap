@@ -2,99 +2,113 @@
 
 exports[`<RoomListItemView /> should be selected if isSelected=true 1`] = `
 <DocumentFragment>
-  <button
+  <div
     aria-label="Open room room1"
     aria-posinset="1"
     aria-selected="true"
     aria-setsize="1"
     class="_flex_4dswl_9 mx_RoomListItemView mx_RoomListItemView_selected"
     role="option"
-    style="--mx-flex-display: flex; --mx-flex-direction: row; --mx-flex-align: center; --mx-flex-justify: start; --mx-flex-gap: var(--cpd-space-3x); --mx-flex-wrap: nowrap;"
+    style="--mx-flex-display: flex; --mx-flex-direction: row; --mx-flex-align: stretch; --mx-flex-justify: start; --mx-flex-gap: var(--cpd-space-3x); --mx-flex-wrap: nowrap;"
     tabindex="-1"
-    type="button"
   >
-    <span
-      aria-label="Avatar"
-      class="_avatar_zysgz_8 mx_BaseAvatar"
-      data-color="3"
-      data-testid="avatar-img"
-      data-type="round"
-      style="--cpd-avatar-size: 32px;"
+    <div
+      class="mx_RoomListItemView_avatarWrapper"
     >
-      <img
-        alt=""
-        class="_image_zysgz_43"
+      <span
+        aria-label="Avatar"
+        class="_avatar_zysgz_8 mx_BaseAvatar"
+        data-color="3"
+        data-testid="avatar-img"
         data-type="round"
-        height="32px"
-        loading="lazy"
-        referrerpolicy="no-referrer"
-        src="http://this.is.a.url/avatar.url/room.png"
-        width="32px"
-      />
-    </span>
+        style="--cpd-avatar-size: 32px;"
+      >
+        <img
+          alt=""
+          class="_image_zysgz_43"
+          data-type="round"
+          height="32px"
+          loading="lazy"
+          referrerpolicy="no-referrer"
+          src="http://this.is.a.url/avatar.url/room.png"
+          width="32px"
+        />
+      </span>
+    </div>
     <div
       class="_flex_4dswl_9 mx_RoomListItemView_content"
-      style="--mx-flex-display: flex; --mx-flex-direction: row; --mx-flex-align: center; --mx-flex-justify: space-between; --mx-flex-gap: var(--cpd-space-2x); --mx-flex-wrap: nowrap;"
+      style="--mx-flex-display: flex; --mx-flex-direction: row; --mx-flex-align: stretch; --mx-flex-justify: space-between; --mx-flex-gap: var(--cpd-space-2x); --mx-flex-wrap: nowrap;"
     >
       <div
         class="mx_RoomListItemView_text"
       >
         <div
-          class="mx_RoomListItemView_roomName"
-          title="room1"
+          class="mx_RoomListItemView_nameWrapper"
         >
-          room1
+          <div
+            class="mx_RoomListItemView_roomName"
+            title="room1"
+          >
+            room1
+          </div>
         </div>
       </div>
     </div>
-  </button>
+  </div>
 </DocumentFragment>
 `;
 
 exports[`<RoomListItemView /> should display notification decoration 1`] = `
 <DocumentFragment>
-  <button
+  <div
     aria-label="Open room room1"
     aria-posinset="1"
     aria-selected="false"
     aria-setsize="1"
     class="_flex_4dswl_9 mx_RoomListItemView"
     role="option"
-    style="--mx-flex-display: flex; --mx-flex-direction: row; --mx-flex-align: center; --mx-flex-justify: start; --mx-flex-gap: var(--cpd-space-3x); --mx-flex-wrap: nowrap;"
+    style="--mx-flex-display: flex; --mx-flex-direction: row; --mx-flex-align: stretch; --mx-flex-justify: start; --mx-flex-gap: var(--cpd-space-3x); --mx-flex-wrap: nowrap;"
     tabindex="-1"
-    type="button"
   >
-    <span
-      aria-label="Avatar"
-      class="_avatar_zysgz_8 mx_BaseAvatar"
-      data-color="3"
-      data-testid="avatar-img"
-      data-type="round"
-      style="--cpd-avatar-size: 32px;"
+    <div
+      class="mx_RoomListItemView_avatarWrapper"
     >
-      <img
-        alt=""
-        class="_image_zysgz_43"
+      <span
+        aria-label="Avatar"
+        class="_avatar_zysgz_8 mx_BaseAvatar"
+        data-color="3"
+        data-testid="avatar-img"
         data-type="round"
-        height="32px"
-        loading="lazy"
-        referrerpolicy="no-referrer"
-        src="http://this.is.a.url/avatar.url/room.png"
-        width="32px"
-      />
-    </span>
+        style="--cpd-avatar-size: 32px;"
+      >
+        <img
+          alt=""
+          class="_image_zysgz_43"
+          data-type="round"
+          height="32px"
+          loading="lazy"
+          referrerpolicy="no-referrer"
+          src="http://this.is.a.url/avatar.url/room.png"
+          width="32px"
+        />
+      </span>
+    </div>
     <div
       class="_flex_4dswl_9 mx_RoomListItemView_content"
-      style="--mx-flex-display: flex; --mx-flex-direction: row; --mx-flex-align: center; --mx-flex-justify: space-between; --mx-flex-gap: var(--cpd-space-2x); --mx-flex-wrap: nowrap;"
+      style="--mx-flex-display: flex; --mx-flex-direction: row; --mx-flex-align: stretch; --mx-flex-justify: space-between; --mx-flex-gap: var(--cpd-space-2x); --mx-flex-wrap: nowrap;"
     >
       <div
         class="mx_RoomListItemView_text"
       >
         <div
-          class="mx_RoomListItemView_roomName"
-          title="room1"
+          class="mx_RoomListItemView_nameWrapper"
         >
-          room1
+          <div
+            class="mx_RoomListItemView_roomName"
+            title="room1"
+          >
+            room1
+          </div>
         </div>
       </div>
       <div
@@ -121,105 +135,119 @@ exports[`<RoomListItemView /> should display notification decoration 1`] = `
         </span>
       </div>
     </div>
-  </button>
+  </div>
 </DocumentFragment>
 `;
 
 exports[`<RoomListItemView /> should render a room item 1`] = `
 <DocumentFragment>
-  <button
+  <div
     aria-label="Open room room1"
     aria-posinset="1"
     aria-selected="false"
     aria-setsize="0"
     class="_flex_4dswl_9 mx_RoomListItemView"
     role="option"
-    style="--mx-flex-display: flex; --mx-flex-direction: row; --mx-flex-align: center; --mx-flex-justify: start; --mx-flex-gap: var(--cpd-space-3x); --mx-flex-wrap: nowrap;"
+    style="--mx-flex-display: flex; --mx-flex-direction: row; --mx-flex-align: stretch; --mx-flex-justify: start; --mx-flex-gap: var(--cpd-space-3x); --mx-flex-wrap: nowrap;"
     tabindex="-1"
-    type="button"
   >
-    <span
-      aria-label="Avatar"
-      class="_avatar_zysgz_8 mx_BaseAvatar"
-      data-color="3"
-      data-testid="avatar-img"
-      data-type="round"
-      style="--cpd-avatar-size: 32px;"
+    <div
+      class="mx_RoomListItemView_avatarWrapper"
     >
-      <img
-        alt=""
-        class="_image_zysgz_43"
+      <span
+        aria-label="Avatar"
+        class="_avatar_zysgz_8 mx_BaseAvatar"
+        data-color="3"
+        data-testid="avatar-img"
         data-type="round"
-        height="32px"
-        loading="lazy"
-        referrerpolicy="no-referrer"
-        src="http://this.is.a.url/avatar.url/room.png"
-        width="32px"
-      />
-    </span>
+        style="--cpd-avatar-size: 32px;"
+      >
+        <img
+          alt=""
+          class="_image_zysgz_43"
+          data-type="round"
+          height="32px"
+          loading="lazy"
+          referrerpolicy="no-referrer"
+          src="http://this.is.a.url/avatar.url/room.png"
+          width="32px"
+        />
+      </span>
+    </div>
     <div
       class="_flex_4dswl_9 mx_RoomListItemView_content"
-      style="--mx-flex-display: flex; --mx-flex-direction: row; --mx-flex-align: center; --mx-flex-justify: space-between; --mx-flex-gap: var(--cpd-space-2x); --mx-flex-wrap: nowrap;"
+      style="--mx-flex-display: flex; --mx-flex-direction: row; --mx-flex-align: stretch; --mx-flex-justify: space-between; --mx-flex-gap: var(--cpd-space-2x); --mx-flex-wrap: nowrap;"
     >
       <div
         class="mx_RoomListItemView_text"
       >
         <div
-          class="mx_RoomListItemView_roomName"
-          title="room1"
+          class="mx_RoomListItemView_nameWrapper"
         >
-          room1
+          <div
+            class="mx_RoomListItemView_roomName"
+            title="room1"
+          >
+            room1
+          </div>
         </div>
       </div>
     </div>
-  </button>
+  </div>
 </DocumentFragment>
 `;
 
 exports[`<RoomListItemView /> should render a room item with a message preview 1`] = `
 <DocumentFragment>
-  <button
+  <div
     aria-label="Open room room1"
     aria-posinset="1"
     aria-selected="false"
     aria-setsize="1"
     class="_flex_4dswl_9 mx_RoomListItemView"
     role="option"
-    style="--mx-flex-display: flex; --mx-flex-direction: row; --mx-flex-align: center; --mx-flex-justify: start; --mx-flex-gap: var(--cpd-space-3x); --mx-flex-wrap: nowrap;"
+    style="--mx-flex-display: flex; --mx-flex-direction: row; --mx-flex-align: stretch; --mx-flex-justify: start; --mx-flex-gap: var(--cpd-space-3x); --mx-flex-wrap: nowrap;"
     tabindex="-1"
-    type="button"
   >
-    <span
-      aria-label="Avatar"
-      class="_avatar_zysgz_8 mx_BaseAvatar"
-      data-color="3"
-      data-testid="avatar-img"
-      data-type="round"
-      style="--cpd-avatar-size: 32px;"
+    <div
+      class="mx_RoomListItemView_avatarWrapper"
     >
-      <img
-        alt=""
-        class="_image_zysgz_43"
+      <span
+        aria-label="Avatar"
+        class="_avatar_zysgz_8 mx_BaseAvatar"
+        data-color="3"
+        data-testid="avatar-img"
         data-type="round"
-        height="32px"
-        loading="lazy"
-        referrerpolicy="no-referrer"
-        src="http://this.is.a.url/avatar.url/room.png"
-        width="32px"
-      />
-    </span>
+        style="--cpd-avatar-size: 32px;"
+      >
+        <img
+          alt=""
+          class="_image_zysgz_43"
+          data-type="round"
+          height="32px"
+          loading="lazy"
+          referrerpolicy="no-referrer"
+          src="http://this.is.a.url/avatar.url/room.png"
+          width="32px"
+        />
+      </span>
+    </div>
     <div
       class="_flex_4dswl_9 mx_RoomListItemView_content"
-      style="--mx-flex-display: flex; --mx-flex-direction: row; --mx-flex-align: center; --mx-flex-justify: space-between; --mx-flex-gap: var(--cpd-space-2x); --mx-flex-wrap: nowrap;"
+      style="--mx-flex-display: flex; --mx-flex-direction: row; --mx-flex-align: stretch; --mx-flex-justify: space-between; --mx-flex-gap: var(--cpd-space-2x); --mx-flex-wrap: nowrap;"
     >
       <div
         class="mx_RoomListItemView_text"
       >
         <div
-          class="mx_RoomListItemView_roomName"
-          title="room1"
+          class="mx_RoomListItemView_nameWrapper"
         >
-          room1
+          <div
+            class="mx_RoomListItemView_roomName"
+            title="room1"
+          >
+            room1
+          </div>
         </div>
         <div
           class="mx_RoomListItemView_messagePreview"
@@ -229,6 +257,6 @@ exports[`<RoomListItemView /> should render a room item with a message preview 1
         </div>
       </div>
     </div>
-  </button>
+  </div>
 </DocumentFragment>
 `;

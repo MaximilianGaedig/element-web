@@ -7,6 +7,7 @@ Please see LICENSE files in the repository root for full details.
 */
 
 import { type TagID } from "./models";
+import SettingsStore from "../../settings/SettingsStore";
 
 const TILE_HEIGHT_PX = 44;
 
@@ -51,7 +52,13 @@ export class ListLayout {
     }
 
     public get tileHeight(): number {
-        return TILE_HEIGHT_PX;
+        let height = TILE_HEIGHT_PX;
+        const showPath = SettingsStore.getValue("RoomList.showSpacePath");
+        if (showPath === "under") {
+            height += 12;
+        }
+
+        return height;
     }
 
     private get key(): string {

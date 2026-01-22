@@ -536,6 +536,7 @@
         "name": "Name",
         "no_results": "No results",
         "no_results_found": "No results found",
+        "none": "None",
         "not_trusted": "Not trusted",
         "off": "Off",
         "offline": "Offline",
@@ -3098,6 +3099,15 @@
             "voice_agc": "Automatically adjust the microphone volume",
             "voice_processing": "Voice processing",
             "voice_section": "Voice settings"
+        },
+        "room_header": {
+            "show_space_path": "Show space path"
+        },
+        "room_list": {
+            "show_space_path": "Show space path",
+            "show_space_path_under": "Under title",
+            "show_space_path_icons": "Show icons in space path",
+            "show_space_path_inline": "After room name"
         },
         "warn_quit": "Warn before quitting",
         "warning": "<w>WARNING:</w> <description/>"

@@ -17,6 +17,7 @@ import { type FilterKey } from "../../../../stores/room-list-v3/skip-list/filter
 import { getKeyBindingsManager } from "../../../../KeyBindingsManager";
 import { KeyBindingAction } from "../../../../accessibility/KeyboardShortcuts";
 import { Landmark, LandmarkNavigation } from "../../../../accessibility/LandmarkNavigation";
+import SettingsStore from "../../../../settings/SettingsStore";
 
 interface RoomListProps {
     /**
@@ -34,14 +35,7 @@ type Context = {
  * Height of a single room list item
  */
 const ROOM_LIST_ITEM_HEIGHT = 48;
-/**
- * Amount to extend the top and bottom of the viewport by.
- * From manual testing and user feedback 25 items is reported to be enough to avoid blank space when using the mouse wheel,
- * and the trackpad scrolling at a slow to moderate speed where you can still see/read the content.
- * Using the trackpad to sling through a large percentage of the list quickly will still show blank space.
- * We would likely need to simplify the item content to improve this case.
- */
-const EXTENDED_VIEWPORT_HEIGHT = 25 * ROOM_LIST_ITEM_HEIGHT;
+
 /**
  * A virtualized list of rooms.
  */
@@ -49,6 +43,18 @@ export function RoomList({ vm: { roomsResult, activeIndex } }: RoomListProps): J
     const lastSpaceId = useRef<string | undefined>(undefined);
     const lastFilterKeys = useRef<FilterKey[] | undefined>(undefined);
     const roomCount = roomsResult.rooms.length;
+
+    const itemHeight = useMemo(() => {
+        let height = ROOM_LIST_ITEM_HEIGHT;
+        const showPath = SettingsStore.getValue("RoomList.showSpacePath");
+        if (showPath === "under") {
+            height += 12;
+        }
+        return height;
+    }, []);
+
+    const extendedViewportHeight = 25 * itemHeight;
+
     const getItemComponent = useCallback(
         (
             index: number,
@@ -125,15 +131,15 @@ export function RoomList({ vm: { roomsResult, activeIndex } }: RoomListProps): J
             data-testid="room-list"
             role="listbox"
             aria-label={_t("room_list|list_title")}
-            fixedItemHeight={ROOM_LIST_ITEM_HEIGHT}
+            fixedItemHeight={itemHeight}
             items={roomsResult.rooms}
             getItemComponent={getItemComponent}
             getItemKey={getItemKey}
             isItemFocusable={() => true}
             onKeyDown={keyDownCallback}
             increaseViewportBy={{
-                bottom: EXTENDED_VIEWPORT_HEIGHT,
-                top: EXTENDED_VIEWPORT_HEIGHT,
+                bottom: extendedViewportHeight,
+                top: extendedViewportHeight,
             }}
         />
     );

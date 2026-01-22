@@ -18,7 +18,7 @@ import NotificationsIcon from "@vector-im/compound-design-tokens/assets/web/icon
 import VerifiedIcon from "@vector-im/compound-design-tokens/assets/web/icons/verified";
 import ErrorIcon from "@vector-im/compound-design-tokens/assets/web/icons/error-solid";
 import PublicIcon from "@vector-im/compound-design-tokens/assets/web/icons/public";
-import { JoinRule, type Room } from "matrix-js-sdk/src/matrix";
+import { JoinRule, Room } from "matrix-js-sdk/src/matrix";
 import { type ViewRoomOpts } from "@matrix-org/react-sdk-module-api/lib/lifecycles/RoomViewLifecycle";
 import { Flex, Box } from "@element-hq/web-shared-components";
 import { CallType } from "matrix-js-sdk/src/webrtc/call";
@@ -55,6 +55,7 @@ import { useScopedRoomContext } from "../../../../contexts/ScopedRoomContext.tsx
 import { ToggleableIcon } from "./toggle/ToggleableIcon.tsx";
 import { CurrentRightPanelPhaseContextProvider } from "../../../../contexts/CurrentRightPanelPhaseContext.tsx";
 import { LocalRoom } from "../../../../models/LocalRoom.ts";
+import { RoomHeaderPath } from "../RoomHeaderPath.tsx";
 
 function RoomHeaderButtons({
     room,
@@ -428,18 +429,18 @@ export default function RoomHeader({
                             aria-label={_t("room|header_avatar_open_settings_label")}
                         />
                     </WithPresenceIndicator>
-                    {/* Disable on-click actions until the room is created */}
-                    <button
-                        aria-label={_t("right_panel|room_summary_card|title")}
-                        tabIndex={0}
-                        onClick={
-                            room instanceof LocalRoom
-                                ? undefined
-                                : () => RightPanelStore.instance.showOrHidePhase(RightPanelPhases.RoomSummary)
-                        }
-                        className="mx_RoomHeader_infoWrapper"
-                    >
-                        <Box flex="1" className="mx_RoomHeader_info">
+                    <Box flex="1" className="mx_RoomHeader_info">
+                        {/* Disable on-click actions until the room is created */}
+                        <button
+                            aria-label={_t("right_panel|room_summary_card|title")}
+                            tabIndex={0}
+                            onClick={
+                                room instanceof LocalRoom
+                                    ? undefined
+                                    : () => RightPanelStore.instance.showOrHidePhase(RightPanelPhases.RoomSummary)
+                            }
+                            className="mx_RoomHeader_infoWrapper"
+                        >
                             <Text
                                 as="div"
                                 size="lg"
@@ -485,8 +486,9 @@ export default function RoomHeader({
                                     </Tooltip>
                                 )}
                             </Text>
-                        </Box>
-                    </button>
+                        </button>
+                        {room instanceof Room && <RoomHeaderPath room={room} />}
+                    </Box>
                     {/* If the room is local-only then we don't want to show any additional buttons, as it won't work */}
                     {room instanceof LocalRoom === false && (
                         <RoomHeaderButtons room={room} additionalButtons={additionalButtons} />

@@ -1,4 +1,5 @@
 /*
+ * Copyright 2026 Element Creations Ltd.
  * Copyright 2025 New Vector Ltd.
  *
  * SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only OR LicenseRef-Element-Commercial
@@ -25,6 +26,8 @@
     cursor: pointer;
     height: 48px;
     width: 100%;
+    overflow: hidden; /* Prevent sidebar overflow */
+    box-sizing: border-box;
 
     padding-left: var(--cpd-space-3x);
     font: var(--cpd-font-body-md-regular);
@@ -64,23 +67,60 @@
         }
     }
 
+    .mx_RoomListItemView_avatarWrapper {
+        display: flex;
+        align-items: center;
+        flex-shrink: 0;
+    }
+
     .mx_RoomListItemView_content {
         height: 100%;
         flex: 1;
+        align-self: stretch;
+        display: flex;
+        flex-direction: row;
         /* The border is only under the room name and the future hover menu  */
         border-bottom: var(--cpd-border-width-0-5) solid var(--cpd-color-bg-subtle-secondary);
         box-sizing: border-box;
         min-width: 0;
         padding-right: var(--cpd-space-5x);
+        overflow: hidden;
+
+        .mx_RoomListItemView_menu,
+        .mx_RoomListItemView_notificationDecoration {
+            align-self: center;
+        }
 
         .mx_RoomListItemView_text {
             min-width: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-self: stretch;
+            flex: 1 1 0px;
+        }
+
+        .mx_RoomListItemView_nameWrapper {
+            display: flex;
+            flex-direction: row; /* Default to row for inline mode */
+            align-items: baseline;
+            min-width: 0;
+            overflow: hidden;
+
+            &:not(:has(.mx_RoomPath_inline)) {
+                flex-direction: column;
+                align-items: flex-start;
+            }
         }
 
         .mx_RoomListItemView_roomName {
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
+            /* "Second to shrink" logic */
+            flex-shrink: 1;
+            flex-grow: 0;
+            min-width: 0;
         }
 
         .mx_RoomListItemView_messagePreview {

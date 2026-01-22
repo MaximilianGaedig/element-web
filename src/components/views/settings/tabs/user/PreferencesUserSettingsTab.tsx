@@ -288,6 +288,21 @@ export default class PreferencesUserSettingsTab extends React.Component<IProps, 
                         {newRoomListEnabled && (
                             <SettingsFlag name="RoomList.showMessagePreview" level={SettingLevel.DEVICE} />
                         )}
+
+                        <SettingsDropdown
+                            settingKey="RoomList.showSpacePath"
+                            label={_t("settings|room_list|show_space_path")}
+                            level={SettingLevel.DEVICE}
+                        />
+
+                        {SettingsStore.getValue("RoomList.showSpacePath") !== "none" && (
+                            <SettingsFlag name="RoomList.showSpacePathIcons" level={SettingLevel.DEVICE} />
+                        )}
+                    </SettingsSubsection>
+
+                    <SettingsSubsection heading={_t("common|timeline")} formWrap>
+                        {this.renderGroup(PreferencesUserSettingsTab.TIMELINE_SETTINGS)}
+                        <SettingsFlag name="RoomHeader.showSpacePath" level={SettingLevel.DEVICE} />
                     </SettingsSubsection>
 
                     <SettingsSubsection heading={_t("common|spaces")} formWrap>

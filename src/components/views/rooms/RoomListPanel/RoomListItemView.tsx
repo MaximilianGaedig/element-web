@@ -15,8 +15,10 @@ import { RoomListItemMenuView } from "./RoomListItemMenuView";
 import { NotificationDecoration } from "../NotificationDecoration";
 import { RoomAvatarView } from "../../avatars/RoomAvatarView";
 import { RoomListItemContextMenuView } from "./RoomListItemContextMenuView";
+import { RoomPath } from "../RoomPath";
+import { useSettingValue } from "../../../../hooks/useSettings";
 
-interface RoomListItemViewProps extends Omit<React.HTMLAttributes<HTMLButtonElement>, "onFocus"> {
+interface RoomListItemViewProps extends Omit<React.HTMLAttributes<HTMLDivElement>, "onFocus"> {
     /**
      * The room to display
      */
@@ -55,8 +57,9 @@ export const RoomListItemView = memo(function RoomListItemView({
     roomCount: count,
     ...props
 }: RoomListItemViewProps): JSX.Element {
-    const ref = useRef<HTMLButtonElement>(null);
+    const ref = useRef<HTMLDivElement>(null);
     const vm = useRoomListItemViewModel(room);
+    const showPath = useSettingValue<"RoomList.showSpacePath">("RoomList.showSpacePath");
 
     useEffect(() => {
         if (isFocused) {
@@ -66,7 +69,7 @@ export const RoomListItemView = memo(function RoomListItemView({
 
     const content = (
         <Flex
-            as="button"
+            as="div"
             ref={ref}
             className={classNames("mx_RoomListItemView", {
                 mx_RoomListItemView_has_menu: vm.showHoverMenu,
@@ -74,30 +77,42 @@ export const RoomListItemView = memo(function RoomListItemView({
                 mx_RoomListItemView_bold: vm.isBold,
             })}
             gap="var(--cpd-space-3x)"
-            align="center"
-            type="button"
+            align="stretch"
             role="option"
             aria-posinset={index + 1}
             aria-setsize={count}
             aria-selected={isSelected}
             aria-label={vm.a11yLabel}
             onClick={() => vm.openRoom()}
-            onFocus={(e: React.FocusEvent<HTMLButtonElement>) => onFocus(room, e)}
+            onKeyDown={(e: React.KeyboardEvent) => {
+                if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    vm.openRoom();
+                }
+            }}
+            onFocus={(e: React.FocusEvent<HTMLDivElement>) => onFocus(room, e)}
             tabIndex={isFocused ? 0 : -1}
             {...props}
         >
-            <RoomAvatarView room={room} />
+            <div className="mx_RoomListItemView_avatarWrapper">
+                <RoomAvatarView room={room} />
+            </div>
             <Flex
                 className="mx_RoomListItemView_content"
                 gap="var(--cpd-space-2x)"
-                align="center"
+                align="stretch"
                 justify="space-between"
             >
                 {/* We truncate the room name when too long. Title here is to show the full name on hover */}
                 <div className="mx_RoomListItemView_text">
-                    <div className="mx_RoomListItemView_roomName" title={vm.name}>
-                        {vm.name}
+                    <div className="mx_RoomListItemView_nameWrapper">
+                        <div className="mx_RoomListItemView_roomName" title={vm.name}>
+                            {vm.name}
+                        </div>
+                        {showPath === "inline" && <RoomPath room={room} showSeparatorBefore={true} />}
                     </div>
+                    {showPath === "under" && <RoomPath room={room} />}
                     {vm.messagePreview && (
                         <div className="mx_RoomListItemView_messagePreview" title={vm.messagePreview}>
                             {vm.messagePreview}

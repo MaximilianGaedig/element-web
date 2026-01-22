@@ -36,7 +36,7 @@ Please see LICENSE files in the repository root for full details.
     }
 
     .mx_RoomTile_titleContainer {
-        height: 32px;
+        min-height: 32px;
         min-width: 0;
         flex-basis: 0;
         flex-grow: 1;
@@ -47,6 +47,35 @@ Please see LICENSE files in the repository root for full details.
         flex-direction: column;
         justify-content: center;
 
+        .mx_RoomTile_nameContainer {
+            display: flex;
+            flex-direction: row;
+            align-items: baseline;
+            min-width: 0;
+            overflow: hidden;
+
+            &:not(:has(.mx_RoomPath_inline)) {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+        }
+
+        .mx_RoomTile_title {
+            font: var(--cpd-font-body-md-regular);
+            line-height: 1.25;
+            
+            /* "Second to shrink" logic: stays at natural size unless container overflows */
+            flex: 0 1 auto;
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+
+            &.mx_RoomTile_titleHasUnreadEvents {
+                font-weight: var(--cpd-font-weight-semibold);
+            }
+        }
+
         .mx_RoomTile_subtitle {
             align-items: center;
             color: $secondary-content;
@@ -54,27 +83,16 @@ Please see LICENSE files in the repository root for full details.
             gap: $spacing-4;
             line-height: 1.25;
             position: relative;
-            top: -1px;
         }
 
-        .mx_RoomTile_title,
         .mx_RoomTile_subtitle_text {
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
         }
 
-        .mx_RoomTile_title {
-            font: var(--cpd-font-body-md-regular);
-            line-height: 1.25;
-
-            &.mx_RoomTile_titleHasUnreadEvents {
-                font-weight: var(--cpd-font-weight-semibold);
-            }
-        }
-
         .mx_RoomTile_titleWithSubtitle {
-            margin-top: -2px; /* shift the title up a bit more */
+            /* No longer need negative margin if we have auto height */
         }
     }
 

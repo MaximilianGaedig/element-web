@@ -1,0 +1,70 @@
+/*
+ * Copyright 2026 Element Creations Ltd.
+ *
+ * SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only OR LicenseRef-Element-Commercial
+ */
+
+.mx_RoomPath {
+    font-size: 0.7rem;
+    color: var(--cpd-color-text-secondary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: flex;
+    align-items: baseline;
+    min-width: 0;
+
+    .mx_RoomPath_icon {
+        margin-right: var(--cpd-space-0-5x);
+        flex-shrink: 0;
+        align-self: center;
+    }
+
+    .mx_RoomPath_separator {
+        opacity: 0.5;
+        margin: 0 var(--cpd-space-0-5x);
+        flex-shrink: 0;
+
+        &.mx_RoomPath_separator_first {
+            margin: 0 var(--cpd-space-0-5x) 0 0;
+            opacity: 1;
+        }
+    }
+
+    .mx_RoomPath_entry {
+        display: flex;
+        align-items: baseline;
+        min-width: 0;
+        flex-shrink: 1;
+
+        .mx_RoomPath_name {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+    }
+
+    &.mx_RoomPath_inline {
+        display: inline-flex;
+        
+        /* "First to shrink" logic:
+           Grows to fill extra space, yields it completely before others shrink.
+           flex-shrink: 0 combined with flex-basis: 0 ensures it disappears
+           when there's no extra space.
+        */
+        flex-shrink: 0;
+        flex-grow: 1;
+        flex-basis: 0px;
+        min-width: 0px;
+    }
+
+    &.mx_RoomPath_under {
+        align-items: center;
+        margin-top: calc(-1 * var(--cpd-space-0-5x));
+        margin-bottom: calc(-1 * var(--cpd-space-0-5x));
+
+        .mx_RoomPath_entry {
+            align-items: center;
+        }
+    }
+}
