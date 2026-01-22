@@ -16,6 +16,30 @@ import { type RoomNotifState } from "./RoomNotifs";
 import styles from "./RoomListItem.module.css";
 import { useViewModel } from "../../useViewModel";
 import { type ViewModel } from "../../viewmodel/ViewModel";
+import { _t } from "../../i18n/translation";
+
+/**
+ * Generate an accessible label for a room based on its notification state.
+ */
+function getA11yLabel(roomName: string, notification: NotificationDecorationData): string {
+    if (notification.isUnsentMessage) {
+        return _t("room_list|a11y|unsent_message", { roomName });
+    } else if (notification.invited) {
+        return _t("room_list|a11y|invitation", { roomName });
+    } else if (notification.isMention) {
+        const count = notification.count ?? 0;
+        return count === 1
+            ? _t("room_list|a11y|mention_one", { roomName })
+            : _t("room_list|a11y|mention_other", { roomName, count });
+    } else if (notification.hasUnreadCount) {
+        const count = notification.count ?? 0;
+        return count === 1
+            ? _t("room_list|a11y|unread_one", { roomName })
+            : _t("room_list|a11y|unread_other", { roomName, count });
+    } else {
+        return _t("room_list|a11y|default", { roomName });
+    }
+}
 
 /**
  * Snapshot for a room list item.
@@ -119,6 +143,9 @@ export const RoomListItemView = memo(function RoomListItemView({
         }
     }, [isFocused]);
 
+    // Generate a11y label from notification state and room name
+    const a11yLabel = getA11yLabel(item.name, item.notification);
+
     const content = (
         <Flex
             as="button"
@@ -134,7 +161,7 @@ export const RoomListItemView = memo(function RoomListItemView({
             aria-posinset={roomIndex + 1}
             aria-setsize={roomCount}
             aria-selected={isSelected}
-            aria-label={item.a11yLabel}
+            aria-label={a11yLabel}
             onClick={vm.onOpenRoom}
             onFocus={(e: React.FocusEvent<HTMLButtonElement>) => onFocus(item.room, e)}
             tabIndex={isFocused ? 0 : -1}

@@ -234,7 +234,7 @@ describe("<RoomListView />", () => {
         // Check for the empty state using the test ID
         const emptyState = screen.getByTestId("empty-room-list");
         expect(emptyState).toBeInTheDocument();
-        expect(emptyState.textContent).toContain("You don’t have direct chats with anyone yet");
+        expect(emptyState.textContent).toContain("You don't have direct chats with anyone yet");
     });
 
     it("should handle multiple active filters", () => {

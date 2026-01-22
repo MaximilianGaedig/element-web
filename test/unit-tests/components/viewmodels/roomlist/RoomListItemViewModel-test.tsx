@@ -371,7 +371,7 @@ describe("RoomListItemViewModel", () => {
         it("should return room object", () => {
             viewModel = new RoomListItemViewModel({ room, client: matrixClient });
 
-            expect(viewModel.getRoom()).toBe(room);
+            expect(viewModel.getSnapshot().room).toBe(room);
         });
     });
 

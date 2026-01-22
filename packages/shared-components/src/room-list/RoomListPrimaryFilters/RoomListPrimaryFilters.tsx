@@ -16,17 +16,26 @@ import { useVisibleFilters, type Filter, type FilterId } from "./useVisibleFilte
 import styles from "./RoomListPrimaryFilters.module.css";
 
 /**
- * Maps filter IDs to translation keys
+ * Maps filter IDs to translated labels
  */
-const filterIdToTranslationKey = {
-    unread: "room_list|filters|unread",
-    people: "room_list|filters|people",
-    rooms: "room_list|filters|rooms",
-    favourite: "room_list|filters|favourite",
-    mentions: "room_list|filters|mentions",
-    invites: "room_list|filters|invites",
-    low_priority: "room_list|filters|low_priority",
-} as const satisfies Record<FilterId, string>;
+const filterIdToLabel = (filterId: FilterId): string => {
+    switch (filterId) {
+        case "unread":
+            return _t("room_list|filters|unread");
+        case "people":
+            return _t("room_list|filters|people");
+        case "rooms":
+            return _t("room_list|filters|rooms");
+        case "favourite":
+            return _t("room_list|filters|favourite");
+        case "mentions":
+            return _t("room_list|filters|mentions");
+        case "invites":
+            return _t("room_list|filters|invites");
+        case "low_priority":
+            return _t("room_list|filters|low_priority");
+    }
+};
 
 /**
  * Props for RoomListPrimaryFilters component
@@ -95,7 +104,7 @@ export const RoomListPrimaryFilters: React.FC<RoomListPrimaryFiltersProps> = ({
                         selected={filter.active}
                         onClick={() => onToggleFilter(filter)}
                     >
-                        {_t(filterIdToTranslationKey[filter.id])}
+                        {filterIdToLabel(filter.id)}
                     </ChatFilter>
                 ))}
             </Flex>

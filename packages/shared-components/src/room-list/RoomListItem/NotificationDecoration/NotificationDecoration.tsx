@@ -32,6 +32,8 @@ export interface NotificationDecorationData {
     isActivityNotification: boolean;
     /** Whether there's a notification (not just activity) */
     isNotification: boolean;
+    /** Whether there are unread messages with a count */
+    hasUnreadCount: boolean;
     /** Notification count (optional) */
     count?: number;
     /** Whether notifications are muted */

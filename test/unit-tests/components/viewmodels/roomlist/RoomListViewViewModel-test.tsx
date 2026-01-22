@@ -332,7 +332,7 @@ describe("RoomListViewViewModel", () => {
             const itemViewModel = viewModel.getRoomItemViewModel("!room1:server");
 
             expect(itemViewModel).toBeDefined();
-            expect(itemViewModel.getRoom()).toBe(room1);
+            expect(itemViewModel.getSnapshot().room).toBe(room1);
         });
 
         it("should reuse existing room item view model", () => {

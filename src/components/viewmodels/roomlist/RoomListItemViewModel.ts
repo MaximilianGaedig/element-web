@@ -10,6 +10,7 @@ import {
     type RoomListItemSnapshot,
     type RoomListItemActions,
     type RoomNotifState,
+    _t,
 } from "@element-hq/web-shared-components";
 import { RoomEvent } from "matrix-js-sdk/src/matrix";
 import { CallType } from "matrix-js-sdk/src/webrtc/call";
@@ -172,6 +173,7 @@ export class RoomListItemViewModel
     private static generateInitialItem(room: Room, client: MatrixClient): RoomListItemSnapshot {
         return {
             id: room.roomId,
+            room,
             name: room.name,
             a11yLabel: room.name, // Will be updated with proper label
             isBold: false,
@@ -183,6 +185,7 @@ export class RoomListItemViewModel
                 isMention: false,
                 isActivityNotification: false,
                 isNotification: false,
+                hasUnreadCount: false,
                 count: undefined,
                 muted: false,
                 callType: undefined,
@@ -247,9 +250,6 @@ export class RoomListItemViewModel
         const isNotificationMentionOnly = roomNotifState === ElementRoomNotifState.MentionsOnly;
         const isNotificationMute = roomNotifState === ElementRoomNotifState.Mute;
 
-        // Generate accessible label based on notification state
-        const a11yLabel = RoomListItemViewModel.getA11yLabel(room.name, notifState);
-
         // Video room and call state tracking
         const call = CallStore.instance.getCall(room.roomId);
         const participantCount = call?.participants.size ?? 0;
@@ -261,7 +261,7 @@ export class RoomListItemViewModel
             id: room.roomId,
             room,
             name: room.name,
-            a11yLabel,
+            a11yLabel: room.name,
             isBold: notifState.hasAnyNotificationOrActivity,
             messagePreview,
             notification: {
@@ -271,6 +271,7 @@ export class RoomListItemViewModel
                 isMention: notifState.isMention,
                 isActivityNotification: notifState.isActivityNotification,
                 isNotification: notifState.isNotification,
+                hasUnreadCount: notifState.hasUnreadCount,
                 count: notifState.count > 0 ? notifState.count : undefined,
                 muted: isNotificationMute,
                 callType: hasParticipantsInCall ? callType : undefined,
@@ -292,30 +293,6 @@ export class RoomListItemViewModel
                 isNotificationMute,
             },
         };
-    }
-
-    /**
-     * Generate an accessible label for a room based on its notification state.
-     * Same logic as RoomListViewViewModel.getA11yLabel
-     */
-    private static getA11yLabel(roomName: string, notificationState: RoomNotificationState): string {
-        if (notificationState.isUnsentMessage) {
-            return `Open room ${roomName} with an unsent message.`;
-        } else if (notificationState.invited) {
-            return `Open room ${roomName} invitation.`;
-        } else if (notificationState.isMention) {
-            const count = notificationState.count;
-            return count === 1
-                ? `Open room ${roomName} with 1 unread mention.`
-                : `Open room ${roomName} with ${count} unread mentions.`;
-        } else if (notificationState.hasUnreadCount) {
-            const count = notificationState.count;
-            return count === 1
-                ? `Open room ${roomName} with 1 unread message.`
-                : `Open room ${roomName} with ${count} unread messages.`;
-        } else {
-            return `Open room ${roomName}`;
-        }
     }
 
     // ==================== Actions (RoomListItemActions implementation) ====================

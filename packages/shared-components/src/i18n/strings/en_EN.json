@@ -1,15 +1,5 @@
 {
     "a11y": {
-        "room_messsage_not_sent": "Open room %(roomName)s with an unsent message.",
-        "room_n_unread_invite": "Open room %(roomName)s invitation.",
-        "room_n_unread_messages": {
-            "one": "Open room %(roomName)s with 1 unread message.",
-            "other": "Open room %(roomName)s with %(count)s unread messages."
-        },
-        "room_n_unread_messages_mentions": {
-            "one": "Open room %(roomName)s with 1 unread mention.",
-            "other": "Open room %(roomName)s with %(count)s unread messages including mentions."
-        },
         "seek_bar_label": "Audio seek bar"
     },
     "action": {
@@ -60,6 +50,15 @@
         }
     },
     "room_list": {
+        "a11y": {
+            "default": "Open room {{roomName}}",
+            "invitation": "Open room {{roomName}} invitation.",
+            "mention_one": "Open room {{roomName}} with 1 unread mention.",
+            "mention_other": "Open room {{roomName}} with {{count}} unread mentions.",
+            "unread_one": "Open room {{roomName}} with 1 unread message.",
+            "unread_other": "Open room {{roomName}} with {{count}} unread messages.",
+            "unsent_message": "Open room {{roomName}} with an unsent message."
+        },
         "appearance": "Appearance",
         "collapse_filters": "Collapse filter list",
         "empty": {
