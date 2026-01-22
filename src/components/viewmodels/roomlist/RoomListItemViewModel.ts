@@ -10,7 +10,6 @@ import {
     type RoomListItemSnapshot,
     type RoomListItemActions,
     type RoomNotifState,
-    _t,
 } from "@element-hq/web-shared-components";
 import { RoomEvent } from "matrix-js-sdk/src/matrix";
 import { CallType } from "matrix-js-sdk/src/webrtc/call";
