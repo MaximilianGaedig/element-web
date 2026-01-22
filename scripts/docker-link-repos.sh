@@ -4,7 +4,7 @@ set -ex
 
 # Automatically link to develop if we're building develop, but only if the caller
 # hasn't asked us to build something else
-BRANCH=$(git rev-parse --abbrev-ref HEAD)
+BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "unknown")
 if [[ $USE_CUSTOM_SDKS == false ]] && [[ $BRANCH == 'develop' ]]
 then
     echo "using develop dependencies for react-sdk and js-sdk"
