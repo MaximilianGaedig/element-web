@@ -66,7 +66,6 @@ export class DialogOpener {
             case Action.OpenForwardDialog:
                 Modal.createDialog(ForwardDialog, {
                     matrixClient: this.matrixClient,
-                    event: payload.event,
                     events: payload.events,
                     permalinkCreator: payload.permalinkCreator,
                 });

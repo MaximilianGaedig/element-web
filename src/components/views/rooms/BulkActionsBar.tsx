@@ -5,7 +5,7 @@
  */
 
 import React from "react";
-import { type Room, MatrixEvent } from "matrix-js-sdk/src/matrix";
+import { type Room, type MatrixEvent } from "matrix-js-sdk/src/matrix";
 import { DeleteIcon, ForwardIcon } from "@vector-im/compound-design-tokens/assets/web/icons";
 import { logger } from "matrix-js-sdk/src/logger";
 

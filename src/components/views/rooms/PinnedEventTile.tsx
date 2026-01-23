@@ -187,7 +187,7 @@ function PinMenu({ event, room, permalinkCreator, contentId }: PinMenuProps): JS
         if (forwardableEvent) {
             dis.dispatch<OpenForwardDialogPayload>({
                 action: Action.OpenForwardDialog,
-                event: forwardableEvent,
+                events: [forwardableEvent],
                 permalinkCreator: permalinkCreator,
             });
         }

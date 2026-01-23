@@ -1200,7 +1200,7 @@ export default class MatrixChat extends React.PureComponent<IProps, IState> {
             const event = new MatrixEvent(rawEvent);
             dis.dispatch<OpenForwardDialogPayload>({
                 action: Action.OpenForwardDialog,
-                event: event,
+                events: [event],
                 permalinkCreator: null,
             });
         });

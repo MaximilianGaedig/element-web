@@ -1461,8 +1461,8 @@ export class UnwrappedEventTile extends React.Component<EventTileProps, IState> 
                         <a
                             className="mx_EventTile_senderDetailsLink"
                             key="mx_EventTile_senderDetailsLink"
-                            href={this.props.isSelecting ? undefined : permalink}
-                            onClick={this.props.isSelecting ? undefined : this.onPermalinkClicked}
+                            href={permalink}
+                            onClick={this.props.isSelecting ? (e) => e.preventDefault() : this.onPermalinkClicked}
                         >
                             <div className="mx_EventTile_senderDetails" onContextMenu={this.onTimestampContextMenu}>
                                 {avatar}

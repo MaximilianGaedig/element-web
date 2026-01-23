@@ -5,6 +5,7 @@
  */
 
 import EventEmitter from "events";
+
 import { UPDATE_EVENT } from "./AsyncStore";
 
 /**
