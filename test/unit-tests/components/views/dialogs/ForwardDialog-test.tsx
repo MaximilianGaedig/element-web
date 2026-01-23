@@ -93,7 +93,7 @@ describe("ForwardDialog", () => {
         const wrapper: RenderResult = render(
             <ForwardDialog
                 matrixClient={mockClient}
-                event={message}
+                events={[message]}
                 permalinkCreator={new RoomPermalinkCreator(undefined!, sourceRoom)}
                 onFinished={jest.fn()}
             />,
@@ -284,7 +284,7 @@ describe("ForwardDialog", () => {
 
         it("strips extra mentions", async () => {
             const message = makeMessage("Hi Alice", { user_ids: [aliceId] });
-            const { container } = mountForwardDialog(message);
+            const { container } = mountForwardDialog(message, undefined, true);
             sendClick(container);
             // Expected content should have mentions empty.
             expect(mockClient.sendEvent).toHaveBeenCalledWith(roomId, message.getType(), {
@@ -346,13 +346,14 @@ describe("ForwardDialog", () => {
             const text = `Location ${geoUri} at ${new Date(now).toISOString()}`;
             const expectedStrippedContent = {
                 ...modernLocationEvent.getContent(),
-                body: text,
+                "body": text,
                 [M_TEXT.name]: text,
                 [M_TIMESTAMP.name]: now,
                 [M_ASSET.name]: { type: LocationAssetType.Pin },
                 [M_LOCATION.name]: {
                     uri: geoUri,
                 },
+                "m.mentions": {},
             };
             expect(mockClient.sendEvent).toHaveBeenCalledWith(
                 roomId,
@@ -373,12 +374,13 @@ describe("ForwardDialog", () => {
             const text = `Location ${geoUri} at ${new Date(timestamp).toISOString()}`;
             const expectedStrippedContent = {
                 ...modernLocationEvent.getContent(),
-                body: text,
+                "body": text,
                 [M_TEXT.name]: text,
                 [M_ASSET.name]: { type: LocationAssetType.Pin },
                 [M_LOCATION.name]: {
                     uri: geoUri,
                 },
+                "m.mentions": {},
             };
             expect(mockClient.sendEvent).toHaveBeenCalledWith(
                 roomId,
@@ -392,15 +394,16 @@ describe("ForwardDialog", () => {
             const beaconEvent = makeBeaconEvent("@alice:server.org", { geoUri, timestamp });
             const text = `Location ${geoUri} at ${new Date(timestamp).toISOString()}`;
             const expectedContent = {
-                msgtype: "m.location",
-                body: text,
+                "msgtype": "m.location",
+                "body": text,
                 [M_TEXT.name]: text,
                 [M_ASSET.name]: { type: LocationAssetType.Pin },
                 [M_LOCATION.name]: {
                     uri: geoUri,
                 },
-                geo_uri: geoUri,
+                "geo_uri": geoUri,
                 [M_TIMESTAMP.name]: timestamp,
+                "m.mentions": {},
             };
             const { container } = mountForwardDialog(beaconEvent);
 

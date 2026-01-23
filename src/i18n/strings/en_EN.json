@@ -120,7 +120,7 @@
         "revoke": "Revoke",
         "save": "Save",
         "search": "Search",
-        "select_messages": "Select messages",
+        "select_messages": "action|select_messages",
         "send_report": "Send report",
         "set_avatar": "Set profile picture",
         "share": "Share",
@@ -569,7 +569,6 @@
         "saved": "Saved",
         "saving": "Saving…",
         "secure_backup": "Secure Backup",
-        "search": "Search",
         "select_all": "Select all",
         "server": "Server",
         "settings": "Settings",
@@ -1290,14 +1289,14 @@
         "peek_note": "You must join the room to see its files"
     },
     "forward": {
-        "title_multiple": "Forward %(count)s messages",
         "filter_placeholder": "Search for rooms or people",
         "message_preview_heading": "Message preview",
         "no_perms_title": "You don't have permission to do this",
         "open_room": "Open room",
         "send_label": "Send",
         "sending": "Sending",
-        "sent": "Sent"
+        "sent": "Sent",
+        "title_multiple": "Forward %(count)s messages"
     },
     "identity_server": {
         "change": "Change identity server",
@@ -2900,6 +2899,15 @@
         },
         "prompt_invite": "Prompt before sending invites to potentially invalid matrix IDs",
         "replace_plain_emoji": "Automatically replace plain text Emoji",
+        "room_header": {
+            "show_space_path": "Show space path"
+        },
+        "room_list": {
+            "show_space_path": "Show space path",
+            "show_space_path_icons": "Show icons in space path",
+            "show_space_path_inline": "After room name",
+            "show_space_path_under": "Under title"
+        },
         "security": {
             "analytics_description": "Share anonymous data to help us identify issues. Nothing personal. No third parties.",
             "bulk_options_accept_all_invites": "Accept all %(invitedRooms)s invites",
@@ -3102,15 +3110,6 @@
             "voice_agc": "Automatically adjust the microphone volume",
             "voice_processing": "Voice processing",
             "voice_section": "Voice settings"
-        },
-        "room_header": {
-            "show_space_path": "Show space path"
-        },
-        "room_list": {
-            "show_space_path": "Show space path",
-            "show_space_path_under": "Under title",
-            "show_space_path_icons": "Show icons in space path",
-            "show_space_path_inline": "After room name"
         },
         "warn_quit": "Warn before quitting",
         "warning": "<w>WARNING:</w> <description/>"
@@ -3396,10 +3395,6 @@
             "one": "Are you sure you want to delete this message?",
             "other": "Are you sure you want to delete these %(count)s messages?"
         },
-        "messages_selected": {
-            "one": "1 message selected",
-            "other": "%(count)s messages selected"
-        },
         "context_menu": {
             "collapse_reply_thread": "Collapse reply thread",
             "external_url": "Source URL",
@@ -3644,6 +3639,10 @@
         },
         "message_timestamp_received_at": "Received at: %(dateTime)s",
         "message_timestamp_sent_at": "Sent at: %(dateTime)s",
+        "messages_selected": {
+            "one": "1 message selected",
+            "other": "%(count)s messages selected"
+        },
         "mjolnir": {
             "changed_rule_glob": "%(senderName)s updated a ban rule that was matching %(oldGlob)s to matching %(newGlob)s for %(reason)s",
             "changed_rule_rooms": "%(senderName)s changed a rule that was banning rooms matching %(oldGlob)s to matching %(newGlob)s for %(reason)s",

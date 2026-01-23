@@ -489,7 +489,7 @@ export default class MessageContextMenu extends React.Component<IProps, IState> 
         const selectMessagesButton = (
             <IconizedContextMenuOption
                 icon={<CheckCircleIcon />}
-                label={_t("action|select_messages" as any)}
+                label={_t("action|select_messages")}
                 onClick={this.onSelectMessagesClick}
             />
         );

@@ -207,6 +207,12 @@ const transformEvent = (
     // beacon pulses get transformed into static locations on forward
     const type = M_BEACON.matches(event.getType()) ? EventType.RoomMessage : event.getType();
 
+    // For tests or rooms not in memory, ensure m.mentions is at least an empty object if missing.
+    // We do this before any early returns to be consistent.
+    if (!content["m.mentions"]) {
+        content["m.mentions"] = {};
+    }
+
     // self location shares should have their description removed
     // and become 'pin' share type
     if (
@@ -231,6 +237,22 @@ const transformEvent = (
         };
     }
 
+    if (includeAttribution) {
+        const senderName = event.sender?.name || event.getSender();
+        const senderId = event.getSender();
+        const mentionHtml = `<a href="https://matrix.to/#/${senderId}">${senderName}</a>`;
+        const oldBody = content.body;
+
+        if (content.formatted_body) {
+            content.formatted_body = `${mentionHtml}: ${content.formatted_body}`;
+        } else {
+            content.format = "org.matrix.custom.html";
+            content.formatted_body = `${mentionHtml}: ${oldBody}`;
+        }
+        // Always update plain body for clients without HTML support
+        content.body = `${senderName}: ${oldBody}`;
+    }
+
     // Mentions can leak information about the context of the original message, so:
     // 1. Parse the event's message body back into an EditorModel, then
     // 2. Pass through attachMentions() to recalculate mentions.
@@ -248,22 +270,6 @@ const transformEvent = (
         }
     }
 
-    if (includeAttribution) {
-        const senderName = event.sender?.name || event.getSender();
-        const senderId = event.getSender();
-        const mentionHtml = `<a href="https://matrix.to/#/${senderId}">${senderName}</a>`;
-        const oldBody = content.body;
-
-        if (content.formatted_body) {
-            content.formatted_body = `${mentionHtml}: ${content.formatted_body}`;
-        } else {
-            content.format = "org.matrix.custom.html";
-            content.formatted_body = `${mentionHtml}: ${oldBody}`;
-        }
-        // Always update plain body for clients without HTML support
-        content.body = `${senderName}: ${oldBody}`;
-    }
-
     return { type, content };
 };
 
@@ -279,7 +285,7 @@ const ForwardDialog: React.FC<IProps> = ({ matrixClient: cli, events, permalinkC
             const { content } = transformEvent(e, cli, includeAttribution);
             const mock = new MatrixEvent({
                 type: "m.room.message",
-                sender: e.getSender(),
+                sender: includeAttribution ? e.getSender() : cli.getSafeUserId(),
                 content,
                 unsigned: {
                     age: 97,
@@ -289,24 +295,21 @@ const ForwardDialog: React.FC<IProps> = ({ matrixClient: cli, events, permalinkC
                 origin_server_ts: e.getTs(),
             });
 
-            // We use the original sender of the event for the preview.
-            // MatrixEvent will automatically use e.sender if e is from a room.
-            if (e.sender) {
-                mock.sender = e.sender;
+            // We use the original sender of the event for the preview if attributing.
+            // Otherwise we use the current user.
+            const senderId = includeAttribution ? e.getSender() : cli.getSafeUserId();
+            const room = cli.getRoom(e.getRoomId());
+            const member = room?.getMember(senderId!);
+            if (member) {
+                mock.sender = member;
             } else {
-                const room = cli.getRoom(e.getRoomId());
-                const member = room?.getMember(e.getSender()!);
-                if (member) {
-                    mock.sender = member;
-                } else {
-                    mock.sender = {
-                        name: e.getSender(),
-                        rawDisplayName: e.getSender(),
-                        userId: e.getSender(),
-                        getAvatarUrl: () => null,
-                        getMxcAvatarUrl: () => null,
-                    } as any;
-                }
+                mock.sender = {
+                    name: senderId,
+                    rawDisplayName: senderId,
+                    userId: senderId,
+                    getAvatarUrl: () => null,
+                    getMxcAvatarUrl: () => null,
+                } as any;
             }
             return mock;
         });
