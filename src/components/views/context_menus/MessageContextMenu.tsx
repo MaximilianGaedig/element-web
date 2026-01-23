@@ -41,6 +41,7 @@ import {
     ShareIcon,
     CopyIcon,
     TreeIcon,
+    CheckCircleIcon,
 } from "@vector-im/compound-design-tokens/assets/web/icons";
 
 import { MatrixClientPeg } from "../../../MatrixClientPeg";
@@ -75,6 +76,7 @@ import { type ShowThreadPayload } from "../../../dispatcher/payloads/ShowThreadP
 import { CardContext } from "../right_panel/context";
 import PinningUtils from "../../../utils/PinningUtils";
 import PosthogTrackers from "../../../PosthogTrackers.ts";
+import { MessageSelectionStore } from "../../../stores/MessageSelectionStore";
 
 interface IReplyInThreadButton {
     mxEvent: MatrixEvent;
@@ -270,7 +272,7 @@ export default class MessageContextMenu extends React.Component<IProps, IState> 
     private onForwardClick = (forwardableEvent: MatrixEvent) => (): void => {
         dis.dispatch<OpenForwardDialogPayload>({
             action: Action.OpenForwardDialog,
-            event: forwardableEvent,
+            events: [forwardableEvent],
             permalinkCreator: this.props.permalinkCreator ?? null,
         });
         this.closeMenu();
@@ -358,6 +360,12 @@ export default class MessageContextMenu extends React.Component<IProps, IState> 
 
     private onReactClick = (): void => {
         this.setState({ reactionPickerDisplayed: true });
+    };
+
+    private onSelectMessagesClick = (): void => {
+        const roomId = this.props.mxEvent.getRoomId()!;
+        MessageSelectionStore.instance.enterSelectionMode(roomId, this.props.mxEvent.getId());
+        this.closeMenu();
     };
 
     private onCloseReactionPicker = (): void => {
@@ -477,6 +485,14 @@ export default class MessageContextMenu extends React.Component<IProps, IState> 
                 />
             );
         }
+
+        const selectMessagesButton = (
+            <IconizedContextMenuOption
+                icon={<CheckCircleIcon />}
+                label={_t("action|select_messages" as any)}
+                onClick={this.onSelectMessagesClick}
+            />
+        );
 
         // This is specifically not behind the developerMode flag to give people insight into the Matrix
         const viewSourceButton = (
@@ -727,6 +743,7 @@ export default class MessageContextMenu extends React.Component<IProps, IState> 
                 {openInMapSiteButton}
                 {endPollButton}
                 {forwardButton}
+                {selectMessagesButton}
                 {permalinkButton}
                 {reportEventButton}
                 {externalURLButton}

@@ -77,6 +77,8 @@ import RoomPreviewCard from "../views/rooms/RoomPreviewCard";
 import RoomUpgradeWarningBar from "../views/rooms/RoomUpgradeWarningBar";
 import AuxPanel from "../views/rooms/AuxPanel";
 import RoomHeader from "../views/rooms/RoomHeader/RoomHeader";
+import BulkActionsBar from "../views/rooms/BulkActionsBar";
+import { MessageSelectionStore } from "../../stores/MessageSelectionStore";
 import { type IOOBData, type IThreepidInvite } from "../../stores/ThreepidInviteStore";
 import EffectsOverlay from "../views/elements/EffectsOverlay";
 import { containsEmoji } from "../../effects/utils";
@@ -960,6 +962,9 @@ export class RoomView extends React.Component<IRoomProps, IRoomState> {
             this.context.client.on(CryptoEvent.KeysChanged, this.onCrossSigningKeysChanged);
             this.context.client.on(MatrixEventEvent.Decrypted, this.onEventDecrypted);
         }
+
+        MessageSelectionStore.instance.on(UPDATE_EVENT, this.onSelectionUpdate);
+
         // Start listening for RoomViewStore updates
         this.roomViewStore.on(UPDATE_EVENT, this.onRoomViewStoreUpdate);
 
@@ -1076,6 +1081,8 @@ export class RoomView extends React.Component<IRoomProps, IRoomState> {
             this.context.client.removeListener(MatrixEventEvent.Decrypted, this.onEventDecrypted);
         }
 
+        MessageSelectionStore.instance.off(UPDATE_EVENT, this.onSelectionUpdate);
+
         window.removeEventListener("beforeunload", this.onPageUnload);
 
         this.roomViewStore.off(UPDATE_EVENT, this.onRoomViewStoreUpdate);
@@ -1123,6 +1130,11 @@ export class RoomView extends React.Component<IRoomProps, IRoomState> {
         } else if (this.getCallForRoom() && this.state.callState !== "ended") {
             return (event.returnValue = _t("quit_warning|call_in_progress"));
         }
+    };
+
+    private onSelectionUpdate = (): void => {
+        if (this.unmounted) return;
+        this.forceUpdate();
     };
 
     private onReactKeyDown = (ev: React.KeyboardEvent): void => {
@@ -2520,7 +2532,8 @@ export class RoomView extends React.Component<IRoomProps, IRoomState> {
             !isRoomEncryptionLoading &&
             // joined and not showing search results
             myMembership === KnownMembership.Join &&
-            !this.state.search;
+            !this.state.search &&
+            !MessageSelectionStore.instance.isSelecting(this.state.room.roomId);
         if (showComposer) {
             messageComposer = (
                 <MessageComposer
@@ -2744,6 +2757,9 @@ export class RoomView extends React.Component<IRoomProps, IRoomState> {
                                     />
                                 )}
                                 {mainSplitBody}
+                                {this.state.room && (
+                                    <BulkActionsBar room={this.state.room} permalinkCreator={this.permalinkCreator} />
+                                )}
                             </div>
                         </MainSplit>
                     </ErrorBoundary>

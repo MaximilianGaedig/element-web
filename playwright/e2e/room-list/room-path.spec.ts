@@ -13,8 +13,8 @@ test.describe("Room Path Breadcrumbs", () => {
 
     test.beforeEach(async ({ page, app, user }) => {
         // Create a space and a room within it
-        await user.createSpace({ name: "Space 1" });
-        await user.createRoom({ name: "Room 1" });
+        await app.client.createSpace({ name: "Space 1" });
+        await app.client.createRoom({ name: "Room 1" });
         // Add Room 1 to Space 1
         // Note: For simplicity in E2E, we might just assume the Room is in the space
         // if we are in the space view, but our utility is context-aware.

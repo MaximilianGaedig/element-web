@@ -15,6 +15,6 @@ import { type RoomPermalinkCreator } from "../../utils/permalinks/Permalinks";
 export interface OpenForwardDialogPayload extends ActionPayload {
     action: Action.OpenForwardDialog;
 
-    event: MatrixEvent;
+    events: MatrixEvent[];
     permalinkCreator: RoomPermalinkCreator | null;
 }

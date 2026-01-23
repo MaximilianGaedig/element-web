@@ -42,6 +42,7 @@ import ErrorBoundary from "../views/elements/ErrorBoundary";
 import Spinner from "../views/elements/Spinner";
 import { type RoomPermalinkCreator } from "../../utils/permalinks/Permalinks";
 import type EditorStateTransfer from "../../utils/EditorStateTransfer";
+import { UPDATE_EVENT } from "../../stores/AsyncStore";
 import { Action } from "../../dispatcher/actions";
 import { getEventDisplayInfo } from "../../utils/EventRenderingUtils";
 import { type IReadReceiptPosition } from "../views/rooms/ReadReceiptMarker";
@@ -49,6 +50,7 @@ import { haveRendererForEvent } from "../../events/EventTileFactory";
 import { editorRoomKey } from "../../Editing";
 import { hasThreadSummary } from "../../utils/EventUtils";
 import { type BaseGrouper } from "./grouper/BaseGrouper";
+import { MessageSelectionStore } from "../../stores/MessageSelectionStore";
 import { MainGrouper } from "./grouper/MainGrouper";
 import { CreationGrouper } from "./grouper/CreationGrouper";
 import { _t } from "../../languageHandler";
@@ -190,6 +192,7 @@ interface IState {
     ghostReadMarkers: string[];
     showTypingNotifications: boolean;
     hideSender: boolean;
+    isSelecting: boolean;
 }
 
 interface IReadReceiptForUser {
@@ -266,6 +269,7 @@ export default class MessagePanel extends React.Component<IProps, IState> {
             ghostReadMarkers: [],
             showTypingNotifications: SettingsStore.getValue("showTypingNotifications"),
             hideSender: this.shouldHideSender(),
+            isSelecting: props.room ? MessageSelectionStore.instance.isSelecting(props.room.roomId) : false,
         };
 
         // Cache these settings on mount since Settings is expensive to query,
@@ -276,6 +280,7 @@ export default class MessagePanel extends React.Component<IProps, IState> {
 
     public componentDidMount(): void {
         this.unmounted = false;
+        MessageSelectionStore.instance.on(UPDATE_EVENT, this.onSelectionStoreUpdate);
         this.showTypingNotificationsWatcherRef = SettingsStore.watchSetting(
             "showTypingNotifications",
             null,
@@ -287,11 +292,19 @@ export default class MessagePanel extends React.Component<IProps, IState> {
 
     public componentWillUnmount(): void {
         this.unmounted = true;
+        MessageSelectionStore.instance.off(UPDATE_EVENT, this.onSelectionStoreUpdate);
         this.props.room?.currentState.off(RoomStateEvent.Update, this.calculateRoomMembersCount);
         SettingsStore.unwatchSetting(this.showTypingNotificationsWatcherRef);
         this.readReceiptMap = {};
         this.resizeObserver.disconnect();
     }
+
+    private onSelectionStoreUpdate = (): void => {
+        if (!this.props.room) return;
+        this.setState({
+            isSelecting: MessageSelectionStore.instance.isSelecting(this.props.room.roomId),
+        });
+    };
 
     public componentDidUpdate(prevProps: IProps, prevState: IState): void {
         if (prevProps.layout !== this.props.layout) {
@@ -817,6 +830,10 @@ export default class MessagePanel extends React.Component<IProps, IState> {
                 showReadReceipts={this.props.showReadReceipts}
                 callEventGrouper={callEventGrouper}
                 hideSender={this.state.hideSender}
+                isSelected={
+                    this.props.room ? MessageSelectionStore.instance.isSelected(this.props.room.roomId, eventId) : false
+                }
+                isSelecting={this.state.isSelecting}
             />,
         );
 

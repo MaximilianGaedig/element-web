@@ -120,6 +120,7 @@
         "revoke": "Revoke",
         "save": "Save",
         "search": "Search",
+        "select_messages": "Select messages",
         "send_report": "Send report",
         "set_avatar": "Set profile picture",
         "share": "Share",
@@ -568,6 +569,7 @@
         "saved": "Saved",
         "saving": "Saving…",
         "secure_backup": "Secure Backup",
+        "search": "Search",
         "select_all": "Select all",
         "server": "Server",
         "settings": "Settings",
@@ -1288,6 +1290,7 @@
         "peek_note": "You must join the room to see its files"
     },
     "forward": {
+        "title_multiple": "Forward %(count)s messages",
         "filter_placeholder": "Search for rooms or people",
         "message_preview_heading": "Message preview",
         "no_perms_title": "You don't have permission to do this",
@@ -3389,6 +3392,14 @@
         "short_seconds": "%(value)ss"
     },
     "timeline": {
+        "bulk_delete_confirm": {
+            "one": "Are you sure you want to delete this message?",
+            "other": "Are you sure you want to delete these %(count)s messages?"
+        },
+        "messages_selected": {
+            "one": "1 message selected",
+            "other": "%(count)s messages selected"
+        },
         "context_menu": {
             "collapse_reply_thread": "Collapse reply thread",
             "external_url": "Source URL",

@@ -6,21 +6,19 @@ SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only OR LicenseRef-Element-Com
 Please see LICENSE files in the repository root for full details.
 */
 
-import React, { type JSX, useEffect, useMemo, useState } from "react";
+import React, { type JSX, useMemo, useState } from "react";
 import classnames from "classnames";
 import {
     type IContent,
     MatrixEvent,
     type Room,
-    type RoomMember,
-    EventType,
     type MatrixClient,
     ContentHelpers,
     type ILocationContent,
     LocationAssetType,
     M_TIMESTAMP,
     M_BEACON,
-    type TimelineEvents,
+    EventType,
 } from "matrix-js-sdk/src/matrix";
 import { KnownMembership } from "matrix-js-sdk/src/types";
 import { CheckCircleIcon, CircleIcon } from "@vector-im/compound-design-tokens/assets/web/icons";
@@ -30,7 +28,6 @@ import dis from "../../../dispatcher/dispatcher";
 import { useSettingValue } from "../../../hooks/useSettings";
 import { Layout } from "../../../settings/enums/Layout";
 import BaseDialog from "./BaseDialog";
-import { avatarUrlForUser } from "../../../Avatar";
 import EventTile from "../rooms/EventTile";
 import SearchBox from "../../structures/SearchBox";
 import DecoratedRoomAvatar from "../avatars/DecoratedRoomAvatar";
@@ -64,22 +61,19 @@ import SettingsStore from "../../../settings/SettingsStore";
 import { parseEvent } from "../../../editor/deserialize";
 import EditorModel from "../../../editor/model";
 
-const AVATAR_SIZE = 30;
-
 interface IProps {
     matrixClient: MatrixClient;
-    // The event to forward
-    event: MatrixEvent;
+    // Multiple events to forward
+    events: MatrixEvent[];
     // We need a permalink creator for the source room to pass through to EventTile
     // in case the event is a reply (even though the user can't get at the link)
-    permalinkCreator: RoomPermalinkCreator;
+    permalinkCreator: RoomPermalinkCreator | null;
     onFinished(): void;
 }
 
-interface IEntryProps<K extends keyof TimelineEvents> {
+interface IEntryProps {
     room: Room;
-    type: K;
-    content: TimelineEvents[K];
+    eventsToForward: { type: string; content: IContent }[];
     matrixClient: MatrixClient;
     onFinished(success: boolean): void;
 }
@@ -91,7 +85,7 @@ enum SendState {
     Failed,
 }
 
-const Entry: React.FC<IEntryProps<any>> = ({ room, type, content, matrixClient: cli, onFinished }) => {
+const Entry: React.FC<IEntryProps> = ({ room, eventsToForward, matrixClient: cli, onFinished }) => {
     const [sendState, setSendState] = useState<SendState>(SendState.CanSend);
     const [onFocus, isActive, ref] = useRovingTabIndex<HTMLDivElement>();
 
@@ -107,7 +101,9 @@ const Entry: React.FC<IEntryProps<any>> = ({ room, type, content, matrixClient: 
     const send = async (): Promise<void> => {
         setSendState(SendState.Sending);
         try {
-            await cli.sendEvent(room.roomId, type, content);
+            for (const ev of eventsToForward) {
+                await cli.sendEvent(room.roomId, ev.type as any, ev.content);
+            }
             setSendState(SendState.Sent);
         } catch {
             setSendState(SendState.Failed);
@@ -193,9 +189,14 @@ const Entry: React.FC<IEntryProps<any>> = ({ room, type, content, matrixClient: 
  *
  * @param event - The MatrixEvent to transform.
  * @param cli - The MatrixClient (used for recalculation of mentions).
+ * @param includeAttribution - Whether to include the original sender's name.
  * @returns The transformed event type and content.
  */
-const transformEvent = (event: MatrixEvent, cli: MatrixClient): { type: string; content: IContent } => {
+const transformEvent = (
+    event: MatrixEvent,
+    cli: MatrixClient,
+    includeAttribution = false,
+): { type: string; content: IContent } => {
     const {
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
         "m.relates_to": _, // strip relations - in future we will attach a relation pointing at the original event
@@ -233,48 +234,83 @@ const transformEvent = (event: MatrixEvent, cli: MatrixClient): { type: string; 
     // Mentions can leak information about the context of the original message, so:
     // 1. Parse the event's message body back into an EditorModel, then
     // 2. Pass through attachMentions() to recalculate mentions.
-    const room = cli.getRoom(event.getRoomId())!;
-    const partCreator = new CommandPartCreator(room, cli);
-    const parts = parseEvent(event, partCreator, {
-        shouldEscape: SettingsStore.getValue("MessageComposerInput.useMarkdown"),
-    });
-    const model = new EditorModel(parts, partCreator); // Temporary EditorModel to pass through
-    const userId = cli.getSafeUserId();
-    attachMentions(userId, content, model, undefined);
+    const roomId = event.getRoomId();
+    if (roomId) {
+        const room = cli.getRoom(roomId);
+        if (room) {
+            const partCreator = new CommandPartCreator(room, cli);
+            const parts = parseEvent(event, partCreator, {
+                shouldEscape: SettingsStore.getValue("MessageComposerInput.useMarkdown"),
+            });
+            const model = new EditorModel(parts, partCreator); // Temporary EditorModel to pass through
+            const userId = cli.getSafeUserId();
+            attachMentions(userId, content, model, undefined);
+        }
+    }
+
+    if (includeAttribution) {
+        const senderName = event.sender?.name || event.getSender();
+        const senderId = event.getSender();
+        const mentionHtml = `<a href="https://matrix.to/#/${senderId}">${senderName}</a>`;
+        const oldBody = content.body;
+
+        if (content.formatted_body) {
+            content.formatted_body = `${mentionHtml}: ${content.formatted_body}`;
+        } else {
+            content.format = "org.matrix.custom.html";
+            content.formatted_body = `${mentionHtml}: ${oldBody}`;
+        }
+        // Always update plain body for clients without HTML support
+        content.body = `${senderName}: ${oldBody}`;
+    }
 
     return { type, content };
 };
 
-const ForwardDialog: React.FC<IProps> = ({ matrixClient: cli, event, permalinkCreator, onFinished }) => {
-    const userId = cli.getSafeUserId();
-    const [profileInfo, setProfileInfo] = useState<any>({});
-    useEffect(() => {
-        cli.getProfileInfo(userId).then((info) => setProfileInfo(info));
-    }, [cli, userId]);
+const ForwardDialog: React.FC<IProps> = ({ matrixClient: cli, events, permalinkCreator, onFinished }) => {
+    const eventsToForward = useMemo(() => {
+        const includeAttribution = events.length > 1;
+        return events.map((e) => transformEvent(e, cli, includeAttribution));
+    }, [events, cli]);
 
-    const { type, content } = transformEvent(event, cli);
+    const mockEvents = useMemo(() => {
+        const includeAttribution = events.length > 1;
+        return events.map((e, i) => {
+            const { content } = transformEvent(e, cli, includeAttribution);
+            const mock = new MatrixEvent({
+                type: "m.room.message",
+                sender: e.getSender(),
+                content,
+                unsigned: {
+                    age: 97,
+                },
+                event_id: `$999999999999999999999999999999999999999999${i}`,
+                room_id: e.getRoomId(),
+                origin_server_ts: e.getTs(),
+            });
 
-    // For the message preview we fake the sender as ourselves
-    const mockEvent = new MatrixEvent({
-        type: "m.room.message",
-        sender: userId,
-        content,
-        unsigned: {
-            age: 97,
-        },
-        event_id: "$9999999999999999999999999999999999999999999",
-        room_id: event.getRoomId(),
-        origin_server_ts: event.getTs(),
-    });
-    mockEvent.sender = {
-        name: profileInfo.displayname || userId,
-        rawDisplayName: profileInfo.displayname,
-        userId,
-        getAvatarUrl: (..._) => {
-            return avatarUrlForUser({ avatarUrl: profileInfo.avatar_url }, AVATAR_SIZE, AVATAR_SIZE, "crop");
-        },
-        getMxcAvatarUrl: () => profileInfo.avatar_url,
-    } as RoomMember;
+            // We use the original sender of the event for the preview.
+            // MatrixEvent will automatically use e.sender if e is from a room.
+            if (e.sender) {
+                mock.sender = e.sender;
+            } else {
+                const room = cli.getRoom(e.getRoomId());
+                const member = room?.getMember(e.getSender()!);
+                if (member) {
+                    mock.sender = member;
+                } else {
+                    mock.sender = {
+                        name: e.getSender(),
+                        rawDisplayName: e.getSender(),
+                        userId: e.getSender(),
+                        getAvatarUrl: () => null,
+                        getMxcAvatarUrl: () => null,
+                    } as any;
+                }
+            }
+            return mock;
+        });
+    }, [events, cli]);
 
     const [query, setQuery] = useState("");
     const lcQuery = query.toLowerCase();
@@ -326,28 +362,39 @@ const ForwardDialog: React.FC<IProps> = ({ matrixClient: cli, event, permalinkCr
         }
     };
 
+    const title =
+        mockEvents.length > 1
+            ? _t("forward|title_multiple", { count: mockEvents.length })
+            : _t("common|forward_message");
+
     return (
         <BaseDialog
-            title={_t("common|forward_message")}
+            title={title}
             className="mx_ForwardDialog"
             contentId="mx_ForwardList"
             onFinished={onFinished}
             fixedWidth={false}
         >
             <h3>{_t("forward|message_preview_heading")}</h3>
-            <div
-                className={classnames("mx_ForwardDialog_preview", {
-                    mx_IRCLayout: previewLayout == Layout.IRC,
-                })}
-            >
-                <EventTile
-                    mxEvent={mockEvent}
-                    layout={previewLayout}
-                    permalinkCreator={permalinkCreator}
-                    as="div"
-                    inhibitInteraction
-                />
-            </div>
+            <AutoHideScrollbar className="mx_ForwardDialog_preview_container">
+                <div
+                    className={classnames("mx_ForwardDialog_preview", {
+                        mx_IRCLayout: previewLayout == Layout.IRC,
+                    })}
+                >
+                    {mockEvents.map((mockEvent) => (
+                        <EventTile
+                            key={mockEvent.getId()}
+                            mxEvent={mockEvent}
+                            layout={previewLayout}
+                            permalinkCreator={permalinkCreator!}
+                            as="div"
+                            inhibitInteraction
+                            continuation={false}
+                        />
+                    ))}
+                </div>
+            </AutoHideScrollbar>
             <hr />
             <RovingTabIndexProvider
                 handleUpDown
@@ -399,8 +446,7 @@ const ForwardDialog: React.FC<IProps> = ({ matrixClient: cli, event, permalinkCr
                                                     <Entry
                                                         key={room.roomId}
                                                         room={room}
-                                                        type={type}
-                                                        content={content}
+                                                        eventsToForward={eventsToForward}
                                                         matrixClient={cli}
                                                         onFinished={onFinished}
                                                     />

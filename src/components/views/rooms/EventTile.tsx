@@ -86,6 +86,8 @@ import { EventPreview } from "./EventPreview";
 import { ElementCallEventType } from "../../../call-types";
 import { E2eMessageSharedIcon } from "./EventTile/E2eMessageSharedIcon.tsx";
 import { E2ePadlock, E2ePadlockIcon } from "./EventTile/E2ePadlock.tsx";
+import { MessageSelectionStore } from "../../../stores/MessageSelectionStore";
+import StyledCheckbox from "../elements/StyledCheckbox";
 
 export type GetRelationsForEvent = (
     eventId: string,
@@ -231,6 +233,10 @@ export interface EventTileProps {
     // The following properties are used by EventTilePreview to disable tab indexes within the event tile
     hideTimestamp?: boolean;
     inhibitInteraction?: boolean;
+
+    // Selection mode props
+    isSelected?: boolean;
+    isSelecting?: boolean;
 
     ref?: Ref<UnwrappedEventTile>;
 }
@@ -710,10 +716,44 @@ export class UnwrappedEventTile extends React.Component<EventTileProps, IState> 
         });
     };
 
+    private onSelectionToggle = (e?: React.MouseEvent | React.KeyboardEvent): void => {
+        const eventId = this.props.mxEvent.getId()!;
+        const roomId = this.props.mxEvent.getRoomId()!;
+
+        if (e?.shiftKey) {
+            e.preventDefault();
+            const anchorId = MessageSelectionStore.instance.getAnchorId(roomId);
+            if (anchorId) {
+                const room = MatrixClientPeg.safeGet().getRoom(roomId);
+                if (room) {
+                    const timelines = room.getUnfilteredTimelineSet().getTimelines();
+                    const events = timelines.reduce((acc, t) => [...acc, ...t.getEvents()], [] as MatrixEvent[]);
+                    const ids = events.map((ev) => ev.getId()!);
+                    const start = ids.indexOf(anchorId);
+                    const end = ids.indexOf(eventId);
+                    if (start !== -1 && end !== -1) {
+                        const range = ids.slice(Math.min(start, end), Math.max(start, end) + 1);
+                        MessageSelectionStore.instance.enterSelectionMode(roomId);
+                        MessageSelectionStore.instance.selectRange(roomId, range);
+                        return;
+                    }
+                }
+            }
+        }
+
+        if (this.props.isSelecting) {
+            MessageSelectionStore.instance.toggleSelection(roomId, eventId);
+        }
+    };
+
     private onPermalinkClicked = (e: MouseEvent): void => {
         // This allows the permalink to be opened in a new tab/window or copied as
         // matrix.to, but also for it to enable routing within Element when clicked.
         e.preventDefault();
+        const eventId = this.props.mxEvent.getId()!;
+        const roomId = this.props.mxEvent.getRoomId()!;
+        MessageSelectionStore.instance.setAnchorId(roomId, eventId);
+
         dis.dispatch<ViewRoomPayload>({
             action: Action.ViewRoom,
             event_id: this.props.mxEvent.getId(),
@@ -1009,7 +1049,8 @@ export class UnwrappedEventTile extends React.Component<EventTileProps, IState> 
             // Note: we keep the `sending` state class for tests, not for our styles
             mx_EventTile_sending: !isEditing && isSending,
             mx_EventTile_highlight: this.shouldHighlight(),
-            mx_EventTile_selected: this.props.isSelectedEvent || this.state.contextMenu,
+            mx_EventTile_selected: this.props.isSelectedEvent || this.state.contextMenu || this.props.isSelected,
+            mx_EventTile_selecting: this.props.isSelecting,
             mx_EventTile_continuation:
                 isContinuation || eventType === EventType.CallInvite || ElementCallEventType.matches(eventType),
             mx_EventTile_last: this.props.last,
@@ -1161,8 +1202,15 @@ export class UnwrappedEventTile extends React.Component<EventTileProps, IState> 
             ts,
             receivedTs: getLateEventInfo(this.props.mxEvent)?.received_ts,
         };
-        const messageTimestamp = <MessageTimestamp {...messageTimestampProps} />;
-        const linkedMessageTimestamp = (
+
+        const linkedMessageTimestamp = this.props.isSelecting ? (
+            <span
+                className="mx_MessageTimestamp mx_EventTile_selectionCheckbox"
+                onContextMenu={this.onTimestampContextMenu}
+            >
+                <StyledCheckbox checked={this.props.isSelected} readOnly tabIndex={-1} />
+            </span>
+        ) : (
             <MessageTimestamp
                 {...messageTimestampProps}
                 href={permalink}
@@ -1174,9 +1222,8 @@ export class UnwrappedEventTile extends React.Component<EventTileProps, IState> 
         const useIRCLayout = this.props.layout === Layout.IRC;
         // Used to simplify the UI layout where necessary by not conditionally rendering an element at the start
         const dummyTimestamp = useIRCLayout ? <span className="mx_MessageTimestamp" /> : null;
-        const timestamp = showTimestamp && ts ? messageTimestamp : dummyTimestamp;
-        const linkedTimestamp =
-            timestamp !== dummyTimestamp && !this.props.hideTimestamp ? linkedMessageTimestamp : dummyTimestamp;
+        const timestamp = (showTimestamp || this.props.isSelecting) && ts ? linkedMessageTimestamp : dummyTimestamp;
+        const linkedTimestamp = timestamp;
 
         let pinnedMessageBadge: JSX.Element | undefined;
         if (PinningUtils.isPinned(MatrixClientPeg.safeGet(), this.props.mxEvent)) {
@@ -1258,6 +1305,10 @@ export class UnwrappedEventTile extends React.Component<EventTileProps, IState> 
                         "onMouseLeave": () => this.setState({ hover: false }),
                         "onFocus": () => this.setState({ focusWithin: true }),
                         "onBlur": () => this.setState({ focusWithin: false }),
+                        "onMouseDown": (e: MouseEvent) => {
+                            if (e.shiftKey) e.preventDefault();
+                        },
+                        "onClick": !this.props.forExport ? this.onSelectionToggle : undefined,
                     },
                     [
                         <div className="mx_EventTile_senderDetails" key="mx_EventTile_senderDetails">
@@ -1320,6 +1371,9 @@ export class UnwrappedEventTile extends React.Component<EventTileProps, IState> 
                         "onMouseLeave": () => this.setState({ hover: false }),
                         "onFocus": () => this.setState({ focusWithin: true }),
                         "onBlur": () => this.setState({ focusWithin: false }),
+                        "onMouseDown": (e: MouseEvent) => {
+                            if (e.shiftKey) e.preventDefault();
+                        },
                         "onClick": (ev: MouseEvent) => {
                             const target = ev.currentTarget as HTMLElement;
                             let index = -1;
@@ -1399,13 +1453,16 @@ export class UnwrappedEventTile extends React.Component<EventTileProps, IState> 
                         "aria-live": ariaLive,
                         "aria-atomic": true,
                         "data-scroll-tokens": scrollToken,
+                        "onMouseDown": (e: MouseEvent) => {
+                            if (e.shiftKey) e.preventDefault();
+                        },
                     },
                     [
                         <a
                             className="mx_EventTile_senderDetailsLink"
                             key="mx_EventTile_senderDetailsLink"
-                            href={permalink}
-                            onClick={this.onPermalinkClicked}
+                            href={this.props.isSelecting ? undefined : permalink}
+                            onClick={this.props.isSelecting ? undefined : this.onPermalinkClicked}
                         >
                             <div className="mx_EventTile_senderDetails" onContextMenu={this.onTimestampContextMenu}>
                                 {avatar}
@@ -1453,6 +1510,10 @@ export class UnwrappedEventTile extends React.Component<EventTileProps, IState> 
                         "onMouseLeave": () => this.setState({ hover: false }),
                         "onFocus": () => this.setState({ focusWithin: true }),
                         "onBlur": () => this.setState({ focusWithin: false }),
+                        "onMouseDown": (e: MouseEvent) => {
+                            if (e.shiftKey) e.preventDefault();
+                        },
+                        "onClick": !this.props.forExport ? this.onSelectionToggle : undefined,
                     },
                     <>
                         {ircTimestamp}
