@@ -419,9 +419,11 @@ async function getLanguage(langPath: string): Promise<ICounterpartTranslation> {
 }
 
 export async function getLangsJson(): Promise<Languages> {
-    const url = i18nFolder + "languages.json";
+    // Add a cache-busting parameter to ensure we always get the latest languages.json
+    // after deployments, bypassing any stale browser or service-worker caches.
+    const url = i18nFolder + "languages.json?" + Date.now();
 
-    const res = await fetch(url, { method: "GET" });
+    const res = await fetch(url, { method: "GET", cache: "no-store" });
 
     if (!res.ok) {
         throw new Error(`Failed to load ${url}, got ${res.status}`);
