@@ -25,7 +25,22 @@ global.addEventListener("install", (event) => {
 global.addEventListener("activate", (event) => {
     // We force all clients to be under our control, immediately. This could be old tabs.
     // @ts-expect-error - service worker types are not available. See 'fetch' event handler.
-    event.waitUntil(clients.claim());
+    event.waitUntil(
+        Promise.all([
+            clients.claim(),
+            // Clean up any old Workbox or app caches from previous deployments to prevent
+            // stale cached assets from being served after upgrades.
+            (async () => {
+                const cacheNames = await caches.keys();
+                await Promise.all(
+                    cacheNames.map((name) => {
+                        console.log(`[ServiceWorker] Deleting old cache: ${name}`);
+                        return caches.delete(name);
+                    }),
+                );
+            })(),
+        ]),
+    );
 });
 
 // @ts-expect-error - the service worker types conflict with the DOM types available through TypeScript. Many hours
