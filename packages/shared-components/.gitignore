@@ -5,3 +5,10 @@
 /__vis__/**/__diffs__
 /__vis__/**/__results__
 /__vis__/local
+
+# Ignore coverage report
+/coverage/
+# Ignore generated docs
+typedoc
+# Build storybook
+storybook-static

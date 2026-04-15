@@ -21,4 +21,4 @@ fi
 
 DIST_VERSION=$("$DIR"/normalize-version.sh "$DIST_VERSION")
 
-NODE_OPTIONS="--max-old-space-size=4096" VERSION=$DIST_VERSION yarn build
+NODE_OPTIONS="--max-old-space-size=4096" VERSION=$DIST_VERSION pnpm --dir apps/web build

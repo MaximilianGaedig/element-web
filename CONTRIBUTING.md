@@ -46,6 +46,9 @@ As for your PR description, it should include these things:
 - Add comments to the diff for the reviewer that might help them to understand
   why the change is necessary or how they might better understand and review it.
 
+Please **_do not use force push_** in your PRs. Doing so means we can't see what
+has changed. We use squash merge to get a "clean" git history.
+
 ### Changelogs
 
 There's no need to manually add Changelog entries: we use information in the
@@ -67,25 +70,6 @@ For some PRs, it's not useful to have an entry in the user-facing changelog (thi
 the default for PRs labelled with `T-Task`):
 
 _Remove outdated comment from `Ungulates.ts`_
-
-```
-Notes: none
-```
-
-Sometimes, you're fixing a bug in a downstream project, in which case you want
-an entry in that project's changelog. You can do that too:
-
-_Fix another herding bug_
-
-```
-Notes: Fix a bug where the `herd()` function would only work on Tuesdays
-element-web notes: Fix a bug where the 'Herd' button only worked on Tuesdays
-```
-
-This example is for Element Web. You can specify:
-
-- element-web
-- element-desktop
 
 If your PR introduces a breaking change, use the `Notes` section in the same
 way, additionally adding the `X-Breaking-Change` label (see below). There's no need

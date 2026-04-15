@@ -5,22 +5,19 @@ SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Element-Commercial
 Please see LICENSE files in the repository root for full details.
 */
 
-/// <reference types="@vitest/browser-playwright" />
-
-import { defineConfig } from "vitest/config";
+import { defineConfig, ViteUserConfig } from "vitest/config";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { storybookTest } from "@storybook/addon-vitest/vitest-plugin";
 import { storybookVis } from "storybook-addon-vis/vitest-plugin";
-import { playwright } from "@vitest/browser-playwright";
+import { playwright, PlaywrightProviderOptions } from "@vitest/browser-playwright";
 import { nodePolyfills } from "vite-plugin-node-polyfills";
-import { InlineConfig } from "vite";
 import { Reporter } from "vitest/reporters";
 import { env } from "process";
 
 const dirname = typeof __dirname !== "undefined" ? __dirname : path.dirname(fileURLToPath(import.meta.url));
 
-const reporters: NonNullable<InlineConfig["test"]>["reporters"] = [["default"]];
+const reporters: NonNullable<ViteUserConfig["test"]>["reporters"] = [["default"]];
 const slowTestReporter: Reporter = {
     onTestRunEnd(testModules, unhandledErrors, reason) {
         const tests = testModules
@@ -60,6 +57,19 @@ if (env["GITHUB_ACTIONS"] !== undefined) {
     }
 }
 
+const commonContextOptions: PlaywrightProviderOptions["contextOptions"] = {
+    reducedMotion: "reduce",
+    // Force consistent font rendering
+    colorScheme: "light",
+    // Disable font smoothing for consistent rendering
+    deviceScaleFactor: 1,
+};
+
+const commonLaunchOptions = {
+    // Options to try to make font rendering more consistent
+    args: ["--font-render-hinting=none", "--disable-font-subpixel-positioning", "--disable-lcd-text"],
+};
+
 export default defineConfig({
     test: {
         coverage: {
@@ -80,15 +90,32 @@ export default defineConfig({
                     storybookTest({
                         configDir: path.join(dirname, ".storybook"),
                         storybookScript: "storybook --ci",
+                        tags: {
+                            exclude: ["skip-test"],
+                        },
                     }),
-                    storybookVis({}),
+                    storybookVis({
+                        // 3px of difference allowed before marking as failed
+                        failureThreshold: 3,
+                        // When running in CI=1 mode, set the platform to `linux` as that is the platform where the browser-in-docker is running
+                        snapshotRootDir: ({ ci, platform }) => `__vis__/${ci ? "linux" : platform}`,
+                    }),
                 ],
                 test: {
                     name: "storybook",
                     browser: {
                         enabled: true,
                         headless: true,
-                        provider: playwright({ contextOptions: { reducedMotion: "reduce" } }),
+                        provider: playwright({
+                            contextOptions: commonContextOptions,
+                            launchOptions: commonLaunchOptions,
+                            connectOptions: process.env.PW_TEST_CONNECT_WS_ENDPOINT
+                                ? {
+                                      wsEndpoint: process.env.PW_TEST_CONNECT_WS_ENDPOINT,
+                                      exposeNetwork: "<loopback>",
+                                  }
+                                : undefined,
+                        }),
                         instances: [{ browser: "chromium" }],
                     },
                     setupFiles: [".storybook/vitest.setup.ts"],
@@ -96,21 +123,27 @@ export default defineConfig({
             },
             {
                 extends: true,
-                plugins: [nodePolyfills({ include: ["util"], globals: { global: false } })],
+                // as any is workaround for https://github.com/davidmyersdev/vite-plugin-node-polyfills/issues/150
+                plugins: [nodePolyfills({ include: ["util"], globals: { global: false } }) as any],
                 test: {
                     name: "unit",
                     browser: {
                         enabled: true,
                         headless: true,
-                        provider: playwright({}),
+                        provider: playwright({
+                            // These tests don't actually take screenshots (at least at time of writing)
+                            // but let's pass these options everywhere for consistency
+                            contextOptions: commonContextOptions,
+                            launchOptions: commonLaunchOptions,
+                        }),
                         instances: [{ browser: "chromium" }],
                     },
                     setupFiles: ["src/test/setupTests.ts"],
                 },
                 css: {
                     modules: {
-                        // Stabilise snapshots by stripping the hash component of the CSS module class name
-                        generateScopedName: (name) => name,
+                        // Stabilise snapshots while keeping names distinct across CSS modules.
+                        generateScopedName: "[name]_[local]",
                     },
                 },
             },

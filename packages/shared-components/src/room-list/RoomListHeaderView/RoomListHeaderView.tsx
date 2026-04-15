@@ -9,10 +9,9 @@ import React, { type JSX } from "react";
 import { IconButton, H1 } from "@vector-im/compound-web";
 import ComposeIcon from "@vector-im/compound-design-tokens/assets/web/icons/compose";
 
-import { type ViewModel } from "../../viewmodel/ViewModel";
-import { useViewModel } from "../../useViewModel";
-import { Flex } from "../../utils/Flex";
-import { useI18n } from "../../utils/i18nContext";
+import { type ViewModel, useViewModel } from "../../core/viewmodel";
+import { Flex } from "../../core/utils/Flex";
+import { useI18n } from "../../core/i18n/i18nContext";
 import { ComposeMenuView, OptionMenuView, SpaceMenuView } from "./menu";
 import styles from "./RoomListHeaderView.module.css";
 
@@ -104,7 +103,7 @@ export interface RoomListHeaderViewActions {
 /**
  * The view model for the room list header component.
  */
-export type RoomListHeaderViewModel = ViewModel<RoomListHeaderViewSnapshot> & RoomListHeaderViewActions;
+export type RoomListHeaderViewModel = ViewModel<RoomListHeaderViewSnapshot, RoomListHeaderViewActions>;
 
 interface RoomListHeaderViewProps {
     /**
@@ -131,30 +130,33 @@ export function RoomListHeaderView({ vm }: Readonly<RoomListHeaderViewProps>): J
             as="header"
             className={styles.header}
             aria-label={_t("room|context_menu|title")}
-            justify="space-between"
-            align="center"
+            align="end"
             data-testid="room-list-header"
         >
-            <Flex className={styles.title} align="center" gap="var(--cpd-space-1x)">
-                <H1 size="sm" title={title}>
-                    {title}
-                </H1>
-                {displaySpaceMenu && <SpaceMenuView vm={vm} />}
-            </Flex>
-            <Flex align="center" gap="var(--cpd-space-2x)">
-                <OptionMenuView vm={vm} />
+            <Flex className={styles.container} justify="space-between" align="center" gap="var(--cpd-space-3x)">
+                <Flex className={styles.title} align="center" gap="var(--cpd-space-1x)">
+                    <H1 size="sm" title={title}>
+                        {title}
+                    </H1>
+                    {displaySpaceMenu && <SpaceMenuView vm={vm} />}
+                </Flex>
+                <Flex align="center" gap="var(--cpd-space-2x)">
+                    <OptionMenuView vm={vm} />
 
-                {/* If we don't display the compose menu, it means that the user can only send DM */}
-                {displayComposeMenu ? (
-                    <ComposeMenuView vm={vm} />
-                ) : (
-                    <IconButton
-                        onClick={(e) => vm.createChatRoom(e.nativeEvent)}
-                        tooltip={_t("action|new_conversation")}
-                    >
-                        <ComposeIcon color="var(--cpd-color-icon-secondary)" aria-hidden />
-                    </IconButton>
-                )}
+                    {/* If we don't display the compose menu, it means that the user can only send DM */}
+                    {displayComposeMenu ? (
+                        <ComposeMenuView vm={vm} />
+                    ) : (
+                        <IconButton
+                            size="28px"
+                            style={{ padding: "4px" }}
+                            onClick={(e) => vm.createChatRoom(e.nativeEvent)}
+                            tooltip={_t("action|new_conversation")}
+                        >
+                            <ComposeIcon color="var(--cpd-color-icon-secondary)" aria-hidden />
+                        </IconButton>
+                    )}
+                </Flex>
             </Flex>
         </Flex>
     );
