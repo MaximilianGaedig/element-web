@@ -19,6 +19,7 @@ import { getKeyBindingsManager } from "../../../../KeyBindingsManager";
 import { KeyBindingAction } from "../../../../accessibility/KeyboardShortcuts";
 import { Landmark, LandmarkNavigation } from "../../../../accessibility/LandmarkNavigation";
 import { RoomListViewModel } from "../../../../viewmodels/room-list/RoomListViewModel";
+import { RoomPath } from "../RoomPath";
 
 /**
  * RoomListView component using shared components with proper MVVM pattern.
@@ -34,6 +35,11 @@ export function RoomListView(): JSX.Element {
         return <RoomAvatarView room={room as Room} />;
     }, []);
 
+    // Render room path breadcrumbs for each room
+    const renderRoomPath = useCallback((room: SharedRoom): ReactNode => {
+        return <RoomPath room={room as Room} />;
+    }, []);
+
     // Handle keyboard navigation for landmarks
     const onKeyDown = useCallback((ev: React.KeyboardEvent) => {
         const navAction = getKeyBindingsManager().getNavigationAction(ev);
@@ -47,5 +53,7 @@ export function RoomListView(): JSX.Element {
         }
     }, []);
 
-    return <SharedRoomListView vm={vm} renderAvatar={renderAvatar} onKeyDown={onKeyDown} />;
+    return (
+        <SharedRoomListView vm={vm} renderAvatar={renderAvatar} renderRoomPath={renderRoomPath} onKeyDown={onKeyDown} />
+    );
 }

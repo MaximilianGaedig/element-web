@@ -55,6 +55,11 @@ export interface VirtualizedRoomListViewProps {
     renderAvatar: (room: Room) => ReactNode;
 
     /**
+     * Optional render function for room path / breadcrumbs
+     */
+    renderRoomPath?: (room: Room) => ReactNode;
+
+    /**
      * Optional callback for keyboard key down events
      */
     onKeyDown?: (e: React.KeyboardEvent<HTMLDivElement>) => void;
@@ -105,7 +110,12 @@ const EXTENDED_VIEWPORT_HEIGHT = 25 * ROOM_LIST_ITEM_HEIGHT;
  * <VirtualizedRoomListView vm={roomListViewModel} renderAvatar={(room) => <Avatar room={room} />} />
  * ```
  */
-export function VirtualizedRoomListView({ vm, renderAvatar, onKeyDown }: VirtualizedRoomListViewProps): JSX.Element {
+export function VirtualizedRoomListView({
+    vm,
+    renderAvatar,
+    renderRoomPath,
+    onKeyDown,
+}: VirtualizedRoomListViewProps): JSX.Element {
     const snapshot = useViewModel(vm);
     const { roomListState, sections, isFlatList } = snapshot;
     const activeRoomIndex = roomListState.activeRoomIndex;
@@ -177,6 +187,7 @@ export function VirtualizedRoomListView({ vm, renderAvatar, onKeyDown }: Virtual
                     key={roomId}
                     vm={roomItemVM}
                     renderAvatar={renderAvatar}
+                    renderRoomPath={renderRoomPath}
                     isSelected={isSelected}
                     isFocused={isFocused}
                     onFocus={onFocus}
@@ -190,7 +201,7 @@ export function VirtualizedRoomListView({ vm, renderAvatar, onKeyDown }: Virtual
                 />
             );
         },
-        [renderAvatar],
+        [renderAvatar, renderRoomPath],
     );
 
     /**

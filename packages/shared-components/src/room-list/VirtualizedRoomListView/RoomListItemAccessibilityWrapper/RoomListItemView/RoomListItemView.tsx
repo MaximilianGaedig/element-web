@@ -129,6 +129,8 @@ export interface RoomListItemViewProps extends Omit<React.HTMLAttributes<HTMLBut
     isLastItem: boolean;
     /** Function to render the room avatar */
     renderAvatar: (room: Room) => ReactNode;
+    /** Optional function to render the room path (e.g. space breadcrumbs) */
+    renderRoomPath?: (room: Room) => ReactNode;
 }
 
 /**
@@ -143,6 +145,7 @@ export const RoomListItemView = memo(function RoomListItemView({
     isFirstItem,
     isLastItem,
     renderAvatar,
+    renderRoomPath,
     ...props
 }: RoomListItemViewProps): JSX.Element {
     const ref = useRef<HTMLButtonElement>(null);
@@ -186,6 +189,7 @@ export const RoomListItemView = memo(function RoomListItemView({
                         <div className={styles.ellipsis}>
                             <div className={styles.roomName} title={item.name} data-testid="room-name">
                                 {item.name}
+                                {renderRoomPath?.(item.room)}
                             </div>
                             {item.messagePreview && (
                                 <Text as="div" size="sm" className={styles.ellipsis} title={item.messagePreview}>
