@@ -20,12 +20,14 @@ import { useEventEmitter } from "./useEventEmitter";
  * @param room - The room to get the path for.
  * @returns The current space path for the room.
  */
-export function useRoomPath(room: Room): SpacePathEntry[] {
-    const [path, setPath] = useState<SpacePathEntry[]>(() => getSpacePath(room, SpaceStore.instance.activeSpace));
+export function useRoomPath(room: Room, noPrune = false): SpacePathEntry[] {
+    const [path, setPath] = useState<SpacePathEntry[]>(() =>
+        getSpacePath(room, noPrune ? undefined : SpaceStore.instance.activeSpace),
+    );
 
     const updatePath = useCallback(() => {
-        setPath(getSpacePath(room, SpaceStore.instance.activeSpace));
-    }, [room]);
+        setPath(getSpacePath(room, noPrune ? undefined : SpaceStore.instance.activeSpace));
+    }, [room, noPrune]);
 
     useEventEmitter(SpaceStore.instance, UPDATE_SELECTED_SPACE, updatePath);
     // Also update if the room itself is moved or parents change.

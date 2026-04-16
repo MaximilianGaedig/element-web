@@ -41,13 +41,41 @@ export class RoomListSectionHeaderViewModel
      */
     private readonly expandedBySpace = new Map<string, boolean>();
 
+    private static getStorageKey(tag: string, spaceId: string): string {
+        return `mx_roomlist_v3_section_expanded_${tag}_${encodeURIComponent(spaceId)}`;
+    }
+
+    private static loadExpandedState(tag: string, spaceId: string): boolean | null {
+        try {
+            const raw = localStorage.getItem(RoomListSectionHeaderViewModel.getStorageKey(tag, spaceId));
+            if (raw === null) return null;
+            return raw === "true";
+        } catch {
+            return null;
+        }
+    }
+
+    private static saveExpandedState(tag: string, spaceId: string, isExpanded: boolean): void {
+        try {
+            localStorage.setItem(RoomListSectionHeaderViewModel.getStorageKey(tag, spaceId), String(isExpanded));
+        } catch {
+            // ignore storage errors
+        }
+    }
+
     public constructor(props: RoomListSectionHeaderViewModelProps) {
-        super(props, { id: props.tag, title: props.title, isExpanded: true, isUnread: false });
+        const saved = RoomListSectionHeaderViewModel.loadExpandedState(props.tag, props.spaceId);
+        const isExpanded = saved ?? true;
+        super(props, { id: props.tag, title: props.title, isExpanded, isUnread: false });
+        if (saved !== null) {
+            this.expandedBySpace.set(props.spaceId, saved);
+        }
     }
 
     public onClick = (): void => {
         const isExpanded = !this.snapshot.current.isExpanded;
         this.expandedBySpace.set(this.props.spaceId, isExpanded);
+        RoomListSectionHeaderViewModel.saveExpandedState(this.props.tag, this.props.spaceId, isExpanded);
         this.snapshot.merge({ isExpanded });
         this.props.onToggleExpanded(isExpanded);
     };
@@ -65,6 +93,7 @@ export class RoomListSectionHeaderViewModel
      */
     public set isExpanded(value: boolean) {
         this.expandedBySpace.set(this.props.spaceId, value);
+        RoomListSectionHeaderViewModel.saveExpandedState(this.props.tag, this.props.spaceId, value);
         this.snapshot.merge({ isExpanded: value });
     }
 
@@ -74,7 +103,8 @@ export class RoomListSectionHeaderViewModel
      */
     public setSpace(spaceId: string): void {
         this.props.spaceId = spaceId;
-        const isExpanded = this.expandedBySpace.get(this.props.spaceId) ?? true;
+        const saved = RoomListSectionHeaderViewModel.loadExpandedState(this.props.tag, spaceId);
+        const isExpanded = saved ?? this.expandedBySpace.get(this.props.spaceId) ?? true;
         this.snapshot.merge({ isExpanded });
     }
 

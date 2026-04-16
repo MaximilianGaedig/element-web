@@ -20,10 +20,12 @@ describe("RoomListSectionHeaderViewModel", () => {
     beforeEach(() => {
         onToggleExpanded = jest.fn();
         matrixClient = createTestClient();
+        localStorage.clear();
     });
 
     afterEach(() => {
         jest.restoreAllMocks();
+        localStorage.clear();
     });
 
     it("should initialize snapshot from props", () => {
@@ -85,6 +87,27 @@ describe("RoomListSectionHeaderViewModel", () => {
         // Switch to the other space: should still be collapsed
         vm.setSpace("!space:server");
         expect(vm.isExpanded).toBe(false);
+    });
+
+    it("should persist expanded state across instances", () => {
+        // First instance: collapse
+        const vm1 = new RoomListSectionHeaderViewModel({
+            tag: "m.favourite",
+            title: "Favourites",
+            spaceId: "!space:server",
+            onToggleExpanded,
+        });
+        vm1.onClick();
+        expect(vm1.isExpanded).toBe(false);
+
+        // Second instance for same tag/space: should read persisted state
+        const vm2 = new RoomListSectionHeaderViewModel({
+            tag: "m.favourite",
+            title: "Favourites",
+            spaceId: "!space:server",
+            onToggleExpanded,
+        });
+        expect(vm2.isExpanded).toBe(false);
     });
 
     describe("unread status", () => {

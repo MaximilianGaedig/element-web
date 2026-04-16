@@ -21,6 +21,8 @@ interface Props {
     mode?: "inline" | "under";
     /** Whether to show a separator before the first entry in inline mode. */
     showSeparatorBefore?: boolean;
+    /** When true, show the full space path without pruning at the active space. */
+    fullPath?: boolean;
 }
 
 /**
@@ -28,11 +30,11 @@ interface Props {
  *
  * Used in RoomTile to show breadcrumbs like Space > SubSpace > #room.
  */
-export const RoomPath: React.FC<Props> = memo(({ room, className, mode, showSeparatorBefore = false }) => {
+export const RoomPath: React.FC<Props> = memo(({ room, className, mode, showSeparatorBefore = false, fullPath }) => {
     const showPathSetting = useSettingValue<"RoomList.showSpacePath">("RoomList.showSpacePath");
     const showPath = (mode ?? showPathSetting) as string;
     const showIcons = useSettingValue<"RoomList.showSpacePathIcons">("RoomList.showSpacePathIcons");
-    const path = useRoomPath(room);
+    const path = useRoomPath(room, fullPath);
 
     if (showPath === "none" || path.length === 0) {
         return null;

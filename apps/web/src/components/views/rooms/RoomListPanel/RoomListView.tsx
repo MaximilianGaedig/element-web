@@ -35,9 +35,9 @@ export function RoomListView(): JSX.Element {
         return <RoomAvatarView room={room as Room} />;
     }, []);
 
-    // Render room path breadcrumbs for each room
+    // Render room path breadcrumbs for each room (show full path, no pruning)
     const renderRoomPath = useCallback((room: SharedRoom): ReactNode => {
-        return <RoomPath room={room as Room} />;
+        return <RoomPath room={room as Room} fullPath />;
     }, []);
 
     // Handle keyboard navigation for landmarks

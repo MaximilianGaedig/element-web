@@ -36,6 +36,7 @@ describe("RoomListViewModel", () => {
     let viewModel: RoomListViewModel;
 
     beforeEach(() => {
+        localStorage.clear();
         matrixClient = createTestClient();
         room1 = mkStubRoom("!room1:server", "Room 1", matrixClient);
         room2 = mkStubRoom("!room2:server", "Room 2", matrixClient);
@@ -62,6 +63,7 @@ describe("RoomListViewModel", () => {
     afterEach(() => {
         viewModel?.dispose();
         jest.restoreAllMocks();
+        localStorage.clear();
     });
 
     describe("Initialization", () => {
