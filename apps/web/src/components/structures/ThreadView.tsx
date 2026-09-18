@@ -387,7 +387,7 @@ export default class ThreadView extends React.Component<IProps, IState> {
                             manageReadMarkers={true}
                             sendReadReceiptOnLoad={true}
                             timelineSet={this.state.thread.timelineSet}
-                            showUrlPreview={this.context.showUrlPreview}
+                            showUrlPreview={this.context.showTimelineUrlPreview}
                             // ThreadView doesn't support IRC layout at this time
                             layout={layout}
                             hideThreadedMessages={false}

@@ -67,6 +67,7 @@ const RoomContext = createContext<RoomContextType>({
     showDisplaynameChanges: true,
     matrixClientIsReady: false,
     showUrlPreview: false,
+    showTimelineUrlPreview: false,
     timelineRenderingType: TimelineRenderingType.Room,
     mainSplitContentType: MainSplitContentType.Timeline,
     threadId: undefined,

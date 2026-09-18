@@ -672,6 +672,57 @@ describe("<TextualBody />", () => {
         });
     });
 
+    describe("bridge-bundled previews (com.beeper.linkpreviews)", () => {
+        const stickersUrl = "https://t.me/addstickers/SomeSet";
+        const bundleEntry = {
+            "matched_url": stickersUrl,
+            "og:title": "Telegram Stickers",
+            "og:description": "Some sticker set",
+            "og:url": stickersUrl,
+        };
+        const mkBotMessage = (previews: object[]): MatrixEvent =>
+            mkEvent({
+                type: "m.room.message",
+                room: room1Id,
+                user: "@telegram_123:example.com",
+                content: {
+                    "msgtype": "m.text",
+                    "body": `Here is your set: ${stickersUrl}`,
+                    "com.beeper.linkpreviews": previews,
+                },
+                event: true,
+            });
+        const cards = (): HTMLElement[] => screen.queryAllByRole("link", { name: "Telegram Stickers" });
+
+        beforeEach(() => {
+            setMissingEntryGenerator((key) => key.split("|", 2)[1]);
+            DMRoomMap.makeShared(defaultMatrixClient);
+        });
+
+        // Reply quotes, the thread list, the file panel, ... pass showUrlPreview={false} on purpose.
+        // A bundle must not override that, or every quote of the message repeats its card.
+        it("does not render bundled previews where the caller turned previews off", async () => {
+            getComponent({ mxEvent: mkBotMessage([bundleEntry]), showUrlPreview: false }, undefined, undefined, {
+                isRoomEncrypted: true,
+            });
+            await act(async () => {
+                await new Promise((r) => setTimeout(r, 10));
+            });
+            expect(cards()).toHaveLength(0);
+        });
+
+        it("renders each bundled preview once, deduplicated by URL", async () => {
+            getComponent(
+                { mxEvent: mkBotMessage([bundleEntry, { ...bundleEntry }, bundleEntry]), showUrlPreview: true },
+                undefined,
+                undefined,
+                { isRoomEncrypted: true },
+            );
+            await waitFor(() => expect(cards()).toHaveLength(1));
+            expect(screen.queryByRole("button", { name: /other preview/ })).toBeNull();
+        });
+    });
+
     describe("url preview kind", () => {
         beforeEach(() => {
             urlPreviewGroupProps.length = 0;
@@ -715,7 +766,14 @@ describe("<TextualBody />", () => {
         // The user has not asked for the stricter behaviour, so an encrypted message whose bundle
         // is missing a preview may still be filled in by the server.
         it("prefers the bundle in an encrypted room when bundled-only is off", () => {
-            enableSettings("feature_msc4095_url_preview_bundle");
+            // Bundled-only defaults to on once encrypted-room previews are enabled, so turn it off.
+            const original = SettingsStore.getValue;
+            vi.spyOn(SettingsStore, "getValue").mockImplementation((setting, ...rest) => {
+                if (setting === "urlPreviewsEnabled_e2ee_bundled_only") return false;
+                if (setting === "feature_msc4095_url_preview_bundle" || setting === "urlPreviewsEnabled_e2ee")
+                    return true;
+                return original(setting, ...rest);
+            });
             expect(renderAndGetKind({ isRoomEncrypted: true })).toBe("preferbundled");
         });
 
@@ -723,6 +781,13 @@ describe("<TextualBody />", () => {
         // one of its URLs, may be sent to the homeserver.
         it("uses the bundle only in an encrypted room when bundled-only is on", () => {
             enableSettings("feature_msc4095_url_preview_bundle", "urlPreviewsEnabled_e2ee_bundled_only");
+            expect(renderAndGetKind({ isRoomEncrypted: true })).toBe("bundledonly");
+        });
+
+        // Fork: with server-fetched previews off in an encrypted room, the timeline only shows previews
+        // because a bridge bundled them, so nothing may be fetched from the server.
+        it("uses the bundle only in an encrypted room whose server-fetched previews are off", () => {
+            enableSettings("feature_msc4095_url_preview_bundle");
             expect(renderAndGetKind({ isRoomEncrypted: true })).toBe("bundledonly");
         });
 

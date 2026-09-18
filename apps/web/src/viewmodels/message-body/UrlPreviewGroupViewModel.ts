@@ -22,6 +22,20 @@ export const BUNDLED_LINK_PREVIEWS = "com.beeper.linkpreviews";
 
 export const MAX_PREVIEWS_WHEN_LIMITED = 2;
 
+/**
+ * Drops bundle entries without a usable `matched_url` and later entries for a URL that was
+ * already seen, so each URL is previewed at most once.
+ */
+function dedupeBundledPreviews<T extends { matched_url?: unknown }>(bundle: readonly T[]): T[] {
+    const seen = new Set<string>();
+    return bundle.filter((entry) => {
+        const url = entry?.matched_url;
+        if (typeof url !== "string" || seen.has(url)) return false;
+        seen.add(url);
+        return true;
+    });
+}
+
 export enum PreviewVisibility {
     /** Preview is entirely hidden and cannot be changed. */
     Hidden,
@@ -189,7 +203,11 @@ export class UrlPreviewGroupViewModel
 
         const content = this.props.mxEvent.getContent();
         const urlPreviewKind = this.props.urlPreviewKind;
+        // `previews` is already set (to nothing) when previews are hidden: bundled ones must respect that
+        // just like fetched ones, or every place that turns previews off (reply quotes, the thread list,
+        // ...) would still render the bundle.
         if (
+            previews === undefined &&
             content.msgtype === MsgType.Text &&
             (urlPreviewKind === "bundledonly" || urlPreviewKind === "preferbundled")
         ) {
@@ -203,7 +221,7 @@ export class UrlPreviewGroupViewModel
                 const allowServerFallback = urlPreviewKind !== "bundledonly";
                 previews = (
                     await Promise.all(
-                        bundledPreviews
+                        dedupeBundledPreviews(bundledPreviews)
                             .slice(0, this.limitPreviews ? MAX_PREVIEWS_WHEN_LIMITED : undefined)
                             .map((preview) =>
                                 this.fetcher
@@ -239,8 +257,8 @@ export class UrlPreviewGroupViewModel
         const urlPreviewBundleEnabled = SettingsStore.getValue("feature_msc4095_url_preview_bundle");
         const previewBundle = this.props.mxEvent.getContent<RoomMessageEventContent>()["com.beeper.linkpreviews"];
 
-        if (urlPreviewBundleEnabled && previewBundle !== undefined) {
-            this.links = previewBundle.map((entry) => entry.matched_url);
+        if (urlPreviewBundleEnabled && Array.isArray(previewBundle)) {
+            this.links = dedupeBundledPreviews(previewBundle).map((entry) => entry.matched_url);
             return this.computeSnapshot();
         }
 

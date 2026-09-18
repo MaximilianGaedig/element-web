@@ -228,7 +228,7 @@ export default class TimelineCard extends React.Component<IProps, IState> {
                                     sendReadReceiptOnLoad={true}
                                     timelineSet={this.props.timelineSet}
                                     shape={"Card"}
-                                    showUrlPreview={this.context.showUrlPreview}
+                                    showUrlPreview={this.context.showTimelineUrlPreview}
                                     // The right panel timeline (and therefore threads) don't support IRC layout at this time
                                     layout={layout}
                                     hideThreadedMessages={false}

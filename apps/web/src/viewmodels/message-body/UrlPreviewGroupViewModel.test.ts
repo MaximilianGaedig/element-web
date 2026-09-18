@@ -303,6 +303,26 @@ describe("UrlPreviewGroupViewModel", () => {
             expect(client.getUrlPreview).not.toHaveBeenCalled();
         });
 
+        // Reply quotes, the thread list, ... create the view model with visible=false.
+        it("should not render bundled previews while previews are hidden", async () => {
+            const { vm } = getViewModel({
+                visible: false,
+                urlPreviewKind: "bundledonly",
+                content: {
+                    msgtype: MsgType.Text,
+                    body: BUNDLE_PREVIEW_ONE.matched_url,
+                    [BUNDLED_LINK_PREVIEWS]: [BUNDLE_PREVIEW_ONE],
+                },
+            });
+            const msg = document.createElement("div");
+            msg.innerHTML = '<a href="https://example.org/1">Test1</a>';
+            await vm.updateEventElement(msg);
+            expect(vm.getSnapshot().previews).toEqual([]);
+
+            await vm.updateUrlPreviewVisible(true);
+            expect(vm.getSnapshot().previews).toMatchObject([{ link: BUNDLE_PREVIEW_ONE.matched_url }]);
+        });
+
         it("should render an image for a bundled preview", async () => {
             const { vm, client } = getViewModel({
                 urlPreviewKind: "preferbundled",
@@ -509,6 +529,33 @@ describe("UrlPreviewGroupViewModel", () => {
                 expect(snapshot.totalPreviewCount).toBe(2);
                 expect(snapshot.overPreviewLimit).toBe(false);
                 expect(client.getUrlPreview).not.toHaveBeenCalled();
+            });
+
+            it("should preview each bundled URL once and count it once", async () => {
+                enableBundleSetting();
+                const { vm } = getViewModel({
+                    urlPreviewKind: "bundledonly",
+                    content: {
+                        msgtype: MsgType.Text,
+                        body: `${BUNDLE_PREVIEW_ONE.matched_url} ${BUNDLE_PREVIEW_TWO.matched_url}`,
+                        [BUNDLED_LINK_PREVIEWS]: [
+                            BUNDLE_PREVIEW_ONE,
+                            { ...BUNDLE_PREVIEW_ONE },
+                            BUNDLE_PREVIEW_ONE,
+                            { "og:title": "no matched_url" },
+                            BUNDLE_PREVIEW_TWO,
+                        ],
+                    },
+                });
+                await vm.updateEventElement(document.createElement("div"));
+
+                const snapshot = vm.getSnapshot();
+                expect(snapshot.previews.map((p) => p.link)).toEqual([
+                    BUNDLE_PREVIEW_ONE.matched_url,
+                    BUNDLE_PREVIEW_TWO.matched_url,
+                ]);
+                expect(snapshot.totalPreviewCount).toBe(2);
+                expect(snapshot.overPreviewLimit).toBe(false);
             });
 
             it("should recompute even when the rendered links have not changed", async () => {

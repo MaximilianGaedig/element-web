@@ -33,7 +33,6 @@ import Modal from "../../../Modal";
 import PosthogTrackers from "../../../PosthogTrackers";
 import ImageView from "../elements/ImageView";
 import {
-    BUNDLED_LINK_PREVIEWS,
     UrlPreviewGroupViewModel,
     type UrlPreviewKind,
 } from "../../../viewmodels/message-body/UrlPreviewGroupViewModel";
@@ -75,24 +74,20 @@ export function TextualBodyFactory(props: Readonly<IBodyProps>): JSX.Element {
 
     const urlPreviewBundleEnabled = useSettingValue("feature_msc4095_url_preview_bundle");
     const e2eeBundledUrlPreviewsOnly = useSettingValue("urlPreviewsEnabled_e2ee_bundled_only");
-    // Fork: bridges bundle previews into the event (com.beeper.linkpreviews). Showing those leaks nothing
-    // to the homeserver, so in encrypted rooms they follow the unencrypted-room preview setting.
-    const urlPreviewsEnabled = useSettingValue("urlPreviewsEnabled", props.mxEvent.getRoomId() ?? null);
-    const showBundledOnly =
-        !props.showUrlPreview &&
-        !!roomContext.isRoomEncrypted &&
-        urlPreviewBundleEnabled &&
-        urlPreviewsEnabled &&
-        Array.isArray(content[BUNDLED_LINK_PREVIEWS]) &&
-        content[BUNDLED_LINK_PREVIEWS].length > 0;
-    const showUrlPreview = (props.showUrlPreview ?? false) || showBundledOnly;
+    const e2eeUrlPreviewsEnabled = useSettingValue("urlPreviewsEnabled_e2ee");
+    // Whether previews are shown is the caller's decision (reply quotes, the thread list, the file
+    // panel, ... turn them off). Fork: in encrypted rooms whose server-fetched previews are off, the
+    // room timeline still shows bridge-bundled previews (RoomView's `showTimelineUrlPreview`), so
+    // those rooms only ever use the bundle and no URL reaches the homeserver.
+    const showUrlPreview = props.showUrlPreview ?? false;
+    const serverUrlPreviewsAllowed = !roomContext.isRoomEncrypted || e2eeUrlPreviewsEnabled;
 
     let urlPreviewKind: UrlPreviewKind;
 
-    if (showBundledOnly) urlPreviewKind = "bundledonly";
-    else if (urlPreviewBundleEnabled)
-        urlPreviewKind = roomContext.isRoomEncrypted && e2eeBundledUrlPreviewsOnly ? "bundledonly" : "preferbundled";
-    else urlPreviewKind = "fetchonly";
+    if (!urlPreviewBundleEnabled) urlPreviewKind = "fetchonly";
+    else if (!serverUrlPreviewsAllowed || (roomContext.isRoomEncrypted && e2eeBundledUrlPreviewsOnly))
+        urlPreviewKind = "bundledonly";
+    else urlPreviewKind = "preferbundled";
 
     const textualBodyVm = useCreateAutoDisposedViewModel(
         () =>
@@ -327,7 +322,7 @@ export function TextualBodyFactory(props: Readonly<IBodyProps>): JSX.Element {
                 editState={props.editState}
                 className="mx_EventTile_content"
                 mxClient={client}
-                showUrlPreview={props.showUrlPreview ?? false}
+                showUrlPreview={showUrlPreview && serverUrlPreviewsAllowed}
             />
         );
     }

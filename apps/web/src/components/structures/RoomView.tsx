@@ -274,6 +274,14 @@ export interface IRoomState {
     showDisplaynameChanges: boolean;
     matrixClientIsReady: boolean;
     showUrlPreview: boolean;
+    /**
+     * Fork: whether the room's timeline shows URL previews. Like `showUrlPreview`, except that in
+     * encrypted rooms, previews bundled into the event by a bridge (com.beeper.linkpreviews) follow
+     * the unencrypted-room setting: showing them sends nothing to the homeserver, and
+     * TextualBodyFactory only uses the bundle there. `showUrlPreview` stays the source of truth for
+     * anything that would fetch previews (the composers).
+     */
+    showTimelineUrlPreview: boolean;
     e2eStatus?: E2EStatus;
     rejecting?: boolean;
     hasPinnedWidgets?: boolean;
@@ -501,6 +509,7 @@ export class RoomView extends React.Component<IRoomProps, IRoomState> {
             showDisplaynameChanges: true,
             // Default to false to avoid any accidental leakage.
             showUrlPreview: false,
+            showTimelineUrlPreview: false,
             matrixClientIsReady: context.client?.isInitialSyncComplete(),
             mainSplitContentType: MainSplitContentType.Timeline,
             timelineRenderingType: TimelineRenderingType.Room,
@@ -1015,6 +1024,7 @@ export class RoomView extends React.Component<IRoomProps, IRoomState> {
             ),
             SettingsStore.watchSetting("urlPreviewsEnabled", null, this.onUrlPreviewsEnabledChange),
             SettingsStore.watchSetting("urlPreviewsEnabled_e2ee", null, this.onUrlPreviewsEnabledChange),
+            SettingsStore.watchSetting("feature_msc4095_url_preview_bundle", null, this.onUrlPreviewsEnabledChange),
             SettingsStore.watchSetting("feature_dynamic_room_predecessors", null, (...[, , , value]) =>
                 this.setState({ msc3946ProcessDynamicPredecessor: value! }),
             ),
@@ -1550,11 +1560,22 @@ export class RoomView extends React.Component<IRoomProps, IRoomState> {
     private updatePreviewUrlVisibility(): void {
         this.setState(({ isRoomEncrypted }) => ({
             showUrlPreview: this.getPreviewUrlVisibility(isRoomEncrypted),
+            showTimelineUrlPreview: this.getTimelinePreviewUrlVisibility(isRoomEncrypted),
         }));
     }
 
     private getPreviewUrlVisibility(isRoomEncrypted: boolean | null): boolean {
         return SettingsStore.getValue(isRoomEncrypted ? "urlPreviewsEnabled_e2ee" : "urlPreviewsEnabled");
+    }
+
+    /** See {@link IRoomState.showTimelineUrlPreview}. */
+    private getTimelinePreviewUrlVisibility(isRoomEncrypted: boolean | null): boolean {
+        if (this.getPreviewUrlVisibility(isRoomEncrypted)) return true;
+        return (
+            !!isRoomEncrypted &&
+            SettingsStore.getValue("feature_msc4095_url_preview_bundle") &&
+            SettingsStore.getValue("urlPreviewsEnabled", this.state.roomId ?? null)
+        );
     }
 
     private onRoom = (room: Room): void => {
@@ -1642,6 +1663,7 @@ export class RoomView extends React.Component<IRoomProps, IRoomState> {
         this.setState({
             isRoomEncrypted,
             showUrlPreview: this.getPreviewUrlVisibility(isRoomEncrypted),
+            showTimelineUrlPreview: this.getTimelinePreviewUrlVisibility(isRoomEncrypted),
             ...(newE2EStatus && { e2eStatus: newE2EStatus }),
         });
     }
@@ -2575,7 +2597,7 @@ export class RoomView extends React.Component<IRoomProps, IRoomState> {
                         highlightedEventId={highlightedEventId}
                         layout={this.state.layout}
                         permalinkCreator={this.permalinkCreator}
-                        showUrlPreview={this.state.showUrlPreview}
+                        showUrlPreview={this.state.showTimelineUrlPreview}
                         showReactions={true}
                         editState={this.state.editState}
                     />
@@ -2601,7 +2623,7 @@ export class RoomView extends React.Component<IRoomProps, IRoomState> {
                         onScroll={this.onMessageListScroll}
                         onEventScrolledIntoView={this.resetJumpToEvent}
                         onReadMarkerUpdated={this.updateTopUnreadMessagesBar}
-                        showUrlPreview={this.state.showUrlPreview}
+                        showUrlPreview={this.state.showTimelineUrlPreview}
                         className={this.messagePanelClassNames}
                         membersLoaded={this.state.membersLoaded}
                         permalinkCreator={this.permalinkCreator}
