@@ -153,7 +153,7 @@ describe("bridged GIFs and animated stickers", () => {
         expect(play).toHaveBeenCalled();
     });
 
-    it("with autoplay off (or reduced motion) shows the thumbnail and plays on hover", async () => {
+    it("with autoplay off shows the thumbnail and plays on hover; OS reduced motion does not block autoplay", async () => {
         settings.autoplayGifs = false;
         const { container } = renderBody(mkVideo(GIF_INFO, "cat.mp4"));
         const video = container.querySelector("video")!;
@@ -172,8 +172,9 @@ describe("bridged GIFs and animated stickers", () => {
         play.mockClear();
         const again = renderBody(mkVideo(GIF_INFO, "cat.mp4"));
         await waitFor(() => expect(again.container.querySelector("video")).toHaveAttribute("src"));
-        expect(again.container.querySelector("video")!.autoplay).toBe(false);
-        expect(play).not.toHaveBeenCalled();
+        // Like Element's own GIFs, only the in-app setting decides.
+        expect(again.container.querySelector("video")!.autoplay).toBe(true);
+        expect(play).toHaveBeenCalled();
     });
 
     it("opens the lightbox on click", async () => {

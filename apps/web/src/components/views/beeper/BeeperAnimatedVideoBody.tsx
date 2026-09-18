@@ -21,10 +21,6 @@ import { type AnimatedVideoHints, fitSize, getAnimatedVideoHints } from "../../.
 const STICKER_MAX = 256;
 const GIF_MAX = 320;
 
-function prefersReducedMotion(): boolean {
-    return !!window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
-}
-
 /** Resolves the (decrypted, if needed) video and thumbnail URLs of the event. */
 function useMediaUrls(props: IBodyProps, load: boolean): { src?: string; poster?: string } {
     const [urls, setUrls] = useState<{ src?: string; poster?: string }>({});
@@ -105,7 +101,7 @@ export function BeeperAnimatedVideoLightbox({ src, poster, label, onFinished }: 
 /**
  * Renders bridged GIFs and animated stickers (m.video with fi.mau.* playback hints) like Telegram
  * does: muted, looping, without controls. Respects the "Autoplay GIFs"/"Autoplay videos" settings
- * and prefers-reduced-motion (then it shows the thumbnail and plays on hover), and pauses when
+ * (when off it shows the thumbnail and plays on hover), and pauses when
  * scrolled offscreen. Stickers render without a bubble, captioned only by their emoji tooltip.
  */
 export default function BeeperAnimatedVideoBody(props: IBodyProps): JSX.Element {
@@ -115,7 +111,9 @@ export default function BeeperAnimatedVideoBody(props: IBodyProps): JSX.Element 
     const autoplayGifs = useSettingValue("autoplayGifs");
     const autoplayVideo = useSettingValue("autoplayVideo");
     const gifLike = hints.gif || hints.sticker;
-    const autoplay = !forExport && !prefersReducedMotion() && (gifLike ? autoplayGifs : autoplayVideo);
+    // Same rule as Element's own GIFs (MImageBody): only the in-app autoplay settings decide, not the
+    // OS-level prefers-reduced-motion, which many desktops set just by turning animations off.
+    const autoplay = !forExport && (gifLike ? autoplayGifs : autoplayVideo);
 
     const containerRef = useRef<HTMLDivElement>(null);
     const videoRef = useRef<HTMLVideoElement>(null);
