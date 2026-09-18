@@ -70,6 +70,14 @@ describe("disappearing messages", () => {
         expect(parseDisappearingTimer({})).toBeUndefined();
         expect(parseDisappearingTimer({ type: "after_send", timer: 0 })).toBeUndefined();
         expect(parseDisappearingTimer({ type: "bogus", timer: 5 })).toBeUndefined();
+        expect(parseDisappearingTimer({ timer: 86_400_000 })).toBeUndefined();
+        expect(parseDisappearingTimer({ type: "after_send" })).toBeUndefined();
+        expect(parseDisappearingTimer({ type: "after_send", timer: -1 })).toBeUndefined();
+        expect(parseDisappearingTimer({ type: "after_send", timer: "86400000" })).toBeUndefined();
+        expect(parseDisappearingTimer({ type: "after_send", timer: Infinity })).toBeUndefined();
+        expect(parseDisappearingTimer({ type: "", timer: 86_400_000 })).toBeUndefined();
+        expect(parseDisappearingTimer({ "com.beeper.exclude_from_timeline": true })).toBeUndefined();
+        expect(parseDisappearingTimer([])).toBeUndefined();
         expect(formatDisappearingDuration(30_000)).toBe("30s");
         expect(formatDisappearingDuration(3_600_000)).toBe("1h");
         expect(formatDisappearingDuration(7 * 86_400_000)).toBe("1w");
@@ -137,6 +145,38 @@ describe("disappearing messages", () => {
         );
         expect(container).toBeEmptyDOMElement();
         expect(shouldHideEvent(ev)).toBe(false);
+    });
+
+    it("ignores the empty timer bridgev2 puts on every bridged message (badge, header, hiding)", () => {
+        // Real Telegram portal: the room's timer state only excludes itself from the timeline.
+        room.currentState.setStateEvents([
+            mkEvent({
+                event: true,
+                type: DISAPPEARING_TIMER_KEY,
+                skey: "",
+                room: ROOM_ID,
+                user: "@telegrambot:example.org",
+                content: { "com.beeper.exclude_from_timeline": true },
+            }),
+        ]);
+        // An old incoming message and one of ours, both carrying `{}`.
+        const incoming = mkMsg({}, { ts: NOW - 3 * 86_400_000, id: "$in" });
+        const own = mkMsg({}, { sender: client.getSafeUserId(), ts: NOW - 86_400_000, id: "$own" });
+
+        for (const ev of [incoming, own]) {
+            const { container, unmount } = render(
+                <MatrixClientContext.Provider value={client}>
+                    <DisappearingMessageBadge mxEvent={ev} />
+                </MatrixClientContext.Provider>,
+            );
+            expect(container).toBeEmptyDOMElement();
+            unmount();
+            expect(getDisappearingExpiry(ev, room, client.getSafeUserId())).toBeUndefined();
+            expect(shouldHideEvent(ev)).toBe(false);
+        }
+
+        const { container } = render(<DisappearingTimerHeaderBadge room={room} />);
+        expect(container).toBeEmptyDOMElement();
     });
 
     it("room header shows the room's timer from state", () => {

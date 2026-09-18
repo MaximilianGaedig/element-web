@@ -23,11 +23,18 @@ export interface DisappearingTimer {
 
 const TYPES: DisappearingType[] = ["after_read", "after_read_by_recipient", "after_send"];
 
-/** Parses a timer object; an empty object (or a zero timer) means "disabled". */
+/**
+ * Parses a timer object (mautrix-go `event.BeeperDisappearingTimer`: `{type, timer}` with `timer` in ms).
+ *
+ * Anything else means "no timer": mautrix-go marshals a disabled timer as an empty object `{}`, which
+ * bridgev2 puts on every bridged message, and the room state event may only contain
+ * `com.beeper.exclude_from_timeline`. So both a known `type` and a positive, finite `timer` are required.
+ */
 export function parseDisappearingTimer(raw: unknown): DisappearingTimer | undefined {
-    if (!raw || typeof raw !== "object") return undefined;
+    if (!raw || typeof raw !== "object" || Array.isArray(raw)) return undefined;
     const { type, timer } = raw as Record<string, unknown>;
-    if (!TYPES.includes(type as DisappearingType) || typeof timer !== "number" || timer <= 0) return undefined;
+    if (typeof type !== "string" || !TYPES.includes(type as DisappearingType)) return undefined;
+    if (typeof timer !== "number" || !Number.isFinite(timer) || timer <= 0) return undefined;
     return { type: type as DisappearingType, timer };
 }
 
