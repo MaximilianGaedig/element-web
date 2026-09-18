@@ -24,9 +24,9 @@ global.addEventListener("install", (event) => {
 
 global.addEventListener("activate", (event) => {
     // We force all clients to be under our control, immediately. This could be old tabs.
-    // @ts-expect-error - service worker types are not available. See 'fetch' event handler.
     event.waitUntil(
         Promise.all([
+            // @ts-expect-error - service worker types are not available. See 'fetch' event handler.
             clients.claim(),
             // Clean up any old Workbox or app caches from previous deployments to prevent
             // stale cached assets from being served after upgrades.
@@ -132,6 +132,25 @@ async function tryUpdateServerSupportMap(clientApiUrl: string, accessToken?: str
 
 // Ideally we'd use the `Client` interface for `client`, but since it's not available (see 'fetch' listener), we use
 // unknown for now and force-cast it to something close enough later.
+// A busy or swapped-out tab can take well over a second to answer, and a timeout
+// means the media request goes out unauthenticated and fails (403 on servers that
+// disable legacy media). So wait longer, and remember the last answer: the user and
+// device only change on login/logout, and a stale answer merely fails to decrypt the
+// token, which is the same outcome as not having one.
+const USERINFO_TIMEOUT_MS = 10000;
+let lastUserIdParams: { userId: string; deviceId: string; homeserver: string } | undefined;
+
+async function getUserIdParams(client: unknown): Promise<{ userId: string; deviceId: string; homeserver: string }> {
+    try {
+        const params = await askClientForUserIdParams(client);
+        if (params?.userId && params?.deviceId) lastUserIdParams = params;
+        return params;
+    } catch (e) {
+        if (lastUserIdParams) return lastUserIdParams;
+        throw e;
+    }
+}
+
 async function getAuthData(client: unknown): Promise<{ accessToken: string; homeserver: string }> {
     // Access tokens are encrypted at rest, so while we can grab the "access token", we'll need to do work to get the
     // real thing.
@@ -139,7 +158,7 @@ async function getAuthData(client: unknown): Promise<{ accessToken: string; home
 
     // We need to extract a user ID and device ID from localstorage, which means calling WebPlatform for the
     // read operation. Service workers can't access localstorage.
-    const { userId, deviceId, homeserver } = await askClientForUserIdParams(client);
+    const { userId, deviceId, homeserver } = await getUserIdParams(client);
 
     // ... and this is why we need the user ID and device ID: they're index keys for the pickle key table.
     const pickleKeyData = await idbLoad("pickleKey", [userId, deviceId]);
@@ -173,7 +192,7 @@ async function askClientForUserIdParams(
         // than just reading IndexedDB ourselves.
 
         // Avoid stalling the tab in case something goes wrong.
-        const timeoutId = setTimeout(() => reject(new Error("timeout in postMessage")), 1000);
+        const timeoutId = setTimeout(() => reject(new Error("timeout in postMessage")), USERINFO_TIMEOUT_MS);
 
         // We don't need particularly good randomness here - we just use this to generate a request ID, so we know
         // which postMessage reply is for our active request.
