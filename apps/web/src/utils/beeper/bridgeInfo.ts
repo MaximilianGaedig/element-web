@@ -68,3 +68,22 @@ export function describeBridge(info: BridgeInfo): string {
         description: [info.networkName, info.parentName, type].filter(Boolean).join(" · "),
     });
 }
+
+/**
+ * The remote user of a bridged DM portal (com.beeper.room_type "dm"): the only joined member that
+ * is neither us nor the bridge bot. Bridged DMs aren't always in m.direct (e.g. without double
+ * puppeting), so Element wouldn't otherwise treat them as DMs for presence.
+ */
+export function getBridgedDmUserId(room: Room): string | undefined {
+    if (getBridgeInfo(room)?.roomType !== "dm") return undefined;
+    const bots = new Set<string>();
+    for (const type of BRIDGE_EVENT_TYPES) {
+        for (const ev of room.currentState.getStateEvents(type)) {
+            const bot = ev.getContent().bridgebot;
+            if (typeof bot === "string") bots.add(bot);
+        }
+    }
+    const me = room.client.getUserId();
+    const others = room.getJoinedMembers().filter((m) => m.userId !== me && !bots.has(m.userId));
+    return others.length === 1 ? others[0].userId : undefined;
+}

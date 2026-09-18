@@ -23,6 +23,7 @@ import DMRoomMap from "../../../utils/DMRoomMap";
 import { getJoinedNonFunctionalMembers } from "../../../utils/room/getJoinedNonFunctionalMembers";
 import { useEventEmitter } from "../../../hooks/useEventEmitter";
 import { BUSY_PRESENCE_NAME } from "../rooms/PresenceLabel";
+import { getBridgedDmUserId } from "../../../utils/beeper/bridgeInfo";
 
 interface Props {
     room: Room;
@@ -55,7 +56,8 @@ function tooltipText(variant: Presence): string {
 }
 
 function getDmMember(room: Room): RoomMember | null {
-    const otherUserId = DMRoomMap.shared().getUserIdForRoomId(room.roomId);
+    // Bridged DM portals may be missing from m.direct; fall back to the bridge's room type.
+    const otherUserId = DMRoomMap.shared().getUserIdForRoomId(room.roomId) ?? getBridgedDmUserId(room);
     return otherUserId ? room.getMember(otherUserId) : null;
 }
 
@@ -113,7 +115,8 @@ export const usePresence = (room: Room, member: RoomMember | null): Presence | n
     });
     useEffect(updatePresence, [room, member]);
 
-    if (getJoinedNonFunctionalMembers(room).length !== 2 || !isPresenceEnabled(room.client)) return null;
+    const isOneToOne = getJoinedNonFunctionalMembers(room).length === 2 || !!getBridgedDmUserId(room);
+    if (!isOneToOne || !isPresenceEnabled(room.client)) return null;
     return presence;
 };
 
