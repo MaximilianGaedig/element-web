@@ -401,6 +401,23 @@
         "disappearing_in": "Disappears in %(duration)s",
         "disappearing_room_after_read": "Disappearing messages: %(duration)s after they're read",
         "disappearing_room_after_send": "Disappearing messages: %(duration)s after they're sent",
+        "features_delete_too_old": "%(network)s doesn't allow deleting messages this old",
+        "features_delete_unsupported": "%(network)s doesn't support deleting messages",
+        "features_edit_too_many": "%(network)s doesn't allow editing this message again",
+        "features_edit_too_old": "%(network)s doesn't allow editing messages this old",
+        "features_edit_unsupported": "%(network)s doesn't support editing messages",
+        "features_file_too_large": "too large for %(network)s (max %(max)s)",
+        "features_file_type_unsupported": "%(network)s doesn't accept %(type)s files",
+        "features_files_rejected_title": {
+            "one": "This file can't be sent",
+            "other": "%(count)s files can't be sent"
+        },
+        "features_formatting_unsupported": "Not supported on %(network)s",
+        "features_reactions_limited": {
+            "one": "%(network)s only allows %(count)s reaction here",
+            "other": "%(network)s only allows these %(count)s reactions here"
+        },
+        "features_reactions_unsupported": "%(network)s doesn't support reactions",
         "per_message_profile_via": "%(name)s (sent via %(sender)s)",
         "send_status_delivered": "Delivered on %(network)s",
         "send_status_failed": "Not delivered to %(network)s",

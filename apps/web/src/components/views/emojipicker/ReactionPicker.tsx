@@ -16,6 +16,7 @@ import dis from "../../../dispatcher/dispatcher";
 import { Action } from "../../../dispatcher/actions";
 import RoomContext from "../../../contexts/RoomContext";
 import { type FocusComposerPayload } from "../../../dispatcher/payloads/FocusComposerPayload";
+import { isReactionAllowed, reactionsLimitNotice } from "../../../utils/beeper/roomFeatures";
 
 interface IProps {
     mxEvent: MatrixEvent;
@@ -86,6 +87,10 @@ class ReactionPicker extends React.Component<IProps, IState> {
     };
 
     private onChoose = (reaction: string): boolean => {
+        // Quick reactions don't honour isEmojiDisabled, so check again before sending.
+        if (!this.getReactions().hasOwnProperty(reaction) && !isReactionAllowed(this.context.room ?? null, reaction)) {
+            return false;
+        }
         this.componentWillUnmount();
         this.props.onFinished();
         const myReactions = this.getReactions();
@@ -117,20 +122,31 @@ class ReactionPicker extends React.Component<IProps, IState> {
     };
 
     private isEmojiDisabled = (unicode: string): boolean => {
-        if (!this.getReactions()[unicode]) return false;
+        // The bridge's remote network may only accept some reactions.
+        if (!this.getReactions()[unicode]) return !isReactionAllowed(this.context.room ?? null, unicode);
         if (this.context.canSelfRedact) return false;
 
         return true;
     };
 
     public render(): React.ReactNode {
-        return (
+        const picker = (
             <EmojiPicker
                 onChoose={this.onChoose}
                 isEmojiDisabled={this.isEmojiDisabled}
                 onFinished={this.props.onFinished}
                 selectedEmojis={this.state.selectedEmojis}
             />
+        );
+        const notice = reactionsLimitNotice(this.context.room ?? null);
+        if (!notice) return picker;
+        return (
+            <>
+                <div className="mx_BeeperReactionNotice" role="note">
+                    {notice}
+                </div>
+                {picker}
+            </>
         );
     }
 }

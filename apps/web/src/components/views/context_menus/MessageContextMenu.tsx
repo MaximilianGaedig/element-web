@@ -52,6 +52,8 @@ import Resend from "../../../Resend";
 import SettingsStore from "../../../settings/SettingsStore";
 import { isUrlPermitted } from "../../../HtmlUtils";
 import { canEditContent, editEvent, isContentActionable } from "../../../utils/EventUtils";
+import { deleteBlockedReason } from "../../../utils/beeper/roomFeatures";
+import BeeperBlockedActionOptions from "../beeper/BeeperBlockedActionOptions";
 import IconizedContextMenu, { IconizedContextMenuOption, IconizedContextMenuOptionList } from "./IconizedContextMenu";
 import { Action } from "../../../dispatcher/actions";
 import { type RoomPermalinkCreator } from "../../../utils/permalinks/Permalinks";
@@ -186,7 +188,9 @@ export default class MessageContextMenu extends React.Component<IProps, IState> 
         const canRedact =
             !!room?.currentState.maySendRedactionForEvent(this.props.mxEvent, cli.getSafeUserId()) &&
             this.props.mxEvent.getType() !== EventType.RoomServerAcl &&
-            this.props.mxEvent.getType() !== EventType.RoomEncryption;
+            this.props.mxEvent.getType() !== EventType.RoomEncryption &&
+            // The bridge's remote network may not allow deleting (this message, any more).
+            !deleteBlockedReason(this.props.mxEvent, room);
 
         const canPin = PinningUtils.canPin(cli, this.props.mxEvent) || PinningUtils.canUnpin(cli, this.props.mxEvent);
 
@@ -732,6 +736,7 @@ export default class MessageContextMenu extends React.Component<IProps, IState> 
                     {replyButton}
                     {replyInThreadButton}
                     {editButton}
+                    {rightClick && isSent && <BeeperBlockedActionOptions cli={cli} mxEvent={mxEvent} />}
                     {pinButton}
                 </IconizedContextMenuOptionList>
             );
