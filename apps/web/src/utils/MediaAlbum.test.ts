@@ -118,8 +118,9 @@ describe("MediaAlbum utils", () => {
         expect(getCaptionEvents([plain, legacy, captioned, dup]).map((e) => e.getId())).toEqual(["$3"]);
     });
 
-    it("defaults the non-Telegram 'group consecutive images' heuristic to off", () => {
-        expect(SETTINGS["groupConsecutiveImages"].default).toBe(false);
+    it("defaults the tight 'group consecutive images' fallback for untagged media to on", () => {
+        expect(SETTINGS["groupConsecutiveImages"].default).toBe(true);
+        expect(NATIVE_GROUP_WINDOW_MS).toBeLessThanOrEqual(5000);
     });
 
     it("sorts Telegram-style items (index = msgID offset, no count) by index", () => {

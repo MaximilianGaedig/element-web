@@ -887,8 +887,9 @@ export const SETTINGS: Settings = {
         supportedLevels: LEVELS_ACCOUNT_SETTINGS,
         displayName: _td("settings|group_consecutive_images"),
         description: _td("settings|group_consecutive_images_description"),
-        // Off by default: Telegram only ever groups media that was sent as one album (a shared grouped_id).
-        default: false,
+        // On by default, but only for untagged media sent within NATIVE_GROUP_WINDOW_MS (3 s): that
+        // groups albums sent from Element and albums bridged before bridges tagged them.
+        default: true,
     },
     "enableSyntaxHighlightLanguageDetection": {
         supportedLevels: LEVELS_ACCOUNT_SETTINGS,

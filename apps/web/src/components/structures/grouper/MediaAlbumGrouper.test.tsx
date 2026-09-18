@@ -384,9 +384,9 @@ describe("MediaAlbumGrouper", () => {
             expect(tiles(container)).toHaveLength(2);
         });
 
-        it("groups consecutive images sent within 60 s when enabled", () => {
+        it("groups consecutive images sent within 3 s when enabled", () => {
             nativeGrouping = true;
-            const { container } = renderPanel([media({ ts: now }), media({ ts: now + 30_000, msgtype: "m.video" })]);
+            const { container } = renderPanel([media({ ts: now }), media({ ts: now + 2_000, msgtype: "m.video" })]);
             expect(grids(container)).toHaveLength(1);
             expect(tiles(container)).toHaveLength(1);
         });
@@ -397,13 +397,13 @@ describe("MediaAlbumGrouper", () => {
             expect(tiles(container)).toHaveLength(2);
         });
 
-        it("does not group across a gap of more than 60 s or across text", () => {
+        it("does not group across a gap of more than 3 s or across text", () => {
             nativeGrouping = true;
             const { container } = renderPanel([
                 media({ ts: now }),
-                media({ ts: now + 61_000 }),
-                text(ALICE, "caption", now + 62_000),
-                media({ ts: now + 63_000 }),
+                media({ ts: now + 3_001 }),
+                text(ALICE, "caption", now + 3_500),
+                media({ ts: now + 4_000 }),
             ]);
             expect(grids(container)).toHaveLength(0);
             expect(tiles(container)).toHaveLength(4);

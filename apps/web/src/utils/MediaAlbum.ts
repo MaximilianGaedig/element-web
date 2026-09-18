@@ -17,16 +17,20 @@ import { ALBUM_MAX_WIDTH, type AlbumGridLayout, layoutAlbum, type MediaSize, Rec
  * Like Telegram, only adjacent events from the same sender that share an album id are rendered as one
  * grid tile (at most {@link MAX_ALBUM_ITEMS}), ordered by `index` and laid out with Telegram's layouter.
  *
- * Element-sent media carries no album marker; with the (off by default, non-Telegram)
- * `groupConsecutiveImages` setting enabled,
+ * Element-sent media (and media bridged before bridges tagged albums) carries no album marker; with
+ * the `groupConsecutiveImages` setting enabled (default),
  * consecutive m.image/m.video events from the same sender sent within {@link NATIVE_GROUP_WINDOW_MS}
  * of each other are grouped the same way.
  */
 
 export const ALBUM_KEY = "fi.mau.album";
 
-/** Maximum gap between two consecutive natively-sent media events of one group. */
-export const NATIVE_GROUP_WINDOW_MS = 60 * 1000;
+/**
+ * Maximum gap between two consecutive media events without an album tag to group them. Items of one
+ * album (native, or bridged before bridges tagged albums) arrive within a second or two; separate
+ * photos are rarely that close, so this stays tight.
+ */
+export const NATIVE_GROUP_WINDOW_MS = 3 * 1000;
 
 /** Telegram albums hold at most 10 items; longer runs with the same album id are split into several albums. */
 export const MAX_ALBUM_ITEMS = 10;
