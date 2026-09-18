@@ -38,7 +38,10 @@ export function formatLastSeenTime(ts: number, opts: LastSeenOptions = {}, kind:
     const timeZone = opts.timeZone ?? getUserTimezone();
     const diff = now - ts;
     if (diff < MINUTE) return _t(kind === "active" ? "beeper|last_active_just_now" : "beeper|last_seen_just_now");
-    if (diff < HOUR) return _t(kind === "active" ? "beeper|last_active_minutes_ago" : "beeper|last_seen_minutes_ago", { count: Math.floor(diff / MINUTE) });
+    if (diff < HOUR)
+        return _t(kind === "active" ? "beeper|last_active_minutes_ago" : "beeper|last_seen_minutes_ago", {
+            count: Math.floor(diff / MINUTE),
+        });
 
     const date = new Date(ts);
     const at = new Intl.DateTimeFormat(locale, {
@@ -49,8 +52,12 @@ export function formatLastSeenTime(ts: number, opts: LastSeenOptions = {}, kind:
     }).format(date);
 
     const day = dayKey(ts, timeZone);
-    if (day === dayKey(now, timeZone)) return _t(kind === "active" ? "beeper|last_active_today_at" : "beeper|last_seen_today_at", { time: at });
-    if (day === dayKey(now - 24 * HOUR, timeZone)) return _t(kind === "active" ? "beeper|last_active_yesterday_at" : "beeper|last_seen_yesterday_at", { time: at });
+    if (day === dayKey(now, timeZone))
+        return _t(kind === "active" ? "beeper|last_active_today_at" : "beeper|last_seen_today_at", { time: at });
+    if (day === dayKey(now - 24 * HOUR, timeZone))
+        return _t(kind === "active" ? "beeper|last_active_yesterday_at" : "beeper|last_seen_yesterday_at", {
+            time: at,
+        });
     const sameYear = day.slice(0, 4) === dayKey(now, timeZone).slice(0, 4);
     const dateStr = new Intl.DateTimeFormat(locale, {
         timeZone,
@@ -58,7 +65,10 @@ export function formatLastSeenTime(ts: number, opts: LastSeenOptions = {}, kind:
         month: "short",
         year: sameYear ? undefined : "numeric",
     }).format(date);
-    return _t(kind === "active" ? "beeper|last_active_date_at" : "beeper|last_seen_date_at", { date: dateStr, time: at });
+    return _t(kind === "active" ? "beeper|last_active_date_at" : "beeper|last_seen_date_at", {
+        date: dateStr,
+        time: at,
+    });
 }
 
 /**
