@@ -8,6 +8,7 @@ Please see LICENSE files in the repository root for full details.
 // @vitest-environment happy-dom
 
 import { describe, it, expect, vi, beforeEach, afterEach, type Mock } from "vitest";
+// oxlint-disable-next-line no-restricted-imports
 import { EventEmitter } from "events";
 import { type MatrixClient, MatrixError, type Room, type User, UserEvent } from "matrix-js-sdk/src/matrix";
 import { ReEmitter } from "matrix-js-sdk/src/ReEmitter";

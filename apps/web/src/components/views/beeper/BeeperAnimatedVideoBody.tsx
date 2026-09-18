@@ -16,7 +16,7 @@ import { mediaFromContent } from "../../../customisations/Media";
 import Modal from "../../../Modal";
 import AccessibleButton from "../elements/AccessibleButton";
 import { _t } from "../../../languageHandler";
-import { type AnimatedVideoHints, fitSize, getAnimatedVideoHints } from "../../../utils/beeper/animatedMedia";
+import { fitSize, getAnimatedVideoHints } from "../../../utils/beeper/animatedMedia";
 
 const STICKER_MAX = 256;
 const GIF_MAX = 320;
@@ -110,7 +110,7 @@ export function BeeperAnimatedVideoLightbox({ src, poster, label, onFinished }: 
  */
 export default function BeeperAnimatedVideoBody(props: IBodyProps): JSX.Element {
     const { mxEvent, forExport } = props;
-    const hints = getAnimatedVideoHints(mxEvent) as AnimatedVideoHints;
+    const hints = getAnimatedVideoHints(mxEvent)!;
     const [mediaVisible, setMediaVisible] = useMediaVisible(mxEvent);
     const autoplayGifs = useSettingValue("autoplayGifs");
     const autoplayVideo = useSettingValue("autoplayVideo");

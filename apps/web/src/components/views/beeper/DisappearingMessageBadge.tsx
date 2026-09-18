@@ -72,6 +72,8 @@ export default function DisappearingMessageBadge({ mxEvent, onDisappeared }: Pro
 
     return (
         <Tooltip label={label}>
+            {/* Focusable so keyboard users can reach the tooltip. */}
+            {/* oxlint-disable-next-line jsx-a11y/no-noninteractive-tabindex */}
             <span className="mx_DisappearingMessageBadge" tabIndex={0} aria-label={label}>
                 <TimeIcon width="12" height="12" aria-hidden />
                 {text}

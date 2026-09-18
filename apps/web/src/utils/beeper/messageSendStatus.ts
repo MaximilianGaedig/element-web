@@ -127,6 +127,5 @@ export async function retryFailedMessage(client: MatrixClient, mxEvent: MatrixEv
     const originalEventId = typeof previous?.original_event_id === "string" ? previous.original_event_id : eventId;
     const retryCount = typeof previous?.retry_count === "number" ? previous.retry_count + 1 : 1;
     content[MESSAGE_SEND_RETRY_KEY] = { original_event_id: originalEventId, retry_count: retryCount };
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await client.sendEvent(roomId, mxEvent.getType() as any, content);
 }

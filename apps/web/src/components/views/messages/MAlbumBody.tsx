@@ -71,7 +71,7 @@ function useThumbnail(helper: MediaEventHelper, isVideo: boolean): string | null
             if (thumb || isVideo) return thumb;
             return helper.sourceUrl.value;
         };
-        load()
+        void load()
             .catch(() => null)
             .then((u) => {
                 if (!cancelled) setUrl(u);
@@ -123,7 +123,6 @@ function AlbumCell({ event, position, total, overflow, onOpen, onItemContextMenu
                 className="mx_MAlbumBody_cell mx_MAlbumBody_cell_playing"
                 onContextMenu={(ev) => onItemContextMenu(ev, event)}
             >
-                {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
                 <video src={videoUrl} controls autoPlay title={name} poster={thumbnail ?? undefined} />
             </div>
         );
@@ -180,7 +179,9 @@ export default function MAlbumBody({ album, bodyProps, ItemBody }: Props): JSX.E
     const others = sorted.filter((e) => !isVisualMedia(e));
     const captions = getCaptionEvents(sorted);
     const slots: AlbumSlot[] = visual.length
-        ? buildAlbumSlots(visual, others.length ? undefined : getDeclaredCount(sorted), Date.now())
+        ? // Placeholders for not-yet-arrived items expire, so this deliberately reads the clock on each render.
+          // oxlint-disable-next-line react/purity
+          buildAlbumSlots(visual, others.length ? undefined : getDeclaredCount(sorted), Date.now())
         : [];
     const layout = getAlbumLayout(slots.length);
 
@@ -230,6 +231,8 @@ export default function MAlbumBody({ album, bodyProps, ItemBody }: Props): JSX.E
                     if ("placeholder" in slot) {
                         return (
                             <div
+                                // Placeholders have no event yet; their position is their identity.
+                                // oxlint-disable-next-line react/no-array-index-key
                                 key={`placeholder-${i}`}
                                 className="mx_MAlbumBody_cell mx_MAlbumBody_cell_placeholder"
                                 data-testid="album-placeholder"

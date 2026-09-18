@@ -46,10 +46,13 @@ export default function BridgeButtons({ mxEvent, inhibitInteraction }: Props): J
 
     return (
         <div className="mx_BridgeButtons">
+            {/* Keyboard rows and buttons are positional and carry no IDs. */}
             {content.rows.map((row, r) => (
+                // oxlint-disable-next-line react/no-array-index-key
                 <div className="mx_BridgeButtons_row" key={r}>
                     {row.map((btn, c) => (
                         <BridgeButton
+                            // oxlint-disable-next-line react/no-array-index-key
                             key={c}
                             button={btn}
                             roomId={mxEvent.getRoomId()}

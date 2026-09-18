@@ -41,10 +41,12 @@ export default function AlbumLightbox({ items, startIndex, permalinkCreator, onF
         let helper = helpers.get(event);
         if (!helper) {
             helper = new MediaEventHelper(event);
+            // The helpers map is a per-lightbox cache, mutated on purpose.
+            // oxlint-disable-next-line react/immutability
             helpers.set(event, helper);
         }
         const h = helper;
-        (async (): Promise<string | null> => {
+        void (async (): Promise<string | null> => {
             try {
                 return (await h.sourceUrl.value) ?? (await h.thumbnailUrl.value);
             } catch {
@@ -84,7 +86,6 @@ export default function AlbumLightbox({ items, startIndex, permalinkCreator, onF
                 <AccessibleButton className="mx_AlbumLightbox_close" title={_t("action|close")} onClick={onFinished}>
                     <CloseIcon />
                 </AccessibleButton>
-                {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
                 <video key={event.getId()} src={url} controls autoPlay />
             </div>
         );

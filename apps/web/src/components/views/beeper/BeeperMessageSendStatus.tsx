@@ -85,6 +85,8 @@ export default function BeeperMessageSendStatus({ mxEvent }: Props): JSX.Element
     if (status.status === "PENDING") {
         return (
             <Tooltip label={status.message ?? _t("beeper|send_status_pending", { network })}>
+                {/* Focusable so keyboard users can reach the tooltip. */}
+                {/* oxlint-disable-next-line jsx-a11y/no-noninteractive-tabindex */}
                 <span className="mx_BeeperSendStatus mx_BeeperSendStatus_pending" role="status" tabIndex={0}>
                     <TimeIcon width="14" height="14" aria-hidden />
                 </span>
@@ -97,6 +99,7 @@ export default function BeeperMessageSendStatus({ mxEvent }: Props): JSX.Element
         if (!status.delivered_to_users?.length) return null;
         return (
             <Tooltip label={_t("beeper|send_status_delivered", { network })}>
+                {/* oxlint-disable-next-line jsx-a11y/no-noninteractive-tabindex */}
                 <span className="mx_BeeperSendStatus mx_BeeperSendStatus_delivered" role="status" tabIndex={0}>
                     <CheckCircleSolidIcon width="14" height="14" aria-hidden />
                 </span>

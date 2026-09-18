@@ -186,7 +186,7 @@ export function buildAlbumSlots(
         declaredCount !== undefined && declaredCount > sortedVisual.length && now - newestTs < PLACEHOLDER_GRACE_MS;
     if (!keepPlaceholders) return sortedVisual.map((event) => ({ event }));
 
-    const total = declaredCount!;
+    const total = declaredCount;
     const indices = sortedVisual.map((e) => getAlbumInfo(e)?.index);
     const placeable = indices.every((i) => i !== undefined && i < total) && new Set(indices).size === indices.length;
     const slots: AlbumSlot[] = Array.from({ length: total }, () => ({ placeholder: true }));

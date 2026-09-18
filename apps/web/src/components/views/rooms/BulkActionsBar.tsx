@@ -51,7 +51,7 @@ const BulkActionsBar: React.FC<IProps> = ({ room, permalinkCreator }) => {
             danger: true,
         });
 
-        finished.then(async ([confirmed]: [boolean?] = []) => {
+        void finished.then(async ([confirmed]: [boolean?] = []) => {
             if (!confirmed) return;
 
             const cli = MatrixClientPeg.safeGet();

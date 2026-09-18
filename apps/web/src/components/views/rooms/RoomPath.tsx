@@ -32,7 +32,7 @@ interface Props {
  */
 export const RoomPath: React.FC<Props> = memo(({ room, className, mode, showSeparatorBefore = false, fullPath }) => {
     const showPathSetting = useSettingValue<"RoomList.showSpacePath">("RoomList.showSpacePath");
-    const showPath = (mode ?? showPathSetting) as string;
+    const showPath = mode ?? showPathSetting;
     const showIcons = useSettingValue<"RoomList.showSpacePathIcons">("RoomList.showSpacePathIcons");
     const path = useRoomPath(room, fullPath);
 

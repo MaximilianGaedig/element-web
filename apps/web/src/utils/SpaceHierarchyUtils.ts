@@ -39,7 +39,6 @@ export function getSpacePath(room: Room, activeSpace?: string, canonicalOnly = f
 
     const visited = new Set<string>([currentRoomId]);
 
-    // eslint-disable-next-line no-constant-condition
     while (true) {
         // Try to get verified parents first (m.space.parent events)
         let parents = SDKContextClass.instance.spaceStore.getParents(currentRoomId, canonicalOnly);
