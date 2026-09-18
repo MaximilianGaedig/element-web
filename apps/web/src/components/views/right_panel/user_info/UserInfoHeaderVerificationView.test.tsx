@@ -95,4 +95,15 @@ describe("<UserInfoHeaderVerificationView />", () => {
         await waitFor(() => expect(screen.getByText("(User verification unavailable)")).toBeInTheDocument());
         expect(container).toMatchSnapshot();
     });
+    // Fork: bridged users have no devices, so they can't be verified; don't spin forever.
+    it("shows verification unavailable instead of a spinner when the user has no devices", async () => {
+        mockCrypto.getUserVerificationStatus.mockResolvedValue(new UserVerificationStatus(false, false, false));
+        render(
+            <UserInfoHeaderVerificationView member={defaultMember} devices={[]} />,
+            clientAndSDKContextRenderOptions(mockClient, sdkContext),
+        );
+        await waitFor(() => expect(mockCrypto.getUserVerificationStatus).toHaveBeenCalled());
+        await waitFor(() => expect(screen.getByText("(User verification unavailable)")).toBeInTheDocument());
+        expect(mockCrypto.userHasCrossSigningKeys).not.toHaveBeenCalled();
+    });
 });

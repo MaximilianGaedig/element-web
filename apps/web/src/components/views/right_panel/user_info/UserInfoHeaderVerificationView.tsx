@@ -31,10 +31,10 @@ export const UserInfoHeaderVerificationView: React.FC<{
                 </Text>
             </Badge>
         );
-    } else if (vm.canVerify && vm.hasCrossSigningKeys === undefined) {
-        // We are still fetching the cross-signing keys for the user, show spinner.
-        // Only while a check is actually running: the view model also reports undefined when it can't
-        // verify at all (e.g. bridged users with no devices), which used to spin forever.
+    } else if (vm.isLoading) {
+        // We are still fetching the verification status or the cross-signing keys, show spinner.
+        // Only while a check is actually running: hasCrossSigningKeys is also undefined when the user
+        // can't be verified at all (e.g. bridged users with no devices), which used to spin forever.
         content = <InlineSpinner size={24} />;
     } else if (vm.canVerify && vm.hasCrossSigningKeys) {
         content = (

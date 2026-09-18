@@ -20,6 +20,12 @@ export interface UserInfoVerificationSectionState {
     canVerify: boolean;
     hasCrossSigningKeys: boolean | undefined;
     /**
+     * Whether the verification status or the cross-signing keys are still being fetched.
+     * hasCrossSigningKeys is also undefined when the user can't be verified at all (e.g. bridged
+     * users with no devices), so it can't tell loading apart on its own.
+     */
+    isLoading: boolean;
+    /**
      * used to display correct badge value
      */
     isUserVerified: boolean;
@@ -60,9 +66,12 @@ export const useUserInfoVerificationViewModel = (
     const hasCrossSigningKeys = useHasCrossSigningKeys(sdkContext.client!, member as User, canVerify);
     const verifySelectedUser = (): void => verifyUser(sdkContext.rightPanelStore, sdkContext.client!, member as User);
 
+    const isLoading = !hasUserVerificationStatus || (canVerify && hasCrossSigningKeys === undefined);
+
     return {
         canVerify,
         hasCrossSigningKeys,
+        isLoading,
         isUserVerified,
         verifySelectedUser,
     };
