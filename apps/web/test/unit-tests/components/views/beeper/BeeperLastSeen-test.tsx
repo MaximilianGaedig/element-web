@@ -7,7 +7,16 @@ Please see LICENSE files in the repository root for full details.
 
 import React, { type JSX } from "react";
 import { act, render, screen } from "jest-matrix-react";
-import { type MatrixClient, MatrixEvent, PendingEventOrdering, Room, User, UserEvent } from "matrix-js-sdk/src/matrix";
+import {
+    type MatrixClient,
+    MatrixEvent,
+    PendingEventOrdering,
+    Room,
+    type RoomMember,
+    RoomMemberEvent,
+    User,
+    UserEvent,
+} from "matrix-js-sdk/src/matrix";
 
 import { MatrixClientPeg } from "../../../../../src/MatrixClientPeg";
 import MatrixClientContext from "../../../../../src/contexts/MatrixClientContext";
@@ -20,6 +29,7 @@ import {
     BeeperDmLastSeenSubtitle,
     BeeperLastSeenLabel,
 } from "../../../../../src/components/views/beeper/BeeperLastSeen";
+import { BeeperTypingSubtitle, typingText } from "../../../../../src/components/views/beeper/BeeperTypingSubtitle";
 
 // Fri 18 Sep 2026, 21:45:00 in Berlin (UTC+2).
 const NOW = Date.parse("2026-09-18T19:45:00Z");
@@ -152,6 +162,66 @@ describe("Telegram-style last seen", () => {
 
             setPresence("online");
             expect(screen.getByText("online")).toBeInTheDocument();
+        });
+
+        const setTyping = (member: RoomMember, typing: boolean): void => {
+            act(() => {
+                member.typing = typing;
+                client.emit(RoomMemberEvent.Typing, new MatrixEvent({ type: "m.typing" }), member);
+            });
+        };
+
+        it("replaces the DM subtitle with an animated 'typing' while the other side types", () => {
+            setPresence("online");
+            const { container } = render(
+                <MatrixClientContext.Provider value={client}>
+                    <BeeperDmLastSeenSubtitle room={room} />
+                </MatrixClientContext.Provider>,
+            );
+            expect(screen.getByText("online")).toBeInTheDocument();
+
+            setTyping(room.getMember(GHOST)!, true);
+            expect(screen.getByText("typing")).toBeInTheDocument();
+            expect(screen.queryByText("online")).not.toBeInTheDocument();
+            expect(container.querySelectorAll(".mx_BeeperTyping_dot")).toHaveLength(3);
+
+            setTyping(room.getMember(GHOST)!, false);
+            expect(screen.getByText("online")).toBeInTheDocument();
+        });
+
+        it("ignores our own typing", () => {
+            setPresence("online");
+            render(
+                <MatrixClientContext.Provider value={client}>
+                    <BeeperDmLastSeenSubtitle room={room} />
+                </MatrixClientContext.Provider>,
+            );
+            setTyping(room.getMember(client.getSafeUserId())!, true);
+            expect(screen.getByText("online")).toBeInTheDocument();
+        });
+
+        it("shows who is typing in a group header", () => {
+            render(
+                <MatrixClientContext.Provider value={client}>
+                    <BeeperTypingSubtitle room={room} isDm={false} />
+                </MatrixClientContext.Provider>,
+            );
+            expect(screen.queryByText(/typing/)).not.toBeInTheDocument();
+            const ghostMember = room.getMember(GHOST)!;
+            ghostMember.rawDisplayName = "Alice Smith";
+            setTyping(ghostMember, true);
+            expect(screen.getByText("Alice is typing")).toBeInTheDocument();
+        });
+
+        it("formats group typing like Telegram", () => {
+            const m = (name: string): RoomMember => ({ rawDisplayName: name, name, userId: name }) as RoomMember;
+            expect(typingText([], false)).toBeUndefined();
+            expect(typingText([m("Alice Smith")], true)).toBe("typing");
+            expect(typingText([m("Alice Smith")], false)).toBe("Alice is typing");
+            expect(typingText([m("Alice"), m("Bob")], false)).toBe("Alice and Bob are typing");
+            expect(typingText([m("Alice"), m("Bob"), m("Carol"), m("Dan")], false)).toBe(
+                "Alice and 3 others are typing",
+            );
         });
 
         it("user info shows last seen, but keeps Element's label for other status messages", () => {

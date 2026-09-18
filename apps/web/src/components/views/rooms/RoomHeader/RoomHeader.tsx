@@ -40,6 +40,7 @@ import { useRoomState } from "../../../../hooks/useRoomState.ts";
 import RoomAvatar from "../../avatars/RoomAvatar.tsx";
 import BeeperRoomHeaderBadges from "../../beeper/BeeperRoomHeaderBadges";
 import { BeeperDmLastSeenSubtitle } from "../../beeper/BeeperLastSeen";
+import { BeeperTypingSubtitle } from "../../beeper/BeeperTypingSubtitle";
 import { formatCount } from "../../../../utils/FormattingUtils.ts";
 import RightPanelStore from "../../../../stores/right-panel/RightPanelStore.ts";
 import PosthogTrackers from "../../../../PosthogTrackers.ts";
@@ -540,6 +541,7 @@ export default function RoomHeader({
                                 {room instanceof Room && <BeeperRoomHeaderBadges room={room} />}
                             </Text>
                             {isDirectMessage && room instanceof Room && <BeeperDmLastSeenSubtitle room={room} />}
+                    {!isDirectMessage && room instanceof Room && <BeeperTypingSubtitle room={room} isDm={false} />}
                         </button>
                         {room instanceof Room && <RoomHeaderPath room={room} />}
                     </Box>

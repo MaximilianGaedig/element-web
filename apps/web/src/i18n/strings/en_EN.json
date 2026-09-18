@@ -457,7 +457,14 @@
         "send_status_pending": "Sending to %(network)s…",
         "send_status_remote_network": "the remote network",
         "send_status_retry": "Retry",
-        "send_status_retrying": "Retrying…"
+        "send_status_retrying": "Retrying…",
+        "typing_dm": "typing",
+        "typing_many": {
+            "one": "%(name)s and %(count)s other are typing",
+            "other": "%(name)s and %(count)s others are typing"
+        },
+        "typing_one": "%(name)s is typing",
+        "typing_two": "%(name1)s and %(name2)s are typing"
     },
     "bug_reporting": {
         "additional_context": "If there is additional context that would help in analysing the issue, such as what you were doing at the time, room IDs, user IDs, etc., please include those things here.",

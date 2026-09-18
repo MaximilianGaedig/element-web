@@ -16,6 +16,7 @@ import { _t } from "../../../languageHandler";
 import { useSettingValue } from "../../../hooks/useSettings";
 import { isPresenceEnabled } from "../../../utils/presence";
 import { formatLastSeen, formatLastSeenTime, isVagueLastSeen } from "../../../utils/beeper/lastSeen";
+import { BeeperTypingLine, useHeaderTypingText } from "./BeeperTypingSubtitle";
 
 const TICK_MS = 30_000;
 
@@ -75,9 +76,13 @@ function useLastActivity(room: Room, userId: string | undefined): number | undef
     return ts;
 }
 
-/** Subtitle under a DM's name in the room header, like Telegram's "last seen …" line. */
+/**
+ * Subtitle under a DM's name in the room header, like Telegram's "last seen …" line; replaced by
+ * an animated "typing" while the other side types.
+ */
 export function BeeperDmLastSeenSubtitle({ room }: { room: Room }): JSX.Element | null {
     const member = useDmMember(room);
+    const typing = useHeaderTypingText(room, true);
     let text = useLastSeen(room.client, member?.userId);
     const activity = useLastActivity(room, member?.userId);
     const showTwelveHour = useSettingValue("showTwelveHourTimestamps");
@@ -86,6 +91,7 @@ export function BeeperDmLastSeenSubtitle({ room }: { room: Room }): JSX.Element 
     if (activity && isVagueLastSeen(statusMsg) && text !== _t("beeper|last_seen_online")) {
         text = formatLastSeenTime(activity, { showTwelveHour }, "active");
     }
+    if (typing) return <BeeperTypingLine text={typing} />;
     if (!text || !isPresenceEnabled(room.client)) return null;
     return (
         <Text as="div" size="sm" className="mx_BeeperLastSeen" data-online={text === _t("beeper|last_seen_online")}>
