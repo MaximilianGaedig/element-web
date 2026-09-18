@@ -5,13 +5,14 @@ SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only OR LicenseRef-Element-Com
 Please see LICENSE files in the repository root for full details.
 */
 
-import React from "react";
+import React, { type JSX } from "react";
 import { act, render, screen } from "jest-matrix-react";
-import { type MatrixClient, MatrixEvent, PendingEventOrdering, Room, User } from "matrix-js-sdk/src/matrix";
+import { type MatrixClient, MatrixEvent, PendingEventOrdering, Room, User, UserEvent } from "matrix-js-sdk/src/matrix";
 
 import { MatrixClientPeg } from "../../../../../src/MatrixClientPeg";
 import MatrixClientContext from "../../../../../src/contexts/MatrixClientContext";
 import DMRoomMap from "../../../../../src/utils/DMRoomMap";
+import WithPresenceIndicator from "../../../../../src/components/views/avatars/WithPresenceIndicator";
 import { mkEvent, mkMembership, stubClient } from "../../../../test-utils";
 import { formatLastSeen } from "../../../../../src/utils/beeper/lastSeen";
 import { getBridgedDmUserId } from "../../../../../src/utils/beeper/bridgeInfo";
@@ -91,6 +92,10 @@ describe("Telegram-style last seen", () => {
                 mkMembership({ event: true, room: ROOM_ID, user: GHOST, mship: "join" }),
             ]);
             ghost = new User(GHOST);
+            // Like User.createUser(): re-emit the user's events on the client.
+            for (const ev of [UserEvent.Presence, UserEvent.LastPresenceTs]) {
+                ghost.on(ev, (...args: any[]) => client.emit(ev as any, ...(args as [any, any])));
+            }
             jest.spyOn(client, "getUser").mockImplementation((id) => (id === GHOST ? ghost : null));
         });
 
@@ -110,6 +115,24 @@ describe("Telegram-style last seen", () => {
                 );
             });
         };
+
+        it("shows the presence dot for an m.direct DM whose member list isn't loaded (sliding sync)", () => {
+            const lazyRoom = new Room("!lazy:example.org", client, client.getSafeUserId(), {
+                pendingEventOrdering: PendingEventOrdering.Detached,
+            });
+            jest.spyOn(DMRoomMap.shared(), "getUserIdForRoomId").mockReturnValue(GHOST);
+            setPresence("unavailable", "last seen recently");
+            const { container } = render(
+                <MatrixClientContext.Provider value={client}>
+                    <WithPresenceIndicator room={lazyRoom} size="8px">
+                        <span />
+                    </WithPresenceIndicator>
+                    <BeeperDmLastSeenSubtitle room={lazyRoom} />
+                </MatrixClientContext.Provider>,
+            );
+            expect(container.querySelector(".mx_WithPresenceIndicator_icon_away")).toBeInTheDocument();
+            expect(screen.getByText("last seen recently")).toBeInTheDocument();
+        });
 
         it("treats a bridged DM portal as a DM even without m.direct", () => {
             expect(getBridgedDmUserId(room)).toBe(GHOST);
@@ -133,11 +156,16 @@ describe("Telegram-style last seen", () => {
 
         it("user info shows last seen, but keeps Element's label for other status messages", () => {
             setPresence("offline", "last seen within a week");
-            const { rerender } = render(<BeeperLastSeenLabel user={ghost} fallback={<span>Offline</span>} />);
+            const renderLabel = (): JSX.Element => (
+                <MatrixClientContext.Provider value={client}>
+                    <BeeperLastSeenLabel userId={GHOST} fallback={<span>Offline</span>} />
+                </MatrixClientContext.Provider>
+            );
+            const { rerender } = render(renderLabel());
             expect(screen.getByText("last seen within a week")).toBeInTheDocument();
 
             setPresence("offline", "Busy with things");
-            rerender(<BeeperLastSeenLabel user={ghost} fallback={<span>Offline</span>} />);
+            rerender(renderLabel());
             expect(screen.getByText("Offline")).toBeInTheDocument();
         });
     });

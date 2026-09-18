@@ -7,14 +7,7 @@ Please see LICENSE files in the repository root for full details.
 */
 
 import React, { type JSX, type ReactNode, useEffect, useState } from "react";
-import {
-    ClientEvent,
-    type Room,
-    type RoomMember,
-    RoomStateEvent,
-    type User,
-    UserEvent,
-} from "matrix-js-sdk/src/matrix";
+import { ClientEvent, type Room, RoomMember, RoomStateEvent, type User, UserEvent } from "matrix-js-sdk/src/matrix";
 import { Tooltip } from "@vector-im/compound-web";
 
 import { isPresenceEnabled } from "../../../utils/presence";
@@ -58,7 +51,9 @@ function tooltipText(variant: Presence): string {
 function getDmMember(room: Room): RoomMember | null {
     // Bridged DM portals may be missing from m.direct; fall back to the bridge's room type.
     const otherUserId = DMRoomMap.shared().getUserIdForRoomId(room.roomId) ?? getBridgedDmUserId(room);
-    return otherUserId ? room.getMember(otherUserId) : null;
+    if (!otherUserId) return null;
+    // With sliding sync the member list may not be loaded yet; presence only needs the user ID.
+    return room.getMember(otherUserId) ?? new RoomMember(room.roomId, otherUserId);
 }
 
 export const useDmMember = (room?: Room): RoomMember | null => {
@@ -115,7 +110,9 @@ export const usePresence = (room: Room, member: RoomMember | null): Presence | n
     });
     useEffect(updatePresence, [room, member]);
 
-    const isOneToOne = getJoinedNonFunctionalMembers(room).length === 2 || !!getBridgedDmUserId(room);
+    const joined = getJoinedNonFunctionalMembers(room).length;
+    // Fewer than 2 joined members means the (sliding sync) member list isn't loaded yet; trust m.direct.
+    const isOneToOne = joined === 2 || !!getBridgedDmUserId(room) || (joined < 2 && !!member);
     if (!isOneToOne || !isPresenceEnabled(room.client)) return null;
     return presence;
 };

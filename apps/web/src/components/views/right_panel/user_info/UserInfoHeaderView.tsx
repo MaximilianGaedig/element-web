@@ -40,7 +40,7 @@ export const UserInfoHeaderView: React.FC<UserInfoHeaderViewProps> = ({
     if (vm.showPresence) {
         presenceLabel = (
             <BeeperLastSeenLabel
-                user={(member as RoomMember).user}
+                userId={member.userId}
                 fallback={
                     <PresenceLabel
                         activeAgo={vm.precenseInfo.lastActiveAgo}
