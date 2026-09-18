@@ -1,0 +1,210 @@
+/*
+Copyright 2026 New Vector Ltd.
+
+SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only OR LicenseRef-Element-Commercial
+Please see LICENSE files in the repository root for full details.
+*/
+
+import React from "react";
+import { act, fireEvent, render, screen, waitFor } from "jest-matrix-react";
+import { type MatrixClient, type MatrixEvent } from "matrix-js-sdk/src/matrix";
+
+import BeeperAnimatedVideoBody from "../../../../../src/components/views/beeper/BeeperAnimatedVideoBody";
+import MessageEvent from "../../../../../src/components/views/messages/MessageEvent";
+import MatrixClientContext from "../../../../../src/contexts/MatrixClientContext";
+import { MatrixClientPeg } from "../../../../../src/MatrixClientPeg";
+import SettingsStore from "../../../../../src/settings/SettingsStore";
+import Modal from "../../../../../src/Modal";
+import { MediaEventHelper } from "../../../../../src/utils/MediaEventHelper";
+import { mkEvent, stubClient } from "../../../../test-utils";
+import { fitSize, getAnimatedVideoHints, isAnimatedSticker } from "../../../../../src/utils/beeper/animatedMedia";
+
+const ROOM_ID = "!portal:example.org";
+
+// A real Telegram animated sticker as bridged by mautrix-telegram.
+const STICKER_INFO = {
+    "mimetype": "video/webm",
+    "w": 256,
+    "h": 256,
+    "duration": 2900,
+    "size": 12345,
+    "thumbnail_url": "mxc://example.org/thumb",
+    "fi.mau.autoplay": true,
+    "fi.mau.loop": true,
+    "fi.mau.hide_controls": true,
+    "fi.mau.no_audio": true,
+    "fi.mau.telegram.animated_sticker": true,
+    "fi.mau.bridged_sticker": {
+        network: "telegram",
+        id: "123",
+        emoji: "😼",
+        pack_url: "https://t.me/addstickers/cats",
+    },
+};
+
+const GIF_INFO = {
+    "mimetype": "video/mp4",
+    "w": 640,
+    "h": 320,
+    "fi.mau.autoplay": true,
+    "fi.mau.loop": true,
+    "fi.mau.gif": true,
+    "fi.mau.no_audio": true,
+};
+
+describe("bridged GIFs and animated stickers", () => {
+    let client: MatrixClient;
+    let settings: Record<string, unknown>;
+    let observerCallback: IntersectionObserverCallback | undefined;
+    let play: jest.SpyInstance;
+    let pause: jest.SpyInstance;
+
+    const mkVideo = (info: Record<string, unknown>, body = "sticker.webm"): MatrixEvent =>
+        mkEvent({
+            event: true,
+            type: "m.room.message",
+            room: ROOM_ID,
+            user: "@telegram_1:example.org",
+            content: { msgtype: "m.video", body, url: "mxc://example.org/video", info },
+        });
+
+    const renderBody = (ev: MatrixEvent): ReturnType<typeof render> =>
+        render(
+            <MatrixClientContext.Provider value={client}>
+                <BeeperAnimatedVideoBody
+                    mxEvent={ev}
+                    mediaEventHelper={new MediaEventHelper(ev)}
+                    onMessageAllowed={jest.fn()}
+                    permalinkCreator={undefined}
+                />
+            </MatrixClientContext.Provider>,
+        );
+
+    const setOnScreen = (isIntersecting: boolean): void =>
+        act(() => observerCallback?.([{ isIntersecting } as IntersectionObserverEntry], {} as IntersectionObserver));
+
+    beforeEach(() => {
+        stubClient();
+        client = MatrixClientPeg.safeGet();
+        jest.spyOn(client, "mxcUrlToHttp").mockImplementation((mxc) => `https://hs/${mxc}`);
+        settings = {
+            autoplayGifs: true,
+            autoplayVideo: false,
+            mediaPreviewConfig: { media_previews: "on" },
+            showMediaEventIds: {},
+        };
+        jest.spyOn(SettingsStore, "getValue").mockImplementation((name: string) => settings[name] as any);
+        window.IntersectionObserver = jest.fn((cb: IntersectionObserverCallback) => {
+            observerCallback = cb;
+            return { observe: jest.fn(), disconnect: jest.fn(), unobserve: jest.fn() };
+        }) as any;
+        play = jest.spyOn(HTMLMediaElement.prototype, "play").mockResolvedValue(undefined);
+        pause = jest.spyOn(HTMLMediaElement.prototype, "pause").mockImplementation(() => {});
+        window.matchMedia = jest.fn().mockReturnValue({ matches: false }) as any;
+    });
+
+    afterEach(() => jest.restoreAllMocks());
+
+    it("parses the hints; ordinary videos are left alone", () => {
+        const sticker = mkVideo(STICKER_INFO);
+        expect(getAnimatedVideoHints(sticker)).toMatchObject({
+            autoplay: true,
+            loop: true,
+            sticker: true,
+            bridgedSticker: { emoji: "😼", pack_url: "https://t.me/addstickers/cats" },
+        });
+        expect(isAnimatedSticker(sticker)).toBe(true);
+        expect(isAnimatedSticker(mkVideo(GIF_INFO))).toBe(false);
+        expect(getAnimatedVideoHints(mkVideo({ mimetype: "video/mp4", w: 10, h: 10 }))).toBeUndefined();
+        expect(
+            getAnimatedVideoHints(
+                mkVideo({ ...STICKER_INFO, "fi.mau.bridged_sticker": { emoji: "x", pack_url: "javascript:alert(1)" } }),
+            )?.bridgedSticker?.pack_url,
+        ).toBeUndefined();
+        expect(fitSize(640, 320, 320)).toEqual({ width: 320, height: 160 });
+    });
+
+    it("autoplays a muted, looping video without controls, sized like a sticker", async () => {
+        const { container } = renderBody(mkVideo(STICKER_INFO));
+        const video = container.querySelector("video")!;
+        await waitFor(() => expect(video).toHaveAttribute("src", "https://hs/mxc://example.org/video"));
+        expect(video.muted).toBe(true);
+        expect(video.loop).toBe(true);
+        expect(video.autoplay).toBe(true);
+        expect(video).toHaveAttribute("playsinline");
+        expect(video.controls).toBe(false);
+        expect(video).toHaveAttribute("title", "😼");
+        expect(video).toHaveAttribute("width", "256");
+        expect(container.querySelector(".mx_BeeperAnimatedVideo")).toHaveClass("mx_BeeperAnimatedVideo_sticker");
+        expect(screen.getByRole("link", { name: "Open sticker pack" })).toHaveAttribute(
+            "href",
+            "https://t.me/addstickers/cats",
+        );
+        expect(play).toHaveBeenCalled();
+    });
+
+    it("pauses offscreen and resumes when scrolled back", async () => {
+        const { container } = renderBody(mkVideo(GIF_INFO, "cat.mp4"));
+        await waitFor(() => expect(container.querySelector("video")).toHaveAttribute("src"));
+        play.mockClear();
+        setOnScreen(false);
+        expect(pause).toHaveBeenCalled();
+        setOnScreen(true);
+        expect(play).toHaveBeenCalled();
+    });
+
+    it("with autoplay off (or reduced motion) shows the thumbnail and plays on hover", async () => {
+        settings.autoplayGifs = false;
+        const { container } = renderBody(mkVideo(GIF_INFO, "cat.mp4"));
+        const video = container.querySelector("video")!;
+        await waitFor(() => expect(video).toHaveAttribute("src"));
+        expect(video.autoplay).toBe(false);
+        expect(screen.getByText("GIF")).toBeInTheDocument();
+        expect(play).not.toHaveBeenCalled();
+
+        fireEvent.mouseEnter(container.querySelector(".mx_BeeperAnimatedVideo")!);
+        expect(play).toHaveBeenCalled();
+        fireEvent.mouseLeave(container.querySelector(".mx_BeeperAnimatedVideo")!);
+        expect(pause).toHaveBeenCalled();
+
+        settings.autoplayGifs = true;
+        (window.matchMedia as jest.Mock).mockReturnValue({ matches: true });
+        play.mockClear();
+        const again = renderBody(mkVideo(GIF_INFO, "cat.mp4"));
+        await waitFor(() => expect(again.container.querySelector("video")).toHaveAttribute("src"));
+        expect(again.container.querySelector("video")!.autoplay).toBe(false);
+        expect(play).not.toHaveBeenCalled();
+    });
+
+    it("opens the lightbox on click", async () => {
+        const createDialog = jest.spyOn(Modal, "createDialog").mockReturnValue({} as any);
+        const { container } = renderBody(mkVideo(GIF_INFO, "cat.mp4"));
+        const video = container.querySelector("video")!;
+        await waitFor(() => expect(video).toHaveAttribute("src"));
+        fireEvent.click(video);
+        expect(createDialog).toHaveBeenCalledWith(
+            expect.anything(),
+            expect.objectContaining({ src: "https://hs/mxc://example.org/video" }),
+            "mx_Dialog_lightbox",
+            undefined,
+            true,
+        );
+    });
+
+    it("is picked by MessageEvent for hinted videos only, without a caption for stickers", async () => {
+        const render_ = (ev: MatrixEvent): ReturnType<typeof render> =>
+            render(
+                <MatrixClientContext.Provider value={client}>
+                    <MessageEvent mxEvent={ev} permalinkCreator={undefined} />
+                </MatrixClientContext.Provider>,
+            );
+        const sticker = mkVideo(STICKER_INFO, "😼");
+        sticker.getContent().filename = "sticker.webm";
+        const { container } = render_(sticker);
+        expect(container.querySelector(".mx_BeeperAnimatedVideo")).toBeInTheDocument();
+        expect(container.querySelector(".mx_EventTile_caption")).toBeNull();
+
+        const plain = render_(mkVideo({ mimetype: "video/mp4", w: 10, h: 10 }, "clip.mp4"));
+        expect(plain.container.querySelector(".mx_BeeperAnimatedVideo")).toBeNull();
+    });
+});

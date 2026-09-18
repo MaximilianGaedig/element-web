@@ -83,6 +83,7 @@ import SenderProfile from "../messages/SenderProfile";
 import PerMessageProfileAvatar from "../beeper/PerMessageProfileAvatar";
 import BeeperEventTileExtras from "../beeper/BeeperEventTileExtras";
 import { isBeeperDisappeared } from "../../../utils/beeper/shouldHideBeeperEvent";
+import { isAnimatedSticker } from "../../../utils/beeper/animatedMedia";
 import { type IReadReceiptPosition } from "./ReadReceiptMarker";
 import ReactionPicker from "../emojipicker/ReactionPicker";
 import { getEventDisplayInfo } from "../../../utils/EventRenderingUtils";
@@ -1076,7 +1077,8 @@ export class UnwrappedEventTile extends React.Component<EventTileProps, IState> 
             mx_EventTile_image:
                 this.props.mxEvent.getType() === EventType.RoomMessage &&
                 this.props.mxEvent.getContent().msgtype === MsgType.Image,
-            mx_EventTile_sticker: this.props.mxEvent.getType() === EventType.Sticker,
+            mx_EventTile_sticker:
+                this.props.mxEvent.getType() === EventType.Sticker || isAnimatedSticker(this.props.mxEvent),
             mx_EventTile_emote:
                 this.props.mxEvent.getType() === EventType.RoomMessage &&
                 this.props.mxEvent.getContent().msgtype === MsgType.Emote,
