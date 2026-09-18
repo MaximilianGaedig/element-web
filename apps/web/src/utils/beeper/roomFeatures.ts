@@ -9,6 +9,7 @@ import { type MatrixEvent, type Room } from "matrix-js-sdk/src/matrix";
 
 import { _t } from "../../languageHandler";
 import { formatBytes } from "../FormattingUtils";
+import { getBridgeInfo } from "./bridgeInfo";
 
 /**
  * State event (state_key = bridge id) in which mautrix bridges describe what the remote network
@@ -70,14 +71,7 @@ export function getRoomFeatures(room: Room | null | undefined): RoomFeatures | u
 
 /** A human-readable name for the remote network, from the m.bridge state event. */
 export function getBridgeNetworkName(room: Room): string {
-    for (const type of ["m.bridge", "uk.half-shot.bridge"]) {
-        for (const ev of room.currentState.getStateEvents(type)) {
-            const protocol = ev.getContent().protocol;
-            const name = protocol?.displayname || protocol?.id;
-            if (typeof name === "string" && name) return name;
-        }
-    }
-    return _t("beeper|send_status_remote_network");
+    return getBridgeInfo(room)?.networkName ?? _t("beeper|send_status_remote_network");
 }
 
 /**

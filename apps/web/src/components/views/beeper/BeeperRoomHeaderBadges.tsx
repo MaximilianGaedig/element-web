@@ -17,6 +17,7 @@ import {
     formatDisappearingDuration,
     getRoomDisappearingTimer,
 } from "../../../utils/beeper/disappearingMessages";
+import { BridgeNetworkHeaderBadge } from "./BridgeNetworkIcon";
 
 function disappearingLabel(timer: DisappearingTimer): string {
     const duration = formatDisappearingDuration(timer.timer);
@@ -44,6 +45,7 @@ export function DisappearingTimerHeaderBadge({ room }: { room: Room }): JSX.Elem
 export default function BeeperRoomHeaderBadges({ room }: { room: Room }): JSX.Element {
     return (
         <>
+            <BridgeNetworkHeaderBadge room={room} />
             <DisappearingTimerHeaderBadge room={room} />
         </>
     );

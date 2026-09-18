@@ -397,6 +397,7 @@
         "verify_email_heading": "Verify your email to continue"
     },
     "beeper": {
+        "bridged_from": "Bridged from %(description)s",
         "disappearing_after_read": "Disappears %(duration)s after it's read",
         "disappearing_in": "Disappears in %(duration)s",
         "disappearing_room_after_read": "Disappearing messages: %(duration)s after they're read",
@@ -419,6 +420,10 @@
         },
         "features_reactions_unsupported": "%(network)s doesn't support reactions",
         "per_message_profile_via": "%(name)s (sent via %(sender)s)",
+        "room_type_dm": "Direct message",
+        "room_type_group": "Group chat",
+        "room_type_group_dm": "Group DM",
+        "room_type_space": "Space",
         "send_status_delivered": "Delivered on %(network)s",
         "send_status_failed": "Not delivered to %(network)s",
         "send_status_failed_bridge_unavailable": "Not delivered to %(network)s: the bridge is unavailable",
