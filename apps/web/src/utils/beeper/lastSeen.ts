@@ -28,14 +28,17 @@ export interface LastSeenOptions {
     timeZone?: string;
 }
 
-/** Formats an exact last-seen time the way Telegram does. */
-export function formatLastSeenTime(ts: number, opts: LastSeenOptions = {}): string {
+/**
+ * Formats an exact time the way Telegram does. `kind` picks the wording: "seen" for the network's own
+ * last-seen time, "active" for activity we observed ourselves (their last message or read receipt).
+ */
+export function formatLastSeenTime(ts: number, opts: LastSeenOptions = {}, kind: "seen" | "active" = "seen"): string {
     const now = opts.now ?? Date.now();
     const locale = opts.locale ?? getUserLanguage();
     const timeZone = opts.timeZone ?? getUserTimezone();
     const diff = now - ts;
-    if (diff < MINUTE) return _t("beeper|last_seen_just_now");
-    if (diff < HOUR) return _t("beeper|last_seen_minutes_ago", { count: Math.floor(diff / MINUTE) });
+    if (diff < MINUTE) return _t(kind === "active" ? "beeper|last_active_just_now" : "beeper|last_seen_just_now");
+    if (diff < HOUR) return _t(kind === "active" ? "beeper|last_active_minutes_ago" : "beeper|last_seen_minutes_ago", { count: Math.floor(diff / MINUTE) });
 
     const date = new Date(ts);
     const at = new Intl.DateTimeFormat(locale, {
@@ -46,8 +49,8 @@ export function formatLastSeenTime(ts: number, opts: LastSeenOptions = {}): stri
     }).format(date);
 
     const day = dayKey(ts, timeZone);
-    if (day === dayKey(now, timeZone)) return _t("beeper|last_seen_today_at", { time: at });
-    if (day === dayKey(now - 24 * HOUR, timeZone)) return _t("beeper|last_seen_yesterday_at", { time: at });
+    if (day === dayKey(now, timeZone)) return _t(kind === "active" ? "beeper|last_active_today_at" : "beeper|last_seen_today_at", { time: at });
+    if (day === dayKey(now - 24 * HOUR, timeZone)) return _t(kind === "active" ? "beeper|last_active_yesterday_at" : "beeper|last_seen_yesterday_at", { time: at });
     const sameYear = day.slice(0, 4) === dayKey(now, timeZone).slice(0, 4);
     const dateStr = new Intl.DateTimeFormat(locale, {
         timeZone,
@@ -55,7 +58,7 @@ export function formatLastSeenTime(ts: number, opts: LastSeenOptions = {}): stri
         month: "short",
         year: sameYear ? undefined : "numeric",
     }).format(date);
-    return _t("beeper|last_seen_date_at", { date: dateStr, time: at });
+    return _t(kind === "active" ? "beeper|last_active_date_at" : "beeper|last_seen_date_at", { date: dateStr, time: at });
 }
 
 /**
@@ -85,4 +88,10 @@ export function formatLastSeen(
         if (!isNaN(ts)) return formatLastSeenTime(ts, opts);
     }
     return statusMsg;
+}
+
+/** True when the bridge only knows a vague last-seen ("recently", "within a week/month"). */
+export function isVagueLastSeen(statusMsg: string | undefined): boolean {
+    if (typeof statusMsg !== "string" || !statusMsg.startsWith(PREFIX)) return false;
+    return ["recently", "within a week", "within a month"].includes(statusMsg.slice(PREFIX.length).trim());
 }

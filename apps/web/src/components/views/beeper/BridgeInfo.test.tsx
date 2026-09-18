@@ -83,7 +83,9 @@ describe("bridge info (m.bridge + com.beeper.room_type)", () => {
                 </BridgedRoomAvatar>
             </MatrixClientContext.Provider>,
         );
-        expect(screen.getByLabelText("Bridged from WhatsApp · Group DM")).toHaveTextContent("WhatsApp");
+        const badge = screen.getByLabelText("Bridged from WhatsApp · Group DM");
+        expect(badge).not.toHaveTextContent("WhatsApp");
+        expect(badge.querySelector(".mx_BridgeNetworkIcon")).toBeInTheDocument();
         const wrapper = container.querySelector(".mx_BridgedRoomAvatar");
         expect(wrapper).toContainElement(screen.getByTestId("avatar"));
         expect(wrapper?.querySelector(".mx_BridgeNetworkIcon")).toBeInTheDocument();

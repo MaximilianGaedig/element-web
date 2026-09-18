@@ -35,6 +35,8 @@ export function BridgeNetworkIcon({ info, size }: { info: BridgeInfo; size: numb
 }
 
 /** Room header badge naming the network a bridged room comes from (m.bridge + com.beeper.room_type). */
+// Icon only: the room-path breadcrumb under the room name already names the
+// network (e.g. "Telegram (…)"), so repeating it as text is redundant.
 export function BridgeNetworkHeaderBadge({ room }: { room: Room }): JSX.Element | null {
     const info = useRoomState(room, () => getBridgeInfo(room));
     if (!info) return null;
@@ -43,7 +45,6 @@ export function BridgeNetworkHeaderBadge({ room }: { room: Room }): JSX.Element 
         <Tooltip label={label} placement="right">
             <span className="mx_BeeperRoomHeaderBadge mx_BridgeNetworkHeaderBadge" aria-label={label}>
                 <BridgeNetworkIcon info={info} size={16} />
-                {info.networkName}
             </span>
         </Tooltip>
     );

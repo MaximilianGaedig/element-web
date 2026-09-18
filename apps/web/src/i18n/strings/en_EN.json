@@ -420,6 +420,14 @@
             "other": "%(network)s only allows these %(count)s reactions here"
         },
         "features_reactions_unsupported": "%(network)s doesn't support reactions",
+        "last_active_date_at": "active %(date)s at %(time)s",
+        "last_active_just_now": "active just now",
+        "last_active_minutes_ago": {
+            "one": "active %(count)s minute ago",
+            "other": "active %(count)s minutes ago"
+        },
+        "last_active_today_at": "active today at %(time)s",
+        "last_active_yesterday_at": "active yesterday at %(time)s",
         "last_seen_date_at": "last seen %(date)s at %(time)s",
         "last_seen_just_now": "last seen just now",
         "last_seen_minutes_ago": {
