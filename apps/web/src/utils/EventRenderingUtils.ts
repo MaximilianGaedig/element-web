@@ -18,7 +18,13 @@ import {
 } from "matrix-js-sdk/src/matrix";
 
 import SettingsStore from "../settings/SettingsStore";
-import { haveRendererForEvent, JitsiEventFactory, JSONEventFactory, pickFactory } from "../events/EventTileFactory";
+import {
+    BeeperActionMessageFactory,
+    haveRendererForEvent,
+    JitsiEventFactory,
+    JSONEventFactory,
+    pickFactory,
+} from "../events/EventTileFactory";
 import { getMessageModerationState, isLocationEvent, MessageModerationState } from "./EventUtils";
 import { ElementCallEventType } from "../call-types";
 
@@ -83,7 +89,9 @@ export function getEventDisplayInfo(
         factory === JitsiEventFactory;
     const isLeftAlignedBubbleMessage =
         !isBubbleMessage && (eventType === EventType.CallInvite || ElementCallEventType.matches(eventType));
-    let isInfoMessage = calcIsInfoMessage(eventType, content, isBubbleMessage, isLeftAlignedBubbleMessage);
+    let isInfoMessage =
+        calcIsInfoMessage(eventType, content, isBubbleMessage, isLeftAlignedBubbleMessage) ||
+        factory === BeeperActionMessageFactory;
     // Some non-info messages want to be rendered in the appropriate bubble column but without the bubble background
     const noBubbleEvent =
         (eventType === EventType.RoomMessage && msgtype === MsgType.Emote) ||
