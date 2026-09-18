@@ -9,7 +9,7 @@ Please see LICENSE files in the repository root for full details.
 // @vitest-environment happy-dom
 
 import React from "react";
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach, onTestFinished } from "vitest";
 import { fireEvent, render, waitFor } from "test-utils-rtl";
 import { type MatrixClient, MsgType } from "matrix-js-sdk/src/matrix";
 import userEvent from "@testing-library/user-event";
@@ -33,6 +33,8 @@ import { MessageComposerUrlPreviewViewModel } from "../../../viewmodels/composer
 import { SDKContext } from "../../../contexts/SDKContext.ts";
 import { UrlPreviewApi } from "../../../modules/UrlPreviewApi.ts";
 import { attachUrlPreviews } from "../../../utils/messages";
+import { BOT_COMMANDS_EVENT_TYPE } from "../../../utils/beeper/botCommands";
+import Modal from "../../../Modal";
 
 vi.mock("../../../utils/local-room", () => ({
     doMaybeLocalRoomAction: vi.fn(),
@@ -441,6 +443,113 @@ describe("<SendMessageComposer/>", () => {
             });
 
             expect(defaultDispatcher.dispatch).not.toHaveBeenCalledWith({ action: `effects.confetti` });
+        });
+        describe("in a room with Telegram bot commands", () => {
+            const botCommandsEvent = mkEvent({
+                type: BOT_COMMANDS_EVENT_TYPE,
+                skey: "",
+                user: "@telegrambot:test",
+                room: "myfakeroom",
+                content: {
+                    bot: "@telegram_123:test",
+                    commands: [
+                        { command: "start", description: "Start the bot" },
+                        { command: "tableflip", description: "The bot's own tableflip" },
+                    ],
+                },
+                event: true,
+            });
+
+            beforeEach(() => {
+                vi.mocked(doMaybeLocalRoomAction).mockImplementation(
+                    <T,>(roomId: string, fn: (actualRoomId: string) => Promise<T>, _client?: MatrixClient) => {
+                        return fn(roomId);
+                    },
+                );
+                vi.mocked(mockRoom.currentState.getStateEvents).mockImplementation((type: string, key?: string) =>
+                    type === BOT_COMMANDS_EVENT_TYPE && key === "" ? botCommandsEvent : key === undefined ? [] : null,
+                );
+                mockPlatformPeg({ overrideBrowserShortcuts: vi.fn().mockReturnValue(false) });
+            });
+
+            /** Messages sent since the test started (the client mock is shared across the suite). */
+            let sentBefore = 0;
+            beforeEach(() => {
+                sentBefore = vi.mocked(mockClient.sendMessage).mock.calls.length;
+            });
+            const sent = (): unknown[][] => vi.mocked(mockClient.sendMessage).mock.calls.slice(sentBefore);
+
+            afterEach(() => {
+                vi.mocked(mockRoom.currentState.getStateEvents).mockImplementation((_type: string, key?: string) =>
+                    key === undefined ? [] : null,
+                );
+            });
+
+            it("sends a bot command with arguments as plain text, without the unknown-command dialog", async () => {
+                const createDialog = vi.spyOn(Modal, "createDialog");
+                onTestFinished(() => createDialog.mockRestore());
+                const { container } = getComponent();
+
+                addTextToComposer(container, "/start deep-link");
+                fireEvent.keyDown(container.querySelector(".mx_SendMessageComposer")!, { key: "Enter" });
+
+                await waitFor(() =>
+                    expect(sent()).toEqual([
+                        [
+                            "myfakeroom",
+                            null,
+                            {
+                                "body": "/start deep-link",
+                                "msgtype": MsgType.Text,
+                                "m.mentions": {},
+                            },
+                        ],
+                    ]),
+                );
+                expect(createDialog).not.toHaveBeenCalled();
+            });
+
+            it("sends a bot command shadowing an Element command to the bot", async () => {
+                const { container } = getComponent();
+
+                addTextToComposer(container, "/tableflip");
+                fireEvent.keyDown(container.querySelector(".mx_SendMessageComposer")!, { key: "Enter" });
+
+                await waitFor(() =>
+                    expect(sent()).toEqual([
+                        [
+                            "myfakeroom",
+                            null,
+                            {
+                                "body": "/tableflip",
+                                "msgtype": MsgType.Text,
+                                "m.mentions": {},
+                            },
+                        ],
+                    ]),
+                );
+            });
+
+            it("runs the shadowed Element command for //name", async () => {
+                const { container } = getComponent();
+
+                addTextToComposer(container, "//tableflip");
+                fireEvent.keyDown(container.querySelector(".mx_SendMessageComposer")!, { key: "Enter" });
+
+                await waitFor(() =>
+                    expect(sent()).toEqual([
+                        [
+                            "myfakeroom",
+                            null,
+                            {
+                                "body": "(╯°□°）╯︵ ┻━┻",
+                                "msgtype": MsgType.Text,
+                                "m.mentions": {},
+                            },
+                        ],
+                    ]),
+                );
+            });
         });
     });
 

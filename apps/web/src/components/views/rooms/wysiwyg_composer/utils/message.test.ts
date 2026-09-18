@@ -8,7 +8,7 @@ Please see LICENSE files in the repository root for full details.
 
 // @vitest-environment happy-dom
 
-import { describe, it, expect, beforeEach, afterAll, vi } from "vitest";
+import { describe, it, expect, beforeEach, afterAll, vi, onTestFinished } from "vitest";
 import { EventStatus, type IEventRelation, MsgType } from "matrix-js-sdk/src/matrix";
 import { type RoomMessageEventContent } from "matrix-js-sdk/src/types";
 
@@ -26,6 +26,7 @@ import * as Reply from "../../../../../utils/Reply";
 import { MatrixClientPeg } from "../../../../../MatrixClientPeg";
 import { Action } from "../../../../../dispatcher/actions";
 import { attachUrlPreviews } from "../../../../../utils/messages";
+import { BOT_COMMANDS_EVENT_TYPE } from "../../../../../utils/beeper/botCommands";
 
 // Wrapped rather than replaced: only the cancellation test below overrides it.
 vi.mock("../../../../../utils/messages", async (importOriginal) => {
@@ -435,6 +436,44 @@ describe("message", () => {
                     expect.objectContaining({ body: invalidCommandInput }),
                 );
                 expect(spyDispatcher).toHaveBeenCalledWith(expect.objectContaining({ action: Action.FocusAComposer }));
+            });
+
+            it("sends a Telegram bot command as a plain message without asking", async () => {
+                const botCommands = mkEvent({
+                    type: BOT_COMMANDS_EVENT_TYPE,
+                    skey: "",
+                    user: "@telegrambot:test",
+                    room: mockRoom.roomId,
+                    content: { bot: "@telegram_1:test", commands: [{ command: "start", description: "Start" }] },
+                    event: true,
+                });
+                vi.mocked(mockRoom.currentState.getStateEvents).mockImplementation((type: string, key?: string) =>
+                    type === BOT_COMMANDS_EVENT_TYPE && key === "" ? botCommands : key === undefined ? [] : null,
+                );
+                onTestFinished(() =>
+                    vi
+                        .mocked(mockRoom.currentState.getStateEvents)
+                        .mockImplementation((_type: string, key?: string) => (key === undefined ? [] : null)),
+                );
+                const sendAnyway = vi.spyOn(Commands, "shouldSendAnyway");
+
+                await sendMessage("/start hello", false, {
+                    roomContext: defaultRoomContext,
+                    mxClient: mockClient,
+                    urlPreviewSnapshot: {
+                        entries: [],
+                        content: "",
+                        contentLinks: new Set<string>(),
+                        isModified: false,
+                    },
+                });
+
+                expect(sendAnyway).not.toHaveBeenCalled();
+                expect(mockClient.sendMessage).toHaveBeenCalledWith(
+                    "myfakeroom",
+                    null,
+                    expect.objectContaining({ msgtype: "m.text", body: "/start hello" }),
+                );
             });
 
             it("if user enters invalid command and then does not send, return undefined", async () => {

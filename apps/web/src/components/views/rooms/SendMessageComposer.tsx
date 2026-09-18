@@ -55,7 +55,7 @@ import { decorateStartSendingTime, sendRoundTripMetric } from "../../../sendTime
 import RoomContext, { TimelineRenderingType } from "../../../contexts/RoomContext";
 import DocumentPosition from "../../../editor/position";
 import { ComposerType } from "../../../dispatcher/payloads/ComposerInsertPayload";
-import { getSlashCommand, isSlashCommand, runSlashCommand, shouldSendAnyway } from "../../../editor/commands";
+import { getRoomSlashCommand, runSlashCommand, shouldSendAnyway } from "../../../editor/commands";
 import { KeyBindingAction } from "../../../accessibility/KeyboardShortcuts";
 import { PosthogAnalytics } from "../../../PosthogAnalytics";
 import { addReplyToMessageContent } from "../../../utils/Reply";
@@ -375,8 +375,9 @@ export class SendMessageComposer extends React.Component<ISendMessageComposerPro
         let shouldSend = true;
         let content: RoomMessageEventContent | null = null;
 
-        if (!containsEmote(model) && isSlashCommand(this.model)) {
-            const [cmd, args, commandText] = getSlashCommand(this.props.room.roomId, this.model);
+        const slashCommand = containsEmote(model) ? null : getRoomSlashCommand(this.props.room, this.model);
+        if (slashCommand) {
+            const [cmd, args, commandText] = slashCommand;
             if (cmd) {
                 const threadId =
                     this.props.relation?.rel_type === THREAD_RELATION_TYPE.name ? this.props.relation?.event_id : null;

@@ -32,6 +32,7 @@ import { createMessageContent, EMOTE_PREFIX } from "./createMessageContent";
 import { isContentModified } from "./isContentModified";
 import { CommandCategories, getCommand } from "../../../../../slash-commands/SlashCommands";
 import { runSlashCommand, shouldSendAnyway } from "../../../../../editor/commands";
+import { routeSlashMessage } from "../../../../../utils/beeper/botCommands";
 import { Action } from "../../../../../dispatcher/actions";
 import { addReplyToMessageContent } from "../../../../../utils/Reply";
 import { attachRelation, attachUrlPreviews } from "../../../../../utils/messages";
@@ -78,8 +79,22 @@ export async function sendMessage(
 
     // Slash command handling here approximates what can be found in SendMessageComposer.sendMessage()
     // but note that the /me and // special cases are handled by the call to createMessageContent
-    if (message.startsWith("/") && !message.startsWith("//") && !message.startsWith(EMOTE_PREFIX)) {
-        const { cmd, args } = getCommand(roomId, message);
+    // Fork: Telegram bot commands are sent as plain messages, and `//name` reaches an Element command
+    // shadowed by one (see routeSlashMessage).
+    const slashRoute = message.startsWith(EMOTE_PREFIX) ? null : routeSlashMessage(room, message);
+    let commandText: string | undefined;
+    if (slashRoute?.kind === "element" && getCommand(roomId, slashRoute.text).cmd) {
+        commandText = slashRoute.text;
+    } else if (
+        slashRoute?.kind !== "bot" &&
+        message.startsWith("/") &&
+        !message.startsWith("//") &&
+        !message.startsWith(EMOTE_PREFIX)
+    ) {
+        commandText = message;
+    }
+    if (commandText !== undefined) {
+        const { cmd, args } = getCommand(roomId, commandText);
         if (cmd) {
             const threadId = relation?.rel_type === THREAD_RELATION_TYPE.name ? relation?.event_id : null;
             let commandSuccessful: boolean;

@@ -38,7 +38,7 @@ import SettingsStore from "../../../settings/SettingsStore";
 import { withMatrixClientHOC, type MatrixClientProps } from "../../../contexts/MatrixClientContext";
 import RoomContext from "../../../contexts/RoomContext";
 import { ComposerType } from "../../../dispatcher/payloads/ComposerInsertPayload";
-import { getSlashCommand, isSlashCommand, runSlashCommand, shouldSendAnyway } from "../../../editor/commands";
+import { getRoomSlashCommand, runSlashCommand, shouldSendAnyway } from "../../../editor/commands";
 import { KeyBindingAction } from "../../../accessibility/KeyboardShortcuts";
 import { PosthogAnalytics } from "../../../PosthogAnalytics";
 import { editorRoomKey, editorStateKey } from "../../../Editing";
@@ -324,8 +324,9 @@ class EditMessageComposer extends React.Component<IEditMessageComposerProps, ISt
         // either text content or list of URL previews modified counts
         if (this.isContentModified(newContent) || this.props.isUrlPreviewsModified) {
             const roomId = editedEvent.getRoomId()!;
-            if (!containsEmote(this.model) && isSlashCommand(this.model)) {
-                const [cmd, args, commandText] = getSlashCommand(roomId, this.model);
+            const slashCommand = containsEmote(this.model) ? null : getRoomSlashCommand(this.getRoom(), this.model);
+            if (slashCommand) {
+                const [cmd, args, commandText] = slashCommand;
                 if (cmd) {
                     const threadId = editedEvent?.getThread()?.id || null;
                     const [content, commandSuccessful] = await runSlashCommand(

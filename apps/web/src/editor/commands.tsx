@@ -8,7 +8,7 @@ Please see LICENSE files in the repository root for full details.
 
 import React from "react";
 import { logger } from "matrix-js-sdk/src/logger";
-import { type MatrixClient } from "matrix-js-sdk/src/matrix";
+import { type MatrixClient, type Room } from "matrix-js-sdk/src/matrix";
 import { type RoomMessageEventContent } from "matrix-js-sdk/src/types";
 
 import type EditorModel from "./model";
@@ -18,6 +18,7 @@ import { UserFriendlyError, _t, _td } from "../languageHandler";
 import Modal from "../Modal";
 import ErrorDialog from "../components/views/dialogs/ErrorDialog";
 import QuestionDialog from "../components/views/dialogs/QuestionDialog";
+import { routeSlashMessage } from "../utils/beeper/botCommands";
 
 export function isSlashCommand(model: EditorModel): boolean {
     const parts = model.parts;
@@ -45,15 +46,45 @@ export function isSlashCommand(model: EditorModel): boolean {
  * @returns A tuple of the command (or undefined if not found), the arguments (or undefined), and the full command text
  */
 export function getSlashCommand(roomId: string, model: EditorModel): [Command | undefined, string | undefined, string] {
-    const commandText = model.parts.reduce((text, part) => {
+    const commandText = getCommandText(model);
+    const { cmd, args } = getCommand(roomId, commandText);
+    return [cmd, args, commandText];
+}
+
+function getCommandText(model: EditorModel): string {
+    return model.parts.reduce((text, part) => {
         // use mxid to textify user pills in a command and room alias/id for room pills
         if (part.type === Type.UserPill || part.type === Type.RoomPill) {
             return text + part.resourceId;
         }
         return text + part.text;
     }, "");
-    const { cmd, args } = getCommand(roomId, commandText);
-    return [cmd, args, commandText];
+}
+
+/**
+ * Like {@link isSlashCommand} + {@link getSlashCommand}, but aware of the Telegram bot commands of the
+ * room (see {@link routeSlashMessage}):
+ * - a bot command (`/start`, `/start@somebot`, with or without arguments) is not an Element command:
+ *   returns `null` so it is sent as a plain message, without the "Unknown command" dialog;
+ * - `//name args` runs Element's `/name` when a bot command shadows it.
+ *
+ * @returns `null` if the message isn't an Element slash command, otherwise the same tuple as
+ *          {@link getSlashCommand}.
+ */
+export function getRoomSlashCommand(
+    room: Room,
+    model: EditorModel,
+): [Command | undefined, string | undefined, string] | null {
+    const text = getCommandText(model);
+    const route = routeSlashMessage(room, text);
+    if (route.kind === "bot") return null;
+    if (route.kind === "element") {
+        const { cmd, args } = getCommand(room.roomId, route.text);
+        // Not an Element command after all: `//` just escapes the leading `/` as usual.
+        if (cmd) return [cmd, args, route.text];
+    }
+    if (!isSlashCommand(model)) return null;
+    return getSlashCommand(room.roomId, model);
 }
 
 export async function runSlashCommand(
