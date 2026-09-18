@@ -114,6 +114,8 @@ export function TextualBodyFactory(props: Readonly<IBodyProps>): JSX.Element {
                 mxEvent: props.mxEvent,
                 content,
                 stripReply,
+                // BridgeButtons below renders the keyboard, so its text fallback would be a duplicate.
+                stripBridgeButtonsFallback: true,
                 linkify: true,
                 highlights: props.highlights,
                 renderTooltipsForAmbiguousLinks: true,

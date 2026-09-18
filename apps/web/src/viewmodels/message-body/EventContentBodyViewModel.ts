@@ -23,6 +23,7 @@ import {
 
 import { bodyToNode } from "../../HtmlUtils";
 import { stripPerMessageProfileFallback } from "../../utils/beeper/perMessageProfile";
+import { stripBridgeButtonsFallback } from "../../utils/BridgeButtons";
 import PlatformPeg from "../../PlatformPeg";
 import {
     combineRenderers,
@@ -85,6 +86,12 @@ export interface EventContentBodyViewModelProps extends ReplacerOptions {
      * @default false
      */
     stripReply?: boolean;
+    /**
+     * Whether to strip the bridge's text fallback of an inline keyboard (`fi.mau.telegram.buttons`),
+     * for callers that render the keyboard as real buttons next to the body.
+     * @default false
+     */
+    stripBridgeButtonsFallback?: boolean;
     /**
      * Highlights to emphasise in the content.
      */
@@ -183,7 +190,8 @@ export class EventContentBodyViewModel
         props: EventContentBodyViewModelProps,
     ): Pick<EventContentBodyViewSnapshot, "body" | "formattedBody" | "className"> => {
         const { stripReply, highlights, linkify, enableBigEmoji, mediaIsVisible } = props;
-        const content = stripPerMessageProfileFallback(props.content);
+        const withoutProfile = stripPerMessageProfileFallback(props.content);
+        const content = props.stripBridgeButtonsFallback ? stripBridgeButtonsFallback(withoutProfile) : withoutProfile;
         const isEmote = content.msgtype === MsgType.Emote;
         const { strippedBody, formattedBody, emojiBodyElements, className } = bodyToNode(content, highlights, {
             disableBigEmoji: isEmote || !enableBigEmoji,

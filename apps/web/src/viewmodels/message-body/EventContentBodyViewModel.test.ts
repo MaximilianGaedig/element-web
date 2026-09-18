@@ -105,6 +105,31 @@ describe("EventContentBodyViewModel", () => {
         expect(snapshot.className).toContain("mx_EventTile_body");
     });
 
+    it("strips the bridge's inline-keyboard text fallback only when asked to", () => {
+        mockedCombineRenderers.mockReturnValue(() => vi.fn());
+        mockedBodyToNode.mockReturnValue({
+            strippedBody: "",
+            formattedBody: undefined,
+            emojiBodyElements: undefined,
+            className: "mx_EventTile_body",
+        });
+        const content = {
+            "msgtype": MsgType.Text,
+            "body": "Pick one\n\nButtons:\nA (!tg click 7 0 0)",
+            "fi.mau.telegram.buttons": {
+                message_id: 7,
+                keyboard: "inline",
+                rows: [[{ text: "A", type: "callback", command: "!tg click 7 0 0" }]],
+            },
+        };
+
+        new EventContentBodyViewModel(defaultProps({ content }));
+        expect(mockedBodyToNode.mock.lastCall?.[0].body).toBe(content.body);
+
+        new EventContentBodyViewModel(defaultProps({ content, stripBridgeButtonsFallback: true }));
+        expect(mockedBodyToNode.mock.lastCall?.[0].body).toBe("Pick one");
+    });
+
     it("initializes setting-backed options from SettingsStore when omitted", () => {
         const replacer = vi.fn();
         const createReplacerFromOptions = vi.fn().mockReturnValue(replacer);

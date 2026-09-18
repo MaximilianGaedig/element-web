@@ -277,3 +277,114 @@ export function findActiveReplyKeyboard(
     }
     return null;
 }
+
+/** Go's `html.EscapeString`, which the bridge uses for the HTML fallback. */
+function goHtmlEscape(s: string): string {
+    return s.replace(/[&'<>"]/g, (c) => ({ "&": "&amp;", "'": "&#39;", "<": "&lt;", ">": "&gt;", '"': "&#34;" })[c]!);
+}
+
+/** The bridge's `compactButtonLabel`: collapse whitespace runs, placeholder for empty labels. */
+function compactButtonLabel(text: string): string {
+    const compact = text.split(/\s+/).filter(Boolean).join(" ");
+    return compact || "(no label)";
+}
+
+/** Raw non-empty rows of the keyboard field, exactly as the bridge iterates them. */
+function rawButtonRows(content: IContent): Record<string, unknown>[][] {
+    const raw = content[TELEGRAM_BUTTONS_FIELD] as Record<string, unknown> | undefined;
+    const rows = raw?.["rows"];
+    if (!Array.isArray(rows)) return [];
+    return rows
+        .filter((row): row is unknown[] => Array.isArray(row) && row.length > 0)
+        .map((row) => row.map((b) => (b && typeof b === "object" ? (b as Record<string, unknown>) : {})));
+}
+
+/**
+ * Rebuilds the text fallback of a keyboard exactly like mautrix-telegram's `fallbackText()`
+ * (`pkg/connector/inlinebuttons.go`), which is appended to `body` and `formatted_body` when the
+ * bridge's `inline_button_fallback` option is on.
+ */
+export function buildBridgeButtonsFallback(content: IContent): { plain: string; html: string } {
+    let plain = "Buttons:";
+    let html = "<p>Buttons:";
+    for (const row of rawButtonRows(content)) {
+        plain += "\n";
+        html += "<br>";
+        row.forEach((button, i) => {
+            if (i > 0) {
+                plain += " | ";
+                html += " | ";
+            }
+            const label = compactButtonLabel(optString(button["text"]));
+            const type = button["type"];
+            const url = optString(button["url"]);
+            const command = optString(button["command"]);
+            if (type === "url" || type === "url_auth") {
+                plain += `${label} (${url})`;
+                html += `<a href="${goHtmlEscape(url)}">${goHtmlEscape(label)}</a>`;
+            } else if (command) {
+                plain += `${label} (${command})`;
+                html += `${goHtmlEscape(label)} (<code>${goHtmlEscape(command)}</code>)`;
+            } else {
+                plain += label;
+                html += goHtmlEscape(label);
+            }
+        });
+    }
+    html += "</p>";
+    return { plain, html };
+}
+
+function countOf(haystack: string, needle: string): number {
+    return haystack.split(needle).length - 1;
+}
+
+function stripPlainFallback(body: string, expected: string, rowCount: number): string {
+    if (body === expected) return "";
+    if (body.endsWith("\n\n" + expected)) return body.slice(0, -expected.length - 2);
+    // Labels/URLs may have been normalised somewhere along the way: accept a trailing
+    // "Buttons:" paragraph with exactly one line per keyboard row.
+    const idx = body.lastIndexOf("Buttons:");
+    if (idx < 0 || (idx !== 0 && body.slice(idx - 2, idx) !== "\n\n")) return body;
+    const rest = body.slice(idx + "Buttons:".length);
+    if (!rest.startsWith("\n") || countOf(rest, "\n") !== rowCount) return body;
+    return idx === 0 ? "" : body.slice(0, idx - 2);
+}
+
+function stripHtmlFallback(html: string, expected: string, rowCount: number): string {
+    if (html.endsWith(expected)) return html.slice(0, -expected.length).trimEnd();
+    const idx = html.lastIndexOf("<p>Buttons:");
+    if (idx < 0) return html;
+    const rest = html.slice(idx).trimEnd();
+    if (!rest.endsWith("</p>") || countOf(rest, "</p>") !== 1 || countOf(rest, "<p") !== 1) return html;
+    if (countOf(rest.replace(/<br\s*\/?>/g, "<br>"), "<br>") !== rowCount) return html;
+    return html.slice(0, idx).trimEnd();
+}
+
+/**
+ * Removes the bridge's text fallback of an inline keyboard ("Buttons:" paragraph listing each
+ * button and its `!tg click` command) from `body` and `formatted_body`.
+ *
+ * Only does so if the event has an inline keyboard that Element renders as real buttons
+ * ({@link parseBridgeButtons}), otherwise the fallback is the only way to see the buttons.
+ * Returns the content unchanged (same object) if there is nothing to strip. Never throws.
+ */
+export function stripBridgeButtonsFallback(content: IContent): IContent {
+    try {
+        if (!parseBridgeButtons(content)) return content;
+        const rowCount = rawButtonRows(content).length;
+        const { plain, html } = buildBridgeButtonsFallback(content);
+        const body = typeof content.body === "string" ? stripPlainFallback(content.body, plain, rowCount) : undefined;
+        const formatted =
+            typeof content.formatted_body === "string"
+                ? stripHtmlFallback(content.formatted_body, html, rowCount)
+                : undefined;
+        if (body === content.body && formatted === content.formatted_body) return content;
+        const stripped: IContent = { ...content };
+        if (body !== undefined) stripped.body = body;
+        if (formatted !== undefined) stripped.formatted_body = formatted;
+        return stripped;
+    } catch {
+        return content;
+    }
+}
