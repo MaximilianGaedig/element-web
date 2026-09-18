@@ -147,7 +147,11 @@ export default class PreferencesUserSettingsTab extends React.Component<IProps, 
         "showCodeLineNumbers",
     ];
 
-    private static IMAGES_AND_VIDEOS_SETTINGS: BooleanSettingKey[] = ["autoplayGifs", "autoplayVideo"];
+    private static IMAGES_AND_VIDEOS_SETTINGS: BooleanSettingKey[] = [
+        "autoplayGifs",
+        "autoplayVideo",
+        "groupConsecutiveImages",
+    ];
 
     private static TIMELINE_SETTINGS: BooleanSettingKey[] = [
         "showTypingNotifications",

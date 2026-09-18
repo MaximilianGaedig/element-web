@@ -259,6 +259,7 @@ export interface Settings {
     "userTimezonePublish": IBaseSetting<boolean>;
     "autoplayGifs": IBaseSetting<boolean>;
     "autoplayVideo": IBaseSetting<boolean>;
+    "groupConsecutiveImages": IBaseSetting<boolean>;
     "enableSyntaxHighlightLanguageDetection": IBaseSetting<boolean>;
     "expandCodeByDefault": IBaseSetting<boolean>;
     "showCodeLineNumbers": IBaseSetting<boolean>;
@@ -888,6 +889,12 @@ export const SETTINGS: Settings = {
         supportedLevels: LEVELS_ACCOUNT_SETTINGS,
         displayName: _td("settings|autoplay_videos"),
         default: false,
+    },
+    "groupConsecutiveImages": {
+        supportedLevels: LEVELS_ACCOUNT_SETTINGS,
+        displayName: _td("settings|group_consecutive_images"),
+        description: _td("settings|group_consecutive_images_description"),
+        default: true,
     },
     "enableSyntaxHighlightLanguageDetection": {
         supportedLevels: LEVELS_ACCOUNT_SETTINGS,

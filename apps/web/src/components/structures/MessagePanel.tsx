@@ -32,6 +32,7 @@ import SettingsStore from "../../settings/SettingsStore";
 import RoomContext, { TimelineRenderingType } from "../../contexts/RoomContext";
 import { Layout } from "../../settings/enums/Layout";
 import EventTile, {
+    type EventTileProps,
     type GetRelationsForEvent,
     type IReadReceiptProps,
     isEligibleForSpecialReceipt,
@@ -57,6 +58,7 @@ import { type BaseGrouper } from "./grouper/BaseGrouper";
 import { MessageSelectionStore } from "../../stores/MessageSelectionStore";
 import { MainGrouper } from "./grouper/MainGrouper";
 import { CreationGrouper } from "./grouper/CreationGrouper";
+import { MediaAlbumGrouper } from "./grouper/MediaAlbumGrouper";
 import { _t } from "../../languageHandler";
 import { getLateEventInfo } from "./grouper/LateEventGrouper";
 import { DateSeparatorViewModel } from "../../viewmodels/room/timeline/DateSeparatorViewModel";
@@ -762,6 +764,7 @@ export default class MessagePanel extends React.Component<IProps, IState> {
         isGrouped = false,
         nextEvent: WrappedEvent | null = null,
         nextEventWithTile: MatrixEvent | null = null,
+        tileProps?: Partial<EventTileProps>,
     ): ReactNode[] {
         const mxEv = wrappedEvent.event;
         const ret: ReactNode[] = [];
@@ -851,10 +854,19 @@ export default class MessagePanel extends React.Component<IProps, IState> {
                     this.props.room ? MessageSelectionStore.instance.isSelected(this.props.room.roomId, eventId) : false
                 }
                 isSelecting={this.state.isSelecting}
+                {...tileProps}
             />,
         );
 
         return ret;
+    }
+
+    /**
+     * The read receipts that will be shown on the tile of the given (shown) event during the current render.
+     * Used by groupers that fold several events into one tile.
+     */
+    public getReadReceiptsForShownEvent(eventId: string): IReadReceiptProps[] | undefined {
+        return this.readReceiptsByEvent.get(eventId);
     }
 
     public wantsSeparator(prevEvent: MatrixEvent | null, mxEvent: MatrixEvent): SeparatorKind {
@@ -1121,7 +1133,7 @@ export interface WrappedEvent {
 }
 
 // all the grouper classes that we use, ordered by priority
-const groupers = [CreationGrouper, MainGrouper];
+const groupers = [CreationGrouper, MainGrouper, MediaAlbumGrouper];
 
 /**
  * Look through the supplied list of WrappedEvent, and return the first

@@ -166,6 +166,10 @@ export interface EventTileProps {
     // references the same this.props.mxEvent.
     isRedacted?: boolean;
 
+    // Comma-separated scroll tokens overriding the default (the event ID). Used when one tile stands in
+    // for several events (media albums) so that jumping to any of them scrolls to this tile.
+    scrollTokens?: string;
+
     // true if this is a continuation of the previous event (which has the
     // effect of not showing another avatar/displayname
     continuation?: boolean;
@@ -1129,7 +1133,8 @@ export class UnwrappedEventTile extends React.Component<EventTileProps, IState> 
 
         // we can't use local echoes as scroll tokens, because their event IDs change.
         // Local echos have a send "status".
-        const scrollToken = this.props.mxEvent.status ? undefined : this.props.mxEvent.getId();
+        const scrollToken =
+            this.props.scrollTokens ?? (this.props.mxEvent.status ? undefined : this.props.mxEvent.getId());
 
         let avatar: JSX.Element | null = null;
         let sender: JSX.Element | null = null;
