@@ -25,3 +25,41 @@ Please see LICENSE files in the repository root for full details.
     white-space: normal;
     text-align: start;
 }
+
+/* Telegram bot reply keyboard, rendered above the room's main composer. */
+.mx_BridgeReplyKeyboard {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--cpd-space-2x);
+    padding: var(--cpd-space-2x) 0;
+    max-height: 40vh;
+    overflow-y: auto;
+    border-bottom: 1px solid var(--cpd-color-border-interactive-secondary);
+
+    .mx_BridgeReplyKeyboard_toggle {
+        flex-shrink: 0;
+        color: var(--cpd-color-icon-secondary);
+        display: flex;
+
+        svg {
+            width: 20px;
+            height: 20px;
+        }
+    }
+
+    .mx_BridgeReplyKeyboard_rows {
+        flex: 1;
+        margin-top: 0;
+        min-width: 0;
+    }
+
+    /* Without `resize`, Telegram stretches the buttons to fill the keyboard's width. */
+    &:not(.mx_BridgeReplyKeyboard_resize) .mx_BridgeButtons_row > * {
+        flex: 1 1 0;
+        justify-content: center;
+    }
+}
+
+.mx_BridgeReplyKeyboard_resize .mx_BridgeButtons_button {
+    padding-block: var(--cpd-space-1x);
+}

@@ -9,10 +9,22 @@ import React from "react";
 import { type MatrixClient, type MatrixEvent } from "matrix-js-sdk/src/matrix";
 import { render, screen, waitFor, within } from "jest-matrix-react";
 import userEvent from "@testing-library/user-event";
+import { mocked } from "jest-mock";
 
 import { getMockClientWithEventEmitter, mkMessage, mkEvent } from "../../../../test-utils";
 import BridgeButtons from "../../../../../src/components/views/messages/BridgeButtons";
 import MatrixClientContext from "../../../../../src/contexts/MatrixClientContext";
+import { copyPlaintext } from "../../../../../src/utils/strings";
+import dis from "../../../../../src/dispatcher/dispatcher";
+import { Action } from "../../../../../src/dispatcher/actions";
+import { TimelineRenderingType } from "../../../../../src/contexts/RoomContext";
+import Modal, { type ComponentType, type IHandle } from "../../../../../src/Modal";
+import { parseBridgeButtons, parseBridgeKeyboard } from "../../../../../src/utils/BridgeButtons";
+
+jest.mock("../../../../../src/utils/strings", () => ({
+    ...jest.requireActual("../../../../../src/utils/strings"),
+    copyPlaintext: jest.fn(),
+}));
 
 const roomId = "!room:example.com";
 
@@ -22,7 +34,12 @@ describe("<BridgeButtons />", () => {
     beforeEach(() => {
         client = getMockClientWithEventEmitter({
             sendTextMessage: jest.fn().mockResolvedValue({ event_id: "$sent" }),
+            getRoom: jest.fn().mockReturnValue(null),
         });
+    });
+
+    afterEach(() => {
+        jest.restoreAllMocks();
     });
 
     const mkButtonsEvent = (buttons: unknown, extraContent: Record<string, unknown> = {}): MatrixEvent => {
@@ -200,5 +217,176 @@ describe("<BridgeButtons />", () => {
         original.makeReplaced(editRemoved);
 
         await waitFor(() => expect(container).toBeEmptyDOMElement());
+    });
+
+    describe("button types", () => {
+        const renderOne = (button: Record<string, unknown>): ReturnType<typeof render> =>
+            renderButtons(mkButtonsEvent({ message_id: 7, rows: [[button]] }));
+
+        it("renders a requires_password callback button disabled, with an explanation", async () => {
+            const user = userEvent.setup();
+            renderOne({ text: "Transfer", type: "callback", command: "!tg click 7 0 0", requires_password: true });
+
+            const button = screen.getByRole("button", { name: "Transfer" });
+            expect(button).toHaveAttribute("aria-disabled", "true");
+            await user.hover(button);
+            expect(await screen.findByRole("tooltip")).toHaveTextContent(/needs your Telegram password/);
+            await user.click(button);
+            expect(client.sendTextMessage).not.toHaveBeenCalled();
+        });
+
+        it("sends a reply button's text", async () => {
+            const user = userEvent.setup();
+            renderOne({ text: "Hello bot", type: "reply" });
+            await user.click(screen.getByRole("button", { name: "Hello bot" }));
+            expect(client.sendTextMessage).toHaveBeenCalledWith(roomId, null, "Hello bot");
+        });
+
+        it("copies copy_text to the clipboard and says so", async () => {
+            const user = userEvent.setup();
+            mocked(copyPlaintext).mockResolvedValue(true);
+            renderOne({ text: "Copy code", type: "copy", copy_text: "SECRET-123" });
+
+            await user.click(screen.getByRole("button", { name: "Copy code" }));
+            expect(copyPlaintext).toHaveBeenCalledWith("SECRET-123");
+            expect(await screen.findByRole("tooltip")).toHaveTextContent("Copied!");
+            expect(client.sendTextMessage).not.toHaveBeenCalled();
+        });
+
+        it.each([
+            ["with a bot username", { query: "cats", bot_username: "gif" }, "@gif cats"],
+            ["without a bot username", { query: "cats" }, "cats"],
+        ])("inserts a switch_inline query into the composer %s", async (_n, fields, expected) => {
+            const user = userEvent.setup();
+            const spy = jest.spyOn(dis, "dispatch");
+            renderOne({ text: "Search", type: "switch_inline", same_peer: true, ...fields });
+
+            await user.click(screen.getByRole("button", { name: "Search" }));
+            expect(spy).toHaveBeenCalledWith({
+                action: Action.ComposerInsert,
+                text: expected,
+                timelineRenderingType: TimelineRenderingType.Room,
+            });
+            expect(client.sendTextMessage).not.toHaveBeenCalled();
+        });
+
+        it("opens the user_profile target in the user info panel", async () => {
+            const user = userEvent.setup();
+            const spy = jest.spyOn(dis, "dispatch");
+            renderOne({ text: "Profile", type: "user_profile", user_mxid: "@telegram_42:example.com" });
+
+            await user.click(screen.getByRole("button", { name: "Profile" }));
+            expect(spy).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    action: Action.ViewUser,
+                    member: expect.objectContaining({ userId: "@telegram_42:example.com" }),
+                }),
+            );
+        });
+
+        it.each([
+            ["url_auth", /login link/],
+            ["game", /game/],
+            ["webview", /web app/],
+            ["simple_webview", /web app/],
+            ["request_geo", /location/],
+            ["request_poll", /poll/],
+            ["request_peer", /Telegram app/],
+        ])("sends the command of a %s button, with a hint", async (type, hint) => {
+            const user = userEvent.setup();
+            renderOne({ text: "Press", type, command: "!tg click 7 0 0", url: "https://example.com" });
+
+            const button = screen.getByRole("button", { name: "Press" });
+            await user.hover(button);
+            expect(await screen.findByRole("tooltip")).toHaveTextContent(hint);
+            await user.click(button);
+            expect(client.sendTextMessage).toHaveBeenCalledTimes(1);
+            expect(client.sendTextMessage).toHaveBeenCalledWith(roomId, null, "!tg click 7 0 0");
+        });
+
+        it.each([
+            [true, 1],
+            [false, 0],
+        ])("only sends a request_phone command once confirmed (confirmed: %s)", async (confirmed, calls) => {
+            const user = userEvent.setup();
+            const spy = jest.spyOn(Modal, "createDialog").mockReturnValue({
+                finished: Promise.resolve([confirmed]),
+                close: jest.fn(),
+            } as unknown as IHandle<ComponentType>);
+            renderOne({ text: "Share phone", type: "request_phone", command: "!tg click 7 0 0" });
+
+            await user.click(screen.getByRole("button", { name: "Share phone" }));
+            expect(spy).toHaveBeenCalledWith(
+                expect.anything(),
+                expect.objectContaining({ title: "Share your phone number?" }),
+            );
+            await waitFor(() => expect(client.sendTextMessage).toHaveBeenCalledTimes(calls));
+            expect(mocked(client.sendTextMessage).mock.calls).toEqual(calls ? [[roomId, null, "!tg click 7 0 0"]] : []);
+        });
+
+        it.each([
+            ["buy", { type: "buy" }],
+            ["unsupported", { type: "unsupported" }],
+            ["an unknown type", { type: "brand_new_thing", command: "!tg click 7 0 0" }],
+            ["copy without copy_text", { type: "copy" }],
+            ["user_profile without user_mxid", { type: "user_profile" }],
+            ["switch_inline with nothing to insert", { type: "switch_inline" }],
+            ["a command type without command", { type: "webview" }],
+        ])("renders %s disabled", async (_n, fields) => {
+            const user = userEvent.setup();
+            renderOne({ text: "Nope", ...fields });
+            const button = screen.getByRole("button", { name: "Nope" });
+            expect(button).toHaveAttribute("aria-disabled", "true");
+            await user.click(button);
+            expect(client.sendTextMessage).not.toHaveBeenCalled();
+        });
+    });
+
+    describe("keyboard kinds", () => {
+        it.each(["reply", "hide", "force_reply"])("does not render a %s keyboard under the message", (keyboard) => {
+            const { container } = renderButtons(
+                mkButtonsEvent({ message_id: 1, keyboard, rows: [[{ text: "Yes", type: "reply" }]] }),
+            );
+            expect(container).toBeEmptyDOMElement();
+        });
+
+        it("renders an explicit inline keyboard", () => {
+            renderButtons(
+                mkButtonsEvent({ keyboard: "inline", rows: [[{ text: "Go", type: "callback", command: "!tg c" }]] }),
+            );
+            expect(screen.getByRole("button", { name: "Go" })).toBeInTheDocument();
+        });
+
+        it("parses reply keyboard options and never throws on garbage", () => {
+            const content = {
+                "fi.mau.telegram.buttons": {
+                    keyboard: "reply",
+                    rows: [[{ text: "A", type: "reply" }], "junk", [null, 3, { type: "reply" }]],
+                    resize: true,
+                    single_use: true,
+                    placeholder: "Pick",
+                    selective: "yes",
+                },
+            };
+            expect(parseBridgeKeyboard(content)).toEqual({
+                keyboard: "reply",
+                rows: [[{ type: "reply", text: "A" }]],
+                resize: true,
+                singleUse: true,
+                placeholder: "Pick",
+                selective: false,
+            });
+            expect(parseBridgeKeyboard({ "fi.mau.telegram.buttons": { keyboard: "hide" } })?.keyboard).toBe("hide");
+            expect(parseBridgeKeyboard({ "fi.mau.telegram.buttons": { keyboard: "reply", rows: [] } })).toBeNull();
+            expect(parseBridgeKeyboard({ "fi.mau.telegram.buttons": { keyboard: 42 } })).toBeNull();
+            expect(parseBridgeKeyboard({ "fi.mau.telegram.buttons": [] })).toBeNull();
+            const evil = Object.defineProperty({}, "fi.mau.telegram.buttons", {
+                get: (): never => {
+                    throw new Error("boom");
+                },
+            });
+            expect(parseBridgeKeyboard(evil)).toBeNull();
+            expect(parseBridgeButtons(evil)).toBeNull();
+        });
     });
 });

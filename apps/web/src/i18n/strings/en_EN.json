@@ -3344,6 +3344,22 @@
     },
     "timeline": {
         "bridge_buttons": {
+            "hint_copy": "Copy to clipboard",
+            "hint_game": "Opens a game: the bot replies with a link",
+            "hint_request_geo": "Replies with how to share your location",
+            "hint_request_peer": "Sharing a chat needs the Telegram app: the bot replies with details",
+            "hint_request_phone": "Shares your phone number with the bot",
+            "hint_request_poll": "Replies with how to create a poll",
+            "hint_switch_inline": "Inserts an inline query into the message composer",
+            "hint_url_auth": "Asks the bot for a login link",
+            "hint_webview": "Opens a web app: the bot replies with a link",
+            "reply_keyboard_hide": "Hide bot keyboard",
+            "reply_keyboard_label": "Bot keyboard",
+            "reply_keyboard_show": "Show bot keyboard",
+            "request_phone_confirm": "Share phone number",
+            "request_phone_description": "This shares your phone number with the bot.",
+            "request_phone_title": "Share your phone number?",
+            "requires_password": "This button needs your Telegram password and can't be used from Matrix",
             "unsupported": "This button type isn't supported yet"
         },
         "bulk_delete_confirm": {

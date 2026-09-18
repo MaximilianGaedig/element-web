@@ -31,6 +31,7 @@ import SettingsStore from "../../../settings/SettingsStore";
 import { aboveLeftOf, type MenuProps } from "../../structures/ContextMenu";
 import ReplyPreview from "./ReplyPreview";
 import { UserIdentityWarning } from "./UserIdentityWarning";
+import BridgeReplyKeyboard from "./BridgeReplyKeyboard";
 import { UPDATE_EVENT } from "../../../stores/AsyncStore";
 import VoiceRecordComposerTile from "./VoiceRecordComposerTile";
 import { VoiceRecordingStore } from "../../../stores/VoiceRecordingStore";
@@ -42,7 +43,7 @@ import { type ComposerInsertPayload } from "../../../dispatcher/payloads/Compose
 import { Action } from "../../../dispatcher/actions";
 import type EditorModel from "../../../editor/model";
 import UIStore, { UI_EVENTS } from "../../../stores/UIStore";
-import RoomContext from "../../../contexts/RoomContext";
+import RoomContext, { TimelineRenderingType } from "../../../contexts/RoomContext";
 import { type SettingUpdatedPayload } from "../../../dispatcher/payloads/SettingUpdatedPayload";
 import MessageComposerButtons from "./MessageComposerButtons";
 import AccessibleButton, { type ButtonEvent } from "../elements/AccessibleButton";
@@ -101,6 +102,8 @@ interface IState {
     isWysiwygLabEnabled: boolean;
     isRichTextEnabled: boolean;
     initialComposerContent: string;
+    /** Composer placeholder requested by a bridged Telegram bot keyboard, if any. */
+    bridgePlaceholder?: string;
 }
 
 type WysiwygComposerState = {
@@ -360,7 +363,19 @@ export class MessageComposer extends React.Component<IProps, IState> {
         });
     };
 
+    private onBridgePlaceholderChange = (bridgePlaceholder: string | undefined): void => {
+        if (this.state.bridgePlaceholder !== bridgePlaceholder) this.setState({ bridgePlaceholder });
+    };
+
+    /** Whether this is the room's main composer (not a thread or other secondary composer). */
+    private get isMainRoomComposer(): boolean {
+        return !this.props.relation && this.context.timelineRenderingType === TimelineRenderingType.Room;
+    }
+
     private renderPlaceholderText = (): string => {
+        if (this.state.bridgePlaceholder && !this.props.replyToEvent && this.isMainRoomComposer) {
+            return this.state.bridgePlaceholder;
+        }
         if (this.props.replyToEvent) {
             const replyingToThread = this.props.relation?.rel_type === THREAD_RELATION_TYPE.name;
             if (replyingToThread && this.props.e2eStatus) {
@@ -676,6 +691,13 @@ export class MessageComposer extends React.Component<IProps, IState> {
             <div className={classes} ref={this.ref} role="region" aria-label={_t("a11y|message_composer")}>
                 <div className="mx_MessageComposer_wrapper">
                     <UserIdentityWarning room={this.props.room} key={this.props.room.roomId} />
+                    {canSendMessages && this.isMainRoomComposer && (
+                        <BridgeReplyKeyboard
+                            room={this.props.room}
+                            key={`bridge-${this.props.room.roomId}`}
+                            onPlaceholderChange={this.onBridgePlaceholderChange}
+                        />
+                    )}
                     <ReplyPreview
                         replyToEvent={this.props.replyToEvent}
                         permalinkCreator={this.props.permalinkCreator}
