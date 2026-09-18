@@ -38,6 +38,7 @@ import { E2EStatus } from "../../../../utils/ShieldUtils.ts";
 import FacePile from "../../elements/FacePile.tsx";
 import { useRoomState } from "../../../../hooks/useRoomState.ts";
 import RoomAvatar from "../../avatars/RoomAvatar.tsx";
+import BeeperRoomHeaderBadges from "../../beeper/BeeperRoomHeaderBadges";
 import { formatCount } from "../../../../utils/FormattingUtils.ts";
 import RightPanelStore from "../../../../stores/right-panel/RightPanelStore.ts";
 import PosthogTrackers from "../../../../PosthogTrackers.ts";
@@ -534,6 +535,8 @@ export default function RoomHeader({
                                 )}
 
                                 {isRoomEncrypted && historySharingEnabled && historyVisibilityIcon(historyVisibility)}
+
+                                {room instanceof Room && <BeeperRoomHeaderBadges room={room} />}
                             </Text>
                         </button>
                         {room instanceof Room && <RoomHeaderPath room={room} />}

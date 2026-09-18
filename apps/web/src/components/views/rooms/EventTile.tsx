@@ -82,6 +82,7 @@ import MemberAvatar from "../avatars/MemberAvatar";
 import SenderProfile from "../messages/SenderProfile";
 import PerMessageProfileAvatar from "../beeper/PerMessageProfileAvatar";
 import BeeperEventTileExtras from "../beeper/BeeperEventTileExtras";
+import { shouldHideBeeperEvent } from "../../../utils/beeper/shouldHideBeeperEvent";
 import { type IReadReceiptPosition } from "./ReadReceiptMarker";
 import ReactionPicker from "../emojipicker/ReactionPicker";
 import { getEventDisplayInfo } from "../../../utils/EventRenderingUtils";
@@ -743,6 +744,9 @@ export class UnwrappedEventTile extends React.Component<EventTileProps, IState> 
         return !!(actions?.tweaks.highlight || previousActions?.tweaks.highlight);
     }
 
+    // A disappearing message's timer ran out: re-render so the tile hides (mx_EventTile_beeperHidden).
+    private readonly onBeeperDisappeared = (): void => this.forceUpdate();
+
     private readonly onSenderProfileClick = (): void => {
         dis.dispatch<ComposerInsertPayload>({
             action: Action.ComposerInsert,
@@ -1107,6 +1111,7 @@ export class UnwrappedEventTile extends React.Component<EventTileProps, IState> 
             mx_EventTile_highlight: this.shouldHighlight(),
             mx_EventTile_selected: this.props.isSelectedEvent || this.state.contextMenu || this.props.isSelected,
             mx_EventTile_selecting: this.props.isSelecting,
+            mx_EventTile_beeperHidden: shouldHideBeeperEvent(this.props.mxEvent),
             mx_EventTile_continuation:
                 isContinuation || eventType === EventType.CallInvite || ElementCallEventType.matches(eventType),
             mx_EventTile_last: this.props.last,
@@ -1398,7 +1403,10 @@ export class UnwrappedEventTile extends React.Component<EventTileProps, IState> 
                                 permalinkCreator: this.props.permalinkCreator!,
                                 showHiddenEvents: this.context.showHiddenEvents,
                             })}
-                            <BeeperEventTileExtras mxEvent={this.props.mxEvent} />
+                            <BeeperEventTileExtras
+                                mxEvent={this.props.mxEvent}
+                                onDisappeared={this.onBeeperDisappeared}
+                            />
                             {actionBar}
                             {linkedTimestamp}
                             {msgOption}
@@ -1606,7 +1614,10 @@ export class UnwrappedEventTile extends React.Component<EventTileProps, IState> 
                                 permalinkCreator: this.props.permalinkCreator,
                                 showHiddenEvents: this.context.showHiddenEvents,
                             })}
-                            <BeeperEventTileExtras mxEvent={this.props.mxEvent} />
+                            <BeeperEventTileExtras
+                                mxEvent={this.props.mxEvent}
+                                onDisappeared={this.onBeeperDisappeared}
+                            />
                             {actionBar}
                             {this.props.layout === Layout.IRC && (
                                 <>

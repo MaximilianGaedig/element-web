@@ -9,18 +9,22 @@ import React, { type JSX } from "react";
 import { type MatrixEvent } from "matrix-js-sdk/src/matrix";
 
 import BeeperMessageSendStatus from "./BeeperMessageSendStatus";
+import DisappearingMessageBadge from "./DisappearingMessageBadge";
 
 interface Props {
     mxEvent: MatrixEvent;
+    /** Called when a disappearing message's timer runs out. */
+    onDisappeared?: () => void;
 }
 
 /**
  * Per-message decorations driven by Beeper/mautrix bridge extensions, rendered under the message
  * body inside the event tile. Kept in one place so EventTile needs a single hook.
  */
-export default function BeeperEventTileExtras({ mxEvent }: Props): JSX.Element {
+export default function BeeperEventTileExtras({ mxEvent, onDisappeared }: Props): JSX.Element {
     return (
         <>
+            <DisappearingMessageBadge mxEvent={mxEvent} onDisappeared={onDisappeared} />
             <BeeperMessageSendStatus mxEvent={mxEvent} />
         </>
     );

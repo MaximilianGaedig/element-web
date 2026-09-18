@@ -12,6 +12,7 @@ import { KnownMembership } from "matrix-js-sdk/src/types";
 import SettingsStore from "./settings/SettingsStore";
 import { type IRoomState } from "./components/structures/RoomView";
 import { type SettingKey } from "./settings/Settings.tsx";
+import { shouldHideBeeperEvent } from "./utils/beeper/shouldHideBeeperEvent";
 
 interface IDiff {
     isMemberEvent: boolean;
@@ -66,6 +67,8 @@ export default function shouldHideEvent(ev: MatrixEvent, ctx?: IRoomState): bool
 
     // Hide replacement events since they update the original tile (if enabled)
     if (ev.isRelation(RelationType.Replace)) return true;
+
+    if (shouldHideBeeperEvent(ev)) return true;
 
     const eventDiff = memberEventDiff(ev);
 

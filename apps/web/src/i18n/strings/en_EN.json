@@ -397,6 +397,10 @@
         "verify_email_heading": "Verify your email to continue"
     },
     "beeper": {
+        "disappearing_after_read": "Disappears %(duration)s after it's read",
+        "disappearing_in": "Disappears in %(duration)s",
+        "disappearing_room_after_read": "Disappearing messages: %(duration)s after they're read",
+        "disappearing_room_after_send": "Disappearing messages: %(duration)s after they're sent",
         "per_message_profile_via": "%(name)s (sent via %(sender)s)",
         "send_status_delivered": "Delivered on %(network)s",
         "send_status_failed": "Not delivered to %(network)s",
