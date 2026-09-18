@@ -22,6 +22,13 @@ import PlatformPeg from "../../PlatformPeg";
 import { thumbHeight } from "../../ImageUtils";
 import SettingsStore from "../../settings/SettingsStore";
 import { PosthogAnalytics } from "../../PosthogAnalytics";
+import {
+    bundledPreviewImageUrl,
+    bundledPreviewsAllowed,
+    findBundledLinkPreview,
+    mergeBundledLinks,
+    toPreviewUrlResponse,
+} from "../../utils/beeper/linkPreviews";
 
 const logger = rootLogger.getChild("UrlPreviewGroupViewModel");
 
@@ -220,6 +227,11 @@ export class UrlPreviewGroupViewModel
     private readonly previewCache = new Map<string, UrlPreview>();
 
     /**
+     * Object URLs of decrypted bundled preview images, revoked on dispose.
+     */
+    private readonly blobUrls: string[] = [];
+
+    /**
      * Called when the user clicks on the preview thumbnail.
      */
     public readonly onImageClick: (preview: UrlPreview) => void;
@@ -264,9 +276,13 @@ export class UrlPreviewGroupViewModel
             return cached;
         }
         let preview: IPreviewUrlResponse;
+        // Bridges bundle previews (com.beeper.linkpreviews); use them instead of asking the homeserver.
+        const bundled = findBundledLinkPreview(this.props.mxEvent, link);
 
         try {
-            preview = await this.client.getUrlPreview(link, this.eventSendTime);
+            preview = bundled
+                ? toPreviewUrlResponse(bundled)
+                : await this.client.getUrlPreview(link, this.eventSendTime);
         } catch (error) {
             if (error instanceof MatrixError && error.httpStatus === 404) {
                 // Quieten 404 Not found errors, not all URLs can have a preview generated
@@ -285,7 +301,28 @@ export class UrlPreviewGroupViewModel
             return null;
         }
         let image: UrlPreview["image"];
-        if (typeof preview["og:image"] === "string" && this.visibility > PreviewVisibility.MediaHidden) {
+        if (bundled?.["beeper:image:encryption"] && this.visibility > PreviewVisibility.MediaHidden) {
+            const url = await bundledPreviewImageUrl(bundled, this.blobUrls);
+            const width = Math.min(
+                UrlPreviewGroupViewModel.getNumberFromOpenGraph(bundled["og:image:width"]) ?? PREVIEW_WIDTH,
+                PREVIEW_WIDTH,
+            );
+            if (url) {
+                image = {
+                    imageThumb: url,
+                    imageFull: url,
+                    width,
+                    height:
+                        thumbHeight(
+                            width,
+                            UrlPreviewGroupViewModel.getNumberFromOpenGraph(bundled["og:image:height"]),
+                            PREVIEW_WIDTH,
+                            PREVIEW_WIDTH,
+                        ) ?? PREVIEW_WIDTH,
+                    fileSize: UrlPreviewGroupViewModel.getNumberFromOpenGraph(bundled["matrix:image:size"]),
+                };
+            }
+        } else if (typeof preview["og:image"] === "string" && this.visibility > PreviewVisibility.MediaHidden) {
             const media = mediaFromMxc(preview["og:image"], this.client);
             const declaredHeight = UrlPreviewGroupViewModel.getNumberFromOpenGraph(preview["og:image:height"]);
             const declaredWidth = UrlPreviewGroupViewModel.getNumberFromOpenGraph(preview["og:image:width"]);
@@ -318,11 +355,12 @@ export class UrlPreviewGroupViewModel
 
     public dispose(): void {
         super.dispose();
+        this.blobUrls.forEach((url) => URL.revokeObjectURL(url));
         SettingsStore.unwatchSetting(this.useCompactLayoutSettingWatcher);
     }
 
     private get visibility(): PreviewVisibility {
-        if (!this.urlPreviewVisible) {
+        if (!this.urlPreviewVisible && !bundledPreviewsAllowed(this.props.mxEvent)) {
             return PreviewVisibility.Hidden;
         } else if (!this.urlPreviewEnabledByUser) {
             return PreviewVisibility.UserHidden;
@@ -337,19 +375,24 @@ export class UrlPreviewGroupViewModel
      * for the previously-calculated links.
      */
     private async computeSnapshot(): Promise<void> {
+        // When previews are only visible because the bridge bundled them, never fetch the others.
+        const links =
+            this.urlPreviewVisible || !bundledPreviewsAllowed(this.props.mxEvent)
+                ? this.links
+                : this.links.filter((link) => findBundledLinkPreview(this.props.mxEvent, link));
         const previews =
             this.visibility <= PreviewVisibility.UserHidden
                 ? []
                 : await Promise.all(
-                      this.links
+                      links
                           .slice(0, this.limitPreviews ? MAX_PREVIEWS_WHEN_LIMITED : undefined)
                           .map((link) => this.fetchPreview(link)),
                   );
         this.snapshot.merge({
             previews: previews.filter((m) => !!m),
-            totalPreviewCount: this.links.length,
+            totalPreviewCount: links.length,
             previewsLimited: this.limitPreviews,
-            overPreviewLimit: this.links.length > MAX_PREVIEWS_WHEN_LIMITED,
+            overPreviewLimit: links.length > MAX_PREVIEWS_WHEN_LIMITED,
         });
     }
 
@@ -359,9 +402,10 @@ export class UrlPreviewGroupViewModel
      */
     public async updateEventElement(eventElement: HTMLDivElement): Promise<void> {
         const newLinks = UrlPreviewGroupViewModel.findLinks([eventElement]);
+        const links = mergeBundledLinks(this.props.mxEvent, newLinks);
         // Only recalculate if the set of links has changed.
-        if (newLinks.some((x) => !this.links.includes(x)) || this.links.some((x) => !newLinks.includes(x))) {
-            this.links = newLinks;
+        if (links.some((x) => !this.links.includes(x)) || this.links.some((x) => !links.includes(x))) {
+            this.links = links;
             return this.computeSnapshot();
         }
     }
