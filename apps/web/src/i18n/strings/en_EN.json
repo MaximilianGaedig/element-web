@@ -397,7 +397,18 @@
         "verify_email_heading": "Verify your email to continue"
     },
     "beeper": {
-        "per_message_profile_via": "%(name)s (sent via %(sender)s)"
+        "per_message_profile_via": "%(name)s (sent via %(sender)s)",
+        "send_status_delivered": "Delivered on %(network)s",
+        "send_status_failed": "Not delivered to %(network)s",
+        "send_status_failed_bridge_unavailable": "Not delivered to %(network)s: the bridge is unavailable",
+        "send_status_failed_no_permission": "Not delivered to %(network)s: you don't have permission to send this",
+        "send_status_failed_too_old": "Not delivered to %(network)s: the bridge gave up after it took too long",
+        "send_status_failed_unsupported": "Not delivered to %(network)s: this kind of message isn't supported there",
+        "send_status_failed_with_message": "Not delivered to %(network)s: %(message)s",
+        "send_status_pending": "Sending to %(network)s…",
+        "send_status_remote_network": "the remote network",
+        "send_status_retry": "Retry",
+        "send_status_retrying": "Retrying…"
     },
     "bug_reporting": {
         "additional_context": "If there is additional context that would help in analysing the issue, such as what you were doing at the time, room IDs, user IDs, etc., please include those things here.",

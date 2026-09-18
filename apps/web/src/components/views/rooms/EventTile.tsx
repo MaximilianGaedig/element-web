@@ -81,6 +81,7 @@ import PlatformPeg from "../../../PlatformPeg";
 import MemberAvatar from "../avatars/MemberAvatar";
 import SenderProfile from "../messages/SenderProfile";
 import PerMessageProfileAvatar from "../beeper/PerMessageProfileAvatar";
+import BeeperEventTileExtras from "../beeper/BeeperEventTileExtras";
 import { type IReadReceiptPosition } from "./ReadReceiptMarker";
 import ReactionPicker from "../emojipicker/ReactionPicker";
 import { getEventDisplayInfo } from "../../../utils/EventRenderingUtils";
@@ -1397,6 +1398,7 @@ export class UnwrappedEventTile extends React.Component<EventTileProps, IState> 
                                 permalinkCreator: this.props.permalinkCreator!,
                                 showHiddenEvents: this.context.showHiddenEvents,
                             })}
+                            <BeeperEventTileExtras mxEvent={this.props.mxEvent} />
                             {actionBar}
                             {linkedTimestamp}
                             {msgOption}
@@ -1604,6 +1606,7 @@ export class UnwrappedEventTile extends React.Component<EventTileProps, IState> 
                                 permalinkCreator: this.props.permalinkCreator,
                                 showHiddenEvents: this.context.showHiddenEvents,
                             })}
+                            <BeeperEventTileExtras mxEvent={this.props.mxEvent} />
                             {actionBar}
                             {this.props.layout === Layout.IRC && (
                                 <>
