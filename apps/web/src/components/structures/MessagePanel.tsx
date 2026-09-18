@@ -212,6 +212,8 @@ interface IState {
     hideSender: boolean;
     /** Telegram-style layout: no sender avatars in one-to-one chats. */
     hideAvatar: boolean;
+    /** Telegram-style layout: typing shows in the room header, so there is no typing tile at the bottom. */
+    telegramLayout: boolean;
     isSelecting: boolean;
 }
 
@@ -291,6 +293,7 @@ export default class MessagePanel extends React.Component<IProps, IState> {
             showTypingNotifications: SettingsStore.getValue("showTypingNotifications"),
             hideSender: this.shouldHideSender(),
             hideAvatar: this.isTelegramOneToOne(),
+            telegramLayout: isTelegramLayout(),
             isSelecting: props.room ? MessageSelectionStore.instance.isSelecting(props.room.roomId) : false,
         };
 
@@ -385,6 +388,7 @@ export default class MessagePanel extends React.Component<IProps, IState> {
         this.setState({
             hideSender: this.shouldHideSender(),
             hideAvatar: this.isTelegramOneToOne(),
+            telegramLayout: isTelegramLayout(),
         });
     };
 
@@ -1095,6 +1099,8 @@ export default class MessagePanel extends React.Component<IProps, IState> {
         if (
             this.props.room &&
             this.state.showTypingNotifications &&
+            // The Telegram-style layout shows typing in the room header instead, like Telegram Web.
+            !this.state.telegramLayout &&
             this.context.timelineRenderingType === TimelineRenderingType.Room
         ) {
             whoIsTyping = (

@@ -30,6 +30,7 @@ import {
 } from "test-utils";
 
 import MessagePanel, { shouldFormContinuation } from "./MessagePanel";
+import WhoIsTypingTile from "../views/rooms/WhoIsTypingTile";
 import SettingsStore from "../../settings/SettingsStore";
 import RoomContext, { type RoomContextType, TimelineRenderingType } from "../../contexts/RoomContext";
 import DMRoomMap from "../../utils/DMRoomMap";
@@ -319,6 +320,30 @@ describe("MessagePanel", function () {
     function isReadMarkerVisible(rmContainer?: Element) {
         return !!rmContainer?.children.length;
     }
+
+    describe("typing tile", () => {
+        const renderWithSettings = (enabled: string[]): HTMLElement => {
+            vi.spyOn(SettingsStore, "getValue").mockImplementation((arg) => enabled.includes(arg));
+            // Stand-in for the tile, so it doesn't depend on anyone actually typing.
+            vi.spyOn(WhoIsTypingTile.prototype, "render").mockReturnValue(<li data-testid="typing-tile" />);
+            const { container } = render(
+                getComponent({ events }),
+                clientAndSDKContextRenderOptions(client, sdkContext),
+            );
+            return container;
+        };
+
+        it("shows Element's typing tile at the bottom of the timeline", () => {
+            const container = renderWithSettings(["showTypingNotifications"]);
+            expect(within(container).queryByTestId("typing-tile")).not.toBeNull();
+        });
+
+        // Typing shows in the room header there, like Telegram Web.
+        it("hides it in the Telegram-style layout", () => {
+            const container = renderWithSettings(["showTypingNotifications", "telegramStyleLayout"]);
+            expect(within(container).queryByTestId("typing-tile")).toBeNull();
+        });
+    });
 
     it("should show the events", function () {
         const { container } = render(getComponent({ events }), clientAndSDKContextRenderOptions(client, sdkContext));
