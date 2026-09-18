@@ -82,7 +82,7 @@ import MemberAvatar from "../avatars/MemberAvatar";
 import SenderProfile from "../messages/SenderProfile";
 import PerMessageProfileAvatar from "../beeper/PerMessageProfileAvatar";
 import BeeperEventTileExtras from "../beeper/BeeperEventTileExtras";
-import { shouldHideBeeperEvent } from "../../../utils/beeper/shouldHideBeeperEvent";
+import { isBeeperDisappeared } from "../../../utils/beeper/shouldHideBeeperEvent";
 import { type IReadReceiptPosition } from "./ReadReceiptMarker";
 import ReactionPicker from "../emojipicker/ReactionPicker";
 import { getEventDisplayInfo } from "../../../utils/EventRenderingUtils";
@@ -1111,7 +1111,7 @@ export class UnwrappedEventTile extends React.Component<EventTileProps, IState> 
             mx_EventTile_highlight: this.shouldHighlight(),
             mx_EventTile_selected: this.props.isSelectedEvent || this.state.contextMenu || this.props.isSelected,
             mx_EventTile_selecting: this.props.isSelecting,
-            mx_EventTile_beeperHidden: shouldHideBeeperEvent(this.props.mxEvent),
+            mx_EventTile_beeperHidden: isBeeperDisappeared(this.props.mxEvent),
             mx_EventTile_continuation:
                 isContinuation || eventType === EventType.CallInvite || ElementCallEventType.matches(eventType),
             mx_EventTile_last: this.props.last,
