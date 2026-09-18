@@ -202,6 +202,19 @@ describe("EventTile", () => {
             },
         );
 
+        it("hides the sender avatar when asked (Telegram-style one-to-one chats)", () => {
+            const { container, rerender } = getComponent({ layout: Layout.Bubble });
+            expect(container.querySelector(".mx_EventTile_avatar")).toBeInTheDocument();
+            rerender(
+                <WrappedEventTile
+                    roomContext={getRoomContext(room, { timelineRenderingType: TimelineRenderingType.Room })}
+                    eventTilePropertyOverrides={{ layout: Layout.Bubble, hideAvatar: true, hideSender: true }}
+                />,
+            );
+            expect(container.querySelector(".mx_EventTile_avatar")).not.toBeInTheDocument();
+            expect(container.querySelector(".mx_EventTile_noAvatar")).toBeInTheDocument();
+        });
+
         it("renders the tile error fallback when tile rendering throws", async () => {
             jest.spyOn(console, "error").mockImplementation(() => {});
             jest.spyOn(EventTileFactory, "renderTile").mockImplementation(() => {

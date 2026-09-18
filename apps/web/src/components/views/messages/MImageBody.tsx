@@ -26,6 +26,7 @@ import { BLURHASH_FIELD, createThumbnail } from "../../../utils/image-media";
 import ImageView from "../elements/ImageView";
 import { type IBodyProps } from "./IBodyProps";
 import { type ImageSize, suggestedSize as suggestedImageSize } from "../../../settings/enums/ImageSize";
+import { effectiveImageSize } from "../../../utils/beeper/telegramLayout";
 import { MatrixClientPeg } from "../../../MatrixClientPeg";
 import RoomContext, { TimelineRenderingType } from "../../../contexts/RoomContext";
 import { blobIsAnimated, mayBeAnimated } from "../../../utils/Image";
@@ -83,6 +84,7 @@ export class MImageBodyInner extends React.Component<IProps, IState> {
     private placeholder = createRef<HTMLDivElement>();
     private timeout?: number;
     private sizeWatcher?: string;
+    private telegramLayoutWatcher?: string;
 
     public state: IState = {
         contentUrl: null,
@@ -382,6 +384,9 @@ export class MImageBodyInner extends React.Component<IProps, IState> {
         this.sizeWatcher = SettingsStore.watchSetting("Images.size", null, () => {
             this.forceUpdate(); // we don't really have a reliable thing to update, so just update the whole thing
         });
+        this.telegramLayoutWatcher = SettingsStore.watchSetting("telegramStyleLayout", null, () => {
+            this.forceUpdate();
+        });
     }
 
     public componentDidUpdate(prevProps: Readonly<IProps>): void {
@@ -396,9 +401,15 @@ export class MImageBodyInner extends React.Component<IProps, IState> {
         MatrixClientPeg.get()?.off(ClientEvent.Sync, this.reconnectedListener);
         this.clearBlurhashTimeout();
         SettingsStore.unwatchSetting(this.sizeWatcher);
+        SettingsStore.unwatchSetting(this.telegramLayoutWatcher);
         if (this.state.isAnimated && this.state.thumbUrl) {
             URL.revokeObjectURL(this.state.thumbUrl);
         }
+    }
+
+    /** The size preference to lay this image out with. */
+    protected get imageSize(): ImageSize {
+        return effectiveImageSize();
     }
 
     protected getBanner(content: ImageContent): ReactNode {
@@ -471,7 +482,7 @@ export class MImageBodyInner extends React.Component<IProps, IState> {
         // The maximum size of the thumbnail as it is rendered as an <img>,
         // accounting for any height constraints
         const { w: maxWidth, h: maxHeight } = suggestedImageSize(
-            SettingsStore.getValue("Images.size") as ImageSize,
+            this.imageSize,
             { w: infoWidth, h: infoHeight },
             forcedHeight ?? this.props.maxImageHeight,
         );

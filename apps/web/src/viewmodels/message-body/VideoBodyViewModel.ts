@@ -22,6 +22,7 @@ import SettingsStore from "../../settings/SettingsStore";
 import { mediaFromContent } from "../../customisations/Media";
 import { BLURHASH_FIELD } from "../../utils/image-media";
 import { type ImageSize, suggestedSize as suggestedVideoSize } from "../../settings/enums/ImageSize";
+import { effectiveImageSize, isTelegramLayout } from "../../utils/beeper/telegramLayout";
 import { type MediaEventHelper } from "../../utils/MediaEventHelper";
 
 export interface VideoBodyViewModelProps {
@@ -109,9 +110,13 @@ export class VideoBodyViewModel
         this.state = initialState;
 
         const imageSizeWatcherRef = SettingsStore.watchSetting("Images.size", null, (_s, _r, _l, _nvl, value) => {
-            this.setImageSize(value as ImageSize);
+            this.setImageSize(isTelegramLayout() ? effectiveImageSize() : (value as ImageSize));
         });
         this.disposables.track(() => SettingsStore.unwatchSetting(imageSizeWatcherRef));
+        const telegramLayoutWatcherRef = SettingsStore.watchSetting("telegramStyleLayout", null, () => {
+            this.setImageSize(effectiveImageSize());
+        });
+        this.disposables.track(() => SettingsStore.unwatchSetting(telegramLayoutWatcherRef));
     }
 
     public loadInitialMediaIfVisible(): void {
@@ -129,7 +134,7 @@ export class VideoBodyViewModel
             error: null,
             posterLoading: false,
             blurhashUrl: null,
-            imageSize: SettingsStore.getValue("Images.size") as ImageSize,
+            imageSize: effectiveImageSize(),
         };
     }
 

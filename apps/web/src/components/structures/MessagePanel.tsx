@@ -54,6 +54,7 @@ import { type IReadReceiptPosition } from "../views/rooms/ReadReceiptMarker";
 import { haveRendererForEvent } from "../../events/EventTileFactory";
 import { editorRoomKey } from "../../Editing";
 import { hasThreadSummary } from "../../utils/EventUtils";
+import { isOneToOneRoom, isTelegramLayout } from "../../utils/beeper/telegramLayout";
 import { type BaseGrouper } from "./grouper/BaseGrouper";
 import { MessageSelectionStore } from "../../stores/MessageSelectionStore";
 import { MainGrouper } from "./grouper/MainGrouper";
@@ -219,6 +220,8 @@ interface IState {
     ghostReadMarkers: string[];
     showTypingNotifications: boolean;
     hideSender: boolean;
+    /** Telegram-style layout: no sender avatars in one-to-one chats. */
+    hideAvatar: boolean;
     isSelecting: boolean;
 }
 
@@ -282,6 +285,7 @@ export default class MessagePanel extends React.Component<IProps, IState> {
     public scrollPanel = createRef<ScrollPanel>();
 
     private showTypingNotificationsWatcherRef?: string;
+    private telegramLayoutWatcherRef?: string;
     private eventTiles: Record<string, UnwrappedEventTile> = {};
 
     // A map to allow groupers to maintain consistent keys even if their first event is uprooted due to back-pagination.
@@ -296,6 +300,7 @@ export default class MessagePanel extends React.Component<IProps, IState> {
             ghostReadMarkers: [],
             showTypingNotifications: SettingsStore.getValue("showTypingNotifications"),
             hideSender: this.shouldHideSender(),
+            hideAvatar: this.isTelegramOneToOne(),
             isSelecting: props.room ? MessageSelectionStore.instance.isSelecting(props.room.roomId) : false,
         };
 
@@ -313,6 +318,11 @@ export default class MessagePanel extends React.Component<IProps, IState> {
             null,
             this.onShowTypingNotificationsChange,
         );
+        this.telegramLayoutWatcherRef = SettingsStore.watchSetting(
+            "telegramStyleLayout",
+            null,
+            this.calculateRoomMembersCount,
+        );
         this.calculateRoomMembersCount();
         this.props.room?.currentState.on(RoomStateEvent.Update, this.calculateRoomMembersCount);
     }
@@ -322,6 +332,7 @@ export default class MessagePanel extends React.Component<IProps, IState> {
         MessageSelectionStore.instance.off(UPDATE_EVENT, this.onSelectionStoreUpdate);
         this.props.room?.currentState.off(RoomStateEvent.Update, this.calculateRoomMembersCount);
         SettingsStore.unwatchSetting(this.showTypingNotificationsWatcherRef);
+        SettingsStore.unwatchSetting(this.telegramLayoutWatcherRef);
         this.readReceiptMap = {};
         this.resizeObserver.disconnect();
     }
@@ -363,15 +374,27 @@ export default class MessagePanel extends React.Component<IProps, IState> {
 
     private shouldHideSender(): boolean {
         return (
+            (!!this.props.room &&
+                this.props.room.getInvitedAndJoinedMemberCount() <= 2 &&
+                this.props.layout === Layout.Bubble) ||
+            this.isTelegramOneToOne()
+        );
+    }
+
+    /** Telegram-style layout in a one-to-one chat (incl. bridged DMs) with bubbles: like Telegram, no avatars/names. */
+    private isTelegramOneToOne(): boolean {
+        return (
             !!this.props.room &&
-            this.props.room.getInvitedAndJoinedMemberCount() <= 2 &&
-            this.props.layout === Layout.Bubble
+            this.props.layout === Layout.Bubble &&
+            isTelegramLayout() &&
+            isOneToOneRoom(this.props.room)
         );
     }
 
     private calculateRoomMembersCount = (): void => {
         this.setState({
             hideSender: this.shouldHideSender(),
+            hideAvatar: this.isTelegramOneToOne(),
         });
     };
 
@@ -850,6 +873,7 @@ export default class MessagePanel extends React.Component<IProps, IState> {
                 showReadReceipts={this.props.showReadReceipts}
                 callEventGrouper={callEventGrouper}
                 hideSender={this.state.hideSender}
+                hideAvatar={this.state.hideAvatar}
                 isSelected={
                     this.props.room ? MessageSelectionStore.instance.isSelected(this.props.room.roomId, eventId) : false
                 }

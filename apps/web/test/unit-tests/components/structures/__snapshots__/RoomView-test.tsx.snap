@@ -21,14 +21,14 @@ exports[`RoomView for a local room in state CREATING should match the snapshot 1
       >
         u
       </span>
-      <button
-        aria-label="Room info"
-        class="mx_RoomHeader_infoWrapper"
-        tabindex="0"
+      <div
+        class="mx_RoomHeader_info _box-flex_1odfs_9"
+        style="--mx-box-flex: 1;"
       >
-        <div
-          class="mx_RoomHeader_info _box-flex_1odfs_9"
-          style="--mx-box-flex: 1;"
+        <button
+          aria-label="Room info"
+          class="mx_RoomHeader_infoWrapper"
+          tabindex="0"
         >
           <div
             aria-level="1"
@@ -42,8 +42,8 @@ exports[`RoomView for a local room in state CREATING should match the snapshot 1
               @user:example.com
             </span>
           </div>
-        </div>
-      </button>
+        </button>
+      </div>
     </header>
     <div
       class="mx_RoomView_body"
@@ -105,14 +105,14 @@ exports[`RoomView for a local room in state ERROR should match the snapshot 1`] 
       >
         u
       </span>
-      <button
-        aria-label="Room info"
-        class="mx_RoomHeader_infoWrapper"
-        tabindex="0"
+      <div
+        class="mx_RoomHeader_info _box-flex_1odfs_9"
+        style="--mx-box-flex: 1;"
       >
-        <div
-          class="mx_RoomHeader_info _box-flex_1odfs_9"
-          style="--mx-box-flex: 1;"
+        <button
+          aria-label="Room info"
+          class="mx_RoomHeader_infoWrapper"
+          tabindex="0"
         >
           <div
             aria-level="1"
@@ -126,8 +126,8 @@ exports[`RoomView for a local room in state ERROR should match the snapshot 1`] 
               @user:example.com
             </span>
           </div>
-        </div>
-      </button>
+        </button>
+      </div>
     </header>
     <main
       aria-label="Room content"
@@ -295,14 +295,14 @@ exports[`RoomView for a local room in state NEW should match the snapshot 1`] = 
       >
         u
       </span>
-      <button
-        aria-label="Room info"
-        class="mx_RoomHeader_infoWrapper"
-        tabindex="0"
+      <div
+        class="mx_RoomHeader_info _box-flex_1odfs_9"
+        style="--mx-box-flex: 1;"
       >
-        <div
-          class="mx_RoomHeader_info _box-flex_1odfs_9"
-          style="--mx-box-flex: 1;"
+        <button
+          aria-label="Room info"
+          class="mx_RoomHeader_infoWrapper"
+          tabindex="0"
         >
           <div
             aria-level="1"
@@ -316,8 +316,8 @@ exports[`RoomView for a local room in state NEW should match the snapshot 1`] = 
               @user:example.com
             </span>
           </div>
-        </div>
-      </button>
+        </button>
+      </div>
     </header>
     <main
       aria-label="Room content"
@@ -673,14 +673,14 @@ exports[`RoomView for a local room in state NEW that is encrypted should match t
       >
         u
       </span>
-      <button
-        aria-label="Room info"
-        class="mx_RoomHeader_infoWrapper"
-        tabindex="0"
+      <div
+        class="mx_RoomHeader_info _box-flex_1odfs_9"
+        style="--mx-box-flex: 1;"
       >
-        <div
-          class="mx_RoomHeader_info _box-flex_1odfs_9"
-          style="--mx-box-flex: 1;"
+        <button
+          aria-label="Room info"
+          class="mx_RoomHeader_infoWrapper"
+          tabindex="0"
         >
           <div
             aria-level="1"
@@ -694,8 +694,8 @@ exports[`RoomView for a local room in state NEW that is encrypted should match t
               @user:example.com
             </span>
           </div>
-        </div>
-      </button>
+        </button>
+      </div>
     </header>
     <main
       aria-label="Room content"
@@ -1097,6 +1097,7 @@ exports[`RoomView should hide the composer when hideComposer=true 1`] = `
       <div
         class="mx_RoomView_body mx_MainSplit_timeline"
         data-layout="group"
+        data-telegram-layout="true"
       >
         <header
           class="_flex_4dswl_9 mx_RoomHeader light-panel"
@@ -1115,14 +1116,14 @@ exports[`RoomView should hide the composer when hideComposer=true 1`] = `
           >
             !
           </button>
-          <button
-            aria-label="Room info"
-            class="mx_RoomHeader_infoWrapper"
-            tabindex="0"
+          <div
+            class="mx_RoomHeader_info _box-flex_1odfs_9"
+            style="--mx-box-flex: 1;"
           >
-            <div
-              class="mx_RoomHeader_info _box-flex_1odfs_9"
-              style="--mx-box-flex: 1;"
+            <button
+              aria-label="Room info"
+              class="mx_RoomHeader_infoWrapper"
+              tabindex="0"
             >
               <div
                 aria-level="1"
@@ -1136,8 +1137,8 @@ exports[`RoomView should hide the composer when hideComposer=true 1`] = `
                   !roomviewshouldhidethecomposerwhenhidecomposertrue:example.org
                 </span>
               </div>
-            </div>
-          </button>
+            </button>
+          </div>
           <button
             aria-disabled="false"
             aria-label="Video call"
@@ -1326,6 +1327,7 @@ exports[`RoomView should hide the header when hideHeader=true 1`] = `
       <div
         class="mx_RoomView_body mx_MainSplit_timeline"
         data-layout="group"
+        data-telegram-layout="true"
       >
         <div
           class="mx_AutoHideScrollbar mx_AuxPanel"
@@ -1636,6 +1638,7 @@ exports[`RoomView should hide the pinned message banner when hidePinnedMessageBa
       <div
         class="mx_RoomView_body mx_MainSplit_timeline"
         data-layout="group"
+        data-telegram-layout="true"
       >
         <header
           class="_flex_4dswl_9 mx_RoomHeader light-panel"
@@ -1654,14 +1657,14 @@ exports[`RoomView should hide the pinned message banner when hidePinnedMessageBa
           >
             !
           </button>
-          <button
-            aria-label="Room info"
-            class="mx_RoomHeader_infoWrapper"
-            tabindex="0"
+          <div
+            class="mx_RoomHeader_info _box-flex_1odfs_9"
+            style="--mx-box-flex: 1;"
           >
-            <div
-              class="mx_RoomHeader_info _box-flex_1odfs_9"
-              style="--mx-box-flex: 1;"
+            <button
+              aria-label="Room info"
+              class="mx_RoomHeader_infoWrapper"
+              tabindex="0"
             >
               <div
                 aria-level="1"
@@ -1675,8 +1678,8 @@ exports[`RoomView should hide the pinned message banner when hidePinnedMessageBa
                   !roomviewshouldhidethepinnedmessagebannerwhenhidepinnedmessagebannertrue:example.org
                 </span>
               </div>
-            </div>
-          </button>
+            </button>
+          </div>
           <button
             aria-disabled="false"
             aria-label="Video call"
@@ -2111,6 +2114,7 @@ exports[`RoomView should hide the right panel when hideRightPanel=true 1`] = `
       <div
         class="mx_RoomView_body mx_MainSplit_timeline"
         data-layout="group"
+        data-telegram-layout="true"
       >
         <header
           class="_flex_4dswl_9 mx_RoomHeader light-panel"
@@ -2129,14 +2133,14 @@ exports[`RoomView should hide the right panel when hideRightPanel=true 1`] = `
           >
             !
           </button>
-          <button
-            aria-label="Room info"
-            class="mx_RoomHeader_infoWrapper"
-            tabindex="0"
+          <div
+            class="mx_RoomHeader_info _box-flex_1odfs_9"
+            style="--mx-box-flex: 1;"
           >
-            <div
-              class="mx_RoomHeader_info _box-flex_1odfs_9"
-              style="--mx-box-flex: 1;"
+            <button
+              aria-label="Room info"
+              class="mx_RoomHeader_infoWrapper"
+              tabindex="0"
             >
               <div
                 aria-level="1"
@@ -2150,8 +2154,8 @@ exports[`RoomView should hide the right panel when hideRightPanel=true 1`] = `
                   !roomviewshouldhidetherightpanelwhenhiderightpaneltrue:example.org
                 </span>
               </div>
-            </div>
-          </button>
+            </button>
+          </div>
           <button
             aria-disabled="false"
             aria-label="Video call"
@@ -2586,6 +2590,7 @@ exports[`RoomView should not display the timeline when the room encryption is lo
       <div
         class="mx_RoomView_body mx_MainSplit_timeline"
         data-layout="group"
+        data-telegram-layout="true"
       >
         <header
           class="_flex_4dswl_9 mx_RoomHeader light-panel"
@@ -2604,14 +2609,14 @@ exports[`RoomView should not display the timeline when the room encryption is lo
           >
             !
           </button>
-          <button
-            aria-label="Room info"
-            class="mx_RoomHeader_infoWrapper"
-            tabindex="0"
+          <div
+            class="mx_RoomHeader_info _box-flex_1odfs_9"
+            style="--mx-box-flex: 1;"
           >
-            <div
-              class="mx_RoomHeader_info _box-flex_1odfs_9"
-              style="--mx-box-flex: 1;"
+            <button
+              aria-label="Room info"
+              class="mx_RoomHeader_infoWrapper"
+              tabindex="0"
             >
               <div
                 aria-level="1"
@@ -2625,8 +2630,8 @@ exports[`RoomView should not display the timeline when the room encryption is lo
                   !roomviewshouldnotdisplaythetimelinewhentheroomencryptionisloading:example.org
                 </span>
               </div>
-            </div>
-          </button>
+            </button>
+          </div>
           <button
             aria-disabled="false"
             aria-label="Video call"
@@ -2800,6 +2805,7 @@ exports[`RoomView should not display the timeline when the room encryption is lo
       <div
         class="mx_RoomView_body mx_MainSplit_timeline"
         data-layout="group"
+        data-telegram-layout="true"
       >
         <header
           class="_flex_4dswl_9 mx_RoomHeader light-panel"
@@ -2818,14 +2824,14 @@ exports[`RoomView should not display the timeline when the room encryption is lo
           >
             !
           </button>
-          <button
-            aria-label="Room info"
-            class="mx_RoomHeader_infoWrapper"
-            tabindex="0"
+          <div
+            class="mx_RoomHeader_info _box-flex_1odfs_9"
+            style="--mx-box-flex: 1;"
           >
-            <div
-              class="mx_RoomHeader_info _box-flex_1odfs_9"
-              style="--mx-box-flex: 1;"
+            <button
+              aria-label="Room info"
+              class="mx_RoomHeader_infoWrapper"
+              tabindex="0"
             >
               <div
                 aria-level="1"
@@ -2839,8 +2845,8 @@ exports[`RoomView should not display the timeline when the room encryption is lo
                   !roomviewshouldnotdisplaythetimelinewhentheroomencryptionisloading:example.org
                 </span>
               </div>
-            </div>
-          </button>
+            </button>
+          </div>
           <button
             aria-disabled="false"
             aria-label="Video call"
@@ -3315,6 +3321,7 @@ exports[`RoomView video rooms should render joined video room view 1`] = `
       <div
         class="mx_RoomView_body mx_MainSplit_call"
         data-layout="group"
+        data-telegram-layout="true"
       >
         <header
           class="_flex_4dswl_9 mx_RoomHeader light-panel"
@@ -3333,14 +3340,14 @@ exports[`RoomView video rooms should render joined video room view 1`] = `
           >
             !
           </button>
-          <button
-            aria-label="Room info"
-            class="mx_RoomHeader_infoWrapper"
-            tabindex="0"
+          <div
+            class="mx_RoomHeader_info _box-flex_1odfs_9"
+            style="--mx-box-flex: 1;"
           >
-            <div
-              class="mx_RoomHeader_info _box-flex_1odfs_9"
-              style="--mx-box-flex: 1;"
+            <button
+              aria-label="Room info"
+              class="mx_RoomHeader_infoWrapper"
+              tabindex="0"
             >
               <div
                 aria-level="1"
@@ -3354,8 +3361,8 @@ exports[`RoomView video rooms should render joined video room view 1`] = `
                   !roomviewvideoroomsshouldrenderjoinedvideoroomview:example.org
                 </span>
               </div>
-            </div>
-          </button>
+            </button>
+          </div>
           <button
             aria-label="Chat"
             aria-labelledby="_r_kg_"

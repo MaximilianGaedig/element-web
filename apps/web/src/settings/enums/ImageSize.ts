@@ -14,11 +14,43 @@ const SIZE_LARGE = { w: 800, h: 600 };
 const SIZE_NORMAL_LANDSCAPE = { w: 324, h: 324 }; // for w > h
 const SIZE_NORMAL_PORTRAIT = { w: Math.ceil(324 * (9 / 16)), h: 324 }; // for h > w
 
+// Telegram-style layout: Telegram Web's media boxes (Telegram Web K helpers/mediaSizes.ts, GPL-3.0):
+// "regular" 420x400 on desktop / 340x340 on handhelds, stickers 200x200 / 180x180.
+const SIZE_TELEGRAM = { w: 420, h: 400 };
+const SIZE_TELEGRAM_HANDHELD = { w: 340, h: 340 };
+const SIZE_TELEGRAM_STICKER = { w: 200, h: 200 };
+const SIZE_TELEGRAM_STICKER_HANDHELD = { w: 180, h: 180 };
+
 type Dimensions = { w?: number; h?: number };
 
 export enum ImageSize {
     Normal = "normal",
     Large = "large",
+    /** Not user-selectable: used instead of the setting while the Telegram-style layout is on. */
+    Telegram = "telegram",
+    /** Not user-selectable: Telegram-style layout on a narrow (handheld) window. */
+    TelegramHandheld = "telegram_handheld",
+    /** Not user-selectable: stickers in the Telegram-style layout. */
+    TelegramSticker = "telegram_sticker",
+    /** Not user-selectable: stickers in the Telegram-style layout on a narrow (handheld) window. */
+    TelegramStickerHandheld = "telegram_sticker_handheld",
+}
+
+function maxSizeFor(size: ImageSize, portrait: boolean): Required<Dimensions> {
+    switch (size) {
+        case ImageSize.Large:
+            return SIZE_LARGE;
+        case ImageSize.Telegram:
+            return SIZE_TELEGRAM;
+        case ImageSize.TelegramHandheld:
+            return SIZE_TELEGRAM_HANDHELD;
+        case ImageSize.TelegramSticker:
+            return SIZE_TELEGRAM_STICKER;
+        case ImageSize.TelegramStickerHandheld:
+            return SIZE_TELEGRAM_STICKER_HANDHELD;
+        default:
+            return portrait ? SIZE_NORMAL_PORTRAIT : SIZE_NORMAL_LANDSCAPE;
+    }
 }
 
 /**
@@ -31,7 +63,7 @@ export function suggestedSize(size: ImageSize, contentSize: Dimensions, maxHeigh
     const aspectRatio = contentSize.w! / contentSize.h!;
     const portrait = aspectRatio < 1;
 
-    const maxSize = size === ImageSize.Large ? SIZE_LARGE : portrait ? SIZE_NORMAL_PORTRAIT : SIZE_NORMAL_LANDSCAPE;
+    const maxSize = maxSizeFor(size, portrait);
     if (!contentSize.w || !contentSize.h) {
         return maxSize;
     }

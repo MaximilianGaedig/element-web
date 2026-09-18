@@ -17,8 +17,11 @@ import Modal from "../../../Modal";
 import AccessibleButton from "../elements/AccessibleButton";
 import { _t } from "../../../languageHandler";
 import { type AnimatedVideoHints, fitSize, getAnimatedVideoHints } from "../../../utils/beeper/animatedMedia";
+import { isTelegramLayout } from "../../../utils/beeper/telegramLayout";
 
 const STICKER_MAX = 256;
+/** Telegram Web's animated sticker box (mediaSizes.animatedSticker). */
+const TELEGRAM_STICKER_MAX = 200;
 const GIF_MAX = 320;
 
 /** Resolves the (decrypted, if needed) video and thumbnail URLs of the event. */
@@ -142,7 +145,8 @@ export default function BeeperAnimatedVideoBody(props: IBodyProps): JSX.Element 
         Modal.createDialog(BeeperAnimatedVideoLightbox, { src, poster, label }, "mx_Dialog_lightbox", undefined, true);
     }, [src, poster, label]);
 
-    const { width, height } = fitSize(hints.width, hints.height, hints.sticker ? STICKER_MAX : GIF_MAX);
+    const stickerMax = isTelegramLayout() ? TELEGRAM_STICKER_MAX : STICKER_MAX;
+    const { width, height } = fitSize(hints.width, hints.height, hints.sticker ? stickerMax : GIF_MAX);
     const className = classNames("mx_BeeperAnimatedVideo", {
         mx_BeeperAnimatedVideo_sticker: hints.sticker,
         mx_BeeperAnimatedVideo_playing: shouldPlay,

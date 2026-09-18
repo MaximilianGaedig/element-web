@@ -110,6 +110,11 @@ export default class AppearanceUserSettingsTab extends React.Component<EmptyObje
                 <SettingsSection>
                     <ThemeChoicePanel />
                     <LayoutSwitcher />
+                    <SettingsSubsection>
+                        <Form.Root onSubmit={(evt) => evt.preventDefault()}>
+                            <SettingsFlag name="telegramStyleLayout" level={SettingLevel.ACCOUNT} />
+                        </Form.Root>
+                    </SettingsSubsection>
                     <FontScalingPanel />
                     {this.renderAdvancedSection()}
                     <ImageSizePanel />

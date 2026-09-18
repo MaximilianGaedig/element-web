@@ -30,6 +30,8 @@ describe("VideoBodyViewModel", () => {
     const mockedDecode = jest.mocked(decode);
     const videoRef = { current: null };
     let imageSizeWatcher: ((...args: [unknown, unknown, unknown, unknown, ImageSize]) => void) | undefined;
+    let telegramLayoutWatcher: (() => void) | undefined;
+    let telegramLayout = false;
 
     const flushPromises = async (): Promise<void> => {
         await Promise.resolve();
@@ -115,13 +117,20 @@ describe("VideoBodyViewModel", () => {
             if (setting === "Images.size") {
                 return ImageSize.Normal;
             }
+            if (setting === "telegramStyleLayout") {
+                return telegramLayout;
+            }
             if (setting === "autoplayVideo") {
                 return false;
             }
             return originalGetValue(setting, ...args);
         });
-        jest.spyOn(SettingsStore, "watchSetting").mockImplementation((_name, _roomId, callback) => {
-            imageSizeWatcher = callback as (...args: [unknown, unknown, unknown, unknown, ImageSize]) => void;
+        jest.spyOn(SettingsStore, "watchSetting").mockImplementation((name, _roomId, callback) => {
+            if (name === "Images.size") {
+                imageSizeWatcher = callback as (...args: [unknown, unknown, unknown, unknown, ImageSize]) => void;
+            } else if (name === "telegramStyleLayout") {
+                telegramLayoutWatcher = callback as () => void;
+            }
             return "video-body-test-watch";
         });
         jest.spyOn(SettingsStore, "unwatchSetting").mockImplementation(jest.fn());
@@ -133,6 +142,8 @@ describe("VideoBodyViewModel", () => {
     afterEach(() => {
         jest.restoreAllMocks();
         imageSizeWatcher = undefined;
+        telegramLayoutWatcher = undefined;
+        telegramLayout = false;
     });
 
     it("computes the initial hidden snapshot from props", () => {
@@ -200,6 +211,7 @@ describe("VideoBodyViewModel", () => {
         const originalGetValue = SettingsStore.getValue;
         jest.spyOn(SettingsStore, "getValue").mockImplementation((setting, ...args) => {
             if (setting === "Images.size") return ImageSize.Normal;
+            if (setting === "telegramStyleLayout") return false;
             if (setting === "autoplayVideo") return true;
             return originalGetValue(setting, ...args);
         });
@@ -344,6 +356,17 @@ describe("VideoBodyViewModel", () => {
 
         expect(vm.getSnapshot().maxWidth).toBe(800);
         expect(vm.getSnapshot().maxHeight).toBe(450);
+    });
+
+    it("uses Telegram's media box while the Telegram-style layout is on", () => {
+        const vm = createVm({
+            mxEvent: createEvent({ content: { info: { w: 1280, h: 720 } } }),
+            mediaVisible: false,
+        });
+        telegramLayout = true;
+        telegramLayoutWatcher?.();
+        expect(vm.getSnapshot().maxWidth).toBe(420);
+        expect(vm.getSnapshot().maxHeight).toBe(236);
     });
 
     it("uses the blurhash poster while the thumbnail image is loading", () => {

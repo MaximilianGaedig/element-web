@@ -260,6 +260,7 @@ export interface Settings {
     "autoplayGifs": IBaseSetting<boolean>;
     "autoplayVideo": IBaseSetting<boolean>;
     "groupConsecutiveImages": IBaseSetting<boolean>;
+    "telegramStyleLayout": IBaseSetting<boolean>;
     "enableSyntaxHighlightLanguageDetection": IBaseSetting<boolean>;
     "expandCodeByDefault": IBaseSetting<boolean>;
     "showCodeLineNumbers": IBaseSetting<boolean>;
@@ -896,6 +897,12 @@ export const SETTINGS: Settings = {
         description: _td("settings|group_consecutive_images_description"),
         // Off by default: Telegram only ever groups media that was sent as one album (a shared grouped_id).
         default: false,
+    },
+    "telegramStyleLayout": {
+        supportedLevels: LEVELS_ACCOUNT_SETTINGS,
+        displayName: _td("settings|telegram_style_layout"),
+        description: _td("settings|telegram_style_layout_description"),
+        default: true,
     },
     "enableSyntaxHighlightLanguageDetection": {
         supportedLevels: LEVELS_ACCOUNT_SETTINGS,

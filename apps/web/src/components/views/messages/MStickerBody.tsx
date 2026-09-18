@@ -14,8 +14,15 @@ import { BLURHASH_FIELD } from "../../../utils/image-media";
 import IconsShowStickersSvg from "../../../../res/img/icons-show-stickers.svg";
 import { type IBodyProps } from "./IBodyProps";
 import { useMediaVisible } from "../../../hooks/useMediaVisible";
+import { type ImageSize } from "../../../settings/enums/ImageSize";
+import { effectiveImageSize } from "../../../utils/beeper/telegramLayout";
 
 class MStickerBodyInner extends MImageBodyInner {
+    // Telegram-sized (200px) stickers in the Telegram-style layout.
+    protected get imageSize(): ImageSize {
+        return effectiveImageSize(true);
+    }
+
     // Mostly empty to prevent default behaviour of MImageBody
     protected onClick = (ev: React.MouseEvent): void => {
         ev.preventDefault();

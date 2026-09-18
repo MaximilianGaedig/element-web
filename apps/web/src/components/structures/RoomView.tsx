@@ -261,6 +261,7 @@ export interface IRoomState {
     tombstone?: MatrixEvent;
     resizing: boolean;
     layout: Layout;
+    telegramLayout?: boolean;
     lowBandwidth: boolean;
     alwaysShowTimestamps: boolean;
     showTwelveHourTimestamps: boolean;
@@ -490,6 +491,7 @@ export class RoomView extends React.Component<IRoomProps, IRoomState> {
             canSendMessages: false,
             resizing: false,
             layout: SettingsStore.getValue("layout"),
+            telegramLayout: SettingsStore.getValue("telegramStyleLayout"),
             lowBandwidth: SettingsStore.getValue("lowBandwidth"),
             alwaysShowTimestamps: SettingsStore.getValue("alwaysShowTimestamps"),
             showTwelveHourTimestamps: SettingsStore.getValue("showTwelveHourTimestamps"),
@@ -996,6 +998,9 @@ export class RoomView extends React.Component<IRoomProps, IRoomState> {
         this.settingWatchers = [
             SettingsStore.watchSetting("layout", null, (...[, , , value]) =>
                 this.setState({ layout: value as Layout }),
+            ),
+            SettingsStore.watchSetting("telegramStyleLayout", null, (...[, , , value]) =>
+                this.setState({ telegramLayout: value as boolean }),
             ),
             SettingsStore.watchSetting("lowBandwidth", null, (...[, , , value]) =>
                 this.setState({ lowBandwidth: value as boolean }),
@@ -2771,6 +2776,7 @@ export class RoomView extends React.Component<IRoomProps, IRoomState> {
                                 className={mainSplitContentClasses}
                                 ref={this.roomViewBody}
                                 data-layout={this.state.layout}
+                                data-telegram-layout={this.state.telegramLayout || undefined}
                             >
                                 {!this.props.hideHeader && (
                                     <RoomHeader

@@ -3106,6 +3106,8 @@
             "minimised": "Minimised"
         },
         "tac_only_notifications": "Only show notifications in the thread activity centre",
+        "telegram_style_layout": "Telegram-style layout",
+        "telegram_style_layout_description": "A narrower, centred timeline, Telegram-sized media and compact bubbles. Hides avatars and names in direct messages when using the message bubbles layout.",
         "use_12_hour_format": "Show timestamps in 12 hour format (e.g. 2:30pm)",
         "use_command_enter_send_message": "Use Command + Enter to send a message",
         "use_command_f_search": "Use Command + F to search timeline",

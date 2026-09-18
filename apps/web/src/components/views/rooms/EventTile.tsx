@@ -264,6 +264,9 @@ export interface EventTileProps {
     // whether or not to display the sender
     hideSender?: boolean;
 
+    // Telegram-style layout: hide the sender's avatar (one-to-one chats)
+    hideAvatar?: boolean;
+
     // whether or not to display thread info
     showThreadInfo?: boolean;
 
@@ -1127,6 +1130,7 @@ export class UnwrappedEventTile extends React.Component<EventTileProps, IState> 
             mx_EventTile_bad: isEncryptionFailure,
             mx_EventTile_emote: msgtype === MsgType.Emote,
             mx_EventTile_noSender: this.props.hideSender,
+            mx_EventTile_noAvatar: this.props.hideAvatar,
             mx_EventTile_clamp:
                 this.context.timelineRenderingType === TimelineRenderingType.ThreadsList || isRenderingNotification,
             mx_EventTile_noBubble: noBubbleEvent,
@@ -1184,6 +1188,10 @@ export class UnwrappedEventTile extends React.Component<EventTileProps, IState> 
         } else {
             avatarSize = "30px";
             needsSenderProfile = true;
+        }
+
+        if (this.props.hideAvatar && !isInfoMessage && this.context.timelineRenderingType === TimelineRenderingType.Room) {
+            avatarSize = null;
         }
 
         if (this.props.mxEvent.sender && avatarSize !== null) {
