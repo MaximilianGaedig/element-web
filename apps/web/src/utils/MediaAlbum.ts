@@ -7,14 +7,18 @@ Please see LICENSE files in the repository root for full details.
 
 import { EventType, type IContent, type MatrixEvent, MsgType } from "matrix-js-sdk/src/matrix";
 
+import { ALBUM_MAX_WIDTH, type AlbumGridLayout, layoutAlbum, type MediaSize, RectPart } from "./GroupedMediaLayout";
+
 /**
  * Media album ("media group") helpers.
  *
  * Bridges (mautrix) mark media events that were sent together on the remote network with
  *   "fi.mau.album": { "id": "<opaque>", "index": 0, "count": 3 }
- * Consecutive events from the same sender that share an album id are rendered as one grid tile.
+ * Like Telegram, only adjacent events from the same sender that share an album id are rendered as one
+ * grid tile (at most {@link MAX_ALBUM_ITEMS}), ordered by `index` and laid out with Telegram's layouter.
  *
- * Element-sent media carries no album marker; with the `groupConsecutiveImages` setting enabled,
+ * Element-sent media carries no album marker; with the (off by default, non-Telegram)
+ * `groupConsecutiveImages` setting enabled,
  * consecutive m.image/m.video events from the same sender sent within {@link NATIVE_GROUP_WINDOW_MS}
  * of each other are grouped the same way.
  */
@@ -24,14 +28,11 @@ export const ALBUM_KEY = "fi.mau.album";
 /** Maximum gap between two consecutive natively-sent media events of one group. */
 export const NATIVE_GROUP_WINDOW_MS = 60 * 1000;
 
-/** Maximum number of cells shown in the grid; the last visible cell carries a "+N" overlay. */
-export const MAX_VISIBLE_ALBUM_ITEMS = 6;
+/** Telegram albums hold at most 10 items; longer runs with the same album id are split into several albums. */
+export const MAX_ALBUM_ITEMS = 10;
 
 /** Upper bound for a bridge-declared `count`, to guard against nonsense values. */
 const MAX_DECLARED_COUNT = 100;
-
-/** How long we keep empty placeholder slots for declared-but-not-yet-arrived items. */
-export const PLACEHOLDER_GRACE_MS = 5 * 60 * 1000;
 
 export interface AlbumInfo {
     id: string;
@@ -156,62 +157,40 @@ export function getCaptionEvents(sortedItems: MatrixEvent[]): MatrixEvent[] {
     });
 }
 
-/**
- * The highest declared `count` of the members, if every member agrees on being part of one bridged album.
- */
-export function getDeclaredCount(items: MatrixEvent[]): number | undefined {
-    let count: number | undefined;
-    for (const ev of items) {
-        const c = getAlbumInfo(ev)?.count;
-        if (c !== undefined) count = Math.max(count ?? 0, c);
+/** Natural size of a visual item (from `info.w/h`, else its thumbnail's), or a square if unknown. */
+export function getMediaSize(ev: MatrixEvent): MediaSize {
+    const info = ev.getContent().info ?? {};
+    for (const [w, h] of [
+        [info.w, info.h],
+        [info.thumbnail_info?.w, info.thumbnail_info?.h],
+    ]) {
+        if (Number.isFinite(w) && Number.isFinite(h) && w > 0 && h > 0) return { w, h };
     }
-    return count;
-}
-
-/** A slot of the grid: either an arrived item or a placeholder for a declared-but-missing one. */
-export type AlbumSlot = { event: MatrixEvent } | { placeholder: true };
-
-/**
- * Lays out the visual items into slots. If the bridge declared a `count` (and it is still recent),
- * missing items get placeholder slots so that late arrivals fill the grid without re-flowing it.
- * Items with unique in-range indices are placed at their index.
- */
-export function buildAlbumSlots(
-    sortedVisual: MatrixEvent[],
-    declaredCount: number | undefined,
-    now: number,
-): AlbumSlot[] {
-    const newestTs = Math.max(...sortedVisual.map((e) => e.getTs()));
-    const keepPlaceholders =
-        declaredCount !== undefined && declaredCount > sortedVisual.length && now - newestTs < PLACEHOLDER_GRACE_MS;
-    if (!keepPlaceholders) return sortedVisual.map((event) => ({ event }));
-
-    const total = declaredCount!;
-    const indices = sortedVisual.map((e) => getAlbumInfo(e)?.index);
-    const placeable = indices.every((i) => i !== undefined && i < total) && new Set(indices).size === indices.length;
-    const slots: AlbumSlot[] = Array.from({ length: total }, () => ({ placeholder: true }));
-    sortedVisual.forEach((event, i) => {
-        slots[placeable ? indices[i]! : i] = { event };
-    });
-    return slots;
-}
-
-export interface AlbumLayout {
-    /** number of cells rendered */
-    visible: number;
-    /** number of slots not rendered, shown as "+N" on the last visible cell (0 = none) */
-    overflow: number;
-    /** CSS modifier selecting the grid template */
-    variant: "n1" | "n2" | "n3" | "n4" | "n5" | "n6";
+    return { w: 1, h: 1 };
 }
 
 /**
- * Telegram-like layout: 1 alone (only when the album also has non-visual items), 2 side by side, 3 as one large + two small, 4 as 2x2,
- * 5 as 2 + 3, 6+ as 3 + 3 with "+N" on the sixth cell.
+ * Lays out the visual items of an album with Telegram's grouped-media layouter.
+ * A lone visual item (an album whose other items are files) is fitted into a maxWidth square box,
+ * like Telegram's single-photo bubble, instead of being stretched to full width.
  */
-export function getAlbumLayout(slotCount: number): AlbumLayout {
-    const visible = Math.min(Math.max(slotCount, 1), MAX_VISIBLE_ALBUM_ITEMS);
-    const overflow = Math.max(0, slotCount - MAX_VISIBLE_ALBUM_ITEMS);
-    const variant = `n${visible}` as AlbumLayout["variant"];
-    return { visible, overflow, variant };
+export function getAlbumGridLayout(sortedVisual: MatrixEvent[]): AlbumGridLayout {
+    const sizes = sortedVisual.map(getMediaSize);
+    if (sizes.length === 1) {
+        const { w, h } = sizes[0];
+        const scale = Math.min(ALBUM_MAX_WIDTH / w, ALBUM_MAX_WIDTH / h);
+        const width = Math.round(w * scale);
+        const height = Math.round(h * scale);
+        return {
+            width,
+            height,
+            items: [
+                {
+                    geometry: { x: 0, y: 0, width, height },
+                    sides: RectPart.Left | RectPart.Top | RectPart.Right | RectPart.Bottom,
+                },
+            ],
+        };
+    }
+    return layoutAlbum(sizes);
 }
