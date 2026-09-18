@@ -47,7 +47,8 @@ export function setupLanguageMock() {
     fetchMock.mockGlobal();
     fetchMock
         .get(
-            "end:/i18n/languages.json",
+            // languages.json is fetched with a cache-busting "?<timestamp>" query, so match with or without one.
+            /\/i18n\/languages\.json(\?[^/]*)?$/,
             {
                 en: "en_EN.json",
                 de: "de_DE.json",

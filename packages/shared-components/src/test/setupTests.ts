@@ -14,7 +14,8 @@ import en from "../i18n/strings/en_EN.json";
 
 function setupLanguageMock(): void {
     fetchMock
-        .get("end:/i18n/languages.json", {
+        // languages.json is fetched with a cache-busting "?<timestamp>" query, so match with or without one.
+        .get(/\/i18n\/languages\.json(\?[^/]*)?$/, {
             en: "en_EN.json",
         })
         .get("end:en_EN.json", en);
