@@ -51,6 +51,7 @@ import { TimelineRenderingType } from "./contexts/RoomContext";
 import { addReplyToMessageContent } from "./utils/Reply";
 import ErrorDialog from "./components/views/dialogs/ErrorDialog";
 import UploadFailureDialog from "./components/views/dialogs/UploadFailureDialog";
+import { dropUnsupportedBridgeFiles } from "./utils/beeper/unsupportedFiles";
 import UploadConfirmDialog from "./components/views/dialogs/UploadConfirmDialog";
 import { createThumbnail } from "./utils/image-media";
 import { attachMentions, attachRelation } from "./utils/messages.ts";
@@ -482,6 +483,9 @@ export default class ContentMessages {
             const [shouldContinue] = await finished;
             if (!shouldContinue) return;
         }
+
+        // Drop files the bridged network would reject, explaining why.
+        await dropUnsupportedBridgeFiles(matrixClient.getRoom(roomId), okFiles);
 
         let uploadAll = false;
         // Promise to complete before sending next file into room, used for synchronisation of file-sending

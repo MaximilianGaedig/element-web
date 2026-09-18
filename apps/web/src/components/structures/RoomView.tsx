@@ -53,6 +53,7 @@ import {
 } from "@element-hq/web-shared-components";
 
 import shouldHideEvent from "../../shouldHideEvent";
+import { reactionsBlockedReason } from "../../utils/beeper/roomFeatures";
 import { _t } from "../../languageHandler";
 import * as TimezoneHandler from "../../TimezoneHandler";
 import { RoomPermalinkCreator } from "../../utils/permalinks/Permalinks";
@@ -1674,7 +1675,9 @@ export class RoomView extends React.Component<IRoomProps, IRoomState> {
             const me = this.context.client.getSafeUserId();
             const canReact =
                 room.getMyMembership() === KnownMembership.Join &&
-                room.currentState.maySendEvent(EventType.Reaction, me);
+                room.currentState.maySendEvent(EventType.Reaction, me) &&
+                // The bridge's remote network may not support reactions at all.
+                !reactionsBlockedReason(room);
             const canSendMessages = room.maySendMessage();
             const canSelfRedact = room.currentState.maySendEvent(EventType.RoomRedaction, me);
 

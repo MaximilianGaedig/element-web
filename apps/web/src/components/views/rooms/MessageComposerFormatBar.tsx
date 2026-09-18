@@ -32,6 +32,8 @@ export enum Formatting {
 
 interface IProps {
     shortcuts: Partial<Record<Formatting, string>>;
+    /** Formatting the room can't carry (e.g. a bridged network), with the reason shown as tooltip. */
+    disabledReasons?: Partial<Record<Formatting, string>>;
     onAction(action: Formatting): void;
 }
 
@@ -62,6 +64,7 @@ export default class MessageComposerFormatBar extends React.PureComponent<IProps
                 <FormatButton
                     label={_t("composer|format_bold")}
                     onClick={() => this.props.onAction(Formatting.Bold)}
+                    disabledReason={this.props.disabledReasons?.[Formatting.Bold]}
                     icon={<BoldIcon />}
                     shortcut={this.props.shortcuts.bold}
                     visible={this.state.visible}
@@ -69,6 +72,7 @@ export default class MessageComposerFormatBar extends React.PureComponent<IProps
                 <FormatButton
                     label={_t("composer|format_italics")}
                     onClick={() => this.props.onAction(Formatting.Italics)}
+                    disabledReason={this.props.disabledReasons?.[Formatting.Italics]}
                     icon={<ItalicIcon />}
                     shortcut={this.props.shortcuts.italics}
                     visible={this.state.visible}
@@ -76,12 +80,14 @@ export default class MessageComposerFormatBar extends React.PureComponent<IProps
                 <FormatButton
                     label={_t("composer|format_strikethrough")}
                     onClick={() => this.props.onAction(Formatting.Strikethrough)}
+                    disabledReason={this.props.disabledReasons?.[Formatting.Strikethrough]}
                     icon={<StrikethroughIcon />}
                     visible={this.state.visible}
                 />
                 <FormatButton
                     label={_t("composer|format_code_block")}
                     onClick={() => this.props.onAction(Formatting.Code)}
+                    disabledReason={this.props.disabledReasons?.[Formatting.Code]}
                     icon={<InlineCodeIcon />}
                     shortcut={this.props.shortcuts.code}
                     visible={this.state.visible}
@@ -89,6 +95,7 @@ export default class MessageComposerFormatBar extends React.PureComponent<IProps
                 <FormatButton
                     label={_t("action|quote")}
                     onClick={() => this.props.onAction(Formatting.Quote)}
+                    disabledReason={this.props.disabledReasons?.[Formatting.Quote]}
                     icon={<QuoteIcon />}
                     shortcut={this.props.shortcuts.quote}
                     visible={this.state.visible}
@@ -96,6 +103,7 @@ export default class MessageComposerFormatBar extends React.PureComponent<IProps
                 <FormatButton
                     label={_t("composer|format_insert_link")}
                     onClick={() => this.props.onAction(Formatting.InsertLink)}
+                    disabledReason={this.props.disabledReasons?.[Formatting.InsertLink]}
                     icon={<LinkIcon />}
                     shortcut={this.props.shortcuts.insert_link}
                     visible={this.state.visible}
@@ -127,6 +135,8 @@ interface IFormatButtonProps {
     icon: JSX.Element;
     shortcut?: string;
     visible?: boolean;
+    /** If set, the button is disabled and this explains why. */
+    disabledReason?: string;
     onClick(): void;
 }
 
@@ -138,10 +148,14 @@ class FormatButton extends React.PureComponent<IFormatButtonProps> {
             <RovingAccessibleButton
                 element="button"
                 type="button"
-                onClick={this.props.onClick}
+                // Not `disabled`: a disabled button gets no hover, so the reason's tooltip would never show.
+                onClick={this.props.disabledReason ? () => {} : this.props.onClick}
+                aria-disabled={!!this.props.disabledReason || undefined}
                 aria-label={this.props.label}
-                title={this.props.label}
-                caption={this.props.shortcut}
+                title={
+                    this.props.disabledReason ? `${this.props.label}: ${this.props.disabledReason}` : this.props.label
+                }
+                caption={this.props.disabledReason ? undefined : this.props.shortcut}
                 className="mx_MessageComposerFormatBar_button"
             >
                 {this.props.icon}

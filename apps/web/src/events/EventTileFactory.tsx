@@ -49,6 +49,8 @@ import { ModuleApi } from "../modules/Api";
 import { EncryptionEventViewModel } from "../viewmodels/room/timeline/event-tile/EncryptionEventViewModel";
 import { TextualEventViewModel } from "../viewmodels/room/timeline/event-tile/TextualEventViewModel";
 import { ElementCallEventType } from "../call-types";
+import BeeperActionMessage from "../components/views/beeper/BeeperActionMessage";
+import { getActionMessage } from "../utils/beeper/actionMessage";
 
 // Subset of EventTile's IProps plus some mixins
 export interface EventTileTypeProps extends Pick<
@@ -101,6 +103,8 @@ const HiddenEventFactory: Factory = (ref, props) => <HiddenBody ref={ref} {...pr
 export const JitsiEventFactory: Factory = (ref, props) => <MJitsiWidgetEvent ref={ref} {...props} />;
 export const JSONEventFactory: Factory = (ref, props) => <ViewSourceEvent ref={ref} {...props} />;
 export const RoomCreateEventFactory: Factory = (_ref, props) => <RoomPredecessorTile {...props} />;
+// Beeper/mautrix action messages (e.g. bridged calls) render as a compact system line.
+export const BeeperActionMessageFactory: Factory = (_ref, props) => <BeeperActionMessage {...props} />;
 
 const EVENT_TILE_TYPES = new Map<string, Factory>([
     [EventType.RoomMessage, MessageEventFactory], // note that verification requests are handled in pickFactory()
@@ -192,6 +196,8 @@ export function pickFactory(
     }
 
     if (evType === EventType.RoomMessage) {
+        if (getActionMessage(mxEvent)) return BeeperActionMessageFactory;
+
         // don't show verification requests we're not involved in,
         // not even when showing hidden events
         const content = mxEvent.getContent();

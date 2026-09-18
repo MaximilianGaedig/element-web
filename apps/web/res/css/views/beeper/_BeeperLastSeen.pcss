@@ -1,0 +1,16 @@
+/*
+Copyright 2026 New Vector Ltd.
+
+SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only OR LicenseRef-Element-Commercial
+Please see LICENSE files in the repository root for full details.
+*/
+
+/* Telegram-style "last seen …" subtitle under a DM's name. */
+.mx_BeeperLastSeen {
+    color: var(--cpd-color-text-secondary);
+    text-align: start;
+
+    &[data-online="true"] {
+        color: var(--cpd-color-text-action-accent);
+    }
+}

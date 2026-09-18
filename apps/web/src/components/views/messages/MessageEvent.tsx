@@ -43,6 +43,8 @@ import {
     VideoBodyFactory,
     renderMBody,
 } from "./MBodyFactory";
+import BeeperAnimatedVideoBody from "../beeper/BeeperAnimatedVideoBody";
+import { getAnimatedVideoHints, isAnimatedSticker } from "../../../utils/beeper/animatedMedia";
 
 // onMessageAllowed is handled internally
 interface IProps extends Omit<IBodyProps, "onMessageAllowed" | "mediaEventHelper"> {
@@ -277,6 +279,11 @@ export default class MessageEvent extends React.Component<IProps> implements IMe
                 BodyType = this.bodyTypes.get(MsgType.File)!;
             }
 
+            // Bridged GIFs and animated stickers (fi.mau.* playback hints) play like GIFs.
+            if (BodyType === VideoBodyFactory && getAnimatedVideoHints(this.props.mxEvent)) {
+                BodyType = BeeperAnimatedVideoBody;
+            }
+
             // TODO: move to eventTypes when location sharing spec stabilises
             if (M_LOCATION.matches(type) || (type === EventType.RoomMessage && msgtype === MsgType.Location)) {
                 BodyType = MLocationBody;
@@ -301,7 +308,8 @@ export default class MessageEvent extends React.Component<IProps> implements IMe
         const hasCaption =
             [MsgType.Image, MsgType.File, MsgType.Audio, MsgType.Video].includes(msgtype as MsgType) &&
             content.filename &&
-            content.filename !== content.body;
+            content.filename !== content.body &&
+            !isAnimatedSticker(this.props.mxEvent);
         const bodyProps: IBodyProps = {
             ref: this.body,
             mxEvent: this.props.mxEvent,

@@ -1,0 +1,31 @@
+/*
+Copyright 2026 New Vector Ltd.
+
+SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only OR LicenseRef-Element-Commercial
+Please see LICENSE files in the repository root for full details.
+*/
+
+/* Shown above the reaction picker when the bridged network only allows some reactions. */
+.mx_BeeperReactionNotice {
+    padding: var(--cpd-space-2x) var(--cpd-space-3x);
+    font: var(--cpd-font-body-sm-regular);
+    color: var(--cpd-color-text-secondary);
+    border-block-end: 1px solid var(--cpd-color-border-interactive-secondary);
+}
+
+.mx_MessageComposerFormatBar_button[aria-disabled="true"] {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.mx_BeeperRejectedFiles {
+    padding-inline-start: var(--cpd-space-5x);
+    text-align: start;
+    word-break: break-word;
+}
+
+/* Edit/remove entries kept visible (but inert) to explain the bridged network's limits. */
+.mx_IconizedContextMenu_item.mx_BeeperBlockedAction {
+    opacity: 0.5;
+    cursor: not-allowed;
+}

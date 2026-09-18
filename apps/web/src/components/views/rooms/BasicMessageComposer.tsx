@@ -33,6 +33,7 @@ import { IS_MAC, Key } from "../../../Keyboard";
 import { CommandCategories, CommandMap, parseCommandString } from "../../../slash-commands/SlashCommands";
 import Range from "../../../editor/range";
 import MessageComposerFormatBar, { Formatting } from "./MessageComposerFormatBar";
+import { formattingDisabledReasons } from "../../../utils/beeper/roomFeatures";
 import type DocumentOffset from "../../../editor/offset";
 import { type IDiff } from "../../../editor/diff";
 import type AutocompleteWrapperModel from "../../../editor/autocomplete";
@@ -785,6 +786,8 @@ export default class BasicMessageEditor extends React.Component<IProps, IState> 
         if (!this.state.useMarkdown || !this.editorRef.current) {
             return;
         }
+        // Also covers keyboard shortcuts for formatting the bridged network can't carry.
+        if (formattingDisabledReasons(this.props.room)[action]) return;
 
         const range: Range = getRangeForSelection(this.editorRef.current, this.props.model, document.getSelection()!);
 
@@ -842,6 +845,7 @@ export default class BasicMessageEditor extends React.Component<IProps, IState> 
                     ref={this.formatBarRef}
                     onAction={this.onFormatAction}
                     shortcuts={shortcuts}
+                    disabledReasons={formattingDisabledReasons(this.props.room)}
                 />
                 <div
                     className={classes}

@@ -14,6 +14,7 @@ import { useUserfoHeaderViewModel } from "../../../viewmodels/right_panel/user_i
 import MemberAvatar from "../../avatars/MemberAvatar";
 import { Container, type Member, type IDevice } from "../UserInfo";
 import PresenceLabel from "../../rooms/PresenceLabel";
+import { BeeperLastSeenLabel } from "../../beeper/BeeperLastSeen";
 import CopyableText from "../../elements/CopyableText";
 import { UserInfoHeaderVerificationView } from "./UserInfoHeaderVerificationView";
 
@@ -38,12 +39,17 @@ export const UserInfoHeaderView: React.FC<UserInfoHeaderViewProps> = ({
 
     if (vm.showPresence) {
         presenceLabel = (
-            <PresenceLabel
-                activeAgo={vm.precenseInfo.lastActiveAgo}
-                currentlyActive={vm.precenseInfo.currentlyActive}
-                presenceState={vm.precenseInfo.state}
-                className="mx_UserInfo_profileStatus"
-                coloured
+            <BeeperLastSeenLabel
+                userId={member.userId}
+                fallback={
+                    <PresenceLabel
+                        activeAgo={vm.precenseInfo.lastActiveAgo}
+                        currentlyActive={vm.precenseInfo.currentlyActive}
+                        presenceState={vm.precenseInfo.state}
+                        className="mx_UserInfo_profileStatus"
+                        coloured
+                    />
+                }
             />
         );
     }

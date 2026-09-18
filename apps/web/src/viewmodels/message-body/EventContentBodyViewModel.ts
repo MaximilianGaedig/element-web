@@ -15,6 +15,7 @@ import {
 } from "@element-hq/web-shared-components";
 
 import { bodyToNode } from "../../HtmlUtils";
+import { stripPerMessageProfileFallback } from "../../utils/beeper/perMessageProfile";
 import PlatformPeg from "../../PlatformPeg";
 import {
     combineRenderers,
@@ -172,7 +173,8 @@ export class EventContentBodyViewModel
     private static readonly computeBodySnapshot = (
         props: EventContentBodyViewModelProps,
     ): Pick<EventContentBodyViewSnapshot, "body" | "formattedBody" | "className"> => {
-        const { content, stripReply, highlights, linkify, enableBigEmoji, mediaIsVisible } = props;
+        const { stripReply, highlights, linkify, enableBigEmoji, mediaIsVisible } = props;
+        const content = stripPerMessageProfileFallback(props.content);
         const isEmote = content.msgtype === MsgType.Emote;
         const { strippedBody, formattedBody, emojiBodyElements, className } = bodyToNode(content, highlights, {
             disableBigEmoji: isEmote || !enableBigEmoji,

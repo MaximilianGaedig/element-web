@@ -31,6 +31,7 @@ import { launchPollEditor } from "../components/views/messages/MPollBody";
 import { Action } from "../dispatcher/actions";
 import { type ViewRoomPayload } from "../dispatcher/payloads/ViewRoomPayload";
 import { ModuleApi } from "../modules/Api";
+import { editBlockedReason } from "./beeper/roomFeatures";
 
 /**
  * Returns whether an event should allow actions like reply, reactions, edit, etc.
@@ -86,8 +87,10 @@ export function canEditContent(matrixClient: MatrixClient, mxEvent: MatrixEvent)
 
     const { msgtype, body } = mxEvent.getOriginalContent();
     return (
-        M_POLL_START.matches(mxEvent.getType()) ||
-        ((msgtype === MsgType.Text || msgtype === MsgType.Emote) && !!body && typeof body === "string")
+        (M_POLL_START.matches(mxEvent.getType()) ||
+            ((msgtype === MsgType.Text || msgtype === MsgType.Emote) && !!body && typeof body === "string")) &&
+        // The bridge's remote network may not allow editing (this message, any more).
+        !editBlockedReason(mxEvent, matrixClient.getRoom?.(mxEvent.getRoomId()) ?? null)
     );
 }
 
