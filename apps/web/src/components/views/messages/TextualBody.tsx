@@ -31,6 +31,7 @@ import QuestionDialog from "../dialogs/QuestionDialog";
 import MessageEditHistoryDialog from "../dialogs/MessageEditHistoryDialog";
 import EditMessageComposer from "../rooms/EditMessageComposer";
 import { type IBodyProps } from "./IBodyProps";
+import BridgeButtons from "./BridgeButtons";
 import RoomContext from "../../../contexts/RoomContext";
 import AccessibleButton from "../elements/AccessibleButton";
 import { getParentEventId } from "../../../utils/Reply";
@@ -363,6 +364,7 @@ class InnerTextualBody extends React.Component<Props> {
                     &nbsp;
                     {body}
                     {urlPreviewWidget}
+                    <BridgeButtons mxEvent={mxEvent} inhibitInteraction={this.props.inhibitInteraction} />
                 </div>
             );
         }
@@ -371,6 +373,7 @@ class InnerTextualBody extends React.Component<Props> {
                 <div id={this.props.id} className="mx_MNoticeBody mx_EventTile_content" onClick={this.onBodyLinkClick}>
                     {body}
                     {urlPreviewWidget}
+                    <BridgeButtons mxEvent={mxEvent} inhibitInteraction={this.props.inhibitInteraction} />
                 </div>
             );
         }
@@ -386,6 +389,7 @@ class InnerTextualBody extends React.Component<Props> {
             <div id={this.props.id} className="mx_MTextBody mx_EventTile_content" onClick={this.onBodyLinkClick}>
                 {body}
                 {urlPreviewWidget}
+                <BridgeButtons mxEvent={mxEvent} inhibitInteraction={this.props.inhibitInteraction} />
             </div>
         );
     }

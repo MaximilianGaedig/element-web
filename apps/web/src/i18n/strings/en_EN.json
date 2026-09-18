@@ -3343,6 +3343,9 @@
         "short_seconds": "%(value)ss"
     },
     "timeline": {
+        "bridge_buttons": {
+            "unsupported": "This button type isn't supported yet"
+        },
         "bulk_delete_confirm": {
             "one": "Are you sure you want to delete this message?",
             "other": "Are you sure you want to delete these %(count)s messages?"
