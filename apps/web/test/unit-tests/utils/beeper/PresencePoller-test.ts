@@ -6,7 +6,7 @@ Please see LICENSE files in the repository root for full details.
 */
 
 import { EventEmitter } from "events";
-import { type MatrixClient, MatrixError, type Room, type User, UserEvent } from "matrix-js-sdk/src/matrix";
+import { type MatrixClient, MatrixError, MatrixEvent, type Room, type User, UserEvent } from "matrix-js-sdk/src/matrix";
 import { ReEmitter } from "matrix-js-sdk/src/ReEmitter";
 
 import {
@@ -42,6 +42,7 @@ function makeClient(dmCount: number): MatrixClient & { getPresence: jest.Mock } 
     emitter.reEmitter = new ReEmitter(emitter);
     emitter.store = { getUser: (id: string) => users.get(id) ?? null, storeUser: (u: User) => users.set(u.userId, u) };
     emitter.getUser = (id: string) => users.get(id) ?? null;
+    emitter.getEventMapper = () => (raw: object) => new MatrixEvent(raw);
     emitter.getRoom = (id: string) => rooms.find((r) => r.roomId === id) ?? null;
     emitter.getVisibleRooms = () => rooms;
     emitter.getPresence = jest.fn().mockResolvedValue(GHOST_STATUS);

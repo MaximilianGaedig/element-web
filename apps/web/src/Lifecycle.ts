@@ -28,6 +28,7 @@ import Notifier from "./Notifier";
 import UserActivity from "./UserActivity";
 import Presence from "./Presence";
 import { PresencePoller } from "./utils/beeper/PresencePoller";
+import { PresenceSyncLoop } from "./utils/beeper/PresenceSyncLoop";
 import dis from "./dispatcher/dispatcher";
 import DMRoomMap from "./utils/DMRoomMap";
 import Modal from "./Modal";
@@ -1095,8 +1096,19 @@ async function startMatrixClient(
     if (!SettingsStore.getValue("lowBandwidth")) {
         Presence.start();
     }
-    // Simplified sliding sync delivers no presence; poll it for DM partners instead.
-    PresencePoller.start(client, { getOpenRoomId: () => SdkContextClass.instance.roomViewStore.getRoomId() });
+    // Simplified sliding sync delivers no presence: run a presence-only /sync long-poll beside it,
+    // falling back to polling /presence for DM partners while that keeps failing.
+    PresenceSyncLoop.start(client, {
+        onFallback: (active) => {
+            if (active) {
+                PresencePoller.start(client, {
+                    getOpenRoomId: () => SdkContextClass.instance.roomViewStore.getRoomId(),
+                });
+            } else {
+                PresencePoller.stop();
+            }
+        },
+    });
 
     // Now that we have a MatrixClientPeg, update the Jitsi info
     Jitsi.getInstance().start();
@@ -1200,6 +1212,7 @@ export function stopMatrixClient(unsetClient = true): void {
     UserActivity.sharedInstance().stop();
     SdkContextClass.instance.typingStore.reset();
     Presence.stop();
+    PresenceSyncLoop.stop();
     PresencePoller.stop();
     ActiveWidgetStore.instance.stop();
     IntegrationManagers.sharedInstance().stopWatching();

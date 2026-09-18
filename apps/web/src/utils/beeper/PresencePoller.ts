@@ -5,13 +5,14 @@ SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only OR LicenseRef-Element-Com
 Please see LICENSE files in the repository root for full details.
 */
 
-import { ClientEvent, type MatrixClient, MatrixError, MatrixEvent, User } from "matrix-js-sdk/src/matrix";
+import { type MatrixClient, MatrixError } from "matrix-js-sdk/src/matrix";
 import { logger as rootLogger } from "matrix-js-sdk/src/logger";
 
 import SettingsStore from "../../settings/SettingsStore";
 import DMRoomMap from "../DMRoomMap";
 import { isPresenceEnabled } from "../presence";
 import { getBridgedDmUserId } from "./bridgeInfo";
+import { applyPresenceEvent } from "./PresenceSyncLoop";
 
 const logger = rootLogger.getChild("PresencePoller");
 
@@ -30,6 +31,8 @@ export interface PresencePollerOptions {
 }
 
 /**
+ * Fallback for PresenceSyncLoop, used only while its presence-only /sync long-poll keeps failing.
+ *
  * Simplified sliding sync has no presence extension, so with it Element never receives m.presence
  * and presence dots / "last seen" stay empty. This polls GET /presence/{userId}/status for DM
  * partners instead — the open DM every 30s, recent DMs every 90s — and feeds the results into the
@@ -194,15 +197,6 @@ export class PresencePoller {
         for (const key of ["status_msg", "last_active_ago", "currently_active"]) {
             if (status[key] !== undefined) content[key] = status[key];
         }
-        const event = new MatrixEvent({ type: "m.presence", sender: userId, content });
-        let user = this.client.getUser(userId);
-        if (user) {
-            user.setPresenceEvent(event);
-        } else {
-            user = User.createUser(userId, this.client);
-            user.setPresenceEvent(event);
-            this.client.store.storeUser(user);
-        }
-        this.client.emit(ClientEvent.Event, event);
+        applyPresenceEvent(this.client, { type: "m.presence", sender: userId, content });
     }
 }
