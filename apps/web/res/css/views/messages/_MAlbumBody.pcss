@@ -12,71 +12,24 @@ Please see LICENSE files in the repository root for full details.
     max-width: 100%;
 }
 
-/* The grid has a fixed aspect ratio per layout, so thumbnails loading or items filling
-   placeholder slots never change the tile's height. */
+/* Telegram's grouped-media layout (see GroupedMediaLayout.ts): the box gets the layout's pixel width and aspect
+   ratio inline, and every cell is absolutely positioned in percent, so the album scales down as a whole.
+   tweb caps album attachments at min(451px, 100%). */
 .mx_MAlbumBody_grid {
-    display: grid;
-    gap: 2px;
-    width: min(100%, 400px);
+    position: relative;
+    max-width: min(451px, 100%);
     border-radius: var(--cpd-space-2x);
     overflow: hidden;
 
-    &.mx_MAlbumBody_grid_n1 {
-        grid-template-columns: 1fr;
-        aspect-ratio: 4 / 3;
-    }
-
-    &.mx_MAlbumBody_grid_n2 {
-        grid-template-columns: 1fr 1fr;
-        aspect-ratio: 2 / 1;
-    }
-
-    /* one large cell on the left, two small ones stacked on the right */
-    &.mx_MAlbumBody_grid_n3 {
-        grid-template-columns: 2fr 1fr;
-        grid-template-rows: 1fr 1fr;
-        aspect-ratio: 3 / 2;
-
-        > :first-child {
-            grid-row: span 2;
-        }
-    }
-
-    &.mx_MAlbumBody_grid_n4 {
-        grid-template-columns: 1fr 1fr;
-        grid-template-rows: 1fr 1fr;
-        aspect-ratio: 1 / 1;
-    }
-
-    /* two on top, three below */
-    &.mx_MAlbumBody_grid_n5 {
-        grid-template-columns: repeat(6, 1fr);
-        grid-template-rows: 1fr 1fr;
-        aspect-ratio: 3 / 2;
-
-        > * {
-            grid-column: span 2;
-        }
-
-        > :nth-child(-n + 2) {
-            grid-column: span 3;
-        }
-    }
-
-    &.mx_MAlbumBody_grid_n6 {
-        grid-template-columns: repeat(3, 1fr);
-        grid-template-rows: 1fr 1fr;
-        aspect-ratio: 3 / 2;
-    }
-
     .mx_HiddenMediaPlaceholder {
-        grid-column: 1 / -1;
-        grid-row: 1 / -1;
+        position: absolute;
+        inset: 0;
     }
 }
 
 .mx_MAlbumBody_cell {
-    position: relative;
+    position: absolute;
+    box-sizing: border-box;
     min-width: 0;
     min-height: 0;
     padding: 0;
@@ -112,17 +65,6 @@ Please see LICENSE files in the repository root for full details.
     }
 }
 
-.mx_MAlbumBody_cell_placeholder {
-    cursor: default;
-    animation: mx_MAlbumBody_pulse 1.5s ease-in-out infinite;
-}
-
-@keyframes mx_MAlbumBody_pulse {
-    50% {
-        opacity: 0.6;
-    }
-}
-
 .mx_MAlbumBody_play {
     position: absolute;
     inset: 50% auto auto 50%;
@@ -137,17 +79,6 @@ Please see LICENSE files in the repository root for full details.
         width: 24px;
         height: 24px;
     }
-}
-
-.mx_MAlbumBody_overflow {
-    position: absolute;
-    inset: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font: var(--cpd-font-heading-md-semibold);
-    color: white;
-    background-color: rgb(0 0 0 / 50%);
 }
 
 .mx_MAlbumBody_caption .mx_EventTile_body {

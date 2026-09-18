@@ -3660,7 +3660,6 @@
                 "one": "Album with %(count)s item",
                 "other": "Album with %(count)s items"
             },
-            "overflow": "+%(count)s",
             "position": "%(index)s / %(count)s",
             "previous": "Previous",
             "show_media": "Show media"

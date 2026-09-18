@@ -15,15 +15,8 @@ import TextualBody from "./TextualBody";
 import { HiddenMediaPlaceholder } from "./HiddenMediaPlaceholder";
 import { type MediaAlbumContextValue } from "../../../contexts/MediaAlbumContext";
 import { MediaEventHelper } from "../../../utils/MediaEventHelper";
-import {
-    type AlbumSlot,
-    buildAlbumSlots,
-    getAlbumLayout,
-    getCaptionEvents,
-    getDeclaredCount,
-    isVisualMedia,
-    sortAlbumItems,
-} from "../../../utils/MediaAlbum";
+import { getAlbumGridLayout, getCaptionEvents, isVisualMedia, sortAlbumItems } from "../../../utils/MediaAlbum";
+import { type AlbumGridLayout, type GroupedMediaGeometry } from "../../../utils/GroupedMediaLayout";
 import { useMediaVisible } from "../../../hooks/useMediaVisible";
 import { _t } from "../../../languageHandler";
 import Modal from "../../../Modal";
@@ -87,13 +80,13 @@ interface CellProps {
     event: MatrixEvent;
     position: number;
     total: number;
-    /** number of further items hidden behind this (last visible) cell */
-    overflow: number;
+    /** position of the cell as percentages of the album box */
+    style: React.CSSProperties;
     onOpen: (event: MatrixEvent) => void;
     onItemContextMenu: (ev: React.MouseEvent, event: MatrixEvent) => void;
 }
 
-function AlbumCell({ event, position, total, overflow, onOpen, onItemContextMenu }: CellProps): JSX.Element {
+function AlbumCell({ event, position, total, style, onOpen, onItemContextMenu }: CellProps): JSX.Element {
     const content = event.getContent();
     const isVideo = content.msgtype === MsgType.Video;
     // The cell is keyed by the item's replacing event id, so an edit gets a fresh helper.
@@ -106,14 +99,14 @@ function AlbumCell({ event, position, total, overflow, onOpen, onItemContextMenu
         (ev: React.MouseEvent): void => {
             if (ev.button !== 0 || ev.metaKey) return;
             ev.preventDefault();
-            if (isVideo && overflow === 0) {
+            if (isVideo) {
                 // play in place, like the single-video tile does
                 helper.sourceUrl.value.then(setVideoUrl).catch(() => onOpen(event));
                 return;
             }
             onOpen(event);
         },
-        [event, helper, isVideo, onOpen, overflow],
+        [event, helper, isVideo, onOpen],
     );
 
     const name = content.body || _t("common|attachment");
@@ -121,6 +114,7 @@ function AlbumCell({ event, position, total, overflow, onOpen, onItemContextMenu
         return (
             <div
                 className="mx_MAlbumBody_cell mx_MAlbumBody_cell_playing"
+                style={style}
                 onContextMenu={(ev) => onItemContextMenu(ev, event)}
             >
                 {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
@@ -140,6 +134,7 @@ function AlbumCell({ event, position, total, overflow, onOpen, onItemContextMenu
                 name: isVideo ? _t("common|video") : _t("common|image"),
             })}
             title={name}
+            style={style}
             onClick={onClick}
             onContextMenu={(ev) => onItemContextMenu(ev, event)}
         >
@@ -149,13 +144,19 @@ function AlbumCell({ event, position, total, overflow, onOpen, onItemContextMenu
                     <PlaySolidIcon />
                 </span>
             )}
-            {overflow > 0 && (
-                <span className="mx_MAlbumBody_overflow" data-testid="album-overflow">
-                    {_t("timeline|media_album|overflow", { count: overflow })}
-                </span>
-            )}
         </button>
     );
+}
+
+/** tweb's prepareAlbum: items are absolutely positioned in percent of the album box, so the album scales as one. */
+function cellStyle(geometry: GroupedMediaGeometry, layout: AlbumGridLayout): React.CSSProperties {
+    const pct = (v: number, of: number): string => `${(v / of) * 100}%`;
+    return {
+        left: pct(geometry.x, layout.width),
+        top: pct(geometry.y, layout.height),
+        width: pct(geometry.width, layout.width),
+        height: pct(geometry.height, layout.height),
+    };
 }
 
 interface MenuState {
@@ -165,8 +166,8 @@ interface MenuState {
 }
 
 /**
- * Renders a media album (several image/video events grouped by the MediaAlbumGrouper) as a Telegram-like grid,
- * followed by any non-visual items (files/audio) and the caption(s).
+ * Renders a media album (several image/video events grouped by the MediaAlbumGrouper) with Telegram's grouped
+ * media layout (see GroupedMediaLayout), followed by any non-visual items (files/audio) and the caption.
  */
 export default function MAlbumBody({ album, bodyProps, ItemBody }: Props): JSX.Element {
     // re-render on edits/decryption of any item (these can change captions and media)
@@ -179,10 +180,7 @@ export default function MAlbumBody({ album, bodyProps, ItemBody }: Props): JSX.E
     const visual = sorted.filter(isVisualMedia);
     const others = sorted.filter((e) => !isVisualMedia(e));
     const captions = getCaptionEvents(sorted);
-    const slots: AlbumSlot[] = visual.length
-        ? buildAlbumSlots(visual, others.length ? undefined : getDeclaredCount(sorted), Date.now())
-        : [];
-    const layout = getAlbumLayout(slots.length);
+    const layout = visual.length ? getAlbumGridLayout(visual) : null;
 
     const openLightbox = useCallback(
         (event: MatrixEvent): void => {
@@ -208,53 +206,38 @@ export default function MAlbumBody({ album, bodyProps, ItemBody }: Props): JSX.E
     );
 
     let grid: JSX.Element | null = null;
-    if (slots.length && !mediaVisible) {
-        grid = (
-            <div className={`mx_MAlbumBody_grid mx_MAlbumBody_grid_${layout.variant}`}>
-                <HiddenMediaPlaceholder onClick={() => setMediaVisible(true)}>
-                    {_t("timeline|media_album|show_media")}
-                </HiddenMediaPlaceholder>
-            </div>
-        );
-    } else if (slots.length) {
-        const visibleSlots = slots.slice(0, layout.visible);
+    if (layout) {
+        // The box has the album's own aspect ratio and is scaled down as a whole when the timeline is narrower,
+        // so thumbnails loading never change its height.
+        const boxStyle: React.CSSProperties = {
+            width: `${layout.width}px`,
+            aspectRatio: `${layout.width} / ${layout.height}`,
+        };
         grid = (
             <div
-                className={`mx_MAlbumBody_grid mx_MAlbumBody_grid_${layout.variant}`}
+                className="mx_MAlbumBody_grid"
+                style={boxStyle}
                 role="group"
-                aria-label={_t("timeline|media_album|label", { count: slots.length })}
+                aria-label={_t("timeline|media_album|label", { count: visual.length })}
                 data-testid="album-grid"
             >
-                {visibleSlots.map((slot, i) => {
-                    const overflow = i === visibleSlots.length - 1 ? layout.overflow : 0;
-                    if ("placeholder" in slot) {
-                        return (
-                            <div
-                                key={`placeholder-${i}`}
-                                className="mx_MAlbumBody_cell mx_MAlbumBody_cell_placeholder"
-                                data-testid="album-placeholder"
-                                aria-label={_t("common|loading")}
-                            >
-                                {overflow > 0 && (
-                                    <span className="mx_MAlbumBody_overflow" data-testid="album-overflow">
-                                        {_t("timeline|media_album|overflow", { count: overflow })}
-                                    </span>
-                                )}
-                            </div>
-                        );
-                    }
-                    return (
+                {mediaVisible ? (
+                    visual.map((event, i) => (
                         <AlbumCell
-                            key={`${slot.event.getTxnId() || slot.event.getId()}|${slot.event.replacingEventId() ?? ""}`}
-                            event={slot.event}
+                            key={`${event.getTxnId() || event.getId()}|${event.replacingEventId() ?? ""}`}
+                            event={event}
                             position={i}
-                            total={slots.length}
-                            overflow={overflow}
+                            total={visual.length}
+                            style={cellStyle(layout.items[i].geometry, layout)}
                             onOpen={openLightbox}
                             onItemContextMenu={onItemContextMenu}
                         />
-                    );
-                })}
+                    ))
+                ) : (
+                    <HiddenMediaPlaceholder onClick={() => setMediaVisible(true)}>
+                        {_t("timeline|media_album|show_media")}
+                    </HiddenMediaPlaceholder>
+                )}
             </div>
         );
     }
