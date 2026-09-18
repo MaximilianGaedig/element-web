@@ -20,11 +20,11 @@ import { _t } from "../../languageHandler";
 const logger = rootLogger.getChild("imagePacks");
 
 /** MSC2545 image packs, as used by the mautrix bridges (e.g. Telegram sticker packs). */
-export const ROOM_EMOTES = "im.ponies.room_emotes";
-export const USER_EMOTES = "im.ponies.user_emotes";
-export const EMOTE_ROOMS = "im.ponies.emote_rooms";
+const ROOM_EMOTES = "im.ponies.room_emotes";
+const USER_EMOTES = "im.ponies.user_emotes";
+const EMOTE_ROOMS = "im.ponies.emote_rooms";
 /** Where mautrix bridges put the original sticker's identity, inside `info`. */
-export const BRIDGED_STICKER = "fi.mau.bridged_sticker";
+const BRIDGED_STICKER = "fi.mau.bridged_sticker";
 
 type Usage = "sticker" | "emoticon";
 
@@ -99,7 +99,7 @@ export function parseStickerPack(id: string, content: RawPack, fallbackName: str
             shortcode,
             url: raw.url,
             body: typeof raw.body === "string" && raw.body ? raw.body : shortcode,
-            info: info as PackImage["info"],
+            info,
             extra,
         });
     }
@@ -225,14 +225,16 @@ export async function loadStickerPacks(client: MatrixClient, room: Room | undefi
 
     const userPack = (): StickerPack | undefined => {
         const ev = accountData(client, USER_EMOTES);
-        return ev ? parseStickerPack("user", ev.getContent() as RawPack, _t("beeper|sticker_pack_personal")) : undefined;
+        return ev
+            ? parseStickerPack("user", ev.getContent() as RawPack, _t("beeper|sticker_pack_personal"))
+            : undefined;
     };
 
     // The current room's own packs first, then the personal pack, then emote rooms and spaces.
     const tasks: Array<[string, Promise<Array<{ stateKey: string; content: RawPack }>>]> = [];
     if (room) tasks.push([room.roomId, currentRoomPackEvents(client, room)]);
 
-    const rooms = (accountData(client, EMOTE_ROOMS)?.getContent() as EmoteRoomsContent | undefined)?.rooms;
+    const rooms = accountData(client, EMOTE_ROOMS)?.getContent<EmoteRoomsContent>()?.rooms;
     if (rooms && typeof rooms === "object") {
         for (const [roomId, stateKeys] of Object.entries(rooms)) {
             const keys = stateKeys && typeof stateKeys === "object" ? Object.keys(stateKeys) : [];

@@ -8,7 +8,7 @@ Please see LICENSE files in the repository root for full details.
 /*
  * Telegram-style layout (setting "telegramStyleLayout", on by default). Dimensions follow Telegram
  * Web K (GPL-3.0): chat content at most 696px wide and centred (helpers/updateColumnWidths.ts
- * CHAT_WIDTH_MAX), message padding 4px 8px 5px, bubble radius 15px and bubble max width 85%
+ * CHAT_WIDTH_MAX), compact message padding, bubble radius 15px and bubble max width 85%
  * (scss/partials/_chatVariables.scss, _chatBubble.scss). Media sizes live in ImageSize.ts.
  * The IRC layout is left alone.
  */
@@ -34,32 +34,24 @@ Please see LICENSE files in the repository root for full details.
     }
 }
 
-.mx_RoomView_body[data-telegram-layout="true"] .mx_EventTile[data-layout="bubble"] {
-    --cornerRadius: 15px;
-    --maxWidth: 85%;
+/*
+ * Event tiles are the shared-components EventTileView (a CSS module), which declares its geometry
+ * as custom properties on the tile root; the tile root carries data-testid="event-tile".
+ * The gutter drives the bubble padding (gutter - 1px, plus 1px around the content), so 5px gives
+ * Telegram's ~5px text inset and a 2.5px gap between bubbles.
+ */
+.mx_RoomView_body[data-telegram-layout="true"] [data-testid="event-tile"] {
+    --event-tile-bubble-corner-radius: 15px;
+    --event-tile-bubble-line-max-width: 85%;
+    --event-tile-bubble-gutter: 5px;
+}
 
-    .mx_DisambiguatedProfile,
-    .mx_EventTile_line {
-        --EventBubbleTile_line-max-width: 85%;
-    }
-
-    /* Telegram's message padding is 4px 8px 5px; .mx_EventTile_content adds 1px all round. */
-    &:not(.mx_EventTile_noBubble) .mx_EventTile_line:not(.mx_EventTile_mediaLine) {
-        padding: 3px 7px 4px;
-        padding-inline-end: 60px; /* space for the timestamp */
-    }
-
-    .mx_EventTile_line {
-        > a, /* timestamp wrapper anchor */
-        .mx_MessageActionBar + .mx_MessageTimestamp {
-            padding: 2px 8px;
-        }
-    }
-
-    /* One-to-one chats: no avatars (and no names), so the bubbles start at the edge like Telegram. */
-    &.mx_EventTile_noAvatar {
-        --EventTile_bubble-margin-inline-start: 8px;
-    }
+/* One-to-one chats: no avatars (and no names), so the bubbles start at the edge like Telegram. */
+.mx_RoomView_body[data-telegram-layout="true"]
+    .mx_MessagePanel_noAvatars
+    .mx_RoomView_MessageList
+    > [data-testid="event-tile"] {
+    --event-tile-bubble-margin-inline-start: 8px;
 }
 
 .mx_RoomView_body[data-telegram-layout="true"] .mx_GenericEventListSummary[data-layout="bubble"] {

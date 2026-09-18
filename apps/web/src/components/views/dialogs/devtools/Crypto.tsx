@@ -38,6 +38,7 @@ export function Crypto({ onBack }: KeyBackupProps): JSX.Element {
 
                     <button
                         type="button"
+                        className="mx_LegacyDialogButton"
                         onClick={() => {
                             Modal.createDialog(ManualDeviceKeyVerificationDialog);
                         }}
@@ -46,6 +47,7 @@ export function Crypto({ onBack }: KeyBackupProps): JSX.Element {
                     </button>
                     <button
                         type="button"
+                        className="mx_LegacyDialogButton"
                         onClick={() => {
                             Modal.createDialog(
                                 RestoreKeyBackupDialog,
@@ -110,7 +112,11 @@ function KeyStorage(): JSX.Element {
 
     return (
         <table aria-label={_t("devtools|crypto|key_storage")}>
-            <thead>{_t("devtools|crypto|key_storage")}</thead>
+            <thead>
+                <tr>
+                    <th colSpan={2}>{_t("devtools|crypto|key_storage")}</th>
+                </tr>
+            </thead>
             <tbody>
                 <tr>
                     <th scope="row">{_t("devtools|crypto|key_backup_latest_version")}</th>
@@ -212,7 +218,11 @@ function CrossSigning(): JSX.Element {
 
     return (
         <table aria-label={_t("devtools|crypto|cross_signing")}>
-            <thead>{_t("devtools|crypto|cross_signing")}</thead>
+            <thead>
+                <tr>
+                    <th colSpan={2}>{_t("devtools|crypto|cross_signing")}</th>
+                </tr>
+            </thead>
             <tbody>
                 <tr>
                     <th scope="row">{_t("devtools|crypto|cross_signing_status")}</th>
@@ -303,7 +313,11 @@ function Session(): JSX.Element {
 
     return (
         <table aria-label={_t("devtools|crypto|session")}>
-            <thead>{_t("devtools|crypto|session")}</thead>
+            <thead>
+                <tr>
+                    <th colSpan={2}>{_t("devtools|crypto|session")}</th>
+                </tr>
+            </thead>
             <tbody>
                 <tr>
                     <th scope="row">{_t("devtools|crypto|device_id")}</th>

@@ -68,8 +68,6 @@ export default class AppearanceUserSettingsTab extends React.Component<EmptyObje
                         evt.stopPropagation();
                     }}
                 >
-                    <SettingsFlag name="useCompactLayout" level={SettingLevel.DEVICE} />
-
                     <SettingsFlag
                         name="useBundledEmojiFont"
                         level={SettingLevel.DEVICE}
@@ -88,7 +86,7 @@ export default class AppearanceUserSettingsTab extends React.Component<EmptyObje
                                 systemFont: value.target.value,
                             });
 
-                            SettingsStore.setValue("systemFont", null, SettingLevel.DEVICE, value.target.value);
+                            void SettingsStore.setValue("systemFont", null, SettingLevel.DEVICE, value.target.value);
                         }}
                         disabled={!this.state.useSystemFont}
                         value={this.state.systemFont}

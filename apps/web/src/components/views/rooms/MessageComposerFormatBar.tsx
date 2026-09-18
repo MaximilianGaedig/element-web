@@ -67,7 +67,6 @@ export default class MessageComposerFormatBar extends React.PureComponent<IProps
                     disabledReason={this.props.disabledReasons?.[Formatting.Bold]}
                     icon={<BoldIcon />}
                     shortcut={this.props.shortcuts.bold}
-                    visible={this.state.visible}
                 />
                 <FormatButton
                     label={_t("composer|format_italics")}
@@ -75,14 +74,12 @@ export default class MessageComposerFormatBar extends React.PureComponent<IProps
                     disabledReason={this.props.disabledReasons?.[Formatting.Italics]}
                     icon={<ItalicIcon />}
                     shortcut={this.props.shortcuts.italics}
-                    visible={this.state.visible}
                 />
                 <FormatButton
                     label={_t("composer|format_strikethrough")}
                     onClick={() => this.props.onAction(Formatting.Strikethrough)}
                     disabledReason={this.props.disabledReasons?.[Formatting.Strikethrough]}
                     icon={<StrikethroughIcon />}
-                    visible={this.state.visible}
                 />
                 <FormatButton
                     label={_t("composer|format_code_block")}
@@ -90,7 +87,6 @@ export default class MessageComposerFormatBar extends React.PureComponent<IProps
                     disabledReason={this.props.disabledReasons?.[Formatting.Code]}
                     icon={<InlineCodeIcon />}
                     shortcut={this.props.shortcuts.code}
-                    visible={this.state.visible}
                 />
                 <FormatButton
                     label={_t("action|quote")}
@@ -98,7 +94,6 @@ export default class MessageComposerFormatBar extends React.PureComponent<IProps
                     disabledReason={this.props.disabledReasons?.[Formatting.Quote]}
                     icon={<QuoteIcon />}
                     shortcut={this.props.shortcuts.quote}
-                    visible={this.state.visible}
                 />
                 <FormatButton
                     label={_t("composer|format_insert_link")}
@@ -106,7 +101,6 @@ export default class MessageComposerFormatBar extends React.PureComponent<IProps
                     disabledReason={this.props.disabledReasons?.[Formatting.InsertLink]}
                     icon={<LinkIcon />}
                     shortcut={this.props.shortcuts.insert_link}
-                    visible={this.state.visible}
                 />
             </Toolbar>
         );
@@ -134,7 +128,6 @@ interface IFormatButtonProps {
     label: string;
     icon: JSX.Element;
     shortcut?: string;
-    visible?: boolean;
     /** If set, the button is disabled and this explains why. */
     disabledReason?: string;
     onClick(): void;

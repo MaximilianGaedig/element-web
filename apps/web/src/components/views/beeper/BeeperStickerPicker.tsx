@@ -28,7 +28,7 @@ const MAX_SEARCH_RESULTS = 200;
 type Props = ComponentProps<typeof Stickerpicker>;
 
 /** Sends a pack image as m.sticker, keeping its info and fi.mau.* bridge metadata. */
-export async function sendPackSticker(
+async function sendPackSticker(
     client: MatrixClient,
     roomId: string,
     threadId: string | null | undefined,
@@ -151,7 +151,7 @@ function matches(image: PackImage, query: string): boolean {
 }
 
 /** Pack tabs, search and the sticker grid. */
-export function BeeperStickerPickerPanel({
+function BeeperStickerPickerPanel({
     packs,
     onSend,
 }: {
@@ -210,7 +210,11 @@ export function BeeperStickerPickerPanel({
             {!q && selected && <div className="mx_BeeperStickerPicker_packName">{selected.name}</div>}
             <div className="mx_BeeperStickerPicker_body">{body}</div>
             {packs && packs.length > 1 && (
-                <div className="mx_BeeperStickerPicker_tabs" role="tablist" aria-label={_t("beeper|sticker_picker_title")}>
+                <div
+                    className="mx_BeeperStickerPicker_tabs"
+                    role="tablist"
+                    aria-label={_t("beeper|sticker_picker_title")}
+                >
                     {packs.map((pack) => (
                         <PackTab
                             key={pack.id}

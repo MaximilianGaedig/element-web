@@ -141,7 +141,7 @@ export class PasswordAuthEntry extends React.Component<IAuthEntryProps, IPasswor
             submitButtonOrSpinner = (
                 <input
                     type="submit"
-                    className="mx_Dialog_primary"
+                    className="mx_LegacyDialogButton mx_Dialog_primary"
                     disabled={!this.state.password}
                     value={_t("action|continue")}
                 />
@@ -178,13 +178,11 @@ export class PasswordAuthEntry extends React.Component<IAuthEntryProps, IPasswor
     }
 }
 
-/* eslint-disable camelcase */
 interface IRecaptchaAuthEntryProps extends IAuthEntryProps {
     stageParams?: {
         public_key?: string;
     };
 }
-/* eslint-enable camelcase */
 
 export class RecaptchaAuthEntry extends React.Component<IRecaptchaAuthEntryProps> {
     public static LOGIN_TYPE = AuthType.Recaptcha;
@@ -459,8 +457,8 @@ export class EmailIdentityAuthEntry extends React.Component<
                                 {
                                     a: (text: string) => (
                                         <Fragment>
-                                            <AccessibleButton kind="link_inline" onClick={null} disabled>
-                                                {text} <Spinner size={14} />
+                                            <AccessibleButton element="a" kind="link_inline" onClick={null} disabled>
+                                                {text} <Spinner as="span" size={14} />
                                             </AccessibleButton>
                                         </Fragment>
                                     ),
@@ -475,6 +473,7 @@ export class EmailIdentityAuthEntry extends React.Component<
                                 {
                                     a: (text: string) => (
                                         <AccessibleButton
+                                            element="a"
                                             kind="link_inline"
                                             title={
                                                 this.state.requested ? _t("auth|uia|email_resent") : _t("action|resend")
@@ -626,6 +625,7 @@ export class MsisdnAuthEntry extends React.Component<IMsisdnAuthEntryProps, IMsi
             const submitClasses = classNames({
                 mx_InteractiveAuthEntryComponents_msisdnSubmit: true,
                 mx_GeneralButton: true,
+                mx_LegacyDialogButton: true,
             });
             let errorSection;
             if (this.state.errorText) {
@@ -969,7 +969,7 @@ export class MasUnlockCrossSigningAuthEntry extends FallbackAuthEntry<{
     };
 
     private onRetryClick = (): void => {
-        this.props.submitAuthDict({});
+        this.props.submitAuthDict({ type: MasUnlockCrossSigningAuthEntry.LOGIN_TYPE });
     };
 
     public render(): React.ReactNode {

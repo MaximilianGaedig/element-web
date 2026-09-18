@@ -141,9 +141,12 @@ export default function BridgeReplyKeyboard({ room, onPlaceholderChange }: Props
             </AccessibleButton>
             {!collapsed && (
                 <div className="mx_BridgeButtons mx_BridgeReplyKeyboard_rows">
+                    {/* Keyboard rows and buttons are positional and carry no IDs. */}
                     {keyboard.rows.map((row, r) => (
+                        // oxlint-disable-next-line react/no-array-index-key
                         <div className="mx_BridgeButtons_row" key={r}>
                             {row.map((btn, c) => (
+                                // oxlint-disable-next-line react/no-array-index-key
                                 <BridgeButton key={c} button={btn} roomId={room.roomId} onUsed={onUsed} />
                             ))}
                         </div>

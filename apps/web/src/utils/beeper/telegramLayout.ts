@@ -22,7 +22,7 @@ const TELEGRAM_HANDHELD_MAX_WIDTH = 600;
 
 /** The image size to lay media out with: Telegram's while the Telegram-style layout is on. */
 export function effectiveImageSize(sticker = false): ImageSize {
-    if (!isTelegramLayout()) return SettingsStore.getValue("Images.size") as ImageSize;
+    if (!isTelegramLayout()) return SettingsStore.getValue("Images.size");
     const handheld = UIStore.instance.windowWidth <= TELEGRAM_HANDHELD_MAX_WIDTH;
     if (sticker) return handheld ? ImageSize.TelegramStickerHandheld : ImageSize.TelegramSticker;
     return handheld ? ImageSize.TelegramHandheld : ImageSize.Telegram;

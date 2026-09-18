@@ -6,7 +6,7 @@
 
 import { type Room } from "matrix-js-sdk/src/matrix";
 
-import SpaceStore from "../stores/spaces/SpaceStore";
+import { SDKContextClass } from "../contexts/SDKContextClass";
 import { filterBoolean } from "./arrays";
 
 /**
@@ -39,14 +39,13 @@ export function getSpacePath(room: Room, activeSpace?: string, canonicalOnly = f
 
     const visited = new Set<string>([currentRoomId]);
 
-    // eslint-disable-next-line no-constant-condition
     while (true) {
         // Try to get verified parents first (m.space.parent events)
-        let parents = SpaceStore.instance.getParents(currentRoomId, canonicalOnly);
+        let parents = SDKContextClass.instance.spaceStore.getParents(currentRoomId, canonicalOnly);
 
         // Fallback to parentMap (m.space.child events from parents) if no m.space.parent exists
         if (parents.length === 0 && !canonicalOnly) {
-            const knownParentIds = SpaceStore.instance.getKnownParents(currentRoomId);
+            const knownParentIds = SDKContextClass.instance.spaceStore.getKnownParents(currentRoomId);
             parents = filterBoolean(Array.from(knownParentIds).map((id) => client.getRoom(id)));
         }
 
@@ -62,7 +61,7 @@ export function getSpacePath(room: Room, activeSpace?: string, canonicalOnly = f
             break;
         }
 
-        const parent = SpaceStore.instance.getCanonicalParent(currentRoomId) || parents[0];
+        const parent = SDKContextClass.instance.spaceStore.getCanonicalParent(currentRoomId) || parents[0];
 
         if (visited.has(parent.roomId)) break; // Cycle detection
         visited.add(parent.roomId);

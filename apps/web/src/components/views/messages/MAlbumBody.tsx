@@ -9,10 +9,10 @@ import React, { type JSX, useCallback, useEffect, useMemo, useReducer, useState 
 import classNames from "classnames";
 import { type MatrixEvent, MatrixEventEvent, MsgType } from "matrix-js-sdk/src/matrix";
 import { PlaySolidIcon } from "@vector-im/compound-design-tokens/assets/web/icons";
+import { HiddenMediaPlaceholder } from "@element-hq/web-shared-components";
 
 import { type IBodyProps } from "./IBodyProps";
-import TextualBody from "./TextualBody";
-import { HiddenMediaPlaceholder } from "./HiddenMediaPlaceholder";
+import { TextualBodyFactory } from "./TextualBodyFactory";
 import { type MediaAlbumContextValue } from "../../../contexts/MediaAlbumContext";
 import { MediaEventHelper } from "../../../utils/MediaEventHelper";
 import { getAlbumGridLayout, getCaptionEvents, isVisualMedia, sortAlbumItems } from "../../../utils/MediaAlbum";
@@ -64,7 +64,7 @@ function useThumbnail(helper: MediaEventHelper, isVideo: boolean): string | null
             if (thumb || isVideo) return thumb;
             return helper.sourceUrl.value;
         };
-        load()
+        void load()
             .catch(() => null)
             .then((u) => {
                 if (!cancelled) setUrl(u);
@@ -117,7 +117,6 @@ function AlbumCell({ event, position, total, style, onOpen, onItemContextMenu }:
                 style={style}
                 onContextMenu={(ev) => onItemContextMenu(ev, event)}
             >
-                {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
                 <video src={videoUrl} controls autoPlay title={name} poster={thumbnail ?? undefined} />
             </div>
         );
@@ -279,7 +278,7 @@ export default function MAlbumBody({ album, bodyProps, ItemBody }: Props): JSX.E
             ))}
             {captions.map((ev) => (
                 <div key={ev.getTxnId() || ev.getId()} className="mx_MAlbumBody_caption" data-testid="album-caption">
-                    <TextualBody
+                    <TextualBodyFactory
                         {...bodyProps}
                         ref={undefined}
                         mxEvent={ev}

@@ -7,7 +7,7 @@ Please see LICENSE files in the repository root for full details.
 */
 
 import React, { type JSX, useState } from "react";
-import { SettingsToggleInput } from "@vector-im/compound-web";
+import { Alert, Form, SettingsToggleInput } from "@vector-im/compound-web";
 
 import NewAndImprovedIcon from "../../../../../res/img/element-icons/new-and-improved.svg";
 import { useMatrixClientContext } from "../../../../contexts/MatrixClientContext";
@@ -33,6 +33,7 @@ import { SettingsSubsection } from "../shared/SettingsSubsection";
 import { NotificationPusherSettings } from "./NotificationPusherSettings";
 import SettingsFlag from "../../elements/SettingsFlag";
 import { SettingsSubsectionHeading } from "../shared/SettingsSubsectionHeading";
+import { onSubmitPreventDefault } from "../../../../utils/form.ts";
 
 enum NotificationDefaultLevels {
     AllMessages = "all_messages",
@@ -69,7 +70,7 @@ function useHasUnreadNotifications(): boolean {
 export default function NotificationSettings2(): JSX.Element {
     const cli = useMatrixClientContext();
 
-    const { model, hasPendingChanges, reconcile } = useNotificationSettings(cli);
+    const { model, hasPendingChanges, reconciliationError, reconcile } = useNotificationSettings(cli);
 
     const disabled = model === null || hasPendingChanges;
     const settings = model ?? DefaultNotificationSettings;
@@ -94,11 +95,23 @@ export default function NotificationSettings2(): JSX.Element {
 
     return (
         <div className="mx_NotificationSettings2">
+            {reconciliationError !== null && (
+                <Alert
+                    className="mx_NotificationSettings2_error"
+                    type="critical"
+                    title={_t("settings|notifications|labs_notice_error")}
+                    actions={
+                        <AccessibleButton kind="link_inline" onClick={() => reconcile(model!)}>
+                            {_t("action|try_again")}
+                        </AccessibleButton>
+                    }
+                />
+            )}
             {hasPendingChanges && model !== null && (
                 <SettingsBanner
                     icon={<img src={NewAndImprovedIcon} alt="" width={12} />}
                     action={_t("action|proceed")}
-                    onAction={() => reconcile(model!)}
+                    onAction={() => reconcile(model)}
                 >
                     {_t(
                         "settings|notifications|labs_notice_prompt",
@@ -111,7 +124,7 @@ export default function NotificationSettings2(): JSX.Element {
                 </SettingsBanner>
             )}
             <SettingsSection>
-                <div className="mx_SettingsSubsection_content mx_NotificationSettings2_flags">
+                <Form.Root className="mx_SettingsSubsection_content" onSubmit={onSubmitPreventDefault}>
                     <SettingsToggleInput
                         name="enable_notifications_account"
                         label={_t("settings|notifications|enable_notifications_account")}
@@ -131,7 +144,7 @@ export default function NotificationSettings2(): JSX.Element {
                         level={SettingLevel.DEVICE}
                     />
                     <SettingsFlag name="audioNotificationsEnabled" level={SettingLevel.DEVICE} />
-                </div>
+                </Form.Root>
                 <SettingsSubsection
                     heading={
                         <SettingsSubsectionHeading
@@ -275,6 +288,7 @@ export default function NotificationSettings2(): JSX.Element {
                                     symbol="1"
                                     count={1}
                                     level={NotificationLevel.Notification}
+                                    className="mx_NotificationSettings2_notificationBadge"
                                 />
                             ),
                         },
@@ -346,8 +360,15 @@ export default function NotificationSettings2(): JSX.Element {
                         placeholder={_t("notifications|keyword_new")}
                     />
 
-                    <SettingsFlag name="Notifications.showbold" level={SettingLevel.DEVICE} />
-                    <SettingsFlag name="Notifications.tac_only_notifications" level={SettingLevel.DEVICE} />
+                    <Form.Root onSubmit={onSubmitPreventDefault}>
+                        <SettingsFlag name="Notifications.showbold" level={SettingLevel.DEVICE} />
+                        <SettingsFlag
+                            name="Notifications.activityIsUnread"
+                            level={SettingLevel.DEVICE}
+                            requires={["Notifications.showbold"]}
+                        />
+                        <SettingsFlag name="Notifications.tac_only_notifications" level={SettingLevel.DEVICE} />
+                    </Form.Root>
                 </SettingsSubsection>
                 <NotificationPusherSettings />
                 <SettingsSubsection heading={_t("settings|notifications|quick_actions_section")}>

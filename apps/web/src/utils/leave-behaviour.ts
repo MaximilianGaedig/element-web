@@ -9,13 +9,13 @@ Please see LICENSE files in the repository root for full details.
 import { sleep } from "matrix-js-sdk/src/utils";
 import React, { type ReactNode } from "react";
 import { EventStatus, MatrixEventEvent, type Room, type MatrixClient, MatrixError } from "matrix-js-sdk/src/matrix";
+import { logger } from "matrix-js-sdk/src/logger";
 
 import Modal, { type IHandle } from "../Modal";
 import Spinner from "../components/views/elements/Spinner";
 import { _t } from "../languageHandler";
 import ErrorDialog from "../components/views/dialogs/ErrorDialog";
 import { isMetaSpace } from "../stores/spaces";
-import SpaceStore from "../stores/spaces/SpaceStore";
 import dis from "../dispatcher/dispatcher";
 import { type ViewRoomPayload } from "../dispatcher/payloads/ViewRoomPayload";
 import { Action } from "../dispatcher/actions";
@@ -23,8 +23,9 @@ import { type ViewHomePagePayload } from "../dispatcher/payloads/ViewHomePagePay
 import LeaveSpaceDialog from "../components/views/dialogs/LeaveSpaceDialog";
 import { type AfterLeaveRoomPayload } from "../dispatcher/payloads/AfterLeaveRoomPayload";
 import { bulkSpaceBehaviour } from "./space";
-import { SdkContextClass } from "../contexts/SDKContext";
+import { SDKContextClass } from "../contexts/SDKContextClass";
 import SettingsStore from "../settings/SettingsStore";
+import { CallStore } from "../stores/CallStore";
 
 export async function leaveRoomBehaviour(
     matrixClient: MatrixClient,
@@ -57,6 +58,23 @@ export async function leaveRoomBehaviour(
     // should not encounter this
     if (!room) {
         throw new Error(`Expected to find room for id ${roomId}`);
+    }
+
+    // attempt to hang up legacy based calls
+    try {
+        SDKContextClass.instance.legacyCallHandler.hangupOrReject(roomId);
+    } catch (e) {
+        logger.warn("Failed to hangup call before leaving room: ", e);
+    }
+
+    // hang up widget based calls
+    const activeCall = CallStore.instance.getActiveCall(roomId);
+    if (activeCall) {
+        try {
+            await activeCall.disconnect();
+        } catch (e) {
+            logger.warn("Failed to disconnect call before leaving room: ", e);
+        }
     }
 
     // await any queued messages being sent so that they do not fail
@@ -141,16 +159,16 @@ export async function leaveRoomBehaviour(
         return;
     }
 
-    if (SdkContextClass.instance.roomViewStore.getRoomId() === roomId) {
+    if (SDKContextClass.instance.roomViewStore.getRoomId() === roomId) {
         // We were viewing the room that was just left. In order to avoid
         // accidentally viewing the next room in the list and clearing its
         // notifications, switch to a neutral ground such as the home page or
         // space landing page.
-        if (isMetaSpace(SpaceStore.instance.activeSpace)) {
+        if (isMetaSpace(SDKContextClass.instance.spaceStore.activeSpace)) {
             dis.dispatch<ViewHomePagePayload>({ action: Action.ViewHomePage });
-        } else if (SpaceStore.instance.activeSpace === roomId) {
+        } else if (SDKContextClass.instance.spaceStore.activeSpace === roomId) {
             // View the parent space, if there is one
-            const parent = SpaceStore.instance.getCanonicalParent(roomId);
+            const parent = SDKContextClass.instance.spaceStore.getCanonicalParent(roomId);
             if (parent !== null) {
                 dis.dispatch<ViewRoomPayload>({
                     action: Action.ViewRoom,
@@ -163,7 +181,7 @@ export async function leaveRoomBehaviour(
         } else {
             dis.dispatch<ViewRoomPayload>({
                 action: Action.ViewRoom,
-                room_id: SpaceStore.instance.activeSpace,
+                room_id: SDKContextClass.instance.spaceStore.activeSpace,
                 metricsTrigger: undefined, // other
             });
         }
@@ -178,7 +196,7 @@ export const leaveSpace = (space: Room): void => {
         },
         "mx_LeaveSpaceDialog_wrapper",
     );
-    finished.then(async ([leave, rooms]) => {
+    void finished.then(async ([leave, rooms]) => {
         if (!leave) return;
         await bulkSpaceBehaviour(space, rooms!, (room) => leaveRoomBehaviour(space.client, room.roomId));
 

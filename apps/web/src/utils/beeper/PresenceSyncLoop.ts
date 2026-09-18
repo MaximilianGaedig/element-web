@@ -38,7 +38,7 @@ export const LONG_POLL_TIMEOUT_MS = 30_000;
 /** Slack on top of the server-side timeout before we give up on the HTTP request ourselves. */
 const LOCAL_TIMEOUT_SLACK_MS = 30_000;
 const MIN_BACKOFF_MS = 2_000;
-export const MAX_BACKOFF_MS = 5 * 60_000;
+const MAX_BACKOFF_MS = 5 * 60_000;
 /**
  * How long to wait before asking again while to-device messages are pending for this device.
  * They belong to the sliding-sync connection; see the class comment.

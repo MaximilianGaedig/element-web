@@ -97,7 +97,7 @@ export default function BridgeButton({ button, roomId, inhibitInteraction, onUse
 
     const common = {
         kind: "secondary" as const,
-        size: "sm" as const,
+        size: "md" as const,
         className: "mx_BridgeButtons_button",
     };
 

@@ -50,7 +50,7 @@ export const EnterEmail: React.FC<EnterEmailProps> = ({
         }
 
         emailFieldRef.current?.focus();
-        emailFieldRef.current?.validate({ allowEmpty: false, focused: true });
+        void emailFieldRef.current?.validate({ allowEmpty: false, focused: true });
     };
 
     return (
@@ -75,7 +75,7 @@ export const EnterEmail: React.FC<EnterEmailProps> = ({
                         />
                     </div>
                     {errorText && <ErrorMessage message={errorText} />}
-                    <Button type="submit" className="mx_Login_submit" size="sm">
+                    <Button type="submit" className="mx_Login_submit" size="md">
                         {submitButtonChild}
                     </Button>
                     <div className="mx_AuthBody_button-container">

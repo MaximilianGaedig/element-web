@@ -17,7 +17,7 @@ import defaultDispatcher from "../../dispatcher/dispatcher";
 import PosthogTrackers from "../../PosthogTrackers";
 import { Action } from "../../dispatcher/actions";
 import { getMetaSpaceName, type MetaSpace, UPDATE_HOME_BEHAVIOUR, UPDATE_SELECTED_SPACE } from "../../stores/spaces";
-import { type SpaceStoreClass } from "../../stores/spaces/SpaceStore";
+import type SpaceStore from "../../stores/spaces/SpaceStore";
 import {
     shouldShowSpaceSettings,
     showCreateNewRoom,
@@ -26,11 +26,13 @@ import {
     showSpaceSettings,
 } from "../../utils/space";
 import type { ViewRoomPayload } from "../../dispatcher/payloads/ViewRoomPayload";
+import type { RoomListSectionsCollapseStateChangedPayload } from "../../dispatcher/payloads/RoomListSectionsCollapseStateChangedPayload";
 import SettingsStore from "../../settings/SettingsStore";
 import RoomListStoreV3 from "../../stores/room-list-v3/RoomListStoreV3";
 import { SortingAlgorithm } from "../../stores/room-list-v3/skip-list/sorters";
 import { SettingLevel } from "../../settings/SettingLevel";
 import { createRoom, hasCreateRoomRights } from "./utils";
+import { ReleaseAnnouncementStore } from "../../stores/ReleaseAnnouncementStore";
 
 export interface Props {
     /**
@@ -40,7 +42,7 @@ export interface Props {
     /**
      * The space store instance.
      */
-    spaceStore: SpaceStoreClass;
+    spaceStore: SpaceStore;
 }
 
 /**
@@ -68,6 +70,13 @@ export class RoomListHeaderViewModel
         );
         this.disposables.track(() => SettingsStore.unwatchSetting(settingsFeatureVideoRef));
 
+        const settingsShowSectionsRef = SettingsStore.watchSetting(
+            "RoomList.showSections",
+            null,
+            this.onShowSectionsChange,
+        );
+        this.disposables.track(() => SettingsStore.unwatchSetting(settingsShowSectionsRef));
+
         // Listen for space changes
         this.disposables.trackListener(props.spaceStore, UPDATE_SELECTED_SPACE, this.onSpaceChange);
         this.disposables.trackListener(props.spaceStore, UPDATE_HOME_BEHAVIOUR, this.onHomeBehaviourChange);
@@ -77,6 +86,16 @@ export class RoomListHeaderViewModel
         if (this.activeSpace) {
             this.disposables.trackListener(this.activeSpace, RoomEvent.Name, this.onSpaceNameChange);
         }
+
+        // Listen for section collapse state changes from RoomListViewModel
+        const dispatcherRef = defaultDispatcher.register(this.onDispatch);
+        this.disposables.track(() => defaultDispatcher.unregister(dispatcherRef));
+
+        this.disposables.trackListener(
+            ReleaseAnnouncementStore.instance,
+            "releaseAnnouncementChanged",
+            this.onReleaseAnnouncementChanged,
+        );
     }
 
     /**
@@ -121,13 +140,22 @@ export class RoomListHeaderViewModel
         });
     };
 
+    /**
+     * Handles show sections setting change events.
+     */
+    private readonly onShowSectionsChange = (): void => {
+        this.snapshot.merge({
+            areSectionsEnabled: SettingsStore.getValue("RoomList.showSections"),
+        });
+    };
+
     public createChatRoom = (e: Event): void => {
         defaultDispatcher.fire(Action.CreateChat);
         PosthogTrackers.trackInteraction("WebRoomListHeaderPlusMenuCreateChatItem", e);
     };
 
     public createRoom = (e: Event): void => {
-        createRoom(this.activeSpace);
+        void createRoom(this.activeSpace);
         PosthogTrackers.trackInteraction("WebRoomListHeaderPlusMenuCreateRoomItem", e);
     };
 
@@ -136,7 +164,7 @@ export class RoomListHeaderViewModel
             ? RoomType.UnstableCall
             : RoomType.ElementVideo;
         if (this.activeSpace) {
-            showCreateNewRoom(this.activeSpace, type);
+            void showCreateNewRoom(this.activeSpace, type);
         } else {
             defaultDispatcher.dispatch({
                 action: Action.CreateRoom,
@@ -196,8 +224,44 @@ export class RoomListHeaderViewModel
         PosthogTrackers.trackInteraction("WebRoomListMessagePreviewToggle");
 
         const isMessagePreviewEnabled = !SettingsStore.getValue("RoomList.showMessagePreview");
-        SettingsStore.setValue("RoomList.showMessagePreview", null, SettingLevel.DEVICE, isMessagePreviewEnabled);
+        void SettingsStore.setValue("RoomList.showMessagePreview", null, SettingLevel.DEVICE, isMessagePreviewEnabled);
         this.snapshot.merge({ isMessagePreviewEnabled });
+    };
+
+    public createSection = (): void => {
+        void RoomListStoreV3.instance.createSection();
+        PosthogTrackers.trackSectionCreation("RoomListHeader");
+    };
+
+    public collapseOrExpandSections = (): void => {
+        const action =
+            this.snapshot.current.collapseSections === "expand"
+                ? Action.RoomListExpandAllSections
+                : Action.RoomListCollapseAllSections;
+        defaultDispatcher.fire(action);
+
+        const kind = action === Action.RoomListExpandAllSections ? "Expand" : "Collapse";
+        PosthogTrackers.trackCollapseOrExpandSection(kind, "RoomListHeader");
+    };
+
+    private readonly onDispatch = (payload: { action: string }): void => {
+        if (payload.action === Action.RoomListSectionsCollapseStateChanged) {
+            const { collapseSections } = payload as RoomListSectionsCollapseStateChangedPayload;
+            this.snapshot.merge({
+                collapseSections: collapseSections && (collapseSections === "collapse" ? "expand" : "collapse"),
+            });
+        }
+    };
+
+    public closeSectionReleaseAnnouncement = (): void => {
+        void ReleaseAnnouncementStore.instance.nextReleaseAnnouncement();
+        this.snapshot.merge({ displaySectionReleaseAnnouncement: false });
+    };
+
+    public onReleaseAnnouncementChanged = (): void => {
+        const displaySectionReleaseAnnouncement =
+            ReleaseAnnouncementStore.instance.getReleaseAnnouncement() === "room_list_section";
+        this.snapshot.merge({ displaySectionReleaseAnnouncement });
     };
 }
 
@@ -207,7 +271,7 @@ export class RoomListHeaderViewModel
  * @param matrixClient - The Matrix client instance.
  * @returns
  */
-function getInitialSnapshot(spaceStore: SpaceStoreClass, matrixClient: MatrixClient): RoomListHeaderViewSnapshot {
+function getInitialSnapshot(spaceStore: SpaceStore, matrixClient: MatrixClient): RoomListHeaderViewSnapshot {
     const sortingAlgorithm = SettingsStore.getValue("RoomList.preferredSorting");
 
     let activeSortOption: SortOption;
@@ -236,7 +300,7 @@ function getInitialSnapshot(spaceStore: SpaceStoreClass, matrixClient: MatrixCli
  * Get the header title based on the active space.
  * @param spaceStore - The space store instance.
  */
-function getHeaderTitle(spaceStore: SpaceStoreClass): string {
+function getHeaderTitle(spaceStore: SpaceStore): string {
     const activeSpace = spaceStore.activeSpaceRoom;
     const spaceName = activeSpace?.name;
     return spaceName ?? getMetaSpaceName(spaceStore.activeSpace as MetaSpace, spaceStore.allRoomsInHome);
@@ -257,15 +321,18 @@ function getCanCreateVideoRoom(canCreateRoom: boolean): boolean {
  * @returns The header space state containing title, permissions, and display flags.
  */
 function computeHeaderSpaceState(
-    spaceStore: SpaceStoreClass,
+    spaceStore: SpaceStore,
     matrixClient: MatrixClient,
 ): Omit<RoomListHeaderViewSnapshot, "activeSortOption" | "isMessagePreviewEnabled"> {
+    const displaySectionReleaseAnnouncement =
+        ReleaseAnnouncementStore.instance.getReleaseAnnouncement() === "room_list_section";
+    const areSectionsEnabled = SettingsStore.getValue("RoomList.showSections");
+
     const activeSpace = spaceStore.activeSpaceRoom;
     const title = getHeaderTitle(spaceStore);
 
     const canCreateRoom = hasCreateRoomRights(matrixClient, activeSpace);
     const canCreateVideoRoom = getCanCreateVideoRoom(canCreateRoom);
-    const displayComposeMenu = canCreateRoom;
     const displaySpaceMenu = Boolean(activeSpace);
     const canInviteInSpace = Boolean(
         activeSpace?.getJoinRule() === JoinRule.Public || activeSpace?.canInvite(matrixClient.getSafeUserId()),
@@ -276,9 +343,10 @@ function computeHeaderSpaceState(
         title,
         canCreateRoom,
         canCreateVideoRoom,
-        displayComposeMenu,
         displaySpaceMenu,
         canInviteInSpace,
         canAccessSpaceSettings,
+        displaySectionReleaseAnnouncement,
+        areSectionsEnabled,
     };
 }

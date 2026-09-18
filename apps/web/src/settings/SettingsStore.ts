@@ -10,6 +10,8 @@ Please see LICENSE files in the repository root for full details.
 import { logger } from "matrix-js-sdk/src/logger";
 import { type ReactNode } from "react";
 import { ClientEvent } from "matrix-js-sdk/src/matrix";
+// Imports directly from shared-components to avoid an import cycle
+import { _t } from "@element-hq/web-shared-components";
 
 import DeviceSettingsHandler from "./handlers/DeviceSettingsHandler";
 import RoomDeviceSettingsHandler from "./handlers/RoomDeviceSettingsHandler";
@@ -18,7 +20,6 @@ import RoomAccountSettingsHandler from "./handlers/RoomAccountSettingsHandler";
 import AccountSettingsHandler from "./handlers/AccountSettingsHandler";
 import RoomSettingsHandler from "./handlers/RoomSettingsHandler";
 import ConfigSettingsHandler from "./handlers/ConfigSettingsHandler";
-import { _t } from "../languageHandler";
 import dis from "../dispatcher/dispatcher";
 import {
     type IFeature,
@@ -39,6 +40,7 @@ import PlatformSettingsHandler from "./handlers/PlatformSettingsHandler";
 import ReloadOnChangeController from "./controllers/ReloadOnChangeController";
 import { MatrixClientPeg } from "../MatrixClientPeg";
 import { MediaPreviewValue } from "../@types/media_preview";
+import SettingController, { getSettingDisabled, toControllers } from "./controllers/SettingController.ts";
 
 // Convert the settings to easier to manage objects for the handlers
 const defaultSettings: Record<string, any> = {};
@@ -79,7 +81,7 @@ export const LEVEL_ORDER = [
     SettingLevel.DEFAULT,
 ];
 
-function getLevelOrder(setting: ISetting): SettingLevel[] {
+function getLevelOrder(setting: Settings[keyof Settings]): SettingLevel[] {
     // Settings which support only a single setting level are inherently ordered
     if (setting.supportedLevelsAreOrdered || setting.supportedLevels.length === 1) {
         // return a copy to prevent callers from modifying the array
@@ -88,12 +90,12 @@ function getLevelOrder(setting: ISetting): SettingLevel[] {
     return LEVEL_ORDER;
 }
 
-export type CallbackFn = (
-    settingName: SettingKey,
+export type CallbackFn<S extends SettingKey> = (
+    settingName: S,
     roomId: string | null,
     atLevel: SettingLevel,
-    newValAtLevel: any,
-    newVal: any,
+    newValAtLevel: Settings[S]["default"] | null,
+    newVal: Settings[S]["default"] | null,
 ) => void;
 
 type HandlerMap = Partial<{
@@ -123,6 +125,7 @@ type HandlerMap = Partial<{
  * feature may be reported as disabled even though a user has specifically requested it
  * be enabled).
  */
+// oxlint-disable-next-line typescript/no-extraneous-class
 export default class SettingsStore {
     // We support watching settings for changes, and do this by tracking which callbacks have
     // been given to us. We end up returning the callbackRef to the caller so they can unsubscribe
@@ -167,7 +170,11 @@ export default class SettingsStore {
      * if the change in value is worthwhile enough to react upon.
      * @returns {string} A reference to the watcher that was employed.
      */
-    public static watchSetting(settingName: SettingKey, roomId: string | null, callbackFn: CallbackFn): string {
+    public static watchSetting<S extends SettingKey>(
+        settingName: S,
+        roomId: string | null,
+        callbackFn: CallbackFn<S>,
+    ): string {
         const setting = SETTINGS[settingName];
         if (!setting) throw new Error(`${settingName} is not a setting`);
 
@@ -175,7 +182,11 @@ export default class SettingsStore {
 
         const watcherId = `${new Date().getTime()}_${SettingsStore.watcherCount++}_${finalSettingName}_${roomId}`;
 
-        const localizedCallback = (changedInRoomId: string | null, atLevel: SettingLevel, newValAtLevel: any): void => {
+        const localizedCallback = (
+            changedInRoomId: string | null,
+            atLevel: SettingLevel,
+            newValAtLevel: Settings[S]["default"],
+        ): void => {
             if (!SettingsStore.doesSettingSupportLevel(settingName, atLevel)) {
                 logger.warn(
                     `Setting handler notified for an update of an invalid setting level: ` +
@@ -220,7 +231,7 @@ export default class SettingsStore {
      * @param {string} settingName The setting name to monitor.
      * @param {String} roomId The room ID to monitor for changes in. Use null for all rooms.
      */
-    public static monitorSetting(settingName: SettingKey, roomId: string | null): void {
+    public static monitorSetting<S extends SettingKey>(settingName: S, roomId: string | null): void {
         roomId = roomId || null; // the thing wants null specifically to work, so appease it.
 
         if (!this.monitors.has(settingName)) this.monitors.set(settingName, new Map());
@@ -228,7 +239,7 @@ export default class SettingsStore {
         const registerWatcher = (): void => {
             this.monitors.get(settingName)!.set(
                 roomId,
-                SettingsStore.watchSetting(
+                SettingsStore.watchSetting<S>(
                     settingName,
                     roomId,
                     (settingName, inRoomId, level, newValueAtLevel, newValue) => {
@@ -253,7 +264,7 @@ export default class SettingsStore {
             if (roomId === null) {
                 // Unregister all existing watchers and register the new one
                 rooms.forEach((roomId) => {
-                    SettingsStore.unwatchSetting(this.monitors.get(settingName)!.get(roomId)!);
+                    SettingsStore.unwatchSetting(this.monitors.get(settingName)!.get(roomId));
                 });
                 this.monitors.get(settingName)!.clear();
                 registerWatcher();
@@ -266,7 +277,7 @@ export default class SettingsStore {
      * @param {string} settingName The setting to look up.
      * @param {SettingLevel} atLevel
      * The level to get the display name for; Defaults to 'default'.
-     * @return {String} The display name for the setting, or null if not found.
+     * @returns {String} The display name for the setting, or null if not found.
      */
     public static getDisplayName(settingName: SettingKey, atLevel = SettingLevel.DEFAULT): string | null {
         if (!SETTINGS[settingName] || !SETTINGS[settingName].displayName) return null;
@@ -289,7 +300,7 @@ export default class SettingsStore {
     /**
      * Gets the translated description for a given setting
      * @param {string} settingName The setting to look up.
-     * @return {String} The description for the setting, or null if not found.
+     * @returns {String} The description for the setting, or null if not found.
      */
     public static getDescription(settingName: SettingKey): string | ReactNode {
         const description = SETTINGS[settingName]?.description;
@@ -301,7 +312,7 @@ export default class SettingsStore {
     /**
      * Determines if a setting is also a feature.
      * @param {string} settingName The setting to look up.
-     * @return {boolean} True if the setting is a feature.
+     * @returns {boolean} True if the setting is a feature.
      */
     public static isFeature(settingName: SettingKey): boolean {
         if (!SETTINGS[settingName]) return false;
@@ -311,7 +322,7 @@ export default class SettingsStore {
     /**
      * Determines if a setting should have a warning sign in the microcopy
      * @param {string} settingName The setting to look up.
-     * @return {boolean} True if the setting should have a warning sign.
+     * @returns {boolean} True if the setting should have a warning sign.
      */
     public static shouldHaveWarning(settingName: SettingKey): boolean {
         if (!SETTINGS[settingName]) return false;
@@ -324,10 +335,13 @@ export default class SettingsStore {
             SettingsStore.isFeature(settingName) &&
             SettingsStore.getValueAt(SettingLevel.CONFIG, settingName, null, true, true) !== false
         ) {
-            const betaInfo = SETTINGS[settingName]!.betaInfo;
+            const betaInfo = SETTINGS[settingName].betaInfo;
             if (betaInfo) {
                 betaInfo.requiresRefresh =
-                    betaInfo.requiresRefresh ?? SETTINGS[settingName]!.controller instanceof ReloadOnChangeController;
+                    betaInfo.requiresRefresh ??
+                    toControllers(SETTINGS[settingName].controller).some(
+                        (controller) => controller instanceof ReloadOnChangeController,
+                    );
             }
             return betaInfo;
         }
@@ -344,10 +358,10 @@ export default class SettingsStore {
      * If a setting is not disabled, or no reason is given by the `SettingController`,
      * this will return undefined.
      * @param {string} settingName The setting to look up.
-     * @return {string} The reason the setting is disabled.
+     * @returns {string} The reason the setting is disabled.
      */
     public static disabledMessage(settingName: SettingKey): string | undefined {
-        const disabled = SETTINGS[settingName].controller?.settingDisabled;
+        const disabled = getSettingDisabled(SETTINGS[settingName].controller);
         return typeof disabled === "string" ? disabled : undefined;
     }
 
@@ -357,7 +371,7 @@ export default class SettingsStore {
      * @param {string} settingName The name of the setting to read the value of.
      * @param {String} roomId The room ID to read the setting value in, may be null.
      * @param {boolean} excludeDefault True to disable using the default value.
-     * @return {*} The value, or null if not found
+     * @returns {*} The value, or null if not found
      */
     public static getValue<S extends SettingKey>(
         settingName: S,
@@ -394,7 +408,7 @@ export default class SettingsStore {
      * @param {boolean} explicit If true, this method will not consider other levels, just the one
      * provided. Defaults to false.
      * @param {boolean} excludeDefault True to disable using the default value.
-     * @return {*} The value, or null if not found.
+     * @returns {*} The value, or null if not found.
      */
     public static getValueAt<S extends SettingKey>(
         level: SettingLevel,
@@ -449,11 +463,10 @@ export default class SettingsStore {
 
     /**
      * Gets the default value of a setting.
-     * @param {string} settingName The name of the setting to read the value of.
-     * @param {String} roomId The room ID to read the setting value in, may be null.
-     * @return {*} The default value
+     * @param settingName The name of the setting to read the value of.
+     * @returns The default value
      */
-    public static getDefaultValue(settingName: SettingKey): any {
+    public static getDefaultValue<S extends SettingKey>(settingName: S): Settings[S]["default"] {
         // Verify that the setting is actually a setting
         if (!SETTINGS[settingName]) {
             throw new Error("Setting '" + settingName + "' does not appear to be a setting.");
@@ -462,43 +475,43 @@ export default class SettingsStore {
         return SETTINGS[settingName].default;
     }
 
-    private static getFinalValue(
-        setting: ISetting,
+    private static getFinalValue<S extends SettingKey>(
+        setting: Settings[S],
         level: SettingLevel,
         roomId: string | null,
-        calculatedValue: any,
+        calculatedValue: Settings[S]["default"],
         calculatedAtLevel: SettingLevel | null,
-    ): any {
+    ): Settings[S]["default"] {
         let resultingValue = calculatedValue;
 
-        if (setting.controller) {
-            const actualValue = setting.controller.getValueOverride(level, roomId, calculatedValue, calculatedAtLevel);
-            if (actualValue !== undefined && actualValue !== null) resultingValue = actualValue;
+        for (const controller of toControllers(setting.controller)) {
+            const actualValue = controller.getValueOverride(level, roomId, calculatedValue, calculatedAtLevel);
+            if (actualValue !== undefined && actualValue !== null) {
+                resultingValue = actualValue;
+                break;
+            }
         }
 
         if (setting.invertedSettingName) resultingValue = !resultingValue;
         return resultingValue;
     }
 
-    /* eslint-disable valid-jsdoc */ //https://github.com/eslint/eslint/issues/7307
     /**
      * Sets the value for a setting. The room ID is optional if the setting is not being
      * set for a particular room, otherwise it should be supplied. The value may be null
      * to indicate that the level should no longer have an override.
-     * @param {string} settingName The name of the setting to change.
-     * @param {String} roomId The room ID to change the value in, may be null.
-     * @param {SettingLevel} level The level
+     * @param settingName The name of the setting to change.
+     * @param roomId The room ID to change the value in, may be null.
+     * @param level The level
      * to change the value at.
-     * @param {*} value The new value of the setting, may be null.
-     * @return {Promise} Resolves when the setting has been changed.
+     * @param value The new value of the setting, may be null.
+     * @returns Resolves when the setting has been changed.
      */
-
-    /* eslint-enable valid-jsdoc */
-    public static async setValue(
-        settingName: SettingKey,
+    public static async setValue<S extends SettingKey>(
+        settingName: S,
         roomId: string | null,
         level: SettingLevel,
-        value: any,
+        value: Settings[S]["default"] | null,
     ): Promise<void> {
         // Verify that the setting is actually a setting
         const setting = SETTINGS[settingName];
@@ -525,13 +538,18 @@ export default class SettingsStore {
             throw new Error("User cannot set " + finalSettingName + " at " + level + " in " + roomId);
         }
 
-        if (setting.controller && !(await setting.controller.beforeChange(level, roomId, value))) {
-            return; // controller says no
+        const controllers = toControllers(setting.controller);
+        for (const controller of controllers) {
+            if (!(await controller.beforeChange(level, roomId, value))) {
+                return; // controller says no
+            }
         }
 
         await handler.setValue(finalSettingName, roomId, value);
 
-        setting.controller?.onChange(level, roomId, value);
+        for (const controller of controllers) {
+            controller.onChange(level, roomId, value);
+        }
     }
 
     /**
@@ -550,7 +568,7 @@ export default class SettingsStore {
      * @param {string} settingName The name of the setting to check.
      * @param {String} roomId The room ID to check in, may be null.
      * @param {SettingLevel} level The level to check at.
-     * @return {boolean} True if the user may set the setting, false otherwise.
+     * @returns {boolean} True if the user may set the setting, false otherwise.
      */
     public static canSetValue(settingName: SettingKey, roomId: string | null, level: SettingLevel): boolean {
         const setting = SETTINGS[settingName];
@@ -559,7 +577,7 @@ export default class SettingsStore {
             throw new Error("Setting '" + settingName + "' does not appear to be a setting.");
         }
 
-        if (setting.controller?.settingDisabled) {
+        if (getSettingDisabled(setting.controller)) {
             return false;
         }
 
@@ -604,7 +622,7 @@ export default class SettingsStore {
      * Determines if the given level is supported on this device.
      * @param {SettingLevel} level The level
      * to check the feasibility of.
-     * @return {boolean} True if the level is supported, false otherwise.
+     * @returns {boolean} True if the level is supported, false otherwise.
      */
     public static isLevelSupported(level: SettingLevel): boolean {
         if (!LEVEL_HANDLERS[level]) return false;
@@ -632,7 +650,7 @@ export default class SettingsStore {
      * Determines the first supported level out of all the levels that can be used for a
      * specific setting.
      * @param {string} settingName The setting name.
-     * @return {SettingLevel}
+     * @returns {SettingLevel}
      */
     public static firstSupportedLevel(settingName: SettingKey): SettingLevel | null {
         // Verify that the setting is actually a setting
@@ -667,7 +685,7 @@ export default class SettingsStore {
                 .filter((k) => k.startsWith("mx_ShowImage_"))
                 .map((k) => [k.slice("mx_ShowImage_".length), true]),
         );
-        this.setValue("showMediaEventIds", null, SettingLevel.DEVICE, newValue);
+        void this.setValue("showMediaEventIds", null, SettingLevel.DEVICE, newValue);
 
         localStorage.setItem(MIGRATION_DONE_FLAG, "true");
     }
@@ -694,7 +712,7 @@ export default class SettingsStore {
         const showAvatarsOnInvites = handler.getValue("showAvatarsOnInvites", null);
 
         if (typeof showImages === "boolean" || typeof showAvatarsOnInvites === "boolean") {
-            this.setValue("mediaPreviewConfig", null, SettingLevel.ACCOUNT, {
+            await this.setValue("mediaPreviewConfig", null, SettingLevel.ACCOUNT, {
                 invite_avatars: showAvatarsOnInvites === false ? MediaPreviewValue.Off : MediaPreviewValue.On,
                 media_previews: showImages === false ? MediaPreviewValue.Off : MediaPreviewValue.On,
             });
@@ -862,8 +880,7 @@ export default class SettingsStore {
 
     private static getHandler(settingName: SettingKey, level: SettingLevel): SettingsHandler | null {
         const handlers = SettingsStore.getHandlers(settingName);
-        if (!handlers[level]) return null;
-        return handlers[level]!;
+        return handlers[level] ?? null;
     }
 
     private static getHandlers(settingName: SettingKey): HandlerMap {
@@ -882,5 +899,6 @@ export default class SettingsStore {
     }
 }
 
+SettingController.settingsStore = SettingsStore;
 // For debugging purposes
 window.mxSettingsStore = SettingsStore;

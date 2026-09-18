@@ -24,6 +24,10 @@ Please see LICENSE files in the repository root for full details.
     min-width: 0;
     white-space: normal;
     text-align: start;
+    /* Compound dropped the "sm" button size; keep the bridge buttons compact. */
+    padding-block: var(--cpd-space-1x);
+    padding-inline: var(--cpd-space-4x);
+    font: var(--cpd-font-body-sm-semibold);
 }
 
 /* Telegram bot reply keyboard, rendered above the room's main composer. */

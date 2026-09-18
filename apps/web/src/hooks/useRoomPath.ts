@@ -7,7 +7,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { type Room, RoomEvent } from "matrix-js-sdk/src/matrix";
 
-import SpaceStore from "../stores/spaces/SpaceStore";
+import { SDKContextClass } from "../contexts/SDKContextClass";
 import { UPDATE_SELECTED_SPACE } from "../stores/spaces";
 import { getSpacePath, type SpacePathEntry } from "../utils/SpaceHierarchyUtils";
 import { useEventEmitter } from "./useEventEmitter";
@@ -22,17 +22,17 @@ import { useEventEmitter } from "./useEventEmitter";
  */
 export function useRoomPath(room: Room, noPrune = false): SpacePathEntry[] {
     const [path, setPath] = useState<SpacePathEntry[]>(() =>
-        getSpacePath(room, noPrune ? undefined : SpaceStore.instance.activeSpace),
+        getSpacePath(room, noPrune ? undefined : SDKContextClass.instance.spaceStore.activeSpace),
     );
 
     const updatePath = useCallback(() => {
-        setPath(getSpacePath(room, noPrune ? undefined : SpaceStore.instance.activeSpace));
+        setPath(getSpacePath(room, noPrune ? undefined : SDKContextClass.instance.spaceStore.activeSpace));
     }, [room, noPrune]);
 
-    useEventEmitter(SpaceStore.instance, UPDATE_SELECTED_SPACE, updatePath);
+    useEventEmitter(SDKContextClass.instance.spaceStore, UPDATE_SELECTED_SPACE, updatePath);
     // Also update if the room itself is moved or parents change.
     // SpaceStore emits events on room IDs when their hierarchy changes.
-    useEventEmitter(SpaceStore.instance, room.roomId, updatePath);
+    useEventEmitter(SDKContextClass.instance.spaceStore, room.roomId, updatePath);
 
     useEffect(() => {
         room.on(RoomEvent.Name, updatePath);

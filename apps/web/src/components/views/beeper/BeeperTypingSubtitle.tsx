@@ -15,7 +15,7 @@ import { usersTypingApartFromMeAndIgnored } from "../../../WhoIsTyping";
 import { _t } from "../../../languageHandler";
 
 /** The members of `room` currently typing (not us, not ignored users), kept live. */
-export function useTypingMembers(room: Room): RoomMember[] {
+function useTypingMembers(room: Room): RoomMember[] {
     const read = useCallback(() => usersTypingApartFromMeAndIgnored(room), [room]);
     const [members, setMembers] = useState(read);
     useEffect(() => setMembers(read()), [read]);

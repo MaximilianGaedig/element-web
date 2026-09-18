@@ -52,7 +52,7 @@ export function getBridgeInfo(room: Room): BridgeInfo | undefined {
             else if (v1 === "dm") roomType = "dm";
             const typed = v2 !== undefined || v1 !== undefined;
             const ts = ev.getTs();
-            if (best && (best.typed && !typed || (best.typed === typed && best.ts >= ts))) continue;
+            if (best && ((best.typed && !typed) || (best.typed === typed && best.ts >= ts))) continue;
             const avatar = str(protocol.avatar_url);
             best = {
                 typed,

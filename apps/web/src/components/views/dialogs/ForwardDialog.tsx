@@ -22,20 +22,21 @@ import {
 } from "matrix-js-sdk/src/matrix";
 import { KnownMembership } from "matrix-js-sdk/src/types";
 import { CheckCircleIcon, CircleIcon } from "@vector-im/compound-design-tokens/assets/web/icons";
+import { AutoHideScrollbar } from "@element-hq/web-shared-components";
 
 import { _t } from "../../../languageHandler";
 import dis from "../../../dispatcher/dispatcher";
 import { useSettingValue } from "../../../hooks/useSettings";
 import { Layout } from "../../../settings/enums/Layout";
+import { EventPresentationContextProvider } from "../../../utils/EventPresentationContextProvider";
 import BaseDialog from "./BaseDialog";
 import EventTile from "../rooms/EventTile";
 import SearchBox from "../../structures/SearchBox";
 import DecoratedRoomAvatar from "../avatars/DecoratedRoomAvatar";
-import AutoHideScrollbar from "../../structures/AutoHideScrollbar";
 import { StaticNotificationState } from "../../../stores/notifications/StaticNotificationState";
-import NotificationBadge from "../rooms/NotificationBadge";
+import { NotificationBadge } from "../rooms/NotificationBadge/NotificationBadge";
 import { type RoomPermalinkCreator } from "../../../utils/permalinks/Permalinks";
-import { sortRooms } from "../../../stores/room-list/algorithms/tag-sorting/RecentAlgorithm";
+import { sortRoomsByRecency } from "../../../utils/room/sortRoomsByRecency";
 import QueryMatcher from "../../../autocomplete/QueryMatcher";
 import TruncatedList from "../elements/TruncatedList";
 import { Action } from "../../../dispatcher/actions";
@@ -47,9 +48,9 @@ import { RoomContextDetails } from "../rooms/RoomContextDetails";
 import { filterBoolean } from "../../../utils/arrays";
 import {
     type IState,
+    RovingStateActionType,
     RovingTabIndexContext,
     RovingTabIndexProvider,
-    Type,
     useRovingTabIndex,
 } from "../../../accessibility/RovingTabIndex";
 import { getKeyBindingsManager } from "../../../KeyBindingsManager";
@@ -134,7 +135,12 @@ const Entry: React.FC<IEntryProps> = ({ room, eventsToForward, matrixClient: cli
         className = "mx_ForwardList_sendFailed";
         disabled = true;
         title = _t("timeline|send_state_failed");
-        icon = <NotificationBadge notification={StaticNotificationState.RED_EXCLAMATION} />;
+        icon = (
+            <NotificationBadge
+                notification={StaticNotificationState.RED_EXCLAMATION}
+                className="mx_ForwardDialog_notificationBadge"
+            />
+        );
     }
 
     const id = `mx_ForwardDialog_entry_${room.roomId}`;
@@ -198,7 +204,6 @@ const transformEvent = (
     includeAttribution = false,
 ): { type: string; content: IContent } => {
     const {
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         "m.relates_to": _, // strip relations - in future we will attach a relation pointing at the original event
         // We're taking a shallow copy here to avoid https://github.com/vector-im/element-web/issues/10924
         ...content
@@ -323,10 +328,11 @@ const ForwardDialog: React.FC<IProps> = ({ matrixClient: cli, events, permalinkC
 
     let rooms = useMemo(
         () =>
-            sortRooms(
+            sortRoomsByRecency(
                 cli
                     .getVisibleRooms(msc3946DynamicRoomPredecessors)
                     .filter((room) => room.getMyMembership() === KnownMembership.Join && !room.isSpaceRoom()),
+                cli.getSafeUserId(),
             ),
         [cli, msc3946DynamicRoomPredecessors],
     );
@@ -379,23 +385,25 @@ const ForwardDialog: React.FC<IProps> = ({ matrixClient: cli, events, permalinkC
             fixedWidth={false}
         >
             <h3>{_t("forward|message_preview_heading")}</h3>
-            <AutoHideScrollbar className="mx_ForwardDialog_preview_container">
+            <AutoHideScrollbar className="mx_AutoHideScrollbar mx_ForwardDialog_preview_container">
                 <div
                     className={classnames("mx_ForwardDialog_preview", {
                         mx_IRCLayout: previewLayout == Layout.IRC,
                     })}
                 >
-                    {mockEvents.map((mockEvent) => (
-                        <EventTile
-                            key={mockEvent.getId()}
-                            mxEvent={mockEvent}
-                            layout={previewLayout}
-                            permalinkCreator={permalinkCreator!}
-                            as="div"
-                            inhibitInteraction
-                            continuation={false}
-                        />
-                    ))}
+                    <EventPresentationContextProvider layout={previewLayout}>
+                        {mockEvents.map((mockEvent) => (
+                            <EventTile
+                                key={mockEvent.getId()}
+                                mxEvent={mockEvent}
+                                layout={previewLayout}
+                                permalinkCreator={permalinkCreator ?? undefined}
+                                as="div"
+                                inhibitInteraction
+                                continuation={false}
+                            />
+                        ))}
+                    </EventPresentationContextProvider>
                 </div>
             </AutoHideScrollbar>
             <hr />
@@ -418,7 +426,7 @@ const ForwardDialog: React.FC<IProps> = ({ matrixClient: cli, events, permalinkC
                                             const node = context.state.nodes[0];
                                             if (node) {
                                                 context.dispatch({
-                                                    type: Type.SetFocus,
+                                                    type: RovingStateActionType.SetFocus,
                                                     payload: { node },
                                                 });
                                                 node?.scrollIntoView?.({
@@ -434,7 +442,7 @@ const ForwardDialog: React.FC<IProps> = ({ matrixClient: cli, events, permalinkC
                                 />
                             )}
                         </RovingTabIndexContext.Consumer>
-                        <AutoHideScrollbar className="mx_ForwardList_content">
+                        <AutoHideScrollbar className="mx_AutoHideScrollbar mx_ForwardList_content">
                             {rooms.length > 0 ? (
                                 <div className="mx_ForwardList_results">
                                     <TruncatedList

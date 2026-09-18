@@ -1,4 +1,5 @@
 /*
+Copyright 2026 Element Creations Ltd.
 Copyright 2024 New Vector Ltd.
 Copyright 2020 The Matrix.org Foundation C.I.C.
 Copyright 2019 Michael Telatynski <7t3chguy@gmail.com>
@@ -43,7 +44,6 @@ import SdkConfig from "../SdkConfig";
 import SettingsStore from "../settings/SettingsStore";
 import { UIComponent, UIFeature } from "../settings/UIFeature";
 import { CHAT_EFFECTS } from "../effects";
-import LegacyCallHandler from "../LegacyCallHandler";
 import { guessAndSetDMRoom } from "../Rooms";
 import DevtoolsDialog from "../components/views/dialogs/DevtoolsDialog";
 import InfoDialog from "../components/views/dialogs/InfoDialog";
@@ -54,7 +54,7 @@ import { type ViewRoomPayload } from "../dispatcher/payloads/ViewRoomPayload";
 import { htmlSerializeFromMdIfNeeded } from "../editor/serialize";
 import { leaveRoomBehaviour } from "../utils/leave-behaviour";
 import { MatrixClientPeg } from "../MatrixClientPeg";
-import { isCurrentLocalRoom, reject, singleMxcUpload, success, successSync } from "./utils";
+import { isCurrentLocalRoom, reject, singleMxcUpload, success, successSync, splitAtFirstSpace } from "./utils";
 import { deop, op } from "./op";
 import { CommandCategories } from "./interface";
 import { Command } from "./command";
@@ -62,6 +62,8 @@ import { goto, join } from "./join";
 import { manuallyVerifyDevice } from "../components/views/dialogs/ManualDeviceKeyVerificationDialog";
 import upgraderoom from "./upgraderoom/upgraderoom";
 import { emoticon } from "./emoticon";
+import { statusCommand } from "./status";
+import { SDKContextClass } from "../contexts/SDKContextClass.ts";
 
 export { CommandCategories, Command };
 
@@ -606,7 +608,7 @@ export const Commands = [
 
                     return success(
                         finished.then(([confirmed]) => {
-                            if (confirmed) manuallyVerifyDevice(cli, deviceId, fingerprint);
+                            if (confirmed) void manuallyVerifyDevice(cli, deviceId, fingerprint);
                         }),
                     );
                 }
@@ -622,7 +624,7 @@ export const Commands = [
         isEnabled: (cli) => !isCurrentLocalRoom(cli),
         runFn: function (cli, roomId) {
             try {
-                cli.getCrypto()?.forceDiscardSession(roomId);
+                void cli.getCrypto()?.forceDiscardSession(roomId);
             } catch (e) {
                 return reject(e instanceof Error ? e.message : e);
             }
@@ -703,14 +705,17 @@ export const Commands = [
             // easter-egg for now: look up phone numbers through the thirdparty API
             // (very dumb phone number detection...)
             const isPhoneNumber = userId && /^\+?[0123456789]+$/.test(userId);
-            if (!userId || ((!userId.startsWith("@") || !userId.includes(":")) && !isPhoneNumber)) {
+            // Validate with the same helper createRoom() uses to decide whether to send an invite. A looser
+            // check here lets an argument such as "@alice:example.com hello" be written to m.direct as a user
+            // ID that is then never invited, leaving an empty DM behind.
+            if (!userId || (getAddressType(userId) !== AddressType.MatrixUserId && !isPhoneNumber)) {
                 return reject(this.getUsage());
             }
 
             return success(
                 (async (): Promise<void> => {
                     if (isPhoneNumber) {
-                        const results = await LegacyCallHandler.instance.pstnLookup(userId);
+                        const results = await SDKContextClass.instance.legacyCallHandler.pstnLookup(userId);
                         if (!results || results.length === 0 || !results[0].userid) {
                             throw new UserFriendlyError("slash_command|query_not_found_phone_number");
                         }
@@ -753,7 +758,7 @@ export const Commands = [
                                     metricsViaKeyboard: true,
                                 });
                                 if (msg) {
-                                    cli.sendTextMessage(roomId, msg);
+                                    void cli.sendTextMessage(roomId, msg);
                                 }
                             })(),
                         );
@@ -771,7 +776,7 @@ export const Commands = [
         category: CommandCategories.other,
         isEnabled: (cli) => !isCurrentLocalRoom(cli),
         runFn: function (cli, roomId, threadId, args) {
-            const call = LegacyCallHandler.instance.getCallForRoom(roomId);
+            const call = SDKContextClass.instance.legacyCallHandler.getCallForRoom(roomId);
             if (!call) {
                 return reject(new UserFriendlyError("slash_command|no_active_call"));
             }
@@ -786,7 +791,7 @@ export const Commands = [
         category: CommandCategories.other,
         isEnabled: (cli) => !isCurrentLocalRoom(cli),
         runFn: function (cli, roomId, threadId, args) {
-            const call = LegacyCallHandler.instance.getCallForRoom(roomId);
+            const call = SDKContextClass.instance.legacyCallHandler.getCallForRoom(roomId);
             if (!call) {
                 return reject(new UserFriendlyError("slash_command|no_active_call"));
             }
@@ -819,6 +824,7 @@ export const Commands = [
         },
         renderingTypes: [TimelineRenderingType.Room],
     }),
+    statusCommand,
 
     // Command definitions for autocompletion ONLY:
     // /me is special because its not handled by SlashCommands.js and is instead done inside the Composer classes
@@ -890,30 +896,10 @@ interface ICmd {
 }
 
 /**
- * Split the supplied string into one or two strings separated by the first
- * region of white space we can find.
- */
-export function splitAtFirstSpace(args: string): [string, string?] {
-    const trimmedArgs = args.trim();
-    const i = trimmedArgs.search(/\s+/);
-    if (i === -1) {
-        return [trimmedArgs];
-    } else {
-        const first = trimmedArgs.slice(0, i);
-        const second = trimmedArgs.slice(i + 1).trimStart();
-        if (second === "") {
-            return [first];
-        } else {
-            return [first, second];
-        }
-    }
-}
-
-/**
  * Process the given text for /commands and returns a parsed command that can be used for running the operation.
  * @param {string} roomId The room ID where the command was issued.
  * @param {string} input The raw text input by the user.
- * @return {ICmd} The parsed command object.
+ * @returns {ICmd} The parsed command object.
  * Returns an empty object if the input didn't match a command.
  */
 export function getCommand(roomId: string, input: string): ICmd {

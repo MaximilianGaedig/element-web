@@ -8,7 +8,7 @@ Please see LICENSE files in the repository root for full details.
 import React, { type JSX } from "react";
 import { type User, type RoomMember } from "matrix-js-sdk/src/matrix";
 import { Heading, Tooltip, Text } from "@vector-im/compound-web";
-import { Flex } from "@element-hq/web-shared-components";
+import { Flex, StatusTextView } from "@element-hq/web-shared-components";
 
 import { useUserfoHeaderViewModel } from "../../../viewmodels/right_panel/user_info/UserInfoHeaderViewModel";
 import MemberAvatar from "../../avatars/MemberAvatar";
@@ -17,6 +17,7 @@ import PresenceLabel from "../../rooms/PresenceLabel";
 import { BeeperLastSeenLabel } from "../../beeper/BeeperLastSeen";
 import CopyableText from "../../elements/CopyableText";
 import { UserInfoHeaderVerificationView } from "./UserInfoHeaderVerificationView";
+import { useUserStatus } from "../../../../hooks/useUserStatus";
 
 export interface UserInfoHeaderViewProps {
     member: Member;
@@ -34,6 +35,7 @@ export const UserInfoHeaderView: React.FC<UserInfoHeaderViewProps> = ({
     const vm = useUserfoHeaderViewModel({ member, roomId });
     const avatarUrl = (member as User).avatarUrl;
     const displayName = (member as RoomMember).rawDisplayName;
+    const userStatus = useUserStatus(member.userId);
 
     let presenceLabel: JSX.Element | undefined;
 
@@ -79,6 +81,7 @@ export const UserInfoHeaderView: React.FC<UserInfoHeaderViewProps> = ({
                             {displayName}
                         </Flex>
                     </Heading>
+                    {userStatus && <StatusTextView status={userStatus} />}
                     {presenceLabel}
                     {vm.timezoneInfo && (
                         <Tooltip label={vm.timezoneInfo?.timezone ?? ""}>

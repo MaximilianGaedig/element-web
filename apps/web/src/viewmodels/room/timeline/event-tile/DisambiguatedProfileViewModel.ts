@@ -9,17 +9,17 @@ import {
     type DisambiguatedProfileViewActions,
     type DisambiguatedProfileViewSnapshot,
     type DisambiguatedProfileViewModel as DisambiguatedProfileViewModelInterface,
+    type UserStatus,
 } from "@element-hq/web-shared-components";
 import { type MouseEvent } from "react";
 
 import { _t } from "../../../../languageHandler";
 import { getUserNameColorClass } from "../../../../utils/FormattingUtils";
-import UserIdentifier from "../../../../customisations/UserIdentifier";
 
 /**
  * Information about a member for disambiguation purposes.
  */
-interface MemberInfo {
+export interface MemberInfo {
     /**
      * The user's Matrix ID.
      */
@@ -47,6 +47,10 @@ export interface DisambiguatedProfileViewModelProps {
      */
     member?: MemberInfo | null;
     /**
+     * The user's present status.
+     */
+    userStatus?: UserStatus;
+    /**
      * The fallback name to use if the member's display name is not available.
      */
     fallbackName: string;
@@ -62,6 +66,7 @@ export interface DisambiguatedProfileViewModelProps {
      * Whether to show a tooltip with additional information.
      */
     withTooltip?: boolean;
+
     /**
      * Optional click handler for the profile.
      */
@@ -79,7 +84,7 @@ export class DisambiguatedProfileViewModel
     private static readonly computeSnapshot = (
         props: DisambiguatedProfileViewModelProps,
     ): DisambiguatedProfileViewSnapshot => {
-        const { member, fallbackName, colored, emphasizeDisplayName, withTooltip } = props;
+        const { member, fallbackName, colored, emphasizeDisplayName, withTooltip, userStatus } = props;
 
         // Compute display name
         const displayName = member?.rawDisplayName || fallbackName;
@@ -96,22 +101,16 @@ export class DisambiguatedProfileViewModel
         let title: string | undefined;
 
         if (mxid) {
-            const identifier =
-                UserIdentifier.getDisplayUserIdentifier?.(mxid, {
-                    withDisplayName: true,
-                    roomId: member?.roomId,
-                }) ?? mxid;
-
             // Only show identifier if disambiguation is needed
             if (member?.disambiguate) {
-                displayIdentifier = identifier;
+                displayIdentifier = mxid;
             }
 
             // Compute tooltip title if enabled
             if (withTooltip) {
                 title = _t("timeline|disambiguated_profile", {
                     displayName,
-                    matrixId: identifier,
+                    matrixId: mxid,
                 });
             }
         }
@@ -122,11 +121,15 @@ export class DisambiguatedProfileViewModel
             displayIdentifier,
             title,
             emphasizeDisplayName,
+            userStatus,
         };
     };
 
     public constructor(props: DisambiguatedProfileViewModelProps) {
         super(props, DisambiguatedProfileViewModel.computeSnapshot(props));
+        this.snapshot.merge({
+            userStatus: props.userStatus,
+        });
     }
 
     public setMember(fallbackName: string, member?: MemberInfo | null): void {
@@ -134,6 +137,13 @@ export class DisambiguatedProfileViewModel
         this.props.fallbackName = fallbackName;
 
         this.snapshot.set(DisambiguatedProfileViewModel.computeSnapshot(this.props));
+    }
+
+    public setUserStatus(userStatus?: UserStatus): void {
+        this.props.userStatus = userStatus;
+        this.snapshot.merge({
+            userStatus,
+        });
     }
 
     public onClick = (evt: MouseEvent<HTMLDivElement>): void => {
