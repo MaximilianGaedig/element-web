@@ -80,6 +80,7 @@ import { Action } from "../../../dispatcher/actions";
 import PlatformPeg from "../../../PlatformPeg";
 import MemberAvatar from "../avatars/MemberAvatar";
 import SenderProfile from "../messages/SenderProfile";
+import PerMessageProfileAvatar from "../beeper/PerMessageProfileAvatar";
 import { type IReadReceiptPosition } from "./ReadReceiptMarker";
 import ReactionPicker from "../emojipicker/ReactionPicker";
 import { getEventDisplayInfo } from "../../../utils/EventRenderingUtils";
@@ -1190,12 +1191,14 @@ export class UnwrappedEventTile extends React.Component<EventTileProps, IState> 
                 );
             avatar = (
                 <div className="mx_EventTile_avatar">
-                    <MemberAvatar
-                        member={member}
-                        size={avatarSize}
-                        viewUserOnClick={viewUserOnClick}
-                        forceHistorical={this.props.mxEvent.getType() === EventType.RoomMember}
-                    />
+                    <PerMessageProfileAvatar mxEvent={this.props.mxEvent} size={avatarSize}>
+                        <MemberAvatar
+                            member={member}
+                            size={avatarSize}
+                            viewUserOnClick={viewUserOnClick}
+                            forceHistorical={this.props.mxEvent.getType() === EventType.RoomMember}
+                        />
+                    </PerMessageProfileAvatar>
                 </div>
             );
         }

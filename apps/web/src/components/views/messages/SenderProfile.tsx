@@ -13,6 +13,7 @@ import { useCreateAutoDisposedViewModel, DisambiguatedProfileView } from "@eleme
 
 import { DisambiguatedProfileViewModel } from "../../../viewmodels/room/timeline/event-tile/DisambiguatedProfileViewModel";
 import { useRoomMemberProfile } from "../../../hooks/room/useRoomMemberProfile";
+import { usePerMessageProfileMember } from "../beeper/usePerMessageProfileMember";
 
 interface IProps {
     mxEvent: MatrixEvent;
@@ -23,10 +24,12 @@ interface IProps {
 export default function SenderProfile({ mxEvent, onClick, withTooltip }: IProps): JSX.Element {
     const sender = mxEvent.getSender();
 
-    const member = useRoomMemberProfile({
+    const roomMember = useRoomMemberProfile({
         userId: sender,
         member: mxEvent.sender,
     });
+    // Bridged relay messages carry the real author's name in com.beeper.per_message_profile.
+    const member = usePerMessageProfileMember(mxEvent, roomMember);
 
     const disambiguatedProfileVM = useCreateAutoDisposedViewModel(
         () =>
