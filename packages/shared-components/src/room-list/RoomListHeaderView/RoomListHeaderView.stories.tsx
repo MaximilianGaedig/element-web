@@ -30,6 +30,9 @@ const RoomListHeaderViewWrapperImpl = ({
     openSpacePreferences,
     sort,
     toggleMessagePreview,
+    createSection,
+    collapseOrExpandSections,
+    closeSectionReleaseAnnouncement,
     ...rest
 }: RoomListHeaderProps): JSX.Element => {
     const vm = useMockedViewModel(rest, {
@@ -42,6 +45,9 @@ const RoomListHeaderViewWrapperImpl = ({
         sort,
         openSpacePreferences,
         toggleMessagePreview,
+        createSection,
+        collapseOrExpandSections,
+        closeSectionReleaseAnnouncement,
     });
     return <RoomListHeaderView vm={vm} />;
 };
@@ -62,6 +68,9 @@ const meta = {
         sort: fn(),
         openSpacePreferences: fn(),
         toggleMessagePreview: fn(),
+        createSection: fn(),
+        collapseOrExpandSections: fn(),
+        closeSectionReleaseAnnouncement: fn(),
     },
     parameters: {
         design: {
@@ -82,12 +91,6 @@ export const NoSpaceMenu: Story = {
     },
 };
 
-export const NoComposeMenu: Story = {
-    args: {
-        displayComposeMenu: false,
-    },
-};
-
 export const LongTitle: Story = {
     decorators: [
         (Story) => (
@@ -98,5 +101,58 @@ export const LongTitle: Story = {
     ],
     args: {
         title: "Loooooooooooooooooooooooooooooooooooooong title",
+    },
+};
+
+export const CollapseSections: Story = {
+    args: {
+        collapseSections: "collapse",
+    },
+};
+
+export const ExpandSections: Story = {
+    args: {
+        collapseSections: "expand",
+    },
+};
+
+export const DisplaySectionReleaseAnnouncement: Story = {
+    decorators: [
+        (Story) => (
+            <div style={{ width: "300px" }}>
+                <Story />
+            </div>
+        ),
+    ],
+    args: {
+        displaySectionReleaseAnnouncement: true,
+    },
+    parameters: {
+        a11y: {
+            config: {
+                rules: [
+                    {
+                        // compound-web's ReleaseAnnouncement renders its header as <h3>,
+                        // which jumps from RoomListHeaderView's <h1> ("Rooms").
+                        id: "heading-order",
+                        enabled: false,
+                    },
+                ],
+            },
+        },
+    },
+};
+
+export const SectionsDisabled: Story = {
+    args: {
+        areSectionsEnabled: false,
+    },
+};
+
+export const NoComposeMenu: Story = {
+    args: {
+        canCreateRoom: false,
+        canCreateVideoRoom: false,
+        areSectionsEnabled: false,
     },
 };

@@ -42,23 +42,16 @@ import { type NonEmptyArray } from "../../../@types/common";
 import { PollHistoryTab } from "../settings/tabs/room/PollHistoryTab";
 import ErrorBoundary from "../elements/ErrorBoundary";
 import { PeopleRoomSettingsTab } from "../settings/tabs/room/PeopleRoomSettingsTab";
-
-export const enum RoomSettingsTab {
-    General = "ROOM_GENERAL_TAB",
-    People = "ROOM_PEOPLE_TAB",
-    Voip = "ROOM_VOIP_TAB",
-    Security = "ROOM_SECURITY_TAB",
-    Roles = "ROOM_ROLES_TAB",
-    Notifications = "ROOM_NOTIFICATIONS_TAB",
-    Bridges = "ROOM_BRIDGES_TAB",
-    Advanced = "ROOM_ADVANCED_TAB",
-    PollHistory = "ROOM_POLL_HISTORY_TAB",
-}
+import { SDKContext } from "../../../contexts/SDKContext";
+import { type SDKContextClass } from "../../../contexts/SDKContextClass";
+import { RoomSettingsTab } from "./RoomSettingsDialog-tab.ts";
+import SdkConfig from "../../../SdkConfig";
 
 interface IProps {
     roomId: string;
     onFinished: (success?: boolean) => void;
     initialTabId?: RoomSettingsTab;
+    sdkContext: SDKContextClass;
 }
 
 interface IState {
@@ -155,7 +148,7 @@ class RoomSettingsDialog extends React.Component<IProps, IState> {
                 ),
             );
         }
-        if (SettingsStore.getValue("feature_group_calls")) {
+        if (!SdkConfig.get("element_call").disable) {
             tabs.push(
                 new Tab(
                     RoomSettingsTab.Voip,
@@ -238,21 +231,23 @@ class RoomSettingsDialog extends React.Component<IProps, IState> {
     public render(): React.ReactNode {
         const roomName = this.state.room.name;
         return (
-            <BaseDialog
-                className="mx_RoomSettingsDialog"
-                hasCancel={true}
-                onFinished={this.props.onFinished}
-                title={_t("room_settings|title", { roomName })}
-            >
-                <div className="mx_SettingsDialog_content">
-                    <TabbedView
-                        tabs={this.getTabs()}
-                        activeTabId={this.state.activeTabId}
-                        screenName="RoomSettings"
-                        onChange={this.onTabChange}
-                    />
-                </div>
-            </BaseDialog>
+            <SDKContext.Provider value={this.props.sdkContext}>
+                <BaseDialog
+                    className="mx_RoomSettingsDialog"
+                    hasCancel={true}
+                    onFinished={this.props.onFinished}
+                    title={_t("room_settings|title", { roomName })}
+                >
+                    <div className="mx_SettingsDialog_content">
+                        <TabbedView
+                            tabs={this.getTabs()}
+                            activeTabId={this.state.activeTabId}
+                            screenName="RoomSettings"
+                            onChange={this.onTabChange}
+                        />
+                    </div>
+                </BaseDialog>
+            </SDKContext.Provider>
         );
     }
 }

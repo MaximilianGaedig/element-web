@@ -18,6 +18,7 @@ import classNames from "classnames";
 import { Tooltip } from "@vector-im/compound-web";
 
 import { type ViewModel, useViewModel } from "../../../../../core/viewmodel";
+import { useEventPresentationAttributes } from "../../../EventPresentation/EventPresentationContext";
 import styles from "./TextualBody.module.css";
 
 export const enum TextualBodyViewKind {
@@ -63,6 +64,10 @@ export interface TextualBodyViewSnapshot {
      */
     editedMarkerText?: string;
     /**
+     * Accessible label announced for the edited marker action.
+     */
+    editedMarkerAriaLabel?: string;
+    /**
      * Tooltip description for the edited marker.
      */
     editedMarkerTooltip?: string;
@@ -92,7 +97,7 @@ export interface TextualBodyViewActions {
     /**
      * Activation handler used when `bodyWrapper` is `ACTION`.
      */
-    onBodyActionClick?: MouseEventHandler<HTMLElement>;
+    onBodyActionClick?: MouseEventHandler<HTMLButtonElement>;
     /**
      * Click handler for the edited marker.
      */
@@ -157,6 +162,7 @@ export function TextualBodyView({
     urlPreviews,
     className,
 }: Readonly<TextualBodyViewProps>): JSX.Element {
+    const eventPresentationAttributes = useEventPresentationAttributes();
     const {
         id,
         kind,
@@ -165,6 +171,7 @@ export function TextualBodyView({
         bodyActionAriaLabel,
         showEditedMarker,
         editedMarkerText,
+        editedMarkerAriaLabel,
         editedMarkerTooltip,
         editedMarkerCaption,
         showPendingModerationMarker,
@@ -195,6 +202,8 @@ export function TextualBodyView({
                 type="button"
                 className={classNames(styles.annotation, styles.editedMarker)}
                 onClick={onEditedMarkerClick}
+                aria-label={editedMarkerAriaLabel}
+                data-textual-body-edited-marker=""
             >
                 <span>{editedMarkerText}</span>
             </button>
@@ -218,7 +227,7 @@ export function TextualBodyView({
 
     if (showPendingModerationMarker) {
         markers.push(
-            <span key="pending-moderation-marker" className={styles.annotation}>
+            <span key="pending-moderation-marker" className={styles.annotation} data-textual-body-pending-moderation="">
                 {pendingModerationText}
             </span>,
         );
@@ -248,14 +257,16 @@ export function TextualBodyView({
             [styles.annotatedInline]: kind === TextualBodyViewKind.EMOTE,
         });
 
+        // Reply quotes need to tweak this wrapper so long edited messages still clamp nicely.
+        // Keep this hook stable so app CSS doesn't have to reach into CSS-module class names.
         renderedBody =
             kind === TextualBodyViewKind.EMOTE ? (
-                <span dir="auto" className={annotatedClasses}>
+                <span dir="auto" className={annotatedClasses} data-textual-body-annotation-wrapper="">
                     {renderedBody}
                     {markers}
                 </span>
             ) : (
-                <div dir="auto" className={annotatedClasses}>
+                <div dir="auto" className={annotatedClasses} data-textual-body-annotation-wrapper="">
                     {renderedBody}
                     {markers}
                 </div>
@@ -264,7 +275,13 @@ export function TextualBodyView({
 
     if (kind === TextualBodyViewKind.EMOTE) {
         return (
-            <div id={id} className={rootClasses} onClickCapture={vm.onRootClick} dir="auto">
+            <div
+                id={id}
+                className={rootClasses}
+                onClickCapture={vm.onRootClick}
+                dir="auto"
+                {...eventPresentationAttributes}
+            >
                 *&nbsp;
                 <button type="button" className={styles.emoteSender} onClick={vm.onEmoteSenderClick}>
                     {emoteSenderName}
@@ -277,7 +294,7 @@ export function TextualBodyView({
     }
 
     return (
-        <div id={id} className={rootClasses} onClickCapture={vm.onRootClick}>
+        <div id={id} className={rootClasses} onClickCapture={vm.onRootClick} {...eventPresentationAttributes}>
             {renderedBody}
             {urlPreviews}
         </div>

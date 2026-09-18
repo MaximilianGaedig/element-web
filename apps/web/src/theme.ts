@@ -47,7 +47,13 @@ interface CompoundTheme {
 
 export type CustomTheme = {
     name: string;
-    is_dark?: boolean; // eslint-disable-line camelcase
+    is_dark?: boolean;
+    /**
+     * The URL this theme was downloaded from, recorded when it is added via the developer tools so
+     * that it can be re-downloaded later. Absent for themes defined in config, and for themes that
+     * were added before we started recording this.
+     */
+    source_url?: string;
     colors?: {
         [key: string]: string;
     };
@@ -207,9 +213,10 @@ function generateCustomCompoundCSS(theme: CompoundTheme): string {
     for (const [token, value] of Object.entries(theme))
         if (COMPOUND_TOKEN.test(token)) properties.push(`${token}: ${value};`);
         else logger.warn(`'${token}' is not a valid Compound token`);
-    // Insert the design token overrides into the 'custom' cascade layer as
-    // documented at https://compound.element.io/?path=/docs/develop-theming--docs
-    return `@layer compound.custom { :root, [class*="cpd-theme-"] { ${properties.join(" ")} } }`;
+    // Insert the design token overrides into the existing Compound tokens
+    // layer so custom themes win over the imported default tokens by source
+    // order without creating a lower-priority nested layer.
+    return `@layer compound-tokens { :root, [class*="cpd-theme-"] { ${properties.join(" ")} } }`;
 }
 
 /**

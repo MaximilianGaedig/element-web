@@ -168,7 +168,7 @@ const getMsc3531Enabled = (): boolean => {
     if (msc3531Enabled === null) {
         msc3531Enabled = SettingsStore.getValue("feature_msc3531_hide_messages_pending_moderation");
     }
-    return msc3531Enabled!;
+    return msc3531Enabled;
 };
 
 /**

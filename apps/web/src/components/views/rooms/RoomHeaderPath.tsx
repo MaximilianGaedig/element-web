@@ -11,7 +11,7 @@ import { type Room } from "matrix-js-sdk/src/matrix";
 import { useRoomPath } from "../../../hooks/useRoomPath";
 import { useSettingValue } from "../../../hooks/useSettings";
 import RoomAvatar from "../avatars/RoomAvatar";
-import SpaceStore from "../../../stores/spaces/SpaceStore";
+import { SDKContextClass } from "../../../contexts/SDKContextClass";
 import AccessibleButton from "../elements/AccessibleButton";
 
 interface Props {
@@ -36,7 +36,7 @@ export const RoomHeaderPath: React.FC<Props> = memo(({ room, className }) => {
     }
 
     const onSpaceClick = (spaceId: string): void => {
-        SpaceStore.instance.setActiveSpace(spaceId);
+        SDKContextClass.instance.spaceStore.setActiveSpace(spaceId);
     };
 
     return (

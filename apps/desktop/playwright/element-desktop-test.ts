@@ -8,7 +8,7 @@ Please see LICENSE files in the repository root for full details.
 
 import { _electron as electron, test as base, expect as baseExpect, type ElectronApplication } from "@playwright/test";
 import fs from "node:fs/promises";
-import path, { dirname } from "node:path";
+import path from "node:path";
 import os from "node:os";
 import { fileURLToPath } from "node:url";
 import { PassThrough } from "node:stream";
@@ -17,14 +17,14 @@ import { PassThrough } from "node:stream";
  * A PassThrough stream that captures all data written to it.
  */
 class CapturedPassThrough extends PassThrough {
-    private _chunks = [];
+    private _chunks: any[] = [];
 
     public constructor() {
         super();
         super.on("data", this.onData);
     }
 
-    private onData = (chunk): void => {
+    private onData = (chunk: any): void => {
         this._chunks.push(chunk);
     };
 
@@ -44,22 +44,19 @@ interface Fixtures {
     stderr: CapturedPassThrough;
 }
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export const test = base.extend<Fixtures>({
     extraEnv: {},
     extraArgs: [],
 
-    // eslint-disable-next-line no-empty-pattern
     stdout: async ({}, use) => {
         await use(new CapturedPassThrough());
     },
-    // eslint-disable-next-line no-empty-pattern
     stderr: async ({}, use) => {
         await use(new CapturedPassThrough());
     },
 
-    // eslint-disable-next-line no-empty-pattern
     tmpDir: async ({}, use) => {
         const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "element-desktop-tests-"));
         await use(tmpDir);
@@ -69,7 +66,13 @@ export const test = base.extend<Fixtures>({
         const args = ["--profile-dir", tmpDir, ...extraArgs];
 
         if (process.env.GITHUB_ACTIONS) {
+            args.push("--disable-gpu");
+
             if (process.platform === "linux") {
+                if (process.getuid() === 0) {
+                    args.push("--no-sandbox");
+                }
+
                 // GitHub Actions hosted runner lacks dbus and a compatible keyring, so we need to force plaintext storage
                 args.push("--storage-mode", "force-plaintext");
             } else if (process.platform === "darwin") {

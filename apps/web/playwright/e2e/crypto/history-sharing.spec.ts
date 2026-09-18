@@ -5,7 +5,11 @@ SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only OR LicenseRef-Element-Com
 Please see LICENSE files in the repository root for full details.
 */
 
-import { createNewInstance } from "@element-hq/element-web-playwright-common";
+import {
+    closeReleaseAnnouncementIfExists,
+    createNewInstance,
+    rejectToast,
+} from "@element-hq/element-web-playwright-common";
 
 import { expect, test } from "../../element-web-test";
 import { ElementAppPage } from "../../pages/ElementAppPage";
@@ -13,7 +17,6 @@ import { createRoom, sendMessageInCurrentRoom } from "./utils";
 
 test.use({
     displayName: "Alice",
-    labsFlags: ["feature_share_history_on_invite"],
 });
 
 /** Tests for MSC4268: encrypted history sharing */
@@ -29,12 +32,19 @@ test.describe("History sharing", function () {
             // we then invite Bob, and ensure Bob can see the content.
 
             await aliceElementApp.client.bootstrapCrossSigning(aliceCredentials);
+            await aliceElementApp.closeKeyStorageToast();
+
+            await rejectToast(alicePage, "Notifications");
+
+            // Close the release announcement about the new room list sections
+            await closeReleaseAnnouncementIfExists(alicePage, "Introducing Sections");
 
             // Register a second user, and open it in a second instance of the app
             const bobCredentials = await homeserver.registerUser(`user_${testInfo.testId}_bob`, "password", "Bob");
             const bobPage = await createNewInstance(browser, bobCredentials, {}, labsFlags);
             const bobElementApp = new ElementAppPage(bobPage);
             await bobElementApp.client.bootstrapCrossSigning(bobCredentials);
+            await bobElementApp.closeKeyStorageToast();
 
             // Create the room and send a message
             await createRoom(alicePage, "TestRoom", true);
@@ -49,21 +59,28 @@ test.describe("History sharing", function () {
             await sendMessageInCurrentRoom(alicePage, "A message from Alice");
 
             // Send the invite to Bob
-            await aliceElementApp.inviteUserToCurrentRoom(bobCredentials.userId);
+            await aliceElementApp.inviteUserToCurrentRoom(bobCredentials.userId, { confirmUnknownUser: true });
 
             // Bob accepts the invite
-            await bobPage.getByRole("option", { name: "TestRoom" }).click();
-            await bobPage.getByRole("button", { name: "Accept" }).click();
+            await bobElementApp.acceptInvitedRoomByName("TestRoom");
 
             // Bob should now be able to decrypt the event
             await expect(bobPage.getByText("A message from Alice")).toBeVisible();
 
-            // Exclude message timestamps and RR avatars from the screenshot. Bob sometimes sees Alice's RR on the
+            // Mask message timestamps and exclude RR avatars from the screenshot. Bob sometimes sees Alice's RR on the
             // previous event, which is surprising but not what we're testing here.
-            const mask = [bobPage.locator(".mx_MessageTimestamp"), bobPage.locator(".mx_ReadReceiptGroup_container")];
-            await expect(bobPage.locator(".mx_RoomView_body")).toMatchScreenshot("shared-history-invite-accepted.png", {
-                mask,
-            });
+            const mask = [bobPage.getByTestId("event-tile-slot-timestamp")];
+            await expect(bobPage.locator(".mx_RoomView_timeline")).toMatchScreenshot(
+                "shared-history-invite-accepted.png",
+                {
+                    mask,
+                    css: `
+                    .mx_ReadReceiptGroup_container {
+                        display: none !important;
+                    }
+                `,
+                },
+            );
         },
     );
 
@@ -85,6 +102,7 @@ test.describe("History sharing", function () {
         //   5. Charlie can't see the message.
 
         await aliceElementApp.client.bootstrapCrossSigning(aliceCredentials);
+        await aliceElementApp.closeKeyStorageToast();
         await createRoom(alicePage, "TestRoom", true);
 
         // Register a second user, and open it in a second instance of the app
@@ -92,6 +110,7 @@ test.describe("History sharing", function () {
         const bobPage = await createNewInstance(browser, bobCredentials, {}, labsFlags);
         const bobElementApp = new ElementAppPage(bobPage);
         await bobElementApp.client.bootstrapCrossSigning(bobCredentials);
+        await bobElementApp.closeKeyStorageToast();
 
         // ... and a third
         const charlieCredentials = await homeserver.registerUser(
@@ -102,12 +121,12 @@ test.describe("History sharing", function () {
         const charliePage = await createNewInstance(browser, charlieCredentials, {}, labsFlags);
         const charlieElementApp = new ElementAppPage(charliePage);
         await charlieElementApp.client.bootstrapCrossSigning(charlieCredentials);
+        await charlieElementApp.closeKeyStorageToast();
 
         // Alice invites Bob, and Bob accepts
         const roomId = await aliceElementApp.getCurrentRoomIdFromUrl();
-        await aliceElementApp.inviteUserToCurrentRoom(bobCredentials.userId);
-        await bobPage.getByRole("option", { name: "TestRoom" }).click();
-        await bobPage.getByRole("button", { name: "Accept" }).click();
+        await aliceElementApp.inviteUserToCurrentRoom(bobCredentials.userId, { confirmUnknownUser: true });
+        await bobElementApp.acceptInvitedRoomByName("TestRoom");
 
         // The room now defaults to "invited" history visibility, so we need to set it to "shared" first
         await aliceElementApp.client.sendStateEvent(roomId, "m.room.history_visibility", {
@@ -143,9 +162,8 @@ test.describe("History sharing", function () {
         await sendMessageInCurrentRoom(bobPage, "Message3: 'shared' visibility, but Bob thinks it is still 'joined'");
 
         // Alice now invites Charlie
-        await aliceElementApp.inviteUserToCurrentRoom(charlieCredentials.userId);
-        await charliePage.getByRole("option", { name: "TestRoom" }).click();
-        await charliePage.getByRole("button", { name: "Accept" }).click();
+        await aliceElementApp.inviteUserToCurrentRoom(charlieCredentials.userId, { confirmUnknownUser: true });
+        await charlieElementApp.acceptInvitedRoomByName("TestRoom");
 
         // Message1 should be visible
         // Message2 should be invisible
