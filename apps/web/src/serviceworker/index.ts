@@ -24,6 +24,7 @@ global.addEventListener("install", (event) => {
 
 global.addEventListener("activate", (event) => {
     // We force all clients to be under our control, immediately. This could be old tabs.
+    // @ts-expect-error - service worker types are not available. See 'fetch' event handler.
     event.waitUntil(
         Promise.all([
             // @ts-expect-error - service worker types are not available. See 'fetch' event handler.
