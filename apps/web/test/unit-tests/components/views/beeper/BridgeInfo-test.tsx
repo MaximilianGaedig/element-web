@@ -38,6 +38,33 @@ describe("bridge info (m.bridge + com.beeper.room_type)", () => {
         });
     });
 
+    it("prefers the bridge event that states a room type over a stale legacy one", () => {
+        room.currentState.setStateEvents([
+            mkEvent({
+                event: true,
+                type: "m.bridge",
+                skey: "net.maunium.telegram://telegram/123",
+                room: ROOM_ID,
+                user: "@bot:example.org",
+                content: { protocol: { id: "telegram", displayname: "Telegram" }, channel: { id: "123" } },
+            }),
+            mkEvent({
+                event: true,
+                type: "m.bridge",
+                skey: "example.org/telegram",
+                room: ROOM_ID,
+                user: "@bot:example.org",
+                content: {
+                    "protocol": { id: "telegram", displayname: "Telegram" },
+                    "channel": { id: "123" },
+                    "com.beeper.room_type": "dm",
+                    "com.beeper.room_type.v2": "dm",
+                },
+            }),
+        ]);
+        expect(getBridgeInfo(room)?.roomType).toBe("dm");
+    });
+
     it("parses bridgev2 info and room types", () => {
         expect(getBridgeInfo(room)).toBeUndefined();
         setBridge({
