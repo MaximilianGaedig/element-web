@@ -24,7 +24,7 @@ import { _t } from "../../../languageHandler";
 import { MatrixClientPeg } from "../../../MatrixClientPeg";
 import dis from "../../../dispatcher/dispatcher";
 import { type ActionPayload } from "../../../dispatcher/payloads";
-import Stickerpicker from "./Stickerpicker";
+import BeeperStickerPicker from "../beeper/BeeperStickerPicker";
 import { makeRoomPermalink, type RoomPermalinkCreator } from "../../../utils/permalinks/Permalinks";
 import E2EIcon from "./E2EIcon";
 import SettingsStore from "../../../settings/SettingsStore";
@@ -668,7 +668,7 @@ export class MessageComposer extends React.Component<IProps, IState> {
             this.props.relation?.rel_type === THREAD_RELATION_TYPE.name ? this.props.relation.event_id : null;
 
         controls.push(
-            <Stickerpicker
+            <BeeperStickerPicker
                 room={this.props.room}
                 threadId={threadId}
                 isStickerPickerOpen={this.state.isStickerPickerOpen}

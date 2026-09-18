@@ -458,6 +458,11 @@
         "send_status_remote_network": "the remote network",
         "send_status_retry": "Retry",
         "send_status_retrying": "Retrying…",
+        "sticker_pack_personal": "Personal",
+        "sticker_picker_empty": "No stickers found",
+        "sticker_picker_loading": "Loading stickers…",
+        "sticker_picker_search": "Search stickers",
+        "sticker_picker_title": "Stickers",
         "typing_dm": "typing",
         "typing_many": {
             "one": "%(name)s and %(count)s other are typing",
