@@ -1,0 +1,235 @@
+/*
+Copyright 2026 New Vector Ltd.
+
+SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only OR LicenseRef-Element-Commercial
+Please see LICENSE files in the repository root for full details.
+*/
+
+.mx_MAlbumBody {
+    display: flex;
+    flex-direction: column;
+    gap: var(--cpd-space-2x);
+    max-width: 100%;
+}
+
+/* The grid has a fixed aspect ratio per layout, so thumbnails loading or items filling
+   placeholder slots never change the tile's height. */
+.mx_MAlbumBody_grid {
+    display: grid;
+    gap: 2px;
+    width: min(100%, 400px);
+    border-radius: var(--cpd-space-2x);
+    overflow: hidden;
+
+    &.mx_MAlbumBody_grid_n1 {
+        grid-template-columns: 1fr;
+        aspect-ratio: 4 / 3;
+    }
+
+    &.mx_MAlbumBody_grid_n2 {
+        grid-template-columns: 1fr 1fr;
+        aspect-ratio: 2 / 1;
+    }
+
+    /* one large cell on the left, two small ones stacked on the right */
+    &.mx_MAlbumBody_grid_n3 {
+        grid-template-columns: 2fr 1fr;
+        grid-template-rows: 1fr 1fr;
+        aspect-ratio: 3 / 2;
+
+        > :first-child {
+            grid-row: span 2;
+        }
+    }
+
+    &.mx_MAlbumBody_grid_n4 {
+        grid-template-columns: 1fr 1fr;
+        grid-template-rows: 1fr 1fr;
+        aspect-ratio: 1 / 1;
+    }
+
+    /* two on top, three below */
+    &.mx_MAlbumBody_grid_n5 {
+        grid-template-columns: repeat(6, 1fr);
+        grid-template-rows: 1fr 1fr;
+        aspect-ratio: 3 / 2;
+
+        > * {
+            grid-column: span 2;
+        }
+
+        > :nth-child(-n + 2) {
+            grid-column: span 3;
+        }
+    }
+
+    &.mx_MAlbumBody_grid_n6 {
+        grid-template-columns: repeat(3, 1fr);
+        grid-template-rows: 1fr 1fr;
+        aspect-ratio: 3 / 2;
+    }
+
+    .mx_HiddenMediaPlaceholder {
+        grid-column: 1 / -1;
+        grid-row: 1 / -1;
+    }
+}
+
+.mx_MAlbumBody_cell {
+    position: relative;
+    min-width: 0;
+    min-height: 0;
+    padding: 0;
+    border: none;
+    margin: 0;
+    overflow: hidden;
+    cursor: pointer;
+    background-color: var(--cpd-color-bg-subtle-secondary);
+
+    img,
+    video {
+        display: block;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        /* the cell handles clicks and right-clicks for the item */
+        pointer-events: none;
+    }
+
+    &:focus-visible {
+        outline: 2px solid var(--cpd-color-border-focused);
+        outline-offset: -2px;
+    }
+}
+
+.mx_MAlbumBody_cell_playing {
+    cursor: auto;
+    background-color: black;
+
+    video {
+        object-fit: contain;
+        pointer-events: auto;
+    }
+}
+
+.mx_MAlbumBody_cell_placeholder {
+    cursor: default;
+    animation: mx_MAlbumBody_pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes mx_MAlbumBody_pulse {
+    50% {
+        opacity: 0.6;
+    }
+}
+
+.mx_MAlbumBody_play {
+    position: absolute;
+    inset: 50% auto auto 50%;
+    transform: translate(-50%, -50%);
+    display: flex;
+    padding: var(--cpd-space-2x);
+    border-radius: 50%;
+    color: white;
+    background-color: rgb(0 0 0 / 55%);
+
+    svg {
+        width: 24px;
+        height: 24px;
+    }
+}
+
+.mx_MAlbumBody_overflow {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font: var(--cpd-font-heading-md-semibold);
+    color: white;
+    background-color: rgb(0 0 0 / 50%);
+}
+
+.mx_MAlbumBody_caption .mx_EventTile_body {
+    white-space: pre-wrap;
+}
+
+.mx_AlbumLightbox {
+    position: relative;
+    width: 100%;
+    height: 100%;
+}
+
+.mx_AlbumLightbox_loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: white;
+}
+
+.mx_AlbumLightbox_video {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+
+    video {
+        max-width: 90%;
+        max-height: 90%;
+    }
+}
+
+.mx_AlbumLightbox_close {
+    position: absolute;
+    top: var(--cpd-space-4x);
+    right: var(--cpd-space-4x);
+    color: white;
+
+    svg {
+        width: 28px;
+        height: 28px;
+    }
+}
+
+.mx_AlbumLightbox_nav {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 1;
+    display: flex;
+    padding: var(--cpd-space-2x);
+    border-radius: 50%;
+    color: white;
+    background-color: rgb(0 0 0 / 40%);
+
+    svg {
+        width: 32px;
+        height: 32px;
+    }
+
+    &:hover {
+        background-color: rgb(0 0 0 / 65%);
+    }
+}
+
+.mx_AlbumLightbox_prev {
+    left: var(--cpd-space-4x);
+}
+
+.mx_AlbumLightbox_next {
+    right: var(--cpd-space-4x);
+}
+
+.mx_AlbumLightbox_position {
+    position: absolute;
+    bottom: var(--cpd-space-4x);
+    left: 50%;
+    transform: translateX(-50%);
+    padding: var(--cpd-space-1x) var(--cpd-space-3x);
+    border-radius: var(--cpd-space-4x);
+    color: white;
+    background-color: rgb(0 0 0 / 50%);
+    font: var(--cpd-font-body-sm-regular);
+}

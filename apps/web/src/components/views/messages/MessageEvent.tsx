@@ -34,6 +34,8 @@ import MLocationBody from "./MLocationBody";
 import MjolnirBody from "./MjolnirBody";
 import MBeaconBody from "./MBeaconBody";
 import { type GetRelationsForEvent, type IEventTileOps } from "../rooms/EventTile";
+import { MediaAlbumContext } from "../../../contexts/MediaAlbumContext";
+import MAlbumBody from "./MAlbumBody";
 import {
     DecryptionFailureBodyFactory,
     FileBodyFactory,
@@ -81,6 +83,9 @@ const baseEvTypes = new Map<string, React.ComponentType<IBodyProps>>([
 ]);
 
 export default class MessageEvent extends React.Component<IProps> implements IMediaBody, IOperableEventTile {
+    public static contextType = MediaAlbumContext;
+    declare public context: React.ContextType<typeof MediaAlbumContext>;
+
     private body = createRef<React.Component | IOperableEventTile>();
     private mediaHelper?: MediaEventHelper;
     private bodyTypes = new Map<string, React.ComponentType<IBodyProps>>(baseBodyTypes.entries());
@@ -315,6 +320,18 @@ export default class MessageEvent extends React.Component<IProps> implements IMe
             inhibitInteraction: this.props.inhibitInteraction,
             id: this.props.id,
         };
+        const album = this.context;
+        if (
+            album &&
+            album.anchor === this.props.mxEvent &&
+            album.items.length > 1 &&
+            !this.props.mxEvent.isRedacted() &&
+            !this.props.editState
+        ) {
+            // This tile stands in for a whole media album (see MediaAlbumGrouper)
+            return <MAlbumBody album={album} bodyProps={bodyProps} ItemBody={MessageEvent} />;
+        }
+
         if (hasCaption) {
             return <CaptionBody {...bodyProps} WrappedBodyType={BodyType} />;
         }

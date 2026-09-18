@@ -2693,6 +2693,8 @@
             "unable_to_load_msisdns": "Unable to load phone numbers",
             "username": "Username"
         },
+        "group_consecutive_images": "Group consecutive images",
+        "group_consecutive_images_description": "Show images and videos sent in quick succession by the same person as one album",
         "inline_url_previews_default": "Enable previews",
         "inline_url_previews_encrypted": "Enable previews in encrypted rooms",
         "insert_trailing_colon_mentions": "Insert a trailing colon after user mentions at the start of a message",
@@ -3588,6 +3590,17 @@
         "mab": {
             "copy_link_thread": "Copy link to thread",
             "view_in_room": "View in room"
+        },
+        "media_album": {
+            "item_label": "Item %(index)s of %(count)s: %(name)s",
+            "label": {
+                "one": "Album with %(count)s item",
+                "other": "Album with %(count)s items"
+            },
+            "overflow": "+%(count)s",
+            "position": "%(index)s / %(count)s",
+            "previous": "Previous",
+            "show_media": "Show media"
         },
         "mjolnir": {
             "changed_rule_glob": "%(senderName)s updated a ban rule that was matching %(oldGlob)s to matching %(newGlob)s for %(reason)s",
