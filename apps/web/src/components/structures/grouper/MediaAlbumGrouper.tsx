@@ -16,7 +16,7 @@ import SettingsStore from "../../../settings/SettingsStore";
 import { TimelineRenderingType } from "../../../contexts/RoomContext";
 import { MediaAlbumContext, type MediaAlbumContextValue } from "../../../contexts/MediaAlbumContext";
 import { AggregatedRelations } from "../../../utils/AggregatedRelations";
-import { canJoinGroup, getGroupKey, type GroupKey } from "../../../utils/MediaAlbum";
+import { canJoinGroup, getGroupKey, type GroupKey, MAX_ALBUM_ITEMS } from "../../../utils/MediaAlbum";
 import { type EventTileProps, type GetRelationsForEvent, type IReadReceiptProps } from "../../views/rooms/EventTile";
 
 /**
@@ -82,10 +82,12 @@ interface PendingEvent {
 /**
  * Groups media events into an album tile.
  *
- * Membership:
- *  - bridged albums: consecutive events from the same sender with the same `fi.mau.album.id`;
- *  - native media (setting `groupConsecutiveImages`): consecutive m.image/m.video from the same sender,
- *    each within 60 s of the previous one, with nothing visible in between.
+ * Membership (mirrors Telegram, where an album is the messages sharing one `grouped_id`):
+ *  - bridged albums: consecutive events from the same sender with the same `fi.mau.album.id`, at most
+ *    {@link MAX_ALBUM_ITEMS} per album (a longer run continues in a new album);
+ *  - native media (setting `groupConsecutiveImages`, off by default because Telegram never merges separate
+ *    messages): consecutive m.image/m.video from the same sender, each within 60 s of the previous one, with
+ *    nothing visible in between.
  *
  * Hidden events never break a group. A visible event from a different sender (or a date/late-event separator)
  * always does. For bridged albums, a visible non-media event from the *same* sender between items does not
@@ -147,10 +149,14 @@ export class MediaAlbumGrouper extends BaseGrouper {
         return getGroupKey(ev, this.native) === null;
     }
 
+    private canJoin(ev: MatrixEvent): boolean {
+        return this.members.length < MAX_ALBUM_ITEMS && canJoinGroup(this.key, this.lastMember, ev, this.native);
+    }
+
     public shouldGroup({ event, shouldShow }: WrappedEvent): boolean {
         if (!shouldShow) return true; // absorb hidden events so they don't split the album
         if (this.panel.wantsSeparator(this.lastShown, event) !== SeparatorKind.None) return false;
-        if (canJoinGroup(this.key, this.lastMember, event, this.native)) return true;
+        if (this.canJoin(event)) return true;
         return this.isPassThrough(event);
     }
 
@@ -159,7 +165,7 @@ export class MediaAlbumGrouper extends BaseGrouper {
         this.events.push(wrappedEvent);
         const marker = this.panel.readMarkerForEvent(event.getId()!, event === this.lastShownEvent);
 
-        if (shouldShow && canJoinGroup(this.key, this.lastMember, event, this.native)) {
+        if (shouldShow && this.canJoin(event)) {
             this.members.push(wrappedEvent);
             // redacted events followed by further items were album items themselves: drop them
             for (let i = this.pending.length - 1; i >= 0; i--) {

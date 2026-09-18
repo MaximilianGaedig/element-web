@@ -31,8 +31,14 @@ function str(value: unknown): string | undefined {
     return typeof value === "string" && value ? value : undefined;
 }
 
-/** The room's bridge info, or undefined for rooms that aren't bridged. */
+/**
+ * The room's bridge info, or undefined for rooms that aren't bridged.
+ *
+ * A room can carry several bridge events, e.g. a leftover one from an older bridge version without
+ * room-type info next to the current one. Prefer events that state a room type, then the newest.
+ */
 export function getBridgeInfo(room: Room): BridgeInfo | undefined {
+    let best: { info: BridgeInfo; typed: boolean; ts: number } | undefined;
     for (const type of BRIDGE_EVENT_TYPES) {
         for (const ev of room.currentState.getStateEvents(type)) {
             const content = ev.getContent();
@@ -40,20 +46,28 @@ export function getBridgeInfo(room: Room): BridgeInfo | undefined {
             const protocolId = str(protocol?.id);
             if (!protocolId) continue;
             const v2 = content["com.beeper.room_type.v2"];
+            const v1 = content["com.beeper.room_type"];
             let roomType: BridgeRoomType = "group";
             if (v2 === "dm" || v2 === "group_dm" || v2 === "space") roomType = v2;
-            else if (content["com.beeper.room_type"] === "dm") roomType = "dm";
+            else if (v1 === "dm") roomType = "dm";
+            const typed = v2 !== undefined || v1 !== undefined;
+            const ts = ev.getTs();
+            if (best && ((best.typed && !typed) || (best.typed === typed && best.ts >= ts))) continue;
             const avatar = str(protocol.avatar_url);
-            return {
-                protocolId,
-                networkName: str(protocol.displayname) ?? protocolId,
-                avatarUrl: avatar?.startsWith("mxc://") ? avatar : undefined,
-                roomType,
-                parentName: str(content.network?.displayname),
+            best = {
+                typed,
+                ts,
+                info: {
+                    protocolId,
+                    networkName: str(protocol.displayname) ?? protocolId,
+                    avatarUrl: avatar?.startsWith("mxc://") ? avatar : undefined,
+                    roomType,
+                    parentName: str(content.network?.displayname),
+                },
             };
         }
     }
-    return undefined;
+    return best?.info;
 }
 
 /** "Telegram · Direct message", "Discord · My Server · Group chat", ... */

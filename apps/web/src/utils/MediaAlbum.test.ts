@@ -12,17 +12,17 @@ import { type MatrixEvent } from "matrix-js-sdk/src/matrix";
 
 import { mkEvent } from "test-utils";
 import {
-    buildAlbumSlots,
     canJoinGroup,
+    getAlbumGridLayout,
     getAlbumInfo,
-    getAlbumLayout,
     getCaptionEvents,
-    getDeclaredCount,
     getGroupKey,
+    getMediaSize,
     NATIVE_GROUP_WINDOW_MS,
-    PLACEHOLDER_GRACE_MS,
     sortAlbumItems,
 } from "./MediaAlbum";
+import { layoutAlbum } from "./GroupedMediaLayout";
+import { SETTINGS } from "../settings/Settings";
 
 const ROOM = "!room:example.org";
 const ALICE = "@alice:example.org";
@@ -37,6 +37,7 @@ function mkMedia(
         album?: Record<string, unknown>;
         body?: string;
         filename?: string;
+        info?: Record<string, unknown>;
     } = {},
 ): MatrixEvent {
     return mkEvent({
@@ -51,6 +52,7 @@ function mkMedia(
             body: opts.body ?? "photo.jpg",
             ...(opts.filename ? { filename: opts.filename } : {}),
             url: `mxc://example.org/${id.slice(1)}`,
+            ...(opts.info ? { info: opts.info } : {}),
             ...(opts.album ? { "fi.mau.album": opts.album } : {}),
         },
     });
@@ -116,42 +118,43 @@ describe("MediaAlbum utils", () => {
         expect(getCaptionEvents([plain, legacy, captioned, dup]).map((e) => e.getId())).toEqual(["$3"]);
     });
 
-    describe("buildAlbumSlots", () => {
-        const now = 10_000;
+    it("defaults the non-Telegram 'group consecutive images' heuristic to off", () => {
+        expect(SETTINGS["groupConsecutiveImages"].default).toBe(false);
+    });
 
-        it("reserves placeholder slots for declared items and places items at their index", () => {
-            const items = [
-                mkMedia("$0", { album: { id: "x", index: 0, count: 4 }, ts: now }),
-                mkMedia("$2", { album: { id: "x", index: 2, count: 4 }, ts: now }),
-            ];
-            expect(getDeclaredCount(items)).toBe(4);
-            const slots = buildAlbumSlots(items, 4, now);
-            expect(slots.map((s) => ("event" in s ? s.event.getId() : "ph"))).toEqual(["$0", "ph", "$2", "ph"]);
-        });
+    it("sorts Telegram-style items (index = msgID offset, no count) by index", () => {
+        const items = [7, 0, 3].map((index) => mkMedia(`$${index}`, { album: { id: "tg:-123", index } }));
+        expect(sortAlbumItems(items).map((e) => e.getId())).toEqual(["$0", "$3", "$7"]);
+    });
 
-        it("drops placeholders once the grace period is over", () => {
-            const items = [mkMedia("$0", { ts: 0 }), mkMedia("$1", { ts: 0 })];
-            expect(buildAlbumSlots(items, 4, PLACEHOLDER_GRACE_MS + 1)).toHaveLength(2);
-        });
-
-        it("falls back to sequential placement for duplicate indices", () => {
-            const items = [
-                mkMedia("$a", { album: { id: "x", index: 1, count: 3 }, ts: now }),
-                mkMedia("$b", { album: { id: "x", index: 1, count: 3 }, ts: now }),
-            ];
-            const slots = buildAlbumSlots(items, 3, now);
-            expect(slots.map((s) => ("event" in s ? s.event.getId() : "ph"))).toEqual(["$a", "$b", "ph"]);
+    describe("getMediaSize", () => {
+        it("uses info.w/h, then the thumbnail's, then a square", () => {
+            expect(getMediaSize(mkMedia("$1", { info: { w: 1600, h: 900 } }))).toEqual({ w: 1600, h: 900 });
+            expect(getMediaSize(mkMedia("$2", { info: { thumbnail_info: { w: 320, h: 240 } } }))).toEqual({
+                w: 320,
+                h: 240,
+            });
+            expect(getMediaSize(mkMedia("$3", { info: { w: 0, h: 10 } }))).toEqual({ w: 1, h: 1 });
+            expect(getMediaSize(mkMedia("$4"))).toEqual({ w: 1, h: 1 });
         });
     });
 
-    it.each([
-        [2, { visible: 2, overflow: 0, variant: "n2" }],
-        [3, { visible: 3, overflow: 0, variant: "n3" }],
-        [4, { visible: 4, overflow: 0, variant: "n4" }],
-        [5, { visible: 5, overflow: 0, variant: "n5" }],
-        [6, { visible: 6, overflow: 0, variant: "n6" }],
-        [9, { visible: 6, overflow: 3, variant: "n6" }],
-    ])("lays out %i items", (n, expected) => {
-        expect(getAlbumLayout(n)).toEqual(expected);
+    describe("getAlbumGridLayout", () => {
+        it("lays several items out with Telegram's layouter", () => {
+            const items = [mkMedia("$1", { info: { w: 900, h: 1600 } }), mkMedia("$2", { info: { w: 1000, h: 1000 } })];
+            expect(getAlbumGridLayout(items)).toEqual(
+                layoutAlbum([
+                    { w: 900, h: 1600 },
+                    { w: 1000, h: 1000 },
+                ]),
+            );
+        });
+
+        it("fits a lone visual item into a 420px box", () => {
+            const tall = getAlbumGridLayout([mkMedia("$1", { info: { w: 500, h: 1000 } })]);
+            expect([tall.width, tall.height]).toEqual([210, 420]);
+            const wide = getAlbumGridLayout([mkMedia("$2", { info: { w: 2000, h: 1000 } })]);
+            expect([wide.width, wide.height]).toEqual([420, 210]);
+        });
     });
 });

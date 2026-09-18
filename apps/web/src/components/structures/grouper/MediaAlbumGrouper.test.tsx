@@ -29,6 +29,7 @@ import { MatrixClientPeg } from "../../../MatrixClientPeg";
 import { ScopedRoomContextProvider } from "../../../contexts/ScopedRoomContext";
 import { SDKContextClass } from "../../../contexts/SDKContextClass";
 import Modal from "../../../Modal";
+import { layoutAlbum } from "../../../utils/GroupedMediaLayout";
 import { MediaPreviewValue } from "../../../@types/media_preview";
 
 vi.mock("../../../utils/beacon", () => ({ useBeacon: vi.fn() }));
@@ -68,7 +69,7 @@ describe("MediaAlbumGrouper", () => {
 
     beforeEach(() => {
         vi.clearAllMocks();
-        nativeGrouping = true;
+        nativeGrouping = false;
         now = Date.now();
         vi.spyOn(SettingsStore, "getValue").mockImplementation((name: string): any => {
             if (name === "groupConsecutiveImages") return nativeGrouping;
@@ -162,26 +163,46 @@ describe("MediaAlbumGrouper", () => {
         [...grid.querySelectorAll("[data-testid='album-cell']")].map((c) => c.getAttribute("title"));
 
     describe("layouts", () => {
-        it.each([
-            [2, "n2"],
-            [3, "n3"],
-            [4, "n4"],
-            [6, "n6"],
-        ])("renders %i items as one tile with the %s grid", (n, variant) => {
+        it.each([2, 3, 4, 5, 7, 10])("renders %i items as one tile with Telegram's grouped layout", (n) => {
             const { container } = renderPanel(album(n));
             expect(tiles(container)).toHaveLength(1);
             const [grid] = grids(container);
-            expect(grid).toHaveClass(`mx_MAlbumBody_grid_${variant}`);
-            expect(within(grid as HTMLElement).getAllByTestId("album-cell")).toHaveLength(n);
-            expect(screen.queryByTestId("album-overflow")).toBeNull();
+            const cells = within(grid as HTMLElement).getAllByTestId("album-cell");
+            expect(cells).toHaveLength(n);
+
+            const layout = layoutAlbum(Array.from({ length: n }, () => ({ w: 100, h: 100 })));
+            expect((grid as HTMLElement).style.width).toBe(`${layout.width}px`);
+            cells.forEach((cell, i) => {
+                const g = layout.items[i].geometry;
+                expect(parseFloat(cell.style.left)).toBeCloseTo((g.x / layout.width) * 100, 3);
+                expect(parseFloat(cell.style.top)).toBeCloseTo((g.y / layout.height) * 100, 3);
+                expect(parseFloat(cell.style.width)).toBeCloseTo((g.width / layout.width) * 100, 3);
+                expect(parseFloat(cell.style.height)).toBeCloseTo((g.height / layout.height) * 100, 3);
+            });
         });
 
-        it("caps the grid at 6 cells with a +N overlay", () => {
-            const { container } = renderPanel(album(8));
-            const [grid] = grids(container);
-            expect(grid).toHaveClass("mx_MAlbumBody_grid_n6");
-            expect(within(grid as HTMLElement).getAllByTestId("album-cell")).toHaveLength(6);
-            expect(screen.getByTestId("album-overflow")).toHaveTextContent("+2");
+        it("uses each item's own aspect ratio", () => {
+            const e0 = media({ album: { id: "A", index: 0 } });
+            const e1 = media({ album: { id: "A", index: 1 } });
+            e0.getContent().info.w = 900;
+            e0.getContent().info.h = 1600;
+            const { container } = renderPanel([e0, e1]);
+            const layout = layoutAlbum([
+                { w: 900, h: 1600 },
+                { w: 100, h: 100 },
+            ]);
+            expect((grids(container)[0] as HTMLElement).style.aspectRatio).toBe(`${layout.width} / ${layout.height}`);
+        });
+
+        it("splits a run of more than 10 items into albums of at most 10, without a +N overlay", () => {
+            const { container } = renderPanel(album(12, "A", ALICE, undefined));
+            const g = grids(container);
+            expect(g).toHaveLength(2);
+            expect(cellTitles(g[0])).toHaveLength(10);
+            // the remaining two form an album of their own
+            expect(cellTitles(g[1])).toHaveLength(2);
+            expect(tiles(container)).toHaveLength(2);
+            expect(screen.queryByTestId("album-overflow")).toBeNull();
         });
 
         it("renders a group of one exactly like an ungrouped image", () => {
@@ -231,21 +252,28 @@ describe("MediaAlbumGrouper", () => {
             expect(cellTitles(grids(container)[0])).toEqual(["zero.jpg", "one.jpg", "two.jpg"]);
         });
 
-        it("lets late items join the existing tile in place, filling reserved slots", () => {
-            const [a0, a1, a2] = album(3, "A", ALICE, 3);
+        it("lets late items join the existing tile in place and re-lays it out", () => {
+            const [a0, a1, a2] = album(3, "A", ALICE, undefined);
             const { container, rerender } = renderPanel([a0, a1]);
             const tileBefore = tiles(container)[0];
             const gridBefore = grids(container)[0];
-            expect(gridBefore).toHaveClass("mx_MAlbumBody_grid_n3");
-            expect(screen.getAllByTestId("album-placeholder")).toHaveLength(1);
+            expect(cellTitles(gridBefore)).toHaveLength(2);
+            expect(screen.queryAllByTestId("album-placeholder")).toHaveLength(0);
 
             rerender(panel([a0, a1, a2]));
             expect(tiles(container)).toHaveLength(1);
             expect(tiles(container)[0]).toBe(tileBefore);
             expect(grids(container)[0]).toBe(gridBefore);
-            expect(gridBefore).toHaveClass("mx_MAlbumBody_grid_n3");
-            expect(screen.queryAllByTestId("album-placeholder")).toHaveLength(0);
             expect(cellTitles(gridBefore)).toHaveLength(3);
+        });
+
+        it("groups Telegram-bridged albums (index is a msgID offset, no count)", () => {
+            const e0 = media({ album: { id: "tg:-42", index: 0 }, body: "zero.jpg" });
+            const e2 = media({ album: { id: "tg:-42", index: 2 }, body: "two.jpg" });
+            const e5 = media({ album: { id: "tg:-42", index: 5 }, body: "five.jpg" });
+            const { container } = renderPanel([e2, e5, e0]);
+            expect(tiles(container)).toHaveLength(1);
+            expect(cellTitles(grids(container)[0])).toEqual(["zero.jpg", "two.jpg", "five.jpg"]);
         });
 
         it("keeps the tile when the album grows from one item to two", () => {
@@ -350,20 +378,27 @@ describe("MediaAlbumGrouper", () => {
     });
 
     describe("native grouping setting", () => {
+        it("does not group un-marked media by default, like Telegram", () => {
+            const { container } = renderPanel([media({ ts: now }), media({ ts: now + 1_000 })]);
+            expect(grids(container)).toHaveLength(0);
+            expect(tiles(container)).toHaveLength(2);
+        });
+
         it("groups consecutive images sent within 60 s when enabled", () => {
+            nativeGrouping = true;
             const { container } = renderPanel([media({ ts: now }), media({ ts: now + 30_000, msgtype: "m.video" })]);
             expect(grids(container)).toHaveLength(1);
             expect(tiles(container)).toHaveLength(1);
         });
 
         it("does not group when disabled", () => {
-            nativeGrouping = false;
             const { container } = renderPanel([media({ ts: now }), media({ ts: now + 30_000 })]);
             expect(grids(container)).toHaveLength(0);
             expect(tiles(container)).toHaveLength(2);
         });
 
         it("does not group across a gap of more than 60 s or across text", () => {
+            nativeGrouping = true;
             const { container } = renderPanel([
                 media({ ts: now }),
                 media({ ts: now + 61_000 }),
