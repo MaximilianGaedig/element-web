@@ -2,15 +2,10 @@
 
 set -ex
 
-# Automatically link to develop if we're building develop, but only if the caller
-# hasn't asked us to build something else
-BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "unknown")
-if [[ $USE_CUSTOM_SDKS == false ]] && [[ $BRANCH == 'develop' ]]
-then
-    echo "using develop dependencies for react-sdk and js-sdk"
-    USE_CUSTOM_SDKS=true
-    JS_SDK_BRANCH='develop'
-fi
+# Fork: always build with the js-sdk pinned in pnpm-lock.yaml. Upstream links the
+# latest js-sdk develop when building its own develop branch, but this fork's
+# develop lags upstream, so a moving js-sdk breaks the build (e.g. removed
+# src/oidc/authorize). Pass USE_CUSTOM_SDKS=true explicitly to opt in.
 
 if [[ $USE_CUSTOM_SDKS == false ]]
 then
