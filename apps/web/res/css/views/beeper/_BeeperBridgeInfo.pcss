@@ -17,7 +17,8 @@ Please see LICENSE files in the repository root for full details.
 
     > .mx_BridgeNetworkIcon {
         position: absolute;
-        inset-inline-end: -3px;
+        /* Bottom-left: Element's presence dot occupies the bottom-right corner. */
+        inset-inline-start: -3px;
         inset-block-end: -3px;
         border-radius: 4px;
         box-shadow: 0 0 0 2px var(--cpd-color-bg-canvas-default);
