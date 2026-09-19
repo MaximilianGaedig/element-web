@@ -463,10 +463,21 @@
             "empty_music": "No music shared yet",
             "empty_voice": "No voice messages yet",
             "files": "Files",
+            "filter": "Filter",
             "links": "Links",
             "media": "Media",
             "music": "Music",
+            "photo_count": {
+                "one": "%(count)s photo",
+                "other": "%(count)s photos"
+            },
+            "photos": "Photos",
             "title": "Shared media",
+            "video_count": {
+                "one": "%(count)s video",
+                "other": "%(count)s videos"
+            },
+            "videos": "Videos",
             "voice": "Voice"
         },
         "sticker_pack_personal": "Personal",

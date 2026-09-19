@@ -104,3 +104,34 @@ describe("SharedMediaLoader", () => {
         expect(listener).toHaveBeenCalledTimes(2);
     });
 });
+
+describe("SharedMediaLoader without a pagination token", () => {
+    it("pages from the latest event instead of reporting an empty room", async () => {
+        const img = new MatrixEvent({
+            type: "m.room.message",
+            event_id: "$old",
+            room_id: "!r:x",
+            sender: "@a:x",
+            origin_server_ts: 5,
+            content: { msgtype: "m.image", body: "old", url: "mxc://x/o" },
+        });
+        const createMessagesRequest = vi.fn().mockResolvedValueOnce({ chunk: [img.event], end: "t1" });
+        const client = {
+            getSafeUserId: () => "@me:x",
+            isRoomEncrypted: () => false,
+            createMessagesRequest,
+            getEventMapper: () => (raw: any) => new MatrixEvent(raw),
+            decryptEventIfNeeded: vi.fn(),
+        } as unknown as MatrixClient;
+        const room = {
+            roomId: "!r:x",
+            getLiveTimeline: () => ({ getEvents: () => [], getPaginationToken: () => null }),
+        } as unknown as Room;
+        const loader = new SharedMediaLoader(client, room);
+        expect(loader.state("media").done).toBe(false);
+        await loader.loadMore("media");
+        expect(createMessagesRequest.mock.calls[0][1]).toBeNull();
+        expect(loader.state("media").items.map((e) => e.getId())).toEqual(["$old"]);
+        expect(loader.state("media").done).toBe(false);
+    });
+});

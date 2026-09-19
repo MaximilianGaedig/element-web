@@ -95,7 +95,7 @@ export class SharedMediaLoader {
     private readonly seen = new Set<string>();
     private readonly items = new Map<SharedMediaTab, MatrixEvent[]>(SHARED_MEDIA_TABS.map((t) => [t, []]));
     private readonly listeners = new Set<Listener>();
-    private readonly tokens = new Map<"url" | "all", string | null | undefined>();
+    private readonly tokens = new Map<"url" | "all", string | undefined>();
     private readonly doneFor = new Set<"url" | "all">();
     private loadingFor: "url" | "all" | undefined;
     private destroyed = false;
@@ -107,13 +107,13 @@ export class SharedMediaLoader {
         const timeline = room.getLiveTimeline();
         const events = timeline.getEvents();
         for (let i = events.length - 1; i >= 0; i--) this.add(events[i], false);
-        const back = timeline.getPaginationToken(Direction.Backward);
+        // The live timeline's backward token, if the client has one. With sliding sync it often has none
+        // yet; that doesn't mean the room has no history, so paging then starts from the latest event
+        // (/messages without `from`) and the seen-set drops the overlap. A source is only done once the
+        // server returns no further token.
+        const back = timeline.getPaginationToken(Direction.Backward) ?? undefined;
         this.tokens.set("url", back);
         this.tokens.set("all", back);
-        if (back === null) {
-            this.doneFor.add("url");
-            this.doneFor.add("all");
-        }
     }
 
     public subscribe(listener: Listener): () => void {
@@ -201,7 +201,7 @@ export class SharedMediaLoader {
         const events = res.chunk.map((raw: IRoomEvent) => mapper(raw));
         await Promise.all(events.filter((ev) => ev.isEncrypted()).map((ev) => this.client.decryptEventIfNeeded(ev)));
         for (const ev of events) this.add(ev, false);
-        this.tokens.set(source, res.end ?? null);
+        this.tokens.set(source, res.end ?? undefined);
         if (!res.end || res.chunk.length === 0) this.doneFor.add(source);
     }
 

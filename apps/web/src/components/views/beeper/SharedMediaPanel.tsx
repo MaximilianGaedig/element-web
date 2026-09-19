@@ -12,6 +12,14 @@ import { MatrixEventEvent, type MatrixEvent, type Room, RoomEvent } from "matrix
 
 import { _t } from "../../../languageHandler";
 import BaseCard from "../right_panel/BaseCard";
+import AccessibleButton from "../elements/AccessibleButton";
+import IconizedContextMenu, {
+    IconizedContextMenuCheckbox,
+    IconizedContextMenuOptionList,
+} from "../context_menus/IconizedContextMenu";
+import { useContextMenu } from "../../structures/ContextMenu";
+import UIStore from "../../../stores/UIStore";
+import OverflowVerticalIcon from "@vector-im/compound-design-tokens/assets/web/icons/overflow-vertical";
 import Spinner from "../elements/Spinner";
 import Modal from "../../../Modal";
 import AlbumLightbox from "../elements/AlbumLightbox";
@@ -48,6 +56,77 @@ const EMPTY_LABELS: Record<SharedMediaTab, () => string> = {
     music: () => _t("beeper|shared_media|empty_music"),
     voice: () => _t("beeper|shared_media|empty_voice"),
 };
+
+/** tweb sharedMediaFilters.ts: photos and/or videos, never neither. */
+interface MediaFilter {
+    photos: boolean;
+    videos: boolean;
+}
+
+function toggleMediaFilter(filter: MediaFilter, key: keyof MediaFilter): MediaFilter {
+    const next = { ...filter, [key]: !filter[key] };
+    return next.photos || next.videos ? next : filter;
+}
+
+function matchesMediaFilter(event: MatrixEvent, filter: MediaFilter): boolean {
+    return event.getContent().msgtype === "m.video" ? filter.videos : filter.photos;
+}
+
+/** tweb sharedMedia.tsx: the tab's "⋮" menu with Photos / Videos checkboxes. */
+function MediaFilterMenu({
+    filter,
+    onChange,
+}: {
+    filter: MediaFilter;
+    onChange: (f: MediaFilter) => void;
+}): JSX.Element {
+    const [menuOpen, button, openMenu, closeMenu] = useContextMenu<HTMLDivElement>();
+    const rect = button.current?.getBoundingClientRect();
+    return (
+        <>
+            <AccessibleButton
+                ref={button}
+                className="mx_SharedMedia_filterButton"
+                onClick={openMenu}
+                aria-label={_t("beeper|shared_media|filter")}
+                aria-expanded={menuOpen}
+            >
+                <OverflowVerticalIcon />
+            </AccessibleButton>
+            {menuOpen && rect && (
+                <IconizedContextMenu
+                    onFinished={closeMenu}
+                    top={rect.bottom + 4}
+                    right={UIStore.instance.windowWidth - rect.right}
+                    compact
+                >
+                    <IconizedContextMenuOptionList>
+                        <IconizedContextMenuCheckbox
+                            label={_t("beeper|shared_media|photos")}
+                            active={filter.photos}
+                            onClick={() => onChange(toggleMediaFilter(filter, "photos"))}
+                        />
+                        <IconizedContextMenuCheckbox
+                            label={_t("beeper|shared_media|videos")}
+                            active={filter.videos}
+                            onClick={() => onChange(toggleMediaFilter(filter, "videos"))}
+                        />
+                    </IconizedContextMenuOptionList>
+                </IconizedContextMenu>
+            )}
+        </>
+    );
+}
+
+/** tweb updateMediaSubtitle: "12 photos, 3 videos" for the enabled kinds that have any. */
+function mediaSubtitle(items: MatrixEvent[], filter: MediaFilter): string {
+    const videos = items.filter((e) => e.getContent().msgtype === "m.video").length;
+    const photos = items.length - videos;
+    const parts: string[] = [];
+    if (filter.photos && photos) parts.push(_t("beeper|shared_media|photo_count", { count: photos }));
+    if (filter.videos && videos) parts.push(_t("beeper|shared_media|video_count", { count: videos }));
+    return parts.join(", ");
+}
 
 /** Grid thumbnails are requested at this size (3 columns of the right panel), cropped square server-side. */
 const THUMB_SIZE = 160;
@@ -111,7 +190,10 @@ function Tabs({ active, onChange }: { active: SharedMediaTab; onChange: (tab: Sh
     const [bg, setBg] = useState<{ left: number; width: number } | null>(null);
     useLayoutEffect(() => {
         const el = refs.current.get(active);
-        if (el) setBg({ left: el.offsetLeft, width: el.offsetWidth });
+        if (!el) return;
+        setBg({ left: el.offsetLeft, width: el.offsetWidth });
+        // tweb .menu-horizontal-scrollable: the strip scrolls sideways and keeps the active tab in view.
+        el.scrollIntoView?.({ inline: "center", block: "nearest", behavior: "smooth" });
     }, [active]);
     return (
         <div className="mx_SharedMedia_tabs" role="tablist">
@@ -249,8 +331,21 @@ function BodyRow({ event }: { event: MatrixEvent }): JSX.Element {
     );
 }
 
-function TabContent({ loader, tab }: { loader: SharedMediaLoader; tab: SharedMediaTab }): JSX.Element {
-    const { items, loading, done } = useTabState(loader, tab);
+function TabContent({
+    loader,
+    tab,
+    filter,
+}: {
+    loader: SharedMediaLoader;
+    tab: SharedMediaTab;
+    filter: MediaFilter;
+}): JSX.Element {
+    const state = useTabState(loader, tab);
+    const { loading, done } = state;
+    const items = useMemo(
+        () => (tab === "media" ? state.items.filter((e) => matchesMediaFilter(e, filter)) : state.items),
+        [state.items, tab, filter],
+    );
     const sentinel = useRef<HTMLDivElement>(null);
     useEffect(() => {
         const el = sentinel.current;
@@ -310,12 +405,19 @@ interface Props {
 export default function SharedMediaPanel({ room, onClose }: Props): JSX.Element {
     const loader = useLoader(room);
     const [tab, setTab] = useState<SharedMediaTab>("media");
+    const [filter, setFilter] = useState<MediaFilter>({ photos: true, videos: true });
+    const mediaState = useTabState(loader, "media");
+    const subtitle = tab === "media" ? mediaSubtitle(mediaState.items, filter) : "";
     const roomContext = useContext(RoomContext);
     return (
         <ScopedRoomContextProvider {...roomContext} timelineRenderingType={TimelineRenderingType.File}>
             <BaseCard className="mx_SharedMedia" onClose={onClose} header={_t("beeper|shared_media|title")}>
-                <Tabs active={tab} onChange={setTab} />
-                <TabContent key={tab} loader={loader} tab={tab} />
+                <div className="mx_SharedMedia_tabsRow">
+                    <Tabs active={tab} onChange={setTab} />
+                    {tab === "media" && <MediaFilterMenu filter={filter} onChange={setFilter} />}
+                </div>
+                {subtitle && <div className="mx_SharedMedia_subtitle">{subtitle}</div>}
+                <TabContent key={tab} loader={loader} tab={tab} filter={filter} />
             </BaseCard>
         </ScopedRoomContextProvider>
     );
