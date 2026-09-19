@@ -67,6 +67,8 @@ import { getLateEventInfo } from "../../structures/grouper/LateEventGrouper";
 import PinningUtils from "../../../utils/PinningUtils";
 import PerMessageProfileAvatar from "../beeper/PerMessageProfileAvatar";
 import BeeperEventTileExtras from "../beeper/BeeperEventTileExtras";
+import TelegramTimeSlot from "../beeper/telegram/TelegramTimeSlot";
+import { getTelegramTimePlacement } from "../../../utils/beeper/telegramTime";
 import { isBeeperDisappeared } from "../../../utils/beeper/shouldHideBeeperEvent";
 import { isAnimatedSticker } from "../../../utils/beeper/animatedMedia";
 import { getPerMessageProfile } from "../../../utils/beeper/perMessageProfile";
@@ -267,6 +269,12 @@ export interface EventTileProps {
 
     /** Telegram-style layout: hide the sender's avatar on messages (one-to-one chats). */
     hideAvatar?: boolean;
+
+    /**
+     * Telegram-style layout with bubbles: the time (and our messages' sending status) always sits in
+     * the bubble's bottom inline-end corner, as in Telegram Web K.
+     */
+    telegramBubbles?: boolean;
 
     /** Whether thread information should be shown. */
     showThreadInfo?: boolean;
@@ -1181,6 +1189,20 @@ export class UnwrappedEventTile extends React.Component<EventTileProps, IState> 
         ) : undefined;
         const timestamp =
             eventTileRenderState.root.shape === "File" || this.isPreview ? plainTimestamp : linkedTimestamp;
+
+        // Telegram-style bubbles: the time always sits inside the bubble (message bubbles only, not
+        // info rows, which tweb shows as time-less service messages).
+        const rootState = eventTileSnapshot.root.state;
+        const telegramTime =
+            !!this.props.telegramBubbles &&
+            this.context.timelineRenderingType === TimelineRenderingType.Room &&
+            !this.isPreview &&
+            !!ts &&
+            !this.props.hideTimestamp &&
+            !rootState.info &&
+            !rootState.bubbleContainer &&
+            !rootState.leftAlignedBubble &&
+            !rootState.alignedBetweenBubbles;
         const timestampSlot =
             this.props.isSelecting && ts ? (
                 <span
@@ -1189,6 +1211,20 @@ export class UnwrappedEventTile extends React.Component<EventTileProps, IState> 
                 >
                     <StyledCheckbox checked={!!this.props.isSelected} readOnly tabIndex={-1} />
                 </span>
+            ) : telegramTime ? (
+                <TelegramTimeSlot
+                    mxEvent={this.props.mxEvent}
+                    timestamp={
+                        <MessageTimestampAdapter
+                            eventTileViewModel={this.viewModel}
+                            kind="linked"
+                            timestampProps={linkedMessageTimestampProps}
+                        />
+                    }
+                    isOwnEvent={rootState.isOwnEvent}
+                    eventSendStatus={this.props.eventSendStatus}
+                    onDisappeared={this.onBeeperDisappeared}
+                />
             ) : (
                 (timestamp ??
                 (eventTileRenderState.timestamp.displayState.useIRCLayout ? <span aria-hidden="true" /> : undefined))
@@ -1197,11 +1233,11 @@ export class UnwrappedEventTile extends React.Component<EventTileProps, IState> 
         // Receipt slots.
         const receiptState = this.receiptState;
         const isFileShape = eventTileRenderState.root.shape === "File";
+        // Telegram-style bubbles draw the sent/sending state as ticks in the time instead.
+        const sentReceipt = receiptState.shouldShowSentReceipt || receiptState.shouldShowSendingReceipt;
         const receipt =
             !isFileShape &&
-            (this.props.showReadReceipts ||
-                receiptState.shouldShowSentReceipt ||
-                receiptState.shouldShowSendingReceipt) ? (
+            (telegramTime ? this.props.showReadReceipts && !sentReceipt : this.props.showReadReceipts || sentReceipt) ? (
                 <ReceiptAdapter
                     receiptState={receiptState}
                     eventSendStatus={this.props.eventSendStatus}
@@ -1248,7 +1284,11 @@ export class UnwrappedEventTile extends React.Component<EventTileProps, IState> 
                             eventTileRenderState.root.shape === "Thread" ? this.props.permalinkCreator! : undefined,
                     }),
                 )}
-                <BeeperEventTileExtras mxEvent={this.props.mxEvent} onDisappeared={this.onBeeperDisappeared} />
+                <BeeperEventTileExtras
+                    mxEvent={this.props.mxEvent}
+                    onDisappeared={this.onBeeperDisappeared}
+                    telegramTime={telegramTime}
+                />
             </>
         );
 
@@ -1321,6 +1361,14 @@ export class UnwrappedEventTile extends React.Component<EventTileProps, IState> 
                     root: classNames(eventTileRenderState.classNames.root, {
                         mx_EventTile_selecting: this.props.isSelecting,
                         mx_EventTile_beeperHidden: isBeeperDisappeared(this.props.mxEvent),
+                        // Telegram-style bubbles (res/css/views/beeper/_TelegramMessages.pcss).
+                        mx_EventTile_tgTime: telegramTime,
+                        mx_EventTile_tgTimeFloating:
+                            telegramTime && getTelegramTimePlacement(this.props.mxEvent) === "floating",
+                        mx_EventTile_tgOwn: telegramTime && rootState.isOwnEvent,
+                    }),
+                    line: classNames(eventTileRenderState.classNames.line, {
+                        mx_EventTile_tgMediaLine: telegramTime && eventTileRenderState.line.media,
                     }),
                 }}
                 slots={{

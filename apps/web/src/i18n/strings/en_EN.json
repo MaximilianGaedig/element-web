@@ -461,6 +461,8 @@
         "sticker_picker_loading": "Loading stickers…",
         "sticker_picker_search": "Search stickers",
         "sticker_picker_title": "Stickers",
+        "telegram_state_delivered": "Delivered",
+        "telegram_state_read": "Read",
         "typing_dm": "typing",
         "typing_many": {
             "one": "%(name)s and %(count)s other are typing",

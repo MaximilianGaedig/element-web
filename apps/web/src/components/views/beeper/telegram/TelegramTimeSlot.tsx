@@ -1,0 +1,47 @@
+/*
+Copyright 2026 New Vector Ltd.
+
+SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only OR LicenseRef-Element-Commercial
+Please see LICENSE files in the repository root for full details.
+*/
+
+import React, { type JSX, type ReactNode } from "react";
+import { type EventStatus, type MatrixEvent } from "matrix-js-sdk/src/matrix";
+
+import TelegramTime from "./TelegramTime";
+import DisappearingMessageBadge from "../DisappearingMessageBadge";
+import { useMessageSendStatus } from "../BeeperMessageSendStatus";
+import { getTelegramSendState, getTelegramTimePlacement } from "../../../../utils/beeper/telegramTime";
+
+interface Props {
+    mxEvent: MatrixEvent;
+    /** Element's timestamp element. */
+    timestamp: ReactNode;
+    /** Whether the event is ours: only our messages get a sending status, as in tweb. */
+    isOwnEvent: boolean;
+    eventSendStatus?: EventStatus;
+    /** Called when a disappearing message's timer runs out. */
+    onDisappeared?: () => void;
+}
+
+/** The Telegram-style time of one event tile, with its sending status and disappearing timer. */
+export default function TelegramTimeSlot({
+    mxEvent,
+    timestamp,
+    isOwnEvent,
+    eventSendStatus,
+    onDisappeared,
+}: Props): JSX.Element {
+    const bridgeStatus = useMessageSendStatus(mxEvent);
+    const sendState = isOwnEvent
+        ? getTelegramSendState({ eventSendStatus, bridgeStatus: bridgeStatus?.status })
+        : undefined;
+    return (
+        <TelegramTime
+            timestamp={timestamp}
+            sendState={sendState}
+            placement={getTelegramTimePlacement(mxEvent)}
+            parts={<DisappearingMessageBadge mxEvent={mxEvent} onDisappeared={onDisappeared} />}
+        />
+    );
+}

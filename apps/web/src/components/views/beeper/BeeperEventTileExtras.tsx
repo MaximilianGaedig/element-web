@@ -15,13 +15,19 @@ interface Props {
     mxEvent: MatrixEvent;
     /** Called when a disappearing message's timer runs out. */
     onDisappeared?: () => void;
+    /**
+     * Telegram-style bubbles: the disappearing timer and the pending/delivered state live in the
+     * bubble's time (TelegramTimeSlot), so only delivery failures are left to show here.
+     */
+    telegramTime?: boolean;
 }
 
 /**
  * Per-message decorations driven by Beeper/mautrix bridge extensions, rendered under the message
  * body inside the event tile. Kept in one place so EventTile needs a single hook.
  */
-export default function BeeperEventTileExtras({ mxEvent, onDisappeared }: Props): JSX.Element {
+export default function BeeperEventTileExtras({ mxEvent, onDisappeared, telegramTime }: Props): JSX.Element {
+    if (telegramTime) return <BeeperMessageSendStatus mxEvent={mxEvent} failuresOnly />;
     return (
         <>
             <DisappearingMessageBadge mxEvent={mxEvent} onDisappeared={onDisappeared} />

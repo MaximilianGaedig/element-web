@@ -901,6 +901,34 @@ describe("EventTile", () => {
             expect(hidden.container.querySelector(".mx_BaseAvatar")).not.toBeInTheDocument();
         });
 
+        it("keeps a Telegram-style time in the bubble without hovering", () => {
+            const { container } = getComponent({
+                layout: Layout.Bubble,
+                telegramBubbles: true,
+                mxEvent: makeTimestampedMessage(),
+            });
+            const tile = container.querySelector(".mx_EventTile")!;
+            expect(tile).toHaveClass("mx_EventTile_tgTime");
+            expect(tile).not.toHaveClass("mx_EventTile_tgOwn");
+            const time = tile.querySelector(".mx_EventTile_line .mx_TelegramTime")!;
+            expect(time.querySelector(".mx_MessageTimestamp")).toBeInTheDocument();
+            // Other people's messages have no sending status.
+            expect(time.querySelector(".mx_TelegramTime_status")).toBeNull();
+        });
+
+        it("shows tweb's sending status on our own Telegram-style messages instead of the sent receipt", () => {
+            const { container } = getComponent({
+                layout: Layout.Bubble,
+                telegramBubbles: true,
+                mxEvent: makeOwnMessage({ ts: 1234 }),
+                eventSendStatus: EventStatus.SENDING,
+            });
+            const tile = container.querySelector(".mx_EventTile")!;
+            expect(tile).toHaveClass("mx_EventTile_tgOwn");
+            expect(tile.querySelector(".mx_TelegramTime_status")).toHaveAttribute("data-state", "sending");
+            expect(tile.querySelector(".mx_ReadReceiptGroup")).toBeNull();
+        });
+
         it("uses the current room member when current profiles are enabled", async () => {
             const senderId = mxEvent.getSender()!;
             const currentMember = new RoomMember(room.roomId, senderId);

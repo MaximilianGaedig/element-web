@@ -57,6 +57,8 @@ function failureText(status: MessageSendStatus): string {
 
 interface Props {
     mxEvent: MatrixEvent;
+    /** Only render failures (the Telegram-style time shows pending and delivered as ticks). */
+    failuresOnly?: boolean;
 }
 
 /**
@@ -64,7 +66,7 @@ interface Props {
  * (com.beeper.message_send_status): pending, delivered, or failed (with a retry button when the
  * bridge says a retry may work). Renders nothing for events without a status.
  */
-export default function BeeperMessageSendStatus({ mxEvent }: Props): JSX.Element | null {
+export default function BeeperMessageSendStatus({ mxEvent, failuresOnly }: Props): JSX.Element | null {
     const client = useContext(MatrixClientContext);
     const status = useMessageSendStatus(mxEvent);
     const [retrying, setRetrying] = useState(false);
@@ -80,6 +82,7 @@ export default function BeeperMessageSendStatus({ mxEvent }: Props): JSX.Element
     }, [client, mxEvent]);
 
     if (!status || mxEvent.getSender() !== client?.getUserId()) return null;
+    if (failuresOnly && (status.status === "PENDING" || status.status === "SUCCESS")) return null;
     const network = status.network || _t("beeper|send_status_remote_network");
 
     if (status.status === "PENDING") {

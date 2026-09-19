@@ -874,6 +874,7 @@ export default class MessagePanel extends React.Component<IProps, IState> {
                 callEventGrouper={callEventGrouper}
                 hideSender={this.state.hideSender}
                 hideAvatar={this.state.hideAvatar}
+                telegramBubbles={this.state.telegramLayout && this.props.layout === Layout.Bubble}
                 isSelected={
                     this.props.room ? MessageSelectionStore.instance.isSelected(this.props.room.roomId, eventId) : false
                 }
