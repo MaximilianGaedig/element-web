@@ -21,7 +21,14 @@ import {
     ChevronLeftIcon,
     ChevronRightIcon,
     CloseIcon,
+    DeleteIcon,
     DownloadIcon,
+    ForwardIcon,
+    MinusIcon,
+    PlusIcon,
+    RotateLeftIcon,
+    ZoomInIcon,
+    ZoomOutIcon,
 } from "@vector-im/compound-design-tokens/assets/web/icons";
 
 import { MediaEventHelper } from "../../../utils/MediaEventHelper";
@@ -29,11 +36,21 @@ import { FileDownloader } from "../../../utils/FileDownloader";
 import { formatDate } from "../../../DateUtils";
 import { _t } from "../../../languageHandler";
 import UIStore from "../../../stores/UIStore";
+import { MatrixClientPeg } from "../../../MatrixClientPeg";
+import Modal from "../../../Modal";
+import ForwardDialog from "../dialogs/ForwardDialog";
+import { createRedactEventDialog } from "../dialogs/ConfirmRedactDialog";
+import { RoomPermalinkCreator } from "../../../utils/permalinks/Permalinks";
+import MemberAvatar from "../avatars/MemberAvatar";
+import dis from "../../../dispatcher/dispatcher";
+import { Action } from "../../../dispatcher/actions";
+import { type ViewRoomPayload } from "../../../dispatcher/payloads/ViewRoomPayload";
 
 // tweb base.ts
 const ZOOM_INITIAL_VALUE = 1;
 const ZOOM_MIN_VALUE = 0.5;
 const ZOOM_MAX_VALUE = 4;
+const ZOOM_STEP = 0.5;
 const OPEN_TRANSITION_TIME = 200;
 const MOVE_TRANSITION_TIME = 350;
 const RESERVE_TOP_DESKTOP = 80;
@@ -184,6 +201,8 @@ class ViewerController {
     private lastTransform: Transform = { ...this.transform };
     private lastZoomCenter = { x: 0, y: 0 };
     private initialContentRect: DOMRect | null = null;
+    /** Counterclockwise quarter turns, in degrees (tweb rotateMedia: -90 per click). */
+    public rotation = 0;
     private lastDragOffset = { x: 0, y: 0 };
     private lastDragDelta = { x: 0, y: 0 };
     private lastGestureTime = 0;
@@ -200,7 +219,7 @@ class ViewerController {
     private wheelTimer: number | undefined;
     private wheelKind: "zoom" | "drag" | undefined;
 
-    public constructor(private onZoomChange: (zoomed: boolean) => void) {}
+    public constructor(private onZoomChange: (scale: number) => void) {}
 
     public get isZooming(): boolean {
         return this.transform.scale !== ZOOM_INITIAL_VALUE;
@@ -217,6 +236,7 @@ class ViewerController {
 
     public destroy(): void {
         window.clearTimeout(this.wheelTimer);
+        window.clearTimeout(this.clampTimer);
         this.restoreSource();
         this.helpers.forEach((h) => h.destroy());
     }
@@ -332,6 +352,7 @@ class ViewerController {
 
     /** tweb moveTheMover + setMoverToTarget(fromRight): the old one slides out, the new one comes in. */
     public switchTo(event: MatrixEvent, fromRight: 1 | -1): void {
+        this.rotation = 0;
         this.resetZoom(true);
         const old = this.mover;
         if (old) {
@@ -372,6 +393,13 @@ class ViewerController {
             return;
         }
         const el = current.el;
+        if (this.isRotated()) {
+            this.restoreSource();
+            el.classList.add("mx_TgMediaViewer_mover_active");
+            el.style.opacity = "0";
+            window.setTimeout(onDone, OPEN_TRANSITION_TIME);
+            return;
+        }
         const visual = el.getBoundingClientRect();
         this.movers.classList.add("mx_TgMediaViewer_noTransition");
         el.style.transition = "none";
@@ -409,12 +437,98 @@ class ViewerController {
 
     // ---- zoom (tweb base.ts, "zoom part from WebZ") ----
 
-    private applyMoversTransform(): void {
-        const { x, y, scale } = this.transform;
-        if (this.movers)
-            this.movers.style.transform =
-                scale === 1 && !x && !y ? "" : `translate3d(${x}px,${y}px,0) scale3d(${scale},${scale},1)`;
+    /** The media's resting rect on screen (tweb content.media's rect): unzoomed and unrotated. */
+    private restRect(): DOMRect {
+        const r = this.mover?.rect ?? { left: 0, top: 0, width: 0, height: 0 };
+        return new DOMRect(r.left, r.top, r.width, r.height);
     }
+
+    private isRotated(): boolean {
+        return ((this.rotation % 360) + 360) % 360 !== 0;
+    }
+
+    /** tweb getRotationFitScale: a sideways image is refit into the media box. */
+    private getRotationFitScale(): number {
+        const normalized = ((this.rotation % 360) + 360) % 360;
+        if (normalized !== 90 && normalized !== 270) return 1;
+        const { width, height } = this.initialContentRect ?? this.restRect();
+        if (!width || !height) return 1;
+        const handheld = isHandheld();
+        const boxW = UIStore.instance.windowWidth;
+        const boxH = UIStore.instance.windowHeight - (handheld ? 0 : RESERVE_TOP_DESKTOP + RESERVE_BOTTOM_DESKTOP);
+        return Math.min(boxW / height, boxH / width);
+    }
+
+    /** tweb getDisplayRect: the rotated + refit box that pan/zoom bounds apply to. */
+    private getDisplayRect(): { left: number; top: number; right: number; bottom: number } {
+        const rect = this.initialContentRect ?? this.restRect();
+        if (!this.isRotated()) return rect;
+        const normalized = ((this.rotation % 360) + 360) % 360;
+        const swap = normalized === 90 || normalized === 270;
+        const fit = this.getRotationFitScale();
+        const cx = rect.left + rect.width / 2;
+        const cy = rect.top + rect.height / 2;
+        const width = (swap ? rect.height : rect.width) * fit;
+        const height = (swap ? rect.width : rect.height) * fit;
+        return { left: cx - width / 2, right: cx + width / 2, top: cy - height / 2, bottom: cy + height / 2 };
+    }
+
+    /**
+     * tweb buildMoversTransform: zoom/pan (origin 0 0) outside, the rotation + refit inside, around the
+     * media's centre, so a zoom interpolates function by function.
+     */
+    private applyMoversTransform(): void {
+        if (!this.movers) return;
+        const { x, y, scale } = this.transform;
+        if (scale === 1 && !x && !y && !this.isRotated()) {
+            this.movers.style.transform = "";
+            return;
+        }
+        const rect = this.initialContentRect ?? this.restRect();
+        const cx = rect.left + rect.width / 2;
+        const cy = rect.top + rect.height / 2;
+        const fit = this.getRotationFitScale();
+        this.movers.style.transform =
+            `translate3d(${x.toFixed(3)}px, ${y.toFixed(3)}px, 0px) scale(${scale.toFixed(3)}) ` +
+            `translate(${cx.toFixed(3)}px, ${cy.toFixed(3)}px) rotate(${this.rotation}deg) scale(${fit.toFixed(5)}) ` +
+            `translate(${(-cx).toFixed(3)}px, ${(-cy).toFixed(3)}px)`;
+    }
+
+    /** tweb rotateMedia: counterclockwise, matching Telegram Desktop. */
+    public rotate(): void {
+        this.initialContentRect ??= this.restRect();
+        if (this.movers && !this.movers.style.transform) {
+            // Prime an identity-structured transform so the first turn interpolates cleanly.
+            this.movers.classList.add("mx_TgMediaViewer_noTransition");
+            this.applyMoversTransform();
+            void this.movers.offsetLeft;
+            this.movers.classList.remove("mx_TgMediaViewer_noTransition");
+        }
+        this.rotation -= 90;
+        this.applyMoversTransform();
+    }
+
+    /** tweb addZoom (zoom button / range bar): zoom about the window centre, then clamp. */
+    public addZoom(value: number): void {
+        this.initialContentRect ??= this.restRect();
+        this.lastTransform = { ...this.transform };
+        const cx = UIStore.instance.windowWidth / 2;
+        const cy = UIStore.instance.windowHeight / 2;
+        this.onZoom({
+            zoomAdd: value,
+            initialCenterX: cx,
+            initialCenterY: cy,
+            currentCenterX: cx,
+            currentCenterY: cy,
+            dragOffsetX: 0,
+            dragOffsetY: 0,
+        });
+        this.lastTransform = { ...this.transform };
+        window.clearTimeout(this.clampTimer);
+        this.clampTimer = window.setTimeout(() => this.gestureEnd(), 300);
+    }
+
+    private clampTimer: number | undefined;
 
     private setTransform(t: Transform): void {
         this.transform = t;
@@ -423,13 +537,13 @@ class ViewerController {
             this.transform.y = 0;
         }
         this.applyMoversTransform();
-        this.onZoomChange(this.isZooming);
+        this.onZoomChange(this.transform.scale);
     }
 
     public resetZoom(instant = false): void {
         if (instant) this.movers?.classList.add("mx_TgMediaViewer_noTransition");
         this.setTransform({ x: 0, y: 0, scale: ZOOM_INITIAL_VALUE });
-        this.initialContentRect = null;
+        if (!this.isRotated()) this.initialContentRect = null;
         if (instant) {
             void this.movers?.offsetLeft;
             this.movers?.classList.remove("mx_TgMediaViewer_noTransition");
@@ -441,8 +555,8 @@ class ViewerController {
     }
 
     private getZoomBoundaries(scale: number): { minX: number; maxX: number; minY: number; maxY: number } {
-        const rect = this.initialContentRect;
-        if (!rect) return { minX: 0, maxX: 0, minY: 0, maxY: 0 };
+        if (!this.initialContentRect) return { minX: 0, maxX: 0, minY: 0, maxY: 0 };
+        const rect = this.getDisplayRect();
         const w = UIStore.instance.windowWidth;
         const h = UIStore.instance.windowHeight;
         const centerX = (w - w * scale) / 2;
@@ -509,7 +623,7 @@ class ViewerController {
         this.draggingType = type;
         this.lastGestureTime = Date.now();
         if (!this.transform.x && !this.transform.y && !this.isZooming && this.mover) {
-            this.initialContentRect = this.mover.el.getBoundingClientRect();
+            this.initialContentRect = this.restRect();
         }
     }
 
@@ -560,7 +674,7 @@ class ViewerController {
     }
 
     public zoomAt(x: number, y: number, scale: number): void {
-        if (this.mover && !this.isZooming) this.initialContentRect = this.mover.el.getBoundingClientRect();
+        if (this.mover && !this.isZooming) this.initialContentRect = this.restRect();
         const { scaleOffsetX, scaleOffsetY } = this.calculateScaleOffset(x, y, scale);
         const [t] = this.calculateOffsetBoundaries({ x: scaleOffsetX, y: scaleOffsetY, scale });
         this.setTransform(t);
@@ -636,11 +750,12 @@ interface Props {
 function TgMediaViewer({ items, index: startIndex, source, onClosed }: Props): JSX.Element {
     const [index, setIndex] = useState(startIndex);
     const [active, setActive] = useState(false);
-    const [zoomed, setZoomed] = useState(false);
+    const [scale, setScale] = useState(ZOOM_INITIAL_VALUE);
+    const zoomed = scale !== ZOOM_INITIAL_VALUE;
     const rootRef = useRef<HTMLDivElement>(null);
     const moversRef = useRef<HTMLDivElement>(null);
     const ctl = useRef<ViewerController>(null);
-    ctl.current ??= new ViewerController(setZoomed);
+    ctl.current ??= new ViewerController(setScale);
     const indexRef = useRef(index);
     indexRef.current = index;
 
@@ -805,12 +920,36 @@ function TgMediaViewer({ items, index: startIndex, source, onClosed }: Props): J
     };
 
     const event = items[index];
+    const client = MatrixClientPeg.safeGet();
+    const room = client.getRoom(event.getRoomId());
+    const canRedact =
+        !!room?.currentState.maySendRedactionForEvent(event, client.getSafeUserId()) && !event.isRedacted();
     const download = async (): Promise<void> => {
         const helper = ctl.current!.helper(event);
         const blob = await helper.sourceBlob.value;
         await new FileDownloader().download({ blob, name: helper.fileName });
     };
-    const sender = event.sender?.name ?? event.getSender();
+    const forward = (): void => {
+        Modal.createDialog(ForwardDialog, {
+            matrixClient: client,
+            events: [event],
+            permalinkCreator: room ? new RoomPermalinkCreator(room) : null,
+        });
+    };
+    const remove = (): void => createRedactEventDialog({ mxEvent: event, onCloseDialog: close });
+    // tweb: clicking the author closes the viewer and jumps to the message.
+    const showInChat = (): void => {
+        close();
+        dis.dispatch<ViewRoomPayload>({
+            action: Action.ViewRoom,
+            event_id: event.getId(),
+            highlighted: true,
+            room_id: event.getRoomId(),
+            metricsTrigger: undefined,
+        });
+    };
+    const member = room?.getMember(event.getSender() ?? "") ?? null;
+    const sender = member?.name ?? event.sender?.name ?? event.getSender();
 
     // Keyboard: Esc and the arrows are handled on window (above); clicks here are pointer shortcuts.
     return (
@@ -828,19 +967,103 @@ function TgMediaViewer({ items, index: startIndex, source, onClosed }: Props): J
         >
             <div className="mx_TgMediaViewer_backdrop" />
             <div ref={moversRef} className="mx_TgMediaViewer_movers" />
+            {/* tweb topbar: author (userpic 44, name, date) | delete, forward, download, rotate, zoom, close */}
             <div className="mx_TgMediaViewer_chrome mx_TgMediaViewer_topbar">
-                <div className="mx_TgMediaViewer_author">
-                    <div className="mx_TgMediaViewer_name">{sender}</div>
-                    <div className="mx_TgMediaViewer_date">{formatDate(new Date(event.getTs()))}</div>
-                </div>
+                <button type="button" className="mx_TgMediaViewer_author" onClick={showInChat}>
+                    <MemberAvatar
+                        className="mx_TgMediaViewer_userpic"
+                        member={member}
+                        fallbackUserId={event.getSender()}
+                        size="44px"
+                        hideTitle
+                    />
+                    <span className="mx_TgMediaViewer_authorText">
+                        <span className="mx_TgMediaViewer_name">{sender}</span>
+                        <span className="mx_TgMediaViewer_date">{formatDate(new Date(event.getTs()))}</span>
+                    </span>
+                </button>
                 <div className="mx_TgMediaViewer_buttons">
-                    <button type="button" aria-label={_t("action|download")} onClick={() => void download()}>
+                    {canRedact && (
+                        <button
+                            type="button"
+                            title={_t("action|delete")}
+                            aria-label={_t("action|delete")}
+                            onClick={remove}
+                        >
+                            <DeleteIcon />
+                        </button>
+                    )}
+                    <button
+                        type="button"
+                        title={_t("action|forward")}
+                        aria-label={_t("action|forward")}
+                        onClick={forward}
+                    >
+                        <ForwardIcon />
+                    </button>
+                    <button
+                        type="button"
+                        title={_t("action|download")}
+                        aria-label={_t("action|download")}
+                        onClick={() => void download()}
+                    >
                         <DownloadIcon />
                     </button>
-                    <button type="button" aria-label={_t("action|close")} onClick={close}>
+                    <button
+                        type="button"
+                        title={_t("lightbox|rotate_left")}
+                        aria-label={_t("lightbox|rotate_left")}
+                        onClick={() => ctl.current!.rotate()}
+                    >
+                        <RotateLeftIcon />
+                    </button>
+                    <button
+                        type="button"
+                        title={zoomed ? _t("action|zoom_out") : _t("action|zoom_in")}
+                        aria-label={zoomed ? _t("action|zoom_out") : _t("action|zoom_in")}
+                        onClick={() => (zoomed ? ctl.current!.resetZoom() : ctl.current!.addZoom(ZOOM_STEP))}
+                    >
+                        {zoomed ? <ZoomOutIcon /> : <ZoomInIcon />}
+                    </button>
+                    <button type="button" title={_t("action|close")} aria-label={_t("action|close")} onClick={close}>
                         <CloseIcon />
                     </button>
                 </div>
+            </div>
+            {/* tweb .zoom-container: − range + at the bottom while zoomed */}
+            <div
+                className={`mx_TgMediaViewer_chrome mx_TgMediaViewer_zoom${zoomed ? " mx_TgMediaViewer_zoom_visible" : ""}`}
+            >
+                <button
+                    type="button"
+                    aria-label={_t("action|zoom_out")}
+                    disabled={scale <= ZOOM_MIN_VALUE}
+                    onClick={() => ctl.current!.addZoom(-ZOOM_STEP)}
+                >
+                    <MinusIcon />
+                </button>
+                <input
+                    type="range"
+                    aria-label={_t("lightbox|title")}
+                    min={ZOOM_MIN_VALUE}
+                    max={ZOOM_MAX_VALUE}
+                    step={0.01}
+                    value={Math.min(scale, ZOOM_MAX_VALUE)}
+                    style={
+                        {
+                            "--TgMediaViewer-zoom": `${((Math.min(scale, ZOOM_MAX_VALUE) - ZOOM_MIN_VALUE) / (ZOOM_MAX_VALUE - ZOOM_MIN_VALUE)) * 100}%`,
+                        } as React.CSSProperties
+                    }
+                    onChange={(e) => ctl.current!.addZoom(Number(e.target.value) - ctl.current!.transform.scale)}
+                />
+                <button
+                    type="button"
+                    aria-label={_t("action|zoom_in")}
+                    disabled={scale >= ZOOM_MAX_VALUE}
+                    onClick={() => ctl.current!.addZoom(ZOOM_STEP)}
+                >
+                    <PlusIcon />
+                </button>
             </div>
             {index < items.length - 1 && (
                 // oxlint-disable-next-line jsx-a11y/click-events-have-key-events
