@@ -54,6 +54,19 @@ describe("activityLevel", () => {
     });
 });
 
+describe("lastActiveTs", () => {
+    it("prefers the bridge's exact last seen over the homeserver's last_active_ago", () => {
+        // The bridge refreshed the presence 49 minutes ago; the network says 55.
+        const u = user({
+            presence: "offline",
+            presenceStatusMsg: `last seen ${new Date(NOW - 55 * MIN).toISOString()}`,
+            lastPresenceTs: NOW - 49 * MIN,
+            lastActiveAgo: 0,
+        });
+        expect(lastActiveTs(u)).toBe(NOW - 55 * MIN);
+    });
+});
+
 describe("activityLabel", () => {
     it("counts minutes for the first hour, then hours", async () => {
         const { activityLabel } = await import("../../components/views/avatars/ActivityDot");

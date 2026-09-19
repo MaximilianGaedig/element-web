@@ -25,9 +25,12 @@ export function lastActiveTs(user: User): number | undefined {
         const parsed = Date.parse(msg.slice(LAST_SEEN_PREFIX.length).trim());
         if (!isNaN(parsed)) ts = parsed;
     }
+    // A bridge's exact "last seen" is the network's own answer. The homeserver's last_active_ago only
+    // counts from when the bridge last set the presence, so it's newer than the truth: use it only for
+    // users without one (ordinary Matrix users).
+    if (ts !== undefined) return ts;
     if (user.lastPresenceTs && user.lastActiveAgo !== undefined && user.lastActiveAgo >= 0) {
-        const fromServer = user.lastPresenceTs - user.lastActiveAgo;
-        if (!ts || fromServer > ts) ts = fromServer;
+        ts = user.lastPresenceTs - user.lastActiveAgo;
     }
     return ts;
 }
