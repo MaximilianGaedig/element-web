@@ -8,6 +8,8 @@ Please see LICENSE files in the repository root for full details.
 
 import React, { type JSX, createRef, type ReactNode, useEffect } from "react";
 import classNames from "classnames";
+
+import { isTelegramLayout } from "../../../utils/beeper/telegramLayout";
 import {
     type IEventRelation,
     type MatrixEvent,
@@ -18,7 +20,7 @@ import {
 } from "matrix-js-sdk/src/matrix";
 import { Tooltip } from "@vector-im/compound-web";
 import { logger } from "matrix-js-sdk/src/logger";
-import { LockOffIcon, SendSolidIcon } from "@vector-im/compound-design-tokens/assets/web/icons";
+import { LockOffIcon, MicOnSolidIcon, SendSolidIcon } from "@vector-im/compound-design-tokens/assets/web/icons";
 import { useCreateAutoDisposedViewModel } from "@element-hq/web-shared-components";
 
 import { _t } from "../../../languageHandler";
@@ -74,6 +76,35 @@ let instanceCount = 0;
 interface ISendButtonProps {
     onClick: (ev: ButtonEvent) => void;
     title?: string; // defaults to something generic
+}
+
+/**
+ * Telegram Web K's .btn-send (src/scss/partials/_chat.scss): an accent capsule at the end of the
+ * input that shows the microphone while the input is empty and the send arrow once there is
+ * something to send, each icon popping in with tweb's grow-icon animation.
+ */
+function TelegramSendButton({
+    mode,
+    onSend,
+    onRecord,
+}: {
+    mode: "send" | "record";
+    onSend: () => void;
+    onRecord: () => void;
+}): JSX.Element {
+    const send = mode === "send";
+    return (
+        <AccessibleButton
+            className={classNames("mx_TgSendButton", `mx_TgSendButton_${mode}`)}
+            onClick={send ? onSend : onRecord}
+            title={send ? _t("composer|send_button_title") : _t("composer|voice_message_button")}
+            data-testid={send ? "sendmessagebtn" : "tgrecordbtn"}
+        >
+            <span key={mode} className="mx_TgSendButton_icon">
+                {send ? <SendSolidIcon /> : <MicOnSolidIcon />}
+            </span>
+        </AccessibleButton>
+    );
 }
 
 function SendButton(props: ISendButtonProps): JSX.Element {
@@ -154,7 +185,7 @@ export class MessageComposer extends React.Component<IProps, IState> {
         }
 
         this.state = {
-            isComposerEmpty: initialComposerContent?.length === 0,
+            isComposerEmpty: !initialComposerContent,
             composerContent: initialComposerContent,
             haveRecording: false,
             recordingTimeLeftSeconds: undefined, // when set to a number, shows a toast
@@ -563,8 +594,10 @@ export class MessageComposer extends React.Component<IProps, IState> {
     };
 
     public render(): React.ReactNode {
+        // Telegram-style composer: no encryption badge, send/record capsule inside the pill.
+        const telegram = isTelegramLayout();
         let leftIcon: false | JSX.Element = false;
-        if (!this.state.isWysiwygLabEnabled) {
+        if (!this.state.isWysiwygLabEnabled && !telegram) {
             if (!this.props.e2eStatus) {
                 leftIcon = (
                     <div className="mx_MessageComposer_e2eIconWrapper">
@@ -707,6 +740,7 @@ export class MessageComposer extends React.Component<IProps, IState> {
             "mx_MessageComposer--compact": this.props.compact,
             "mx_MessageComposer_e2eStatus": leftIcon,
             "mx_MessageComposer_wysiwyg": this.state.isWysiwygLabEnabled,
+            "mx_MessageComposer_tg": telegram,
         });
 
         return (
@@ -744,13 +778,21 @@ export class MessageComposer extends React.Component<IProps, IState> {
                                         !window.electron && SettingsStore.getValue(UIFeature.LocationSharing)
                                     }
                                     showPollsButton={this.state.showPollsButton}
+                                    hideVoiceButton={telegram}
                                     showStickersButton={this.showStickersButton}
                                     isRichTextEnabled={this.state.isRichTextEnabled}
                                     onComposerModeClick={this.onRichTextToggle}
                                     toggleButtonMenu={this.toggleButtonMenu}
                                 />
                             )}
-                            {showSendButton && (
+                            {telegram && canSendMessages && (
+                                <TelegramSendButton
+                                    mode={showSendButton ? "send" : "record"}
+                                    onSend={this.sendMessage}
+                                    onRecord={this.onRecordStartEndClick}
+                                />
+                            )}
+                            {!telegram && showSendButton && (
                                 <SendButton
                                     key="controls_send"
                                     onClick={this.sendMessage}

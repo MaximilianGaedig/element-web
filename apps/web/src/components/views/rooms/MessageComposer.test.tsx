@@ -49,6 +49,12 @@ const openStickerPicker = async (): Promise<void> => {
 };
 
 const startVoiceMessage = async (): Promise<void> => {
+    // The Telegram-style composer (on by default) records from its send capsule.
+    const capsule = screen.queryByTestId("tgrecordbtn");
+    if (capsule) {
+        await userEvent.click(capsule);
+        return;
+    }
     await userEvent.click(screen.getByLabelText("More options"));
     await userEvent.click(screen.getByLabelText("Voice Message"));
 };
@@ -414,6 +420,8 @@ describe("MessageComposer", () => {
 
         describe("when clicking start a voice message", () => {
             beforeEach(async () => {
+                // Earlier tests typed text, which the composer keeps as a draft.
+                localStorage.clear();
                 wrapAndRender({ room });
                 await startVoiceMessage();
                 await flushPromises();

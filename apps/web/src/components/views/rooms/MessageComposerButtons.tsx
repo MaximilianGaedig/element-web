@@ -56,6 +56,8 @@ interface IProps {
     setStickerPickerOpen: (isStickerPickerOpen: boolean) => void;
     showLocationButton: boolean;
     showPollsButton: boolean;
+    /** The Telegram-style composer records from its send capsule instead. */
+    hideVoiceButton?: boolean;
     showStickersButton: boolean;
     toggleButtonMenu: () => void;
     isRichTextEnabled: boolean;
@@ -188,7 +190,7 @@ function showStickersButton(props: IProps): ReactElement | null {
 
 function voiceRecordingButton(props: IProps, narrow: boolean): ReactElement | null {
     // XXX: recording UI does not work well in narrow mode, so hide for now
-    return narrow ? null : (
+    return narrow || props.hideVoiceButton ? null : (
         <CollapsibleButton
             key="voice_message_send"
             className="mx_MessageComposer_button"
