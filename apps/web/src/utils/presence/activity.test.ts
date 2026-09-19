@@ -40,14 +40,28 @@ describe("activityLevel", () => {
     it("uses the homeserver's last_active_ago when there's no exact time", () => {
         const u = user({ presence: "offline", lastPresenceTs: NOW - 10 * MIN, lastActiveAgo: 20 * MIN });
         expect(lastActiveTs(u)).toBe(NOW - 30 * MIN);
-        expect(activityLevel(u, NOW)).toBeCloseTo(0.5, 5);
+        expect(activityLevel(u, NOW)).toBeCloseTo(1 - (30 * MIN) / ACTIVITY_FADE_MS, 5);
     });
 
     it("gives no dot for offline users without recent activity, or with a vague last seen", () => {
         expect(activityLevel(user({ presence: "offline" }), NOW)).toBe(0);
         expect(activityLevel(user({ presence: "unavailable", presenceStatusMsg: "last seen recently" }), NOW)).toBe(0);
-        const old = user({ presenceStatusMsg: `last seen ${new Date(NOW - 59 * MIN).toISOString()}` });
-        expect(activityLevel(old, NOW)).toBe(0); // below the visibility threshold
+        const hours = user({ presenceStatusMsg: `last seen ${new Date(NOW - 23 * 60 * MIN).toISOString()}` });
+        expect(activityLevel(hours, NOW)).toBeGreaterThan(0); // tagged for a day
+        const old = user({ presenceStatusMsg: `last seen ${new Date(NOW - 25 * 60 * MIN).toISOString()}` });
+        expect(activityLevel(old, NOW)).toBe(0); // past the day
         expect(activityLevel(null, NOW)).toBe(0);
+    });
+});
+
+describe("activityLabel", () => {
+    it("counts minutes for the first hour, then hours", async () => {
+        const { activityLabel } = await import("../../components/views/avatars/ActivityDot");
+        const at = (minutes: number): string => activityLabel(1 - (minutes * MIN) / ACTIVITY_FADE_MS);
+        expect(at(1)).toBe("1m");
+        expect(at(59)).toBe("59m");
+        expect(at(60)).toBe("1h");
+        expect(at(150)).toBe("2h");
+        expect(at(23 * 60 + 59)).toBe("23h");
     });
 });

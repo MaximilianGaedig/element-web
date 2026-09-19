@@ -37,6 +37,12 @@ const TWEAKS: Tweak[] = [
 
 const STORAGE_KEY = "mx_tg_tweaks_values";
 
+/** The ages the preview tag cycles through, in minutes. */
+const PREVIEW_MINUTES = [
+    ...Array.from({ length: 59 }, (_, i) => i + 1),
+    ...Array.from({ length: 23 }, (_, i) => (i + 1) * 60),
+];
+
 function readStored(): Record<string, number> {
     try {
         return JSON.parse(localStorage.getItem(STORAGE_KEY) ?? "{}");
@@ -59,13 +65,14 @@ export function TgTweaksPanel(): JSX.Element | null {
     const [values, setValues] = useState<Record<string, number>>(readStored);
     const [open, setOpen] = useState(true);
     const enabled = isEnabled();
-    // The preview tag counts through every width it takes, 1m to 59m.
-    const [minutes, setMinutes] = useState(1);
+    // The preview tag counts through every label it takes: 1m to 59m, then 1h to 23h.
+    const [step, setStep] = useState(0);
     useEffect(() => {
         if (!enabled || !open) return;
-        const timer = window.setInterval(() => setMinutes((m) => (m % 59) + 1), 400);
+        const timer = window.setInterval(() => setStep((i) => (i + 1) % PREVIEW_MINUTES.length), 400);
         return () => window.clearInterval(timer);
     }, [enabled, open]);
+    const minutes = PREVIEW_MINUTES[step];
 
     // Stored values apply even without the panel, so a tuned look sticks.
     useEffect(() => {

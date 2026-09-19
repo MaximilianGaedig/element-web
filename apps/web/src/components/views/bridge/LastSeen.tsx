@@ -6,7 +6,7 @@ Please see LICENSE files in the repository root for full details.
 */
 
 import React, { type JSX, type ReactNode, useCallback, useContext, useEffect, useState } from "react";
-import { type MatrixClient, type Room, RoomEvent, type User, UserEvent } from "matrix-js-sdk/src/matrix";
+import { type MatrixClient, type Room, type User, UserEvent } from "matrix-js-sdk/src/matrix";
 import { Text } from "@vector-im/compound-web";
 
 import { useDmMember } from "../avatars/WithPresenceIndicator";
@@ -15,7 +15,7 @@ import MatrixClientContext from "../../../contexts/MatrixClientContext";
 import { _t } from "../../../languageHandler";
 import { useSettingValue } from "../../../hooks/useSettings";
 import { isPresenceEnabled } from "../../../utils/presence";
-import { formatLastSeen, formatLastSeenTime, isVagueLastSeen } from "../../../utils/presence/lastSeen";
+import { formatLastSeen } from "../../../utils/presence/lastSeen";
 import { TypingIndicatorLine, useHeaderTypingText } from "./TypingSubtitle";
 
 const TICK_MS = 30_000;
@@ -49,48 +49,14 @@ export function useLastSeen(client: MatrixClient | undefined, userId: string | u
 }
 
 /**
- * The most recent activity of `userId` we can see in `room`: their latest event in the live timeline
- * or their latest read receipt, whichever is newer. Used when the network hides the real last-seen.
- */
-export function lastActivityTs(room: Room, userId: string): number | undefined {
-    let ts: number | undefined;
-    const events = room.getLiveTimeline().getEvents();
-    for (let i = events.length - 1; i >= 0; i--) {
-        if (events[i].getSender() === userId && !events[i].isState()) {
-            ts = events[i].getTs();
-            break;
-        }
-    }
-    const receiptTs = room.getReadReceiptForUserId(userId, true)?.data?.ts;
-    if (receiptTs && (!ts || receiptTs > ts)) ts = receiptTs;
-    return ts;
-}
-
-function useLastActivity(room: Room, userId: string | undefined): number | undefined {
-    const read = useCallback(() => (userId ? lastActivityTs(room, userId) : undefined), [room, userId]);
-    const [ts, setTs] = useState(read);
-    useEffect(() => setTs(read()), [read]);
-    const update = useCallback(() => setTs(read()), [read]);
-    useEventEmitter(room, RoomEvent.Timeline, update);
-    useEventEmitter(room, RoomEvent.Receipt, update);
-    return ts;
-}
-
-/**
  * Subtitle under a DM's name in the room header, like Telegram's "last seen …" line; replaced by
  * an animated "typing" while the other side types.
  */
 export function DmLastSeenSubtitle({ room }: { room: Room }): JSX.Element | null {
     const member = useDmMember(room);
     const typing = useHeaderTypingText(room, true);
-    let text = useLastSeen(room.client, member?.userId);
-    const activity = useLastActivity(room, member?.userId);
-    const showTwelveHour = useSettingValue("showTwelveHourTimestamps");
-    // The network hid the exact time ("last seen recently"): show the newest activity we saw instead.
-    const statusMsg = member?.userId ? room.client.getUser(member.userId)?.presenceStatusMsg : undefined;
-    if (activity && isVagueLastSeen(statusMsg) && text !== _t("bridge|last_seen_online")) {
-        text = formatLastSeenTime(activity, { showTwelveHour });
-    }
+    const text = useLastSeen(room.client, member?.userId);
+    // Presence is the one source (bridges keep it current from what they see on the network).
     if (typing) return <TypingIndicatorLine text={typing} />;
     if (!text || !isPresenceEnabled(room.client)) return null;
     return (

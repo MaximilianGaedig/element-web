@@ -11,7 +11,7 @@ import classNames from "classnames";
 import { ACTIVITY_FADE_MS } from "../../../utils/presence/activity";
 
 interface Props {
-    /** 0–1 from activityLevel(): 1 = online, falling towards 0 over the hour after the user was last active. */
+    /** 0–1 from activityLevel(): 1 = online, falling towards 0 over the day after the user was last active. */
     level: number;
     className?: string;
     label?: string;
@@ -22,9 +22,15 @@ export function activityMinutes(level: number): number {
     return Math.max(1, Math.round(((1 - level) * ACTIVITY_FADE_MS) / 60000));
 }
 
+/** The tag text, Messenger style: "1m" to "59m", then "1h" to "23h". */
+export function activityLabel(level: number): string {
+    const minutes = activityMinutes(level);
+    return minutes < 60 ? `${minutes}m` : `${Math.floor(minutes / 60)}h`;
+}
+
 /**
  * Presence badge, the way Messenger and Facebook show it: a green dot while the user is online, and
- * for someone who was active within the last hour a small green "12m" tag instead. Pops in with
+ * for someone who was active within the last day a small green "12m" / "5h" tag instead. Pops in with
  * Telegram Web K's badge transition.
  */
 /** Fired (on window) when a presence tweak changes, so cut-outs are redrawn. */
@@ -98,7 +104,7 @@ export function ActivityDot({ level, className, label }: Props): JSX.Element | n
             role="img"
             aria-label={label}
         >
-            {activityMinutes(level)}m
+            {activityLabel(level)}
         </span>
     );
 }
