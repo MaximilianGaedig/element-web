@@ -144,7 +144,7 @@ describe("bridged GIFs and animated stickers", () => {
             "href",
             "https://t.me/addstickers/cats",
         );
-        expect(play).toHaveBeenCalled();
+        await waitFor(() => expect(play).toHaveBeenCalled());
     });
 
     it("pauses offscreen and resumes when scrolled back", async () => {
@@ -211,5 +211,39 @@ describe("bridged GIFs and animated stickers", () => {
 
         const plain = render_(mkVideo({ mimetype: "video/mp4", w: 10, h: 10 }, "clip.mp4"));
         expect(plain.container.querySelector(".mx_BeeperAnimatedVideo")).toBeNull();
+    });
+
+    it("plays a video m.sticker (sent from the sticker picker, no size) as a looping sticker", () => {
+        const ev = mkEvent({
+            event: true,
+            type: "m.sticker",
+            room: ROOM_ID,
+            user: "@me:example.org",
+            content: {
+                body: "😼",
+                url: "mxc://example.org/video",
+                info: { "mimetype": "video/webm", "fi.mau.bridged_sticker": { network: "telegram", emoji: "😼" } },
+            },
+        });
+        expect(getAnimatedVideoHints(ev)).toMatchObject({ autoplay: true, loop: true, sticker: true, noAudio: true });
+        const { container } = render(
+            <MatrixClientContext.Provider value={client}>
+                <MessageEvent mxEvent={ev} permalinkCreator={undefined} />
+            </MatrixClientContext.Provider>,
+        );
+        const box = container.querySelector<HTMLElement>(".mx_BeeperAnimatedVideo_sticker");
+        expect(box).toBeInTheDocument();
+        expect(box!.style.width).toBe(box!.style.height); // square fallback without info.w/h
+        expect(container.querySelector("video")?.loop).toBe(true);
+
+        // Image stickers keep Element's sticker body.
+        const image = mkEvent({
+            event: true,
+            type: "m.sticker",
+            room: ROOM_ID,
+            user: "@me:example.org",
+            content: { body: "x", url: "mxc://example.org/img", info: { mimetype: "image/webp", w: 10, h: 10 } },
+        });
+        expect(getAnimatedVideoHints(image)).toBeUndefined();
     });
 });

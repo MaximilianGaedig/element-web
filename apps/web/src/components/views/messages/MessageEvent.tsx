@@ -300,8 +300,12 @@ export default class MessageEvent extends React.Component<IProps> implements IMe
                 BodyType = this.bodyTypes.get(MsgType.File)!;
             }
 
-            // Bridged GIFs and animated stickers (fi.mau.* playback hints) play like GIFs.
-            if (BodyType === VideoBodyFactory && getAnimatedVideoHints(this.props.mxEvent)) {
+            // Bridged GIFs and animated stickers (fi.mau.* playback hints, or an m.sticker that is a
+            // video) play like GIFs.
+            if (
+                (BodyType === VideoBodyFactory || type === EventType.Sticker) &&
+                getAnimatedVideoHints(this.props.mxEvent)
+            ) {
                 BodyType = BeeperAnimatedVideoBody;
             }
 

@@ -15,7 +15,7 @@ export interface BridgedSticker {
     pack_url?: string;
 }
 
-/** Playback hints mautrix bridges put in `info` of GIF-like m.video messages. */
+/** Playback hints mautrix bridges put in `info` of GIF-like m.video messages (implied for video m.sticker). */
 export interface AnimatedVideoHints {
     autoplay: boolean;
     loop: boolean;
@@ -43,11 +43,19 @@ function isHttpUrl(url: unknown): url is string {
  * (no GIF/autoplay/loop/sticker hint), which keeps Element's normal video player.
  */
 export function getAnimatedVideoHints(mxEvent: MatrixEvent): AnimatedVideoHints | undefined {
-    if (mxEvent.getType() !== EventType.RoomMessage || mxEvent.isRedacted()) return undefined;
+    if (mxEvent.isRedacted()) return undefined;
     const content = mxEvent.getContent();
-    if (content.msgtype !== MsgType.Video) return undefined;
     const info = content.info;
     if (!info || typeof info !== "object") return undefined;
+    // A video sticker (e.g. a Telegram .webm sticker sent from the sticker picker) is an m.sticker
+    // whose file is a video: it can only play as an animated sticker.
+    const videoSticker =
+        mxEvent.getType() === EventType.Sticker &&
+        typeof info.mimetype === "string" &&
+        info.mimetype.startsWith("video/");
+    if (!videoSticker && (mxEvent.getType() !== EventType.RoomMessage || content.msgtype !== MsgType.Video)) {
+        return undefined;
+    }
 
     const flag = (key: string): boolean => info[key] === true;
     let bridgedSticker: BridgedSticker | undefined;
@@ -61,12 +69,12 @@ export function getAnimatedVideoHints(mxEvent: MatrixEvent): AnimatedVideoHints 
     }
 
     const hints: AnimatedVideoHints = {
-        autoplay: flag("fi.mau.autoplay"),
-        loop: flag("fi.mau.loop"),
-        hideControls: flag("fi.mau.hide_controls"),
-        noAudio: flag("fi.mau.no_audio"),
+        autoplay: videoSticker || flag("fi.mau.autoplay"),
+        loop: videoSticker || flag("fi.mau.loop"),
+        hideControls: videoSticker || flag("fi.mau.hide_controls"),
+        noAudio: videoSticker || flag("fi.mau.no_audio"),
         gif: flag("fi.mau.gif"),
-        sticker: flag("fi.mau.telegram.animated_sticker") || !!bridgedSticker,
+        sticker: videoSticker || flag("fi.mau.telegram.animated_sticker") || !!bridgedSticker,
         bridgedSticker,
     };
     if (!hints.autoplay && !hints.loop && !hints.gif && !hints.sticker) return undefined;
