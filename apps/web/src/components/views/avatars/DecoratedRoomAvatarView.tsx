@@ -46,9 +46,13 @@ export const DecoratedRoomAvatarView = memo(function DecoratedRoomAvatarView({
 
     // Presence indicator and video/public icons don't have the same size
     // We use different masks
+    // (The "12m" recently-active tag is wider than the online dot and gets its own cut-out.)
+    const recent = vm.presence === Presence.Online && vm.activity !== undefined && vm.activity < 1;
     const maskClass =
         vm.badgeDecoration === AvatarBadgeDecoration.Presence
-            ? "mx_RoomAvatarView_RoomAvatar_presence"
+            ? recent
+                ? "mx_RoomAvatarView_RoomAvatar_recent"
+                : "mx_RoomAvatarView_RoomAvatar_presence"
             : "mx_RoomAvatarView_RoomAvatar_icon";
 
     return (

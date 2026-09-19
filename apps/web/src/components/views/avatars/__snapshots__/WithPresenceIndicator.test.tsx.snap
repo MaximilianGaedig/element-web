@@ -13,7 +13,6 @@ exports[`WithPresenceIndicator > renders the activity dot for DM rooms only whil
         aria-label="Online"
         class="mx_ActivityDot"
         role="img"
-        style="--mx-activity: 1.000;"
       />
     </div>
   </div>

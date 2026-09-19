@@ -310,7 +310,6 @@ exports[`<DecoratedRoomAvatarView /> > should render the 'online' presence 1`] =
       aria-label="Online"
       class="mx_ActivityDot mx_RoomAvatarView_PresenceDecoration"
       role="img"
-      style="--mx-activity: 1.000;"
     />
   </div>
 </DocumentFragment>
