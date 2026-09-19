@@ -10,8 +10,12 @@ Please see LICENSE files in the repository root for full details.
  * src/scss/partials/_chatVariables.scss. The Telegram-style layout reads only these, so every
  * duration and curve stays tweb's. Like tweb, layout transitions do not switch off for
  * prefers-reduced-motion (tweb gates them on its own "animations" lite-mode setting instead).
+ *
+ * Declared on the theme element too: Element puts `cpd-theme-*` on <body>, while compound's :root
+ * tokens follow the OS prefers-color-scheme, so colours resolved only on :root ignore the chosen theme.
  */
-:root {
+:root,
+[class*="cpd-theme-"] {
     --tg-transition-standard-easing: cubic-bezier(0.4, 0, 0.2, 1);
     --tg-transition-standard-in: 0.3s var(--tg-transition-standard-easing);
     --tg-transition-standard-out: 0.25s var(--tg-transition-standard-easing);
