@@ -18,6 +18,7 @@ import classNames from "classnames";
 import { _t } from "../../../languageHandler";
 import { TgIcon } from "./TelegramIcons";
 import { splitMenuReactions } from "../../../utils/telegram/telegramMenu";
+import { haptic } from "../../../utils/haptics";
 
 interface Props {
     /** Every reaction on offer, in order (getMenuReactions). */
@@ -40,7 +41,10 @@ export default function TelegramReactionBar({ reactions, chosen, onChoose, onMor
                         className={classNames("mx_TgMenu_reaction", { mx_TgMenu_reaction_chosen: chosen.has(emoji) })}
                         aria-label={emoji}
                         aria-pressed={chosen.has(emoji)}
-                        onClick={() => onChoose(emoji)}
+                        onClick={() => {
+                            haptic("light");
+                            onChoose(emoji);
+                        }}
                     >
                         <span className="mx_TgMenu_reactionEmoji">{emoji}</span>
                     </button>

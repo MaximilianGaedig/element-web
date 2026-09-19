@@ -18,6 +18,7 @@ import { formatList } from "../../../../../utils/FormattingUtils";
 import dis from "../../../../../dispatcher/dispatcher";
 import { ReactionsRowButtonTooltipViewModel } from "./ReactionsRowButtonTooltipViewModel";
 import { REACTION_SHORTCODE_KEY } from "./reactionShortcode";
+import { haptic } from "../../../../../utils/haptics";
 
 export interface ReactionsRowButtonViewModelProps {
     /**
@@ -193,6 +194,7 @@ export class ReactionsRowButtonViewModel
     public onClick = (): void => {
         const { client, mxEvent, myReactionEvent, content, disabled } = this.props;
         if (disabled) return;
+        haptic("light");
 
         if (myReactionEvent) {
             void client.redactEvent(mxEvent.getRoomId()!, myReactionEvent.getId()!);

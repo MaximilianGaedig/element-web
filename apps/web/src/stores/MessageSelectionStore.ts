@@ -8,6 +8,7 @@
 import EventEmitter from "events";
 
 import { UPDATE_EVENT } from "./AsyncStore";
+import { haptic } from "../utils/haptics";
 
 /**
  * Store for managing message selection in the timeline.
@@ -81,6 +82,7 @@ export class MessageSelectionStore extends EventEmitter {
         } else {
             set.add(eventId);
         }
+        haptic("selection");
         this.lastSelectedIds.set(roomId, eventId);
         this.anchorIds.set(roomId, eventId);
         this.emit(UPDATE_EVENT);

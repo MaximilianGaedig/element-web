@@ -17,6 +17,7 @@ import RoomContext from "../../../contexts/RoomContext";
 import { type FocusComposerPayload } from "../../../dispatcher/payloads/FocusComposerPayload";
 import { isReactionAllowed } from "../../../utils/bridge/roomFeatures";
 import { EmojiPickerWithRecents } from "../../../emojipicker/EmojiPickerWithRecents";
+import { haptic } from "../../../utils/haptics";
 
 interface IProps {
     mxEvent: MatrixEvent;
@@ -91,6 +92,7 @@ class ReactionPicker extends React.Component<IProps, IState> {
         if (!this.getReactions().hasOwnProperty(reaction) && !isReactionAllowed(this.context.room ?? null, reaction)) {
             return false;
         }
+        haptic("light");
         this.componentWillUnmount();
         this.props.onFinished();
         const myReactions = this.getReactions();

@@ -61,6 +61,7 @@ import dis from "../../../dispatcher/dispatcher";
 import { Action } from "../../../dispatcher/actions";
 import { type ActionPayload } from "../../../dispatcher/payloads";
 import { type TgNavigation, TgNavigationContext } from "./TgNavigation";
+import { haptic } from "../../../utils/haptics";
 
 interface TgColumnsProps {
     /** The spaces bar, rendered at the outer edge of the chat-list column. */
@@ -201,6 +202,7 @@ export function TgColumns({
                 cancelContextMenuOpening();
             }
             if (swipe.phase === "committed") {
+                haptic("light");
                 swipe = null;
                 goBack();
                 return;

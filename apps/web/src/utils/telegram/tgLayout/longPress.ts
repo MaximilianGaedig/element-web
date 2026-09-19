@@ -15,6 +15,7 @@ Please see LICENSE files in the repository root for full details.
  */
 
 import { LONG_PRESS_MS } from "./constants";
+import { haptic } from "../../haptics";
 
 let cancelOpening = false;
 let cancelOpeningTimeout: number | undefined;
@@ -80,6 +81,8 @@ export function attachLongPressContextMenu(element: HTMLElement): () => void {
                 screenY: touch.screenY,
             });
             target.dispatchEvent(menuEvent);
+            // Telegram iOS's impact on the menu opening (iOS 18.4+ skips it: no tap grants it mid-hold).
+            if (menuEvent.defaultPrevented) haptic("medium");
             // "fix instant closing": the finger lifting must not click the freshly opened menu away.
             if (menuEvent.defaultPrevented) element.addEventListener("touchend", swallow, { once: true });
         }, LONG_PRESS_MS);
