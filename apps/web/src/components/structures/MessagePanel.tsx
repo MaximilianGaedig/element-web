@@ -386,13 +386,17 @@ export default class MessagePanel extends React.Component<IProps, IState> {
         );
     }
 
-    /** Telegram-style bubbles with Telegram's ticks instead of read receipt avatars. */
+    /** Telegram-style bubbles: the time carries Telegram's sent/read ticks. */
+    private get telegramBubbles(): boolean {
+        return this.state.telegramLayout && this.props.layout === Layout.Bubble;
+    }
+
+    /**
+     * Ticks only, without read receipt avatars: always in one-to-one chats (like Telegram), and in
+     * groups when the "ticks" receipt style is chosen.
+     */
     private get telegramTicks(): boolean {
-        return (
-            this.state.telegramLayout &&
-            this.props.layout === Layout.Bubble &&
-            this.state.readReceiptsStyle === "ticks"
-        );
+        return this.telegramBubbles && (this.state.readReceiptsStyle === "ticks" || this.isTelegramOneToOne());
     }
 
     /** Telegram-style layout in a one-to-one chat (incl. bridged DMs) with bubbles: like Telegram, no avatars/names. */
@@ -725,11 +729,12 @@ export default class MessagePanel extends React.Component<IProps, IState> {
         // this information. When not providing read receipt information, the tile is likely
         // to assume that sent receipts are to be shown more often.
         this.readReceiptsByEvent = new Map();
-        if (this.props.showReadReceipts) {
+        // The ticks need the receipts to tell "read" from "delivered", even with the avatars hidden.
+        if (this.props.showReadReceipts || this.telegramBubbles) {
             this.readReceiptsByEvent = this.getReadReceiptsByShownEvent(events);
         }
         this.eventIdsReadByOthers =
-            this.telegramTicks && this.props.room
+            this.telegramBubbles && this.props.room
                 ? getEventIdsReadByOthers(
                       events.filter((e) => e.shouldShow).map((e) => e.event.getId()!),
                       this.readReceiptsByEvent,

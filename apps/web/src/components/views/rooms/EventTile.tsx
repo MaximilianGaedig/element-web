@@ -1268,7 +1268,7 @@ export class UnwrappedEventTile extends React.Component<EventTileProps, IState> 
                     }
                     isOwnEvent={rootState.isOwnEvent}
                     eventSendStatus={this.props.eventSendStatus}
-                    readByOthers={!!this.props.telegramTicks && !!this.props.readByOthers}
+                    readByOthers={!!this.props.readByOthers}
                     onDisappeared={this.onBeeperDisappeared}
                 />
             ) : (

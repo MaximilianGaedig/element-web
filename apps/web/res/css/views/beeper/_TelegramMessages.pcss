@@ -33,8 +33,8 @@ Please see LICENSE files in the repository root for full details.
 
     /*
      * Read receipts without the 60px gutter: the tile becomes a wrapping flex row, so the avatars sit
-     * next to the bubble (before an outgoing one, after an incoming one, which never fills the row)
-     * and only claim a row of their own when the bubble leaves no room.
+     * right after the bubble, at its end like Element's, and only claim a row of their own when the
+     * bubble leaves no room. One-to-one chats show ticks only (MessagePanel telegramTicks).
      */
     display: flex;
     flex-wrap: wrap;
@@ -159,8 +159,7 @@ Please see LICENSE files in the repository root for full details.
     }
 
     > [data-testid="event-tile-slot-receipt"] {
-        order: 0;
-        margin-inline: 0 var(--cpd-space-1x);
+        margin-inline: var(--cpd-space-1x) 0;
     }
 
     .mx_TelegramTime {
@@ -197,7 +196,9 @@ Please see LICENSE files in the repository root for full details.
 }
 
 /* tweb `.emoji-big`: no bubble behind a message that is only a few emoji. */
-.mx_RoomView_body .mx_EventTile[data-testid="event-tile"].mx_EventTile_tgTime:has(.mx_EventTile_bigEmoji) > [data-testid="event-tile-line"] {
+.mx_RoomView_body
+    .mx_EventTile[data-testid="event-tile"].mx_EventTile_tgTime:has(.mx_EventTile_bigEmoji)
+    > [data-testid="event-tile-line"] {
     padding-block-end: calc(var(--TgTime-text-size) + 0.5rem);
     background: transparent;
 }

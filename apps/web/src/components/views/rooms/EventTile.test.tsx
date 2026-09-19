@@ -941,8 +941,8 @@ describe("EventTile", () => {
                 readByOthers: true,
             });
             expect(avatars.container.querySelector(".mx_ReadReceiptGroup")).toBeInTheDocument();
-            // Avatars mode never draws "read" ticks.
-            expect(avatars.container.querySelector(".mx_TelegramTime_status")).toHaveAttribute("data-state", "sent");
+            // Group avatars and the "read" ticks together, like Telegram groups.
+            expect(avatars.container.querySelector(".mx_TelegramTime_status")).toHaveAttribute("data-state", "read");
             avatars.unmount();
 
             const ticks = getComponent({
