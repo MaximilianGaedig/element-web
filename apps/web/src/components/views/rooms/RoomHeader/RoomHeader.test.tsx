@@ -715,6 +715,45 @@ describe("RoomHeader", () => {
             expect(dispatcherSpy).toHaveBeenCalledWith(expect.objectContaining({ view_call: true }));
         });
 
+        it("uses Element Call in portals whose bridge takes MatrixRTC calls", async () => {
+            const user = userEvent.setup();
+            mockRoomMembers(room, 3);
+            vi.spyOn(room.currentState, "mayClientSendStateEvent").mockImplementation((key) => {
+                if (key === ElementCallMemberEventType.name) return true;
+                return false;
+            });
+            const bridgeEvent = new MatrixEvent({
+                type: "m.bridge",
+                state_key: "fi.mau.meta://facebook/1",
+                room_id: room.roomId,
+                sender: "@facebookbot:example.org",
+                content: { "protocol": { id: "facebook" }, "com.beeper.room_type.v2": "dm" },
+            });
+            // The bridge let members send call memberships: it joins Element calls.
+            const powerLevels = new MatrixEvent({
+                type: EventType.RoomPowerLevels,
+                state_key: "",
+                room_id: room.roomId,
+                sender: "@facebookbot:example.org",
+                content: { events: { [ElementCallMemberEventType.name]: 0 }, state_default: 50 },
+            });
+            const getStateEvents = room.currentState.getStateEvents.bind(room.currentState);
+            vi.spyOn(room.currentState, "getStateEvents").mockImplementation(((type: string, key?: string) => {
+                if (type === "m.bridge" && key === undefined) return [bridgeEvent];
+                if (type === EventType.RoomPowerLevels && key === "") return powerLevels;
+                return getStateEvents(type, key!);
+            }) as any);
+            const placeCallSpy = vi
+                .spyOn(SDKContextClass.instance.legacyCallHandler, "placeCall")
+                .mockResolvedValue(undefined);
+            const dispatcherSpy = vi.spyOn(dispatcher, "dispatch").mockImplementation(() => {});
+            render(<RoomHeader room={room} />, getWrapper());
+
+            await user.click(screen.getByRole("button", { name: "Video call" }));
+            expect(placeCallSpy).not.toHaveBeenCalled();
+            expect(dispatcherSpy).toHaveBeenCalledWith(expect.objectContaining({ view_call: true }));
+        });
+
         it("keeps the legacy 1:1 call in bridged DMs", async () => {
             const user = userEvent.setup();
             mockRoomMembers(room, 3);

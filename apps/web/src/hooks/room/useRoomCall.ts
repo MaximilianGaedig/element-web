@@ -6,7 +6,7 @@ SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only OR LicenseRef-Element-Com
 Please see LICENSE files in the repository root for full details.
 */
 
-import { type Room } from "matrix-js-sdk/src/matrix";
+import { EventType, type Room } from "matrix-js-sdk/src/matrix";
 import { CallType } from "matrix-js-sdk/src/webrtc/call";
 import { type ReactNode, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { logger as rootLogger } from "matrix-js-sdk/src/logger";
@@ -174,7 +174,13 @@ export const useRoomCall = (
     ]);
 
     const mayCreateElementCalls = mayCreateElementCallState && serverIsConfiguredForElementCall;
-    const isBridged = useRoomState(room, () => !!getBridgeInfo(room));
+    // A bridge that takes MatrixRTC calls says so by letting portal members send call memberships
+    // explicitly (the portal's state_default otherwise keeps them out); other portals keep legacy calls.
+    const legacyOnlyBridge = useRoomState(room, () => {
+        if (!getBridgeInfo(room)) return false;
+        const pl = room.currentState.getStateEvents(EventType.RoomPowerLevels, "")?.getContent();
+        return pl?.events?.[ElementCallMemberEventType.name] === undefined;
+    });
 
     // The options provided to the RoomHeader.
     // If there are multiple options, the user will be prompted to choose.
@@ -185,9 +191,9 @@ export const useRoomCall = (
                 return [PlatformCallType.ElementCall];
             }
             // Element Call (MatrixRTC) is what Element X speaks, so where it's available it is the one call:
-            // no prompt to pick, and a DM rings on Element X too. Bridged portals keep the legacy 1:1 call,
-            // which is what the bridges' call support speaks.
-            if ((hasGroupCall || mayCreateElementCalls) && !isBridged) {
+            // no prompt to pick, and a DM rings on Element X too. Portals of bridges that only speak legacy
+            // 1:1 calls keep those.
+            if ((hasGroupCall || mayCreateElementCalls) && !legacyOnlyBridge) {
                 return [PlatformCallType.ElementCall];
             }
         }
@@ -205,7 +211,7 @@ export const useRoomCall = (
         return options;
     }, [
         room,
-        isBridged,
+        legacyOnlyBridge,
         memberCount,
         mayEditWidgets,
         hasJitsiWidget,
