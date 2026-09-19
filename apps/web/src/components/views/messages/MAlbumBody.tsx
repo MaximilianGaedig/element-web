@@ -21,7 +21,6 @@ import { useMediaVisible } from "../../../hooks/useMediaVisible";
 import { _t } from "../../../languageHandler";
 import Modal from "../../../Modal";
 import AlbumLightbox from "../elements/AlbumLightbox";
-import { openRoomMedia } from "../telegram/TgMediaViewer";
 import { isTelegramLayout } from "../../../utils/telegram/telegramLayout";
 import { MatrixClientPeg } from "../../../MatrixClientPeg";
 import MessageContextMenu from "../context_menus/MessageContextMenu";
@@ -192,7 +191,10 @@ export default function MAlbumBody({ album, bodyProps, ItemBody }: Props): JSX.E
                 const source = document.querySelector<HTMLElement>(
                     `[data-tg-media-id="${CSS.escape(event.getId() ?? "")}"] img`,
                 );
-                openRoomMedia(room, event, source);
+                // Loaded on demand: a static import puts the viewer into the startup module cycle.
+                void import("../telegram/TgMediaViewer").then(({ openRoomMedia }) =>
+                    openRoomMedia(room, event, source),
+                );
                 return;
             }
             Modal.createDialog(

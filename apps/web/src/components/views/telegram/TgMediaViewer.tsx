@@ -38,8 +38,6 @@ import { _t } from "../../../languageHandler";
 import UIStore from "../../../stores/UIStore";
 import { MatrixClientPeg } from "../../../MatrixClientPeg";
 import Modal from "../../../Modal";
-import ForwardDialog from "../dialogs/ForwardDialog";
-import { createRedactEventDialog } from "../dialogs/ConfirmRedactDialog";
 import { RoomPermalinkCreator } from "../../../utils/permalinks/Permalinks";
 import MemberAvatar from "../avatars/MemberAvatar";
 import dis from "../../../dispatcher/dispatcher";
@@ -929,14 +927,20 @@ function TgMediaViewer({ items, index: startIndex, source, onClosed }: Props): J
         const blob = await helper.sourceBlob.value;
         await new FileDownloader().download({ blob, name: helper.fileName });
     };
-    const forward = (): void => {
+    // The dialogs are imported lazily: ForwardDialog renders EventTiles, whose bodies import this
+    // viewer, and a static import makes that a module cycle (MAudioBody used before initialization).
+    const forward = async (): Promise<void> => {
+        const { default: ForwardDialog } = await import("../dialogs/ForwardDialog");
         Modal.createDialog(ForwardDialog, {
             matrixClient: client,
             events: [event],
             permalinkCreator: room ? new RoomPermalinkCreator(room) : null,
         });
     };
-    const remove = (): void => createRedactEventDialog({ mxEvent: event, onCloseDialog: close });
+    const remove = async (): Promise<void> => {
+        const { createRedactEventDialog } = await import("../dialogs/ConfirmRedactDialog");
+        createRedactEventDialog({ mxEvent: event, onCloseDialog: close });
+    };
     // tweb: clicking the author closes the viewer and jumps to the message.
     const showInChat = (): void => {
         close();
@@ -988,7 +992,7 @@ function TgMediaViewer({ items, index: startIndex, source, onClosed }: Props): J
                             type="button"
                             title={_t("action|delete")}
                             aria-label={_t("action|delete")}
-                            onClick={remove}
+                            onClick={() => void remove()}
                         >
                             <DeleteIcon />
                         </button>
@@ -997,7 +1001,7 @@ function TgMediaViewer({ items, index: startIndex, source, onClosed }: Props): J
                         type="button"
                         title={_t("action|forward")}
                         aria-label={_t("action|forward")}
-                        onClick={forward}
+                        onClick={() => void forward()}
                     >
                         <ForwardIcon />
                     </button>

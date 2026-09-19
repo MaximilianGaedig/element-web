@@ -24,7 +24,6 @@ import OverflowVerticalIcon from "@vector-im/compound-design-tokens/assets/web/i
 import Spinner from "../elements/Spinner";
 import Modal from "../../../Modal";
 import AlbumLightbox from "../elements/AlbumLightbox";
-import { openTgMediaViewer } from "../telegram/TgMediaViewer";
 import { isTelegramLayout } from "../../../utils/telegram/telegramLayout";
 import MessageEvent from "../messages/MessageEvent";
 import dis from "../../../dispatcher/dispatcher";
@@ -285,7 +284,10 @@ function MediaGrid({ items }: { items: MatrixEvent[] }): JSX.Element {
                 const source = document.querySelector<HTMLElement>(
                     `.mx_SharedMedia_grid [data-tg-media-id="${CSS.escape(event.getId() ?? "")}"] img`,
                 );
-                openTgMediaViewer(ordered, ordered.indexOf(event), source);
+                // Loaded on demand: a static import puts the viewer into the startup module cycle.
+                void import("../telegram/TgMediaViewer").then(({ openTgMediaViewer }) =>
+                    openTgMediaViewer(ordered, ordered.indexOf(event), source),
+                );
                 return;
             }
             Modal.createDialog(AlbumLightbox, { items, startIndex: index }, "mx_Dialog_lightbox", undefined, true);
