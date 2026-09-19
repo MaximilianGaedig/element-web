@@ -10,6 +10,7 @@ import { type Room } from "matrix-js-sdk/src/matrix";
 import PublicIcon from "@vector-im/compound-design-tokens/assets/web/icons/public";
 import VideoIcon from "@vector-im/compound-design-tokens/assets/web/icons/video-call-solid";
 import ArrowDownIcon from "@vector-im/compound-design-tokens/assets/web/icons/arrow-down";
+import { ActivityDot } from "../beeper/ActivityDot";
 import OnlineOrUnavailableIcon from "@vector-im/compound-design-tokens/assets/web/icons/presence-solid-8x8";
 import OfflineIcon from "@vector-im/compound-design-tokens/assets/web/icons/presence-outline-8x8";
 import BusyIcon from "@vector-im/compound-design-tokens/assets/web/icons/presence-strikethrough-8x8";
@@ -40,7 +41,7 @@ export const DecoratedRoomAvatarView = memo(function DecoratedRoomAvatarView({
     // No decoration, we just show the avatar
     if (!vm.badgeDecoration) return <RoomAvatar size="32px" room={room} />;
 
-    const icon = getAvatarDecoration(vm.badgeDecoration, vm.presence);
+    const icon = getAvatarDecoration(vm.badgeDecoration, vm.presence, vm.activity);
     const label = getDecorationLabel(vm.badgeDecoration, vm.presence);
 
     // Presence indicator and video/public icons don't have the same size
@@ -61,16 +62,14 @@ export const DecoratedRoomAvatarView = memo(function DecoratedRoomAvatarView({
 /**
  * Get the decoration for the avatar based on the presence.
  */
-function getPresenceDecoration(presence: Presence): JSX.Element {
+function getPresenceDecoration(presence: Presence, activity = 1): JSX.Element {
     switch (presence) {
         case Presence.Online:
             return (
-                <OnlineOrUnavailableIcon
-                    width="8px"
-                    height="8px"
+                <ActivityDot
+                    level={activity}
                     className="mx_RoomAvatarView_PresenceDecoration"
-                    color="var(--cpd-color-icon-accent-primary)"
-                    aria-label={getPresenceLabel(presence)}
+                    label={getPresenceLabel(presence)}
                 />
             );
         case Presence.Away:
@@ -106,7 +105,11 @@ function getPresenceDecoration(presence: Presence): JSX.Element {
     }
 }
 
-function getAvatarDecoration(decoration: AvatarBadgeDecoration, presence: Presence | null): React.ReactNode {
+function getAvatarDecoration(
+    decoration: AvatarBadgeDecoration,
+    presence: Presence | null,
+    activity?: number,
+): React.ReactNode {
     if (decoration === AvatarBadgeDecoration.LowPriority) {
         return (
             <ArrowDownIcon
@@ -138,7 +141,7 @@ function getAvatarDecoration(decoration: AvatarBadgeDecoration, presence: Presen
             />
         );
     } else if (decoration === AvatarBadgeDecoration.Presence) {
-        return getPresenceDecoration(presence!);
+        return getPresenceDecoration(presence!, activity);
     }
 }
 

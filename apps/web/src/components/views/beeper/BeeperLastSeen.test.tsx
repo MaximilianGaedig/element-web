@@ -135,7 +135,8 @@ describe("Telegram-style last seen", () => {
                 pendingEventOrdering: PendingEventOrdering.Detached,
             });
             vi.spyOn(DMRoomMap.shared(), "getUserIdForRoomId").mockReturnValue(GHOST);
-            setPresence("unavailable", "last seen recently");
+            // A recent exact last-seen: the (fading) activity dot shows; a vague "recently" shows none.
+            setPresence("unavailable", `last seen ${new Date(Date.now() - 2 * 60 * 1000).toISOString()}`);
             const { container } = render(
                 <MatrixClientContext.Provider value={client}>
                     <WithPresenceIndicator room={lazyRoom}>
@@ -144,8 +145,8 @@ describe("Telegram-style last seen", () => {
                     <BeeperDmLastSeenSubtitle room={lazyRoom} />
                 </MatrixClientContext.Provider>,
             );
-            expect(container.querySelector(".mx_WithPresenceIndicator_icon")).toBeInTheDocument();
-            expect(screen.getByText("last seen recently")).toBeInTheDocument();
+            expect(container.querySelector(".mx_ActivityDot")).toBeInTheDocument();
+            expect(screen.getByText(/last seen/)).toBeInTheDocument();
         });
 
         it("treats a bridged DM portal as a DM even without m.direct", () => {

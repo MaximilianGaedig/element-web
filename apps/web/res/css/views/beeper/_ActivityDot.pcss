@@ -1,0 +1,35 @@
+/*
+Copyright 2026 New Vector Ltd.
+
+SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only OR LicenseRef-Element-Commercial
+Please see LICENSE files in the repository root for full details.
+*/
+
+/*
+ * Online / recently-active dot. The pop-in uses Telegram Web K's badge transition
+ * (tweb src/scss/base.scss --chatlist-badge-transition-in: .25s cubic-bezier(.35,.35,.47,1.34),
+ * src/scss/partials/_chatlist.scss dialog-badge-transition), scale 0 → 1. The fade with time
+ * since last activity is ours: opacity follows the activity level.
+ */
+.mx_ActivityDot {
+    display: block;
+    box-sizing: border-box;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    border: 2px solid var(--cpd-color-bg-canvas-default);
+    background-color: var(--cpd-color-icon-accent-primary);
+    opacity: calc(0.25 + 0.75 * var(--mx-activity, 1));
+    transition: opacity 1s linear;
+    animation: mx_ActivityDot_in 0.25s cubic-bezier(0.35, 0.35, 0.47, 1.34) both;
+}
+
+@keyframes mx_ActivityDot_in {
+    from {
+        transform: scale(0);
+    }
+
+    to {
+        transform: scale(1);
+    }
+}

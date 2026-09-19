@@ -9,7 +9,7 @@ import { EventType, JoinRule, type MatrixEvent, type Room, RoomEvent } from "mat
 import { useEffect, useState } from "react";
 
 import { useTypedEventEmitter, useTypedEventEmitterState } from "../../../hooks/useEventEmitter";
-import { useDmMember, usePresence, type Presence } from "../../views/avatars/WithPresenceIndicator";
+import { useActivityLevel, useDmMember, usePresence, type Presence } from "../../views/avatars/WithPresenceIndicator";
 import { DefaultTagID } from "../../../stores/room-list-v3/skip-list/tag";
 
 export enum AvatarBadgeDecoration {
@@ -30,6 +30,8 @@ export interface RoomAvatarViewState {
      * The decoration that should be rendered.
      */
     badgeDecoration?: AvatarBadgeDecoration;
+    /** 0–1 activity level of the DM member (1 online, fading after they were last active). */
+    activity?: number;
 }
 
 /**
@@ -40,6 +42,7 @@ export function useRoomAvatarViewModel(room: Room): RoomAvatarViewState {
     const isVideoRoom = room.isElementVideoRoom() || room.isCallRoom();
     const roomMember = useDmMember(room);
     const presence = usePresence(room, roomMember);
+    const activity = useActivityLevel(room, roomMember);
     const isPublic = useIsPublic(room);
     const isLowPriority = useTypedEventEmitterState(room, RoomEvent.Tags, () => !!room.tags[DefaultTagID.LowPriority]);
 
@@ -54,7 +57,7 @@ export function useRoomAvatarViewModel(room: Room): RoomAvatarViewState {
         badgeDecoration = AvatarBadgeDecoration.Presence;
     }
 
-    return { badgeDecoration, presence };
+    return { badgeDecoration, presence, activity };
 }
 
 /**

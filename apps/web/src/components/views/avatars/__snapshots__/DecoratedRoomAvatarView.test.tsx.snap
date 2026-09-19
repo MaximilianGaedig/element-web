@@ -306,34 +306,12 @@ exports[`<DecoratedRoomAvatarView /> > should render the 'online' presence 1`] =
         width="32px"
       />
     </span>
-    <svg
+    <span
       aria-label="Online"
-      aria-labelledby="react-use-id-1"
-      class="mx_RoomAvatarView_PresenceDecoration"
-      color="var(--cpd-color-icon-accent-primary)"
-      fill="currentColor"
-      height="8px"
-      viewBox="0 0 8 8"
-      width="8px"
-      xmlns="http://www.w3.org/2000/svg"
-    >
-      <g
-        clip-path="url(#cpd_PresenceSolid8X8Icon_a)"
-      >
-        <path
-          d="M8 4a4 4 0 1 1-8 0 4 4 0 0 1 8 0"
-        />
-      </g>
-      <defs>
-        <clippath
-          id="cpd_PresenceSolid8X8Icon_a"
-        >
-          <path
-            d="M0 0h8v8H0z"
-          />
-        </clippath>
-      </defs>
-    </svg>
+      class="mx_ActivityDot mx_RoomAvatarView_PresenceDecoration"
+      role="img"
+      style="--mx-activity: 1.000;"
+    />
   </div>
 </DocumentFragment>
 `;

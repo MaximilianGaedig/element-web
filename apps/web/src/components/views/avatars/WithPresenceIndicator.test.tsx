@@ -66,10 +66,11 @@ describe("WithPresenceIndicator", () => {
     });
 
     it.each([
-        ["online", "Online"],
-        ["offline", "Offline"],
-        ["unavailable", "Away"],
-    ])("renders presence indicator with tooltip for DM rooms", async (presenceStr, renderedStr) => {
+        ["online", true],
+        // No grey "inactive" dot: away/offline users without recent activity get no indicator.
+        ["offline", false],
+        ["unavailable", false],
+    ])("renders the activity dot for DM rooms only while active (%s)", async (presenceStr, shown) => {
         vi.mocked(isPresenceEnabled).mockReturnValue(true);
         const DM_USER_ID = "@bob:foo.bar";
         const dmRoomMap = {
@@ -85,9 +86,10 @@ describe("WithPresenceIndicator", () => {
             return member;
         });
 
-        const { asFragment } = renderComponent();
+        const { asFragment, container } = renderComponent();
 
-        expect(asFragment()).toMatchSnapshot();
+        expect(!!container.querySelector(".mx_ActivityDot")).toBe(shown);
+        if (shown) expect(asFragment()).toMatchSnapshot();
     });
 });
 
@@ -142,13 +144,20 @@ describe("usePresence", () => {
 
     it.each([
         ["online", Presence.Online],
-        ["offline", Presence.Offline],
-        ["unavailable", Presence.Away],
+        ["offline", null],
+        ["unavailable", null],
         ["busy", Presence.Busy],
     ])("returns correct presence for user with '%s' presence state", (presenceStr, expectedPresence) => {
         user.presence = presenceStr;
         const { result } = renderHook(() => usePresence(room, member));
         expect(result.current).toBe(expectedPresence);
+    });
+
+    it("returns Online for an away user who was active recently (fading dot)", () => {
+        user.presence = "unavailable";
+        user.presenceStatusMsg = `last seen ${new Date(Date.now() - 2 * 60 * 1000).toISOString()}`;
+        const { result } = renderHook(() => usePresence(room, member));
+        expect(result.current).toBe(Presence.Online);
     });
 
     it("returns Online when user.currentlyActive is true regardless of presence string", () => {
@@ -168,14 +177,14 @@ describe("usePresence", () => {
             user.emit(UserEvent.Presence, null as any, user);
         });
 
-        await waitFor(() => expect(result.current).toBe(Presence.Offline));
+        await waitFor(() => expect(result.current).toBeNull());
     });
 
     it("updates when UserEvent.CurrentlyActive fires on member.user", async () => {
         user.presence = "offline";
         user.currentlyActive = false;
         const { result } = renderHook(() => usePresence(room, member));
-        expect(result.current).toBe(Presence.Offline);
+        expect(result.current).toBeNull();
 
         act(() => {
             user.currentlyActive = true;
@@ -207,7 +216,7 @@ describe("usePresence", () => {
             mockClient.emit(UserEvent.Presence, null as any, user);
         });
 
-        await waitFor(() => expect(result.current).toBe(Presence.Offline));
+        await waitFor(() => expect(result.current).toBeNull());
     });
 
     it("does not update when client emits UserEvent.Presence for a different user", async () => {
