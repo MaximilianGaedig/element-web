@@ -15,7 +15,8 @@ import MatrixClientContext from "../../../contexts/MatrixClientContext";
 import { _t } from "../../../languageHandler";
 import { useSettingValue } from "../../../hooks/useSettings";
 import { isPresenceEnabled } from "../../../utils/presence";
-import { formatLastSeen } from "../../../utils/presence/lastSeen";
+import { formatPresence } from "../../../utils/presence/lastSeen";
+import { lastActiveTs } from "../../../utils/presence/activity";
 import { TypingIndicatorLine, useHeaderTypingText } from "./TypingSubtitle";
 
 const TICK_MS = 30_000;
@@ -35,17 +36,21 @@ export function useLastSeen(client: MatrixClient | undefined, userId: string | u
 
     const read = useCallback(() => {
         const user = userId ? client?.getUser(userId) : null;
-        return { presence: user?.presence, msg: user?.presenceStatusMsg, exists: !!user };
+        return {
+            online: !!user && (user.currentlyActive || user.presence === "online"),
+            lastActive: user ? lastActiveTs(user) : undefined,
+            exists: !!user,
+        };
     }, [client, userId]);
     const [state, setState] = useState(read);
     useEffect(() => setState(read()), [read]);
     // LastPresenceTs fires for every presence event; Presence only when the state itself changes,
-    // which would miss a new status_msg ("last seen …") while the user stays offline.
+    // which would miss a new last-active time while the user stays offline.
     useEventEmitter(client, UserEvent.LastPresenceTs, (_ev: unknown, user?: User) => {
         if (user?.userId === userId) setState(read());
     });
     if (!state.exists) return undefined;
-    return formatLastSeen(state.presence, state.msg, { now, showTwelveHour });
+    return formatPresence(state.online, state.lastActive, { now, showTwelveHour });
 }
 
 /**

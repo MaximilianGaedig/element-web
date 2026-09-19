@@ -10,9 +10,6 @@ import { getUserLanguage } from "../../i18n/settings";
 import { getTwelveHourOptions } from "../../DateUtils";
 import { getUserTimezone } from "../../TimezoneHandler";
 
-/** Presence status_msg prefix the Telegram bridge uses for ghosts' last-seen info. */
-const PREFIX = "last seen ";
-
 const MINUTE = 60_000;
 const HOUR = 60 * MINUTE;
 
@@ -63,36 +60,15 @@ export function formatLastSeenTime(ts: number, opts: LastSeenOptions = {}): stri
 }
 
 /**
- * Turns a bridged presence into a Telegram-style subtitle: "online", "last seen 5 minutes ago",
- * "last seen recently", ... Returns undefined when there is nothing Telegram-like to show (the
- * status message doesn't start with "last seen " and the user isn't online).
+ * The Telegram-style subtitle for a user's presence: "online", or "last seen 5 minutes ago" from the
+ * homeserver's last-active time (which the bridges keep accurate). Undefined when neither is known.
  */
-export function formatLastSeen(
-    presence: string | undefined,
-    statusMsg: string | undefined,
+export function formatPresence(
+    online: boolean,
+    lastActive: number | undefined,
     opts: LastSeenOptions = {},
 ): string | undefined {
-    if (presence === "online") return _t("bridge|last_seen_online");
-    if (typeof statusMsg !== "string" || !statusMsg.startsWith(PREFIX)) return undefined;
-    const rest = statusMsg.slice(PREFIX.length).trim();
-    switch (rest) {
-        case "recently":
-            return _t("bridge|last_seen_recently");
-        case "within a week":
-            return _t("bridge|last_seen_within_week");
-        case "within a month":
-            return _t("bridge|last_seen_within_month");
-    }
-    // RFC 3339 timestamp; anything else is shown as the bridge sent it.
-    if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:\d{2})$/.test(rest)) {
-        const ts = Date.parse(rest);
-        if (!isNaN(ts)) return formatLastSeenTime(ts, opts);
-    }
-    return statusMsg;
-}
-
-/** True when the bridge only knows a vague last-seen ("recently", "within a week/month"). */
-export function isVagueLastSeen(statusMsg: string | undefined): boolean {
-    if (typeof statusMsg !== "string" || !statusMsg.startsWith(PREFIX)) return false;
-    return ["recently", "within a week", "within a month"].includes(statusMsg.slice(PREFIX.length).trim());
+    if (online) return _t("bridge|last_seen_online");
+    if (lastActive === undefined) return undefined;
+    return formatLastSeenTime(lastActive, opts);
 }

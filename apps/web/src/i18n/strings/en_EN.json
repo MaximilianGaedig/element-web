@@ -423,10 +423,7 @@
             "other": "last seen %(count)s minutes ago"
         },
         "last_seen_online": "online",
-        "last_seen_recently": "last seen recently",
         "last_seen_today_at": "last seen today at %(time)s",
-        "last_seen_within_month": "last seen within a month",
-        "last_seen_within_week": "last seen within a week",
         "last_seen_yesterday_at": "last seen yesterday at %(time)s",
         "per_message_profile_via": "%(name)s (sent via %(sender)s)",
         "room_type_dm": "Direct message",

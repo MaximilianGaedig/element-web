@@ -27,7 +27,7 @@ import DMRoomMap from "../../../utils/DMRoomMap";
 import WithPresenceIndicator from "../avatars/WithPresenceIndicator";
 import { mkEvent, mkMembership, stubClient } from "test-utils";
 import { unmockIntlDateTimeFormat } from "test-utils/date";
-import { formatLastSeen } from "../../../utils/presence/lastSeen";
+import { formatPresence } from "../../../utils/presence/lastSeen";
 import { getBridgedDmUserId } from "../../../utils/bridge/bridgeInfo";
 import { DmLastSeenSubtitle, LastSeenLabel } from "./LastSeen";
 import { TypingSubtitle, typingText } from "./TypingSubtitle";
@@ -37,34 +37,29 @@ const NOW = Date.parse("2026-09-18T19:45:00Z");
 const OPTS = { now: NOW, locale: "en-GB", timeZone: "Europe/Berlin" };
 
 describe("Telegram-style last seen", () => {
-    describe("formatLastSeen", () => {
+    describe("formatPresence", () => {
         // These cases pass an explicit time zone; the global test setup forces every formatter to UTC.
         beforeEach(() => unmockIntlDateTimeFormat());
 
         it.each([
-            ["online", "last seen 2026-09-18T10:00:00Z", "online"],
-            ["offline", "last seen 2026-09-18T19:44:40Z", "last seen just now"],
-            ["offline", "last seen 2026-09-18T19:44:00Z", "last seen 1 minute ago"],
-            ["offline", "last seen 2026-09-18T19:40:00Z", "last seen 5 minutes ago"],
-            ["unavailable", "last seen 2026-09-18T08:05:00Z", "last seen today at 10:05"],
-            ["offline", "last seen 2026-09-17T19:40:00Z", "last seen yesterday at 21:40"],
-            ["offline", "last seen 2026-09-12T19:40:00Z", "last seen 12 Sept at 21:40"],
-            ["offline", "last seen 2025-12-24T19:40:00+00:00", "last seen 24 Dec 2025 at 20:40"],
-            ["offline", "last seen recently", "last seen recently"],
-            ["offline", "last seen within a week", "last seen within a week"],
-            ["offline", "last seen within a month", "last seen within a month"],
-            ["offline", "last seen long ago", "last seen long ago"],
-        ])("%s + %j -> %j", (presence, msg, expected) => {
-            expect(formatLastSeen(presence, msg, OPTS)).toBe(expected);
+            ["2026-09-18T19:44:40Z", "last seen just now"],
+            ["2026-09-18T19:44:00Z", "last seen 1 minute ago"],
+            ["2026-09-18T19:40:00Z", "last seen 5 minutes ago"],
+            ["2026-09-18T08:05:00Z", "last seen today at 10:05"],
+            ["2026-09-17T19:40:00Z", "last seen yesterday at 21:40"],
+            ["2026-09-12T19:40:00Z", "last seen 12 Sept at 21:40"],
+            ["2025-12-24T19:40:00+00:00", "last seen 24 Dec 2025 at 20:40"],
+        ])("last active %s -> %j", (at, expected) => {
+            expect(formatPresence(false, Date.parse(at), OPTS)).toBe(expected);
         });
 
-        it("ignores status messages that aren't last-seen info", () => {
-            expect(formatLastSeen("offline", "In a meeting", OPTS)).toBeUndefined();
-            expect(formatLastSeen("offline", undefined, OPTS)).toBeUndefined();
+        it("says online, and nothing without a last-active time", () => {
+            expect(formatPresence(true, Date.parse("2026-09-18T10:00:00Z"), OPTS)).toBe("online");
+            expect(formatPresence(false, undefined, OPTS)).toBeUndefined();
         });
 
         it("uses the 12-hour clock when asked", () => {
-            expect(formatLastSeen("offline", "last seen 2026-09-18T08:05:00Z", { ...OPTS, showTwelveHour: true })).toBe(
+            expect(formatPresence(false, Date.parse("2026-09-18T08:05:00Z"), { ...OPTS, showTwelveHour: true })).toBe(
                 "last seen today at 10:05 am",
             );
         });
@@ -118,13 +113,14 @@ describe("Telegram-style last seen", () => {
             vi.restoreAllMocks();
         });
 
-        const setPresence = (presence: string, statusMsg?: string): void => {
+        const setPresence = (presence: string, lastActiveAgo?: number): void => {
             act(() => {
                 ghost.setPresenceEvent(
                     new MatrixEvent({
                         type: "m.presence",
                         sender: GHOST,
-                        content: { presence, status_msg: statusMsg },
+                        origin_server_ts: Date.now(),
+                        content: { presence, last_active_ago: lastActiveAgo },
                     }),
                 );
             });
@@ -135,8 +131,8 @@ describe("Telegram-style last seen", () => {
                 pendingEventOrdering: PendingEventOrdering.Detached,
             });
             vi.spyOn(DMRoomMap.shared(), "getUserIdForRoomId").mockReturnValue(GHOST);
-            // A recent exact last-seen: the (fading) activity dot shows; a vague "recently" shows none.
-            setPresence("unavailable", `last seen ${new Date(Date.now() - 2 * 60 * 1000).toISOString()}`);
+            // Active two minutes ago: the recently-active tag and a "last seen" show.
+            setPresence("offline", 2 * 60 * 1000);
             const { container } = render(
                 <MatrixClientContext.Provider value={client}>
                     <WithPresenceIndicator room={lazyRoom}>
@@ -154,7 +150,7 @@ describe("Telegram-style last seen", () => {
         });
 
         it("shows a live last-seen subtitle for a bridged DM", () => {
-            setPresence("offline", "last seen 2026-09-18T19:40:00Z");
+            setPresence("offline", 5 * 60 * 1000);
             render(
                 <MatrixClientContext.Provider value={client}>
                     <DmLastSeenSubtitle room={room} />
@@ -229,17 +225,17 @@ describe("Telegram-style last seen", () => {
             );
         });
 
-        it("user info shows last seen, but keeps Element's label for other status messages", () => {
-            setPresence("offline", "last seen within a week");
+        it("user info shows last seen, but keeps Element's label without a last-active time", () => {
+            setPresence("offline", 5 * 60 * 1000);
             const renderLabel = (): JSX.Element => (
                 <MatrixClientContext.Provider value={client}>
                     <LastSeenLabel userId={GHOST} fallback={<span>Offline</span>} />
                 </MatrixClientContext.Provider>
             );
             const { rerender } = render(renderLabel());
-            expect(screen.getByText("last seen within a week")).toBeInTheDocument();
+            expect(screen.getByText("last seen 5 minutes ago")).toBeInTheDocument();
 
-            setPresence("offline", "Busy with things");
+            setPresence("offline");
             rerender(renderLabel());
             expect(screen.getByText("Offline")).toBeInTheDocument();
         });

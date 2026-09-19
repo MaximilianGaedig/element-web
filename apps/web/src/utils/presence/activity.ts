@@ -12,27 +12,15 @@ export const ACTIVITY_FADE_MS = 24 * 60 * 60 * 1000;
 /** Below this there's no tag (0: the whole window counts). */
 export const MIN_ACTIVITY = 0;
 
-const LAST_SEEN_PREFIX = "last seen ";
-
 /**
- * When `user` was last active: the exact time bridges put in status_msg ("last seen <RFC 3339>"),
- * otherwise what the homeserver reports (last_active_ago relative to when the presence arrived).
+ * When `user` was last active: the homeserver's last-active time (last_active_ago relative to when the
+ * presence arrived). Bridges keep it accurate; status messages are ignored.
  */
 export function lastActiveTs(user: User): number | undefined {
-    let ts: number | undefined;
-    const msg = user.presenceStatusMsg;
-    if (typeof msg === "string" && msg.startsWith(LAST_SEEN_PREFIX)) {
-        const parsed = Date.parse(msg.slice(LAST_SEEN_PREFIX.length).trim());
-        if (!isNaN(parsed)) ts = parsed;
-    }
-    // A bridge's exact "last seen" is the network's own answer. The homeserver's last_active_ago only
-    // counts from when the bridge last set the presence, so it's newer than the truth: use it only for
-    // users without one (ordinary Matrix users).
-    if (ts !== undefined) return ts;
     if (user.lastPresenceTs && user.lastActiveAgo !== undefined && user.lastActiveAgo >= 0) {
-        ts = user.lastPresenceTs - user.lastActiveAgo;
+        return user.lastPresenceTs - user.lastActiveAgo;
     }
-    return ts;
+    return undefined;
 }
 
 /**

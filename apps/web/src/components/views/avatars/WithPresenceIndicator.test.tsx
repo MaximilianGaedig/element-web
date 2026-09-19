@@ -155,7 +155,8 @@ describe("usePresence", () => {
 
     it("returns Online for an away user who was active recently (fading dot)", () => {
         user.presence = "unavailable";
-        user.presenceStatusMsg = `last seen ${new Date(Date.now() - 2 * 60 * 1000).toISOString()}`;
+        user.lastPresenceTs = Date.now();
+        user.lastActiveAgo = 2 * 60 * 1000;
         const { result } = renderHook(() => usePresence(room, member));
         expect(result.current).toBe(Presence.Online);
     });

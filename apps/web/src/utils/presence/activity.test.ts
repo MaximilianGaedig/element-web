@@ -24,46 +24,31 @@ function user(fields: Partial<User>): User {
 }
 
 describe("activityLevel", () => {
+    const activeAgo = (ms: number): User =>
+        user({ presence: "offline", lastPresenceTs: NOW - MIN, lastActiveAgo: ms - MIN });
+
     it("is 1 while online or currently active", () => {
         expect(activityLevel(user({ presence: "online" }), NOW)).toBe(1);
         expect(activityLevel(user({ presence: "unavailable", currentlyActive: true }), NOW)).toBe(1);
     });
 
-    it("fades linearly after the last activity, from the bridge's exact last-seen time", () => {
-        const u = user({
-            presence: "unavailable",
-            presenceStatusMsg: `last seen ${new Date(NOW - 2 * MIN).toISOString()}`,
-        });
-        expect(activityLevel(u, NOW)).toBeCloseTo(1 - (2 * MIN) / ACTIVITY_FADE_MS, 5);
-    });
-
-    it("uses the homeserver's last_active_ago when there's no exact time", () => {
+    it("fades over the day after the homeserver's last-active time", () => {
         const u = user({ presence: "offline", lastPresenceTs: NOW - 10 * MIN, lastActiveAgo: 20 * MIN });
         expect(lastActiveTs(u)).toBe(NOW - 30 * MIN);
         expect(activityLevel(u, NOW)).toBeCloseTo(1 - (30 * MIN) / ACTIVITY_FADE_MS, 5);
+        expect(activityLevel(activeAgo(23 * 60 * MIN), NOW)).toBeGreaterThan(0); // tagged for a day
+        expect(activityLevel(activeAgo(25 * 60 * MIN), NOW)).toBe(0); // past the day
     });
 
-    it("gives no dot for offline users without recent activity, or with a vague last seen", () => {
-        expect(activityLevel(user({ presence: "offline" }), NOW)).toBe(0);
-        expect(activityLevel(user({ presence: "unavailable", presenceStatusMsg: "last seen recently" }), NOW)).toBe(0);
-        const hours = user({ presenceStatusMsg: `last seen ${new Date(NOW - 23 * 60 * MIN).toISOString()}` });
-        expect(activityLevel(hours, NOW)).toBeGreaterThan(0); // tagged for a day
-        const old = user({ presenceStatusMsg: `last seen ${new Date(NOW - 25 * 60 * MIN).toISOString()}` });
-        expect(activityLevel(old, NOW)).toBe(0); // past the day
-        expect(activityLevel(null, NOW)).toBe(0);
-    });
-});
-
-describe("lastActiveTs", () => {
-    it("prefers the bridge's exact last seen over the homeserver's last_active_ago", () => {
-        // The bridge refreshed the presence 49 minutes ago; the network says 55.
+    it("ignores status messages: presence is the only source", () => {
         const u = user({
             presence: "offline",
-            presenceStatusMsg: `last seen ${new Date(NOW - 55 * MIN).toISOString()}`,
-            lastPresenceTs: NOW - 49 * MIN,
-            lastActiveAgo: 0,
+            presenceStatusMsg: `last seen ${new Date(NOW - 2 * MIN).toISOString()}`,
         });
-        expect(lastActiveTs(u)).toBe(NOW - 55 * MIN);
+        expect(lastActiveTs(u)).toBeUndefined();
+        expect(activityLevel(u, NOW)).toBe(0);
+        expect(activityLevel(user({ presence: "offline" }), NOW)).toBe(0);
+        expect(activityLevel(null, NOW)).toBe(0);
     });
 });
 
