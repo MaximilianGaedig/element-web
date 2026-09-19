@@ -14,6 +14,7 @@ import { Form } from "@vector-im/compound-web";
 import { _t } from "../../../../../languageHandler";
 import SettingsStore from "../../../../../settings/SettingsStore";
 import SettingsFlag from "../../../elements/SettingsFlag";
+import SettingsDropdown from "../../../elements/SettingsDropdown";
 import Field from "../../../elements/Field";
 import AccessibleButton from "../../../elements/AccessibleButton";
 import { SettingLevel } from "../../../../../settings/SettingLevel";
@@ -111,6 +112,11 @@ export default class AppearanceUserSettingsTab extends React.Component<EmptyObje
                     <SettingsSubsection>
                         <Form.Root onSubmit={(evt) => evt.preventDefault()}>
                             <SettingsFlag name="telegramStyleLayout" level={SettingLevel.ACCOUNT} />
+                            <SettingsDropdown
+                                settingKey="readReceiptsStyle"
+                                label={_t("settings|read_receipts_style")}
+                                level={SettingLevel.ACCOUNT}
+                            />
                         </Form.Root>
                     </SettingsSubsection>
                     <FontScalingPanel />

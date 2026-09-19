@@ -72,3 +72,27 @@ export function getTelegramTimePlacement(mxEvent: MatrixEvent): TelegramTimePlac
     if ((msgtype === MsgType.Image || msgtype === MsgType.Video) && !hasMediaCaption(mxEvent)) return "floating";
     return "inline";
 }
+
+/** How our messages show that others have read them (setting "readReceiptsStyle"). */
+export type ReadReceiptsStyle = "avatars" | "ticks";
+
+/**
+ * The shown events, in timeline order, that someone other than us has read: everything up to the
+ * newest event carrying someone's read receipt (tweb: a message is read once the peer's read
+ * outbox max id reaches it, bubbles.ts updateUnreadByDialog `readOutboxMaxId`). Receipts from `ignoredUserIds` (bridge bots,
+ * which may acknowledge delivery with a receipt) don't count.
+ */
+export function getEventIdsReadByOthers(
+    eventIds: string[],
+    receiptsByEvent: Map<string, { userId: string }[]>,
+    ignoredUserIds: Set<string> = new Set(),
+): Set<string> {
+    let last = -1;
+    for (let i = eventIds.length - 1; i >= 0; i--) {
+        if (receiptsByEvent.get(eventIds[i])?.some((r) => !ignoredUserIds.has(r.userId))) {
+            last = i;
+            break;
+        }
+    }
+    return new Set(eventIds.slice(0, last + 1));
+}

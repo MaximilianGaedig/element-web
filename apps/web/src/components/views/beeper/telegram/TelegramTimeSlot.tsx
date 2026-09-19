@@ -20,6 +20,8 @@ interface Props {
     /** Whether the event is ours: only our messages get a sending status, as in tweb. */
     isOwnEvent: boolean;
     eventSendStatus?: EventStatus;
+    /** Whether someone else has read up to this event (only passed with Telegram ticks on). */
+    readByOthers?: boolean;
     /** Called when a disappearing message's timer runs out. */
     onDisappeared?: () => void;
 }
@@ -30,11 +32,17 @@ export default function TelegramTimeSlot({
     timestamp,
     isOwnEvent,
     eventSendStatus,
+    readByOthers,
     onDisappeared,
 }: Props): JSX.Element {
     const bridgeStatus = useMessageSendStatus(mxEvent);
     const sendState = isOwnEvent
-        ? getTelegramSendState({ eventSendStatus, bridgeStatus: bridgeStatus?.status })
+        ? getTelegramSendState({
+              eventSendStatus,
+              bridgeStatus: bridgeStatus?.status,
+              bridgeDelivered: !!bridgeStatus?.delivered_to_users?.length,
+              readByOthers,
+          })
         : undefined;
     return (
         <TelegramTime

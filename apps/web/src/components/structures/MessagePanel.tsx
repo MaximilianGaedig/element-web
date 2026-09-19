@@ -49,6 +49,8 @@ import { haveRendererForEvent } from "../../events/EventTileFactory";
 import { editorRoomKey } from "../../Editing";
 import { hasThreadSummary } from "../../utils/EventUtils";
 import { isOneToOneRoom, isTelegramLayout } from "../../utils/beeper/telegramLayout";
+import { getEventIdsReadByOthers, type ReadReceiptsStyle } from "../../utils/beeper/telegramTime";
+import { getBridgeBots } from "../../utils/beeper/bridgeInfo";
 import { type BaseGrouper } from "./grouper/BaseGrouper";
 import { MessageSelectionStore } from "../../stores/MessageSelectionStore";
 import { MainGrouper } from "./grouper/MainGrouper";
@@ -214,6 +216,8 @@ interface IState {
     hideAvatar: boolean;
     /** Telegram-style layout: typing shows in the room header, so there is no typing tile at the bottom. */
     telegramLayout: boolean;
+    /** Telegram-style bubbles: read receipt avatars, or Telegram's ticks ("readReceiptsStyle"). */
+    readReceiptsStyle: ReadReceiptsStyle;
     isSelecting: boolean;
 }
 
@@ -268,6 +272,8 @@ export default class MessagePanel extends React.Component<IProps, IState> {
     // render as our fallback for any user IDs we can't match a receipt to a
     // displayed event in the current render cycle.
     private readReceiptsByUserId: Map<string, IReadReceiptForUser> = new Map();
+    /** Telegram ticks: the shown events someone else has read (two ticks on ours). */
+    private eventIdsReadByOthers: Set<string> = new Set();
 
     private readonly _showHiddenEvents: boolean;
     private unmounted = false;
@@ -278,6 +284,7 @@ export default class MessagePanel extends React.Component<IProps, IState> {
 
     private showTypingNotificationsWatcherRef?: string;
     private telegramLayoutWatcherRef?: string;
+    private readReceiptsStyleWatcherRef?: string;
     private eventTiles: Record<string, UnwrappedEventTile> = {};
 
     // A map to allow groupers to maintain consistent keys even if their first event is uprooted due to back-pagination.
@@ -294,6 +301,7 @@ export default class MessagePanel extends React.Component<IProps, IState> {
             hideSender: this.shouldHideSender(),
             hideAvatar: this.isTelegramOneToOne(),
             telegramLayout: isTelegramLayout(),
+            readReceiptsStyle: SettingsStore.getValue("readReceiptsStyle"),
             isSelecting: props.room ? MessageSelectionStore.instance.isSelecting(props.room.roomId) : false,
         };
 
@@ -316,6 +324,9 @@ export default class MessagePanel extends React.Component<IProps, IState> {
             null,
             this.calculateRoomMembersCount,
         );
+        this.readReceiptsStyleWatcherRef = SettingsStore.watchSetting("readReceiptsStyle", null, () =>
+            this.setState({ readReceiptsStyle: SettingsStore.getValue("readReceiptsStyle") }),
+        );
         this.calculateRoomMembersCount();
         this.props.room?.currentState.on(RoomStateEvent.Update, this.calculateRoomMembersCount);
     }
@@ -326,6 +337,7 @@ export default class MessagePanel extends React.Component<IProps, IState> {
         this.props.room?.currentState.off(RoomStateEvent.Update, this.calculateRoomMembersCount);
         SettingsStore.unwatchSetting(this.showTypingNotificationsWatcherRef);
         SettingsStore.unwatchSetting(this.telegramLayoutWatcherRef);
+        SettingsStore.unwatchSetting(this.readReceiptsStyleWatcherRef);
         this.readReceiptMap = {};
         this.resizeObserver.disconnect();
     }
@@ -371,6 +383,15 @@ export default class MessagePanel extends React.Component<IProps, IState> {
                 this.props.room.getInvitedAndJoinedMemberCount() <= 2 &&
                 this.props.layout === Layout.Bubble) ||
             this.isTelegramOneToOne()
+        );
+    }
+
+    /** Telegram-style bubbles with Telegram's ticks instead of read receipt avatars. */
+    private get telegramTicks(): boolean {
+        return (
+            this.state.telegramLayout &&
+            this.props.layout === Layout.Bubble &&
+            this.state.readReceiptsStyle === "ticks"
         );
     }
 
@@ -707,6 +728,14 @@ export default class MessagePanel extends React.Component<IProps, IState> {
         if (this.props.showReadReceipts) {
             this.readReceiptsByEvent = this.getReadReceiptsByShownEvent(events);
         }
+        this.eventIdsReadByOthers =
+            this.telegramTicks && this.props.room
+                ? getEventIdsReadByOthers(
+                      events.filter((e) => e.shouldShow).map((e) => e.event.getId()!),
+                      this.readReceiptsByEvent,
+                      getBridgeBots(this.props.room),
+                  )
+                : new Set();
 
         let grouper: BaseGrouper | null = null;
 
@@ -875,6 +904,8 @@ export default class MessagePanel extends React.Component<IProps, IState> {
                 hideSender={this.state.hideSender}
                 hideAvatar={this.state.hideAvatar}
                 telegramBubbles={this.state.telegramLayout && this.props.layout === Layout.Bubble}
+                telegramTicks={this.telegramTicks}
+                readByOthers={this.eventIdsReadByOthers.has(eventId)}
                 isSelected={
                     this.props.room ? MessageSelectionStore.instance.isSelected(this.props.room.roomId, eventId) : false
                 }

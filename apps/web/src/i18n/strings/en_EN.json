@@ -2890,6 +2890,10 @@
             "user_timezone": "Set timezone"
         },
         "prompt_invite": "Prompt before sending invites to potentially invalid matrix IDs",
+        "read_receipts_style": "Read receipts style",
+        "read_receipts_style_avatars": "Avatars",
+        "read_receipts_style_description": "How the Telegram-style layout shows who has read your messages: their avatars next to the message, or Telegram's ticks (one tick sent, two ticks delivered or read).",
+        "read_receipts_style_ticks": "Telegram ticks",
         "replace_plain_emoji": "Automatically replace plain text Emoji",
         "room_header": {
             "show_space_path": "Show space path"

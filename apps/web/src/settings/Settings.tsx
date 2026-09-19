@@ -268,6 +268,7 @@ export interface Settings {
     "autoplayVideo": IBaseSetting<boolean>;
     "groupConsecutiveImages": IBaseSetting<boolean>;
     "telegramStyleLayout": IBaseSetting<boolean>;
+    "readReceiptsStyle": IBaseSetting<"avatars" | "ticks">;
     "enableSyntaxHighlightLanguageDetection": IBaseSetting<boolean>;
     "expandCodeByDefault": IBaseSetting<boolean>;
     "showCodeLineNumbers": IBaseSetting<boolean>;
@@ -897,6 +898,16 @@ export const SETTINGS: Settings = {
         displayName: _td("settings|telegram_style_layout"),
         description: _td("settings|telegram_style_layout_description"),
         default: true,
+    },
+    "readReceiptsStyle": {
+        supportedLevels: LEVELS_ACCOUNT_SETTINGS,
+        displayName: _td("settings|read_receipts_style"),
+        description: _td("settings|read_receipts_style_description"),
+        default: "avatars",
+        options: [
+            { value: "avatars", label: _td("settings|read_receipts_style_avatars") },
+            { value: "ticks", label: _td("settings|read_receipts_style_ticks") },
+        ],
     },
     "enableSyntaxHighlightLanguageDetection": {
         supportedLevels: LEVELS_ACCOUNT_SETTINGS,

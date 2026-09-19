@@ -929,6 +929,35 @@ describe("EventTile", () => {
             expect(tile.querySelector(".mx_ReadReceiptGroup")).toBeNull();
         });
 
+        it("shows two ticks instead of read receipt avatars with Telegram ticks", () => {
+            const readReceipts = [{ userId: "@bob:example.org", roomMember: null, ts: 1 }];
+            const own = makeOwnMessage({ ts: 1234 });
+            const avatars = getComponent({
+                layout: Layout.Bubble,
+                telegramBubbles: true,
+                mxEvent: own,
+                showReadReceipts: true,
+                readReceipts,
+                readByOthers: true,
+            });
+            expect(avatars.container.querySelector(".mx_ReadReceiptGroup")).toBeInTheDocument();
+            // Avatars mode never draws "read" ticks.
+            expect(avatars.container.querySelector(".mx_TelegramTime_status")).toHaveAttribute("data-state", "sent");
+            avatars.unmount();
+
+            const ticks = getComponent({
+                layout: Layout.Bubble,
+                telegramBubbles: true,
+                telegramTicks: true,
+                mxEvent: own,
+                showReadReceipts: true,
+                readReceipts,
+                readByOthers: true,
+            });
+            expect(ticks.container.querySelector(".mx_ReadReceiptGroup")).toBeNull();
+            expect(ticks.container.querySelector(".mx_TelegramTime_status")).toHaveAttribute("data-state", "read");
+        });
+
         it("uses the current room member when current profiles are enabled", async () => {
             const senderId = mxEvent.getSender()!;
             const currentMember = new RoomMember(room.roomId, senderId);

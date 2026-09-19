@@ -10,7 +10,12 @@ Please see LICENSE files in the repository root for full details.
 import { describe, it, expect } from "vitest";
 import { EventStatus, EventType, MsgType } from "matrix-js-sdk/src/matrix";
 
-import { getTelegramSendState, getTelegramTimePlacement, hasMediaCaption } from "./telegramTime";
+import {
+    getEventIdsReadByOthers,
+    getTelegramSendState,
+    getTelegramTimePlacement,
+    hasMediaCaption,
+} from "./telegramTime";
 import { mkEvent } from "test-utils";
 
 const mkMsg = (content: Record<string, unknown>, type: string = EventType.RoomMessage) =>
@@ -67,5 +72,34 @@ describe("getTelegramTimePlacement", () => {
         expect(hasMediaCaption(captioned)).toBe(true);
         expect(getTelegramTimePlacement(captioned)).toBe("inline");
         expect(hasMediaCaption(mkMsg({ msgtype: MsgType.Image, body: "a.jpg", filename: "a.jpg" }))).toBe(false);
+    });
+});
+
+describe("getEventIdsReadByOthers", () => {
+    const ids = ["$1", "$2", "$3", "$4"];
+
+    it("marks everything up to the newest receipt as read", () => {
+        const receipts = new Map([["$2", [{ userId: "@bob:x" }]]]);
+        expect([...getEventIdsReadByOthers(ids, receipts)]).toEqual(["$1", "$2"]);
+    });
+
+    it("uses the newest receipt of anyone", () => {
+        const receipts = new Map([
+            ["$1", [{ userId: "@bob:x" }]],
+            ["$3", [{ userId: "@carol:x" }]],
+        ]);
+        expect([...getEventIdsReadByOthers(ids, receipts)]).toEqual(["$1", "$2", "$3"]);
+    });
+
+    it("ignores the bridge bot's receipts", () => {
+        const receipts = new Map([
+            ["$1", [{ userId: "@bob:x" }]],
+            ["$4", [{ userId: "@telegrambot:x" }]],
+        ]);
+        expect([...getEventIdsReadByOthers(ids, receipts, new Set(["@telegrambot:x"]))]).toEqual(["$1"]);
+    });
+
+    it("is empty without receipts", () => {
+        expect(getEventIdsReadByOthers(ids, new Map()).size).toBe(0);
     });
 });

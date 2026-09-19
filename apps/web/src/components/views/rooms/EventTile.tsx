@@ -276,6 +276,12 @@ export interface EventTileProps {
      */
     telegramBubbles?: boolean;
 
+    /** Telegram-style bubbles with Telegram's ticks: no read receipt avatars, two ticks once read. */
+    telegramTicks?: boolean;
+
+    /** Whether someone other than us has read up to this event (Telegram ticks). */
+    readByOthers?: boolean;
+
     /** Whether thread information should be shown. */
     showThreadInfo?: boolean;
 
@@ -1223,6 +1229,7 @@ export class UnwrappedEventTile extends React.Component<EventTileProps, IState> 
                     }
                     isOwnEvent={rootState.isOwnEvent}
                     eventSendStatus={this.props.eventSendStatus}
+                    readByOthers={!!this.props.telegramTicks && !!this.props.readByOthers}
                     onDisappeared={this.onBeeperDisappeared}
                 />
             ) : (
@@ -1237,7 +1244,9 @@ export class UnwrappedEventTile extends React.Component<EventTileProps, IState> 
         const sentReceipt = receiptState.shouldShowSentReceipt || receiptState.shouldShowSendingReceipt;
         const receipt =
             !isFileShape &&
-            (telegramTime ? this.props.showReadReceipts && !sentReceipt : this.props.showReadReceipts || sentReceipt) ? (
+            (telegramTime
+                ? this.props.showReadReceipts && !sentReceipt && !this.props.telegramTicks
+                : this.props.showReadReceipts || sentReceipt) ? (
                 <ReceiptAdapter
                     receiptState={receiptState}
                     eventSendStatus={this.props.eventSendStatus}
