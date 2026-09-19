@@ -69,6 +69,7 @@ import PerMessageProfileAvatar from "../beeper/PerMessageProfileAvatar";
 import BeeperEventTileExtras from "../beeper/BeeperEventTileExtras";
 import TelegramTimeSlot from "../beeper/telegram/TelegramTimeSlot";
 import { getTelegramTimePlacement } from "../../../utils/beeper/telegramTime";
+import { attachLongPress, isAppleTouch } from "../../../utils/beeper/telegramMenu";
 import { isBeeperDisappeared } from "../../../utils/beeper/shouldHideBeeperEvent";
 import { isAnimatedSticker } from "../../../utils/beeper/animatedMedia";
 import { getPerMessageProfile } from "../../../utils/beeper/perMessageProfile";
@@ -447,6 +448,34 @@ export class UnwrappedEventTile extends React.Component<EventTileProps, IState> 
         const room = client.getRoom(this.props.mxEvent.getRoomId());
         room?.on(ThreadEvent.New, this.onNewThread);
         this.bindSelectionListeners();
+        this.bindTelegramGestures();
+    }
+
+    private telegramGesturesTarget?: HTMLElement;
+    private unbindTelegramGestureListeners?: () => void;
+
+    /** Telegram-style bubbles: tweb's long press (Apple touch devices fire no contextmenu). */
+    private bindTelegramGestures(): void {
+        const el = this.props.telegramBubbles ? (this.ref.current ?? undefined) : undefined;
+        if (el === this.telegramGesturesTarget) return;
+        this.unbindTelegramGestures();
+        if (!el || !isAppleTouch()) return;
+        this.telegramGesturesTarget = el;
+        this.unbindTelegramGestureListeners = attachLongPress(el, ({ x, y }) => {
+            if (this.props.editState || this.props.isSelecting) return;
+            this.setState((prevState) => ({
+                interaction: eventTileOpenContextMenu(prevState.interaction, {
+                    position: { left: x, top: y, bottom: y },
+                    link: this.props.permalinkCreator?.forEvent(this.props.mxEvent.getId()!),
+                }),
+            }));
+        });
+    }
+
+    private unbindTelegramGestures(): void {
+        this.unbindTelegramGestureListeners?.();
+        this.unbindTelegramGestureListeners = undefined;
+        this.telegramGesturesTarget = undefined;
     }
 
     private readonly updateThread = (thread: Thread): void => {
@@ -464,6 +493,7 @@ export class UnwrappedEventTile extends React.Component<EventTileProps, IState> 
     public componentWillUnmount(): void {
         this.stopStaleHoverCheck();
         this.unbindSelectionListeners();
+        this.unbindTelegramGestures();
         const client = MatrixClientPeg.get();
         if (client) {
             client.removeListener(RoomEvent.Receipt, this.onRoomReceipt);
@@ -489,6 +519,7 @@ export class UnwrappedEventTile extends React.Component<EventTileProps, IState> 
 
     public componentDidUpdate(_prevProps: Readonly<EventTileProps>, prevState: Readonly<IState>): void {
         this.bindSelectionListeners();
+        this.bindTelegramGestures();
         // Some overlays, such as portalled tooltips, can interrupt the normal mouseleave path.
         // While hover is active, verify it against the browser's real :hover state on mouse movement.
         if (!prevState.interaction.hover && this.state.interaction.hover) {
@@ -1084,6 +1115,14 @@ export class UnwrappedEventTile extends React.Component<EventTileProps, IState> 
         return (
             <MessageContextMenu
                 {...aboveRightOf(this.state.interaction.contextMenu.position)}
+                telegramPoint={
+                    this.props.telegramBubbles
+                        ? {
+                              x: this.state.interaction.contextMenu.position.left,
+                              y: this.state.interaction.contextMenu.position.top,
+                          }
+                        : undefined
+                }
                 mxEvent={this.props.mxEvent}
                 permalinkCreator={this.props.permalinkCreator}
                 eventTileOps={eventTileOps}

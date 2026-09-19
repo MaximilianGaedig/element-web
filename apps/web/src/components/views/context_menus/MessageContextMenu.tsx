@@ -79,6 +79,7 @@ import { CardContext } from "../right_panel/context";
 import PinningUtils from "../../../utils/PinningUtils";
 import PosthogTrackers from "../../../PosthogTrackers.ts";
 import { MessageSelectionStore } from "../../../stores/MessageSelectionStore";
+import TelegramMessageContextMenu from "../beeper/telegram/TelegramMessageContextMenu";
 
 interface IReplyInThreadButton {
     mxEvent: MatrixEvent;
@@ -136,6 +137,12 @@ interface IProps extends MenuProps {
     link?: string;
 
     getRelationsForEvent?: GetRelationsForEvent;
+
+    /**
+     * Telegram-style layout: render Telegram Web K's menu instead, opened at this point (the pointer
+     * or the long-press point, in client coordinates).
+     */
+    telegramPoint?: { x: number; y: number };
 }
 
 interface IState {
@@ -291,6 +298,8 @@ export default class MessageContextMenu extends React.Component<IProps, IState> 
     };
 
     private closeMenu = (): void => {
+        // Telegram Web's menu closes itself after an item, with its transition.
+        if (this.props.telegramPoint) return;
         this.props.onFinished();
     };
 
@@ -418,6 +427,43 @@ export default class MessageContextMenu extends React.Component<IProps, IState> 
     };
 
     public render(): React.ReactNode {
+        if (this.props.telegramPoint) {
+            return (
+                <TelegramMessageContextMenu
+                    point={this.props.telegramPoint}
+                    mxEvent={this.props.mxEvent}
+                    link={this.props.link}
+                    permalinkCreator={this.props.permalinkCreator}
+                    reactions={this.props.reactions}
+                    eventTileOps={this.props.eventTileOps}
+                    collapseReplyChain={this.props.collapseReplyChain}
+                    canRedact={this.state.canRedact}
+                    canPin={this.state.canPin}
+                    canEndPoll={this.canEndPoll(this.props.mxEvent)}
+                    unsentReactions={this.getUnsentReactions()}
+                    quotable={this.isSelectionWithinSingleTextBody()}
+                    onFinished={this.props.onFinished}
+                    handlers={{
+                        reply: this.onReplyClick,
+                        edit: this.onEditClick,
+                        quote: this.onQuoteClick,
+                        pin: this.onPinClick,
+                        forward: this.onForwardClick,
+                        report: this.onReportEventClick,
+                        select: this.onSelectMessagesClick,
+                        viewSource: this.onViewSourceClick,
+                        redact: this.onRedactClick,
+                        endPoll: this.onEndPollClick,
+                        resendReactions: this.onResendReactionsClick,
+                        unhidePreview: this.onUnhidePreviewClick,
+                        collapseReplyChain: this.onCollapseReplyChainClick,
+                        viewInRoom: this.viewInRoom,
+                        jumpToRelated: this.onJumpToRelatedEventClick,
+                    }}
+                />
+            );
+        }
+
         const cli = MatrixClientPeg.safeGet();
         const me = cli.getUserId();
         const { mxEvent, rightClick, link, eventTileOps, reactions, collapseReplyChain, ...other } = this.props;
