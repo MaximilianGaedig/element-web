@@ -11,7 +11,7 @@ import { type MediaEventContent } from "matrix-js-sdk/src/types";
 import { MatrixEventEvent, type MatrixEvent, type Room, RoomEvent } from "matrix-js-sdk/src/matrix";
 
 import { _t } from "../../../languageHandler";
-import BaseCard from "../right_panel/BaseCard";
+import BaseCard from "./BaseCard";
 import AccessibleButton from "../elements/AccessibleButton";
 import IconizedContextMenu, {
     IconizedContextMenuCheckbox,
@@ -39,7 +39,7 @@ import {
     SharedMediaLoader,
     type SharedMediaState,
     type SharedMediaTab,
-} from "../../../utils/beeper/sharedMedia";
+} from "../../../utils/sharedMedia";
 
 const TAB_LABELS: Record<SharedMediaTab, () => string> = {
     media: () => _t("beeper|shared_media|media"),

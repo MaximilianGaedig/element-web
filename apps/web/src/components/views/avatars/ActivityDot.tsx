@@ -8,7 +8,7 @@ Please see LICENSE files in the repository root for full details.
 import React, { type JSX } from "react";
 import classNames from "classnames";
 
-import { ACTIVITY_FADE_MS } from "../../../utils/beeper/activity";
+import { ACTIVITY_FADE_MS } from "../../../utils/presence/activity";
 
 interface Props {
     /** 0–1 from activityLevel(): 1 = online, falling towards 0 over the hour after the user was last active. */

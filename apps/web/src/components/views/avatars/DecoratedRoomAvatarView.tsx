@@ -10,7 +10,7 @@ import { type Room } from "matrix-js-sdk/src/matrix";
 import PublicIcon from "@vector-im/compound-design-tokens/assets/web/icons/public";
 import VideoIcon from "@vector-im/compound-design-tokens/assets/web/icons/video-call-solid";
 import ArrowDownIcon from "@vector-im/compound-design-tokens/assets/web/icons/arrow-down";
-import { ActivityDot } from "../beeper/ActivityDot";
+import { ActivityDot } from "./ActivityDot";
 import OnlineOrUnavailableIcon from "@vector-im/compound-design-tokens/assets/web/icons/presence-solid-8x8";
 import OfflineIcon from "@vector-im/compound-design-tokens/assets/web/icons/presence-outline-8x8";
 import BusyIcon from "@vector-im/compound-design-tokens/assets/web/icons/presence-strikethrough-8x8";

@@ -16,8 +16,8 @@ import { useEventEmitter } from "../../../hooks/useEventEmitter";
 import { BUSY_PRESENCE_NAME } from "../rooms/PresenceLabel";
 import { getBridgedDmUserId } from "../../../utils/beeper/bridgeInfo";
 import AvatarPresenceIconView from "../rooms/MemberList/tiles/common/PresenceIconView";
-import { activityLevel } from "../../../utils/beeper/activity";
-import { ActivityDot } from "../beeper/ActivityDot";
+import { activityLevel } from "../../../utils/presence/activity";
+import { ActivityDot } from "./ActivityDot";
 import { _t } from "../../../languageHandler";
 
 interface Props {

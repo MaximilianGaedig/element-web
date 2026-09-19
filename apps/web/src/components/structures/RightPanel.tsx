@@ -19,7 +19,7 @@ import RoomSummaryCardView from "../views/right_panel/RoomSummaryCardView";
 import WidgetCard from "../views/right_panel/WidgetCard";
 import UserInfo from "../views/right_panel/UserInfo";
 import ThirdPartyMemberInfo from "../views/rooms/ThirdPartyMemberInfo";
-import SharedMediaPanel from "../views/beeper/SharedMediaPanel";
+import SharedMediaPanel from "../views/right_panel/SharedMediaPanel";
 import ThreadView from "./ThreadView";
 import ThreadPanel from "./ThreadPanel";
 import NotificationPanel from "./NotificationPanel";

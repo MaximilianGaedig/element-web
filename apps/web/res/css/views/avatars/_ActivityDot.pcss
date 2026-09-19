@@ -62,14 +62,14 @@ Please see LICENSE files in the repository root for full details.
     }
 }
 
-/* Room list (32px avatar): cut-outs in res/img/beeper/avatar-mask-{dot,pill}.svg. */
+/* Room list (32px avatar): cut-outs in res/img/presence/avatar-mask-{dot,tag}.svg. */
 .mx_RoomAvatarView {
     .mx_RoomAvatarView_RoomAvatar_presence {
-        mask-image: url("/res/img/beeper/avatar-mask-dot.svg");
+        mask-image: url("/res/img/presence/avatar-mask-dot.svg");
     }
 
     .mx_RoomAvatarView_RoomAvatar_recent {
-        mask-image: url("/res/img/beeper/avatar-mask-pill.svg");
+        mask-image: url("/res/img/presence/avatar-mask-tag.svg");
     }
 
     /* 8px presence icons and the 10px dot share the cut-out centred at (27, 27). */
@@ -84,9 +84,10 @@ Please see LICENSE files in the repository root for full details.
         bottom: 0;
     }
 
+    /* The "12m" tag hangs 3px below the avatar, level with the bridged-network badge on the left. */
     .mx_ActivityDot_recent.mx_RoomAvatarView_PresenceDecoration {
-        right: -2px;
-        bottom: 0;
+        right: -3px;
+        bottom: -3px;
         transform-origin: right bottom;
     }
 }
