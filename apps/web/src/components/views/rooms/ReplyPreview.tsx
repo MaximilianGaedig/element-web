@@ -8,7 +8,7 @@ Please see LICENSE files in the repository root for full details.
 
 import React, { useEffect, type JSX } from "react";
 import { type MatrixEvent } from "matrix-js-sdk/src/matrix";
-import { CloseIcon } from "@vector-im/compound-design-tokens/assets/web/icons";
+import { CloseIcon, ReplyIcon } from "@vector-im/compound-design-tokens/assets/web/icons";
 import { ReplyTileView, useCreateAutoDisposedViewModel } from "@element-hq/web-shared-components";
 
 import dis from "../../../dispatcher/dispatcher";
@@ -18,6 +18,11 @@ import RoomContext, { type TimelineRenderingType } from "../../../contexts/RoomC
 import AccessibleButton from "../elements/AccessibleButton";
 import { useMatrixClientContext } from "../../../contexts/MatrixClientContext";
 import { ReplyTileViewModel } from "../../../viewmodels/room/timeline/event-tile/ReplyTileViewModel";
+import { isTelegramLayout } from "../../../utils/telegram/telegramLayout";
+import { senderName, TgReplyQuote } from "../telegram/TgReplyQuote";
+import { getUserNameColorClass } from "../../../utils/FormattingUtils";
+import { Action } from "../../../dispatcher/actions";
+import { type ViewRoomPayload } from "../../../dispatcher/payloads/ViewRoomPayload";
 import { useUserStatus } from "../../../hooks/useUserStatus";
 
 function cancelQuoting(context: TimelineRenderingType): void {
@@ -69,6 +74,44 @@ export default class ReplyPreview extends React.Component<IProps> {
 
     public render(): JSX.Element | null {
         if (!this.props.replyToEvent) return null;
+
+        if (isTelegramLayout()) {
+            // Fork: tweb's .reply-wrapper: [reply icon] [Reply to <name> / the message] [cancel], in the
+            // replied-to sender's colour; clicking the block shows the message.
+            const ev = this.props.replyToEvent;
+            return (
+                <div className="mx_ReplyPreview mx_ReplyPreview_tg">
+                    <div className="mx_ReplyPreview_section">
+                        <div className={`mx_TgReplyRow ${getUserNameColorClass(ev.getSender() ?? "")}`}>
+                            <span className="mx_TgReplyRow_icon" aria-hidden>
+                                <ReplyIcon />
+                            </span>
+                            <TgReplyQuote
+                                variant="composer"
+                                event={ev}
+                                title={_t("tg_layout|reply_to", { name: senderName(ev) })}
+                                onClick={() =>
+                                    dis.dispatch<ViewRoomPayload>({
+                                        action: Action.ViewRoom,
+                                        event_id: ev.getId(),
+                                        highlighted: true,
+                                        room_id: ev.getRoomId(),
+                                        metricsTrigger: undefined,
+                                    })
+                                }
+                            />
+                            <AccessibleButton
+                                className="mx_TgReplyRow_cancel"
+                                title={_t("action|cancel")}
+                                onClick={() => cancelQuoting(this.context.timelineRenderingType)}
+                            >
+                                <CloseIcon />
+                            </AccessibleButton>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
 
         return (
             <div className="mx_ReplyPreview">

@@ -3376,6 +3376,12 @@
         "tos": "Terms of Service"
     },
     "tg_layout": {
+        "reply_gif": "GIF",
+        "reply_photo": "Photo",
+        "reply_sticker": "Sticker",
+        "reply_to": "Reply to %(name)s",
+        "reply_video": "Video",
+        "reply_voice": "Voice message",
         "connection_reconnecting": "Reconnecting...",
         "connection_updating": "Updating...",
         "connection_waiting": "Waiting for network...",

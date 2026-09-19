@@ -9,13 +9,25 @@ Please see LICENSE files in the repository root for full details.
 
 import React from "react";
 import { render, screen, waitFor } from "test-utils-rtl";
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { type MatrixClient, type MatrixEvent } from "matrix-js-sdk/src/matrix";
 import { mkEvent, stubClient, withClientContextRenderOptions } from "test-utils";
 
 import ReplyChain from "./ReplyChain";
+import SettingsStore from "../../../settings/SettingsStore";
+import dis from "../../../dispatcher/dispatcher";
+import { Action } from "../../../dispatcher/actions";
+
+/** These cover Element's reply tile; the fork's Telegram layout (on by default) draws tweb's block. */
+const realGetValue = SettingsStore.getValue.bind(SettingsStore);
+function useTelegramLayout(on: boolean): void {
+    vi.spyOn(SettingsStore, "getValue").mockImplementation(((name: string, ...rest: unknown[]) =>
+        name === "telegramStyleLayout" ? on : (realGetValue as any)(name, ...rest)) as typeof SettingsStore.getValue);
+}
 
 describe("ReplyChain", () => {
+    beforeEach(() => useTelegramLayout(false));
+
     it("should call setQuoteExpanded if chain is longer than 2 lines", async () => {
         // Jest/JSDOM won't set clientHeight/scrollHeight for us so we have to synthesise it
         vi.spyOn(HTMLElement.prototype, "clientHeight", "get").mockReturnValue(100);
@@ -293,6 +305,53 @@ describe("ReplyChain", () => {
             );
 
             await waitFor(() => expect(screen.getByText("In reply to", { exact: false })).toBeInTheDocument());
+        });
+    });
+
+    describe("Telegram layout", () => {
+        beforeEach(() => useTelegramLayout(true));
+
+        it("draws tweb's reply block for the quoted message and jumps to it on click", async () => {
+            const cli = stubClient();
+            const { room_id: roomId } = await cli.createRoom({});
+            const room = cli.getRoom(roomId)!;
+            const quoted = mkEvent({
+                event: true,
+                type: "m.room.message",
+                user: cli.getUserId()!,
+                room: roomId,
+                id: "$quoted",
+                content: { body: "Quoted text", msgtype: "m.text" },
+            });
+            vi.spyOn(room, "findEventById").mockReturnValue(quoted);
+            const parentEv = mkEvent({
+                event: true,
+                type: "m.room.message",
+                user: cli.getUserId()!,
+                room: roomId,
+                id: "$reply",
+                content: {
+                    "body": "Reply",
+                    "msgtype": "m.text",
+                    "m.relates_to": { "m.in_reply_to": { event_id: "$quoted" } },
+                },
+            });
+            const dispatch = vi.spyOn(dis, "dispatch");
+
+            const { container } = render(
+                <ReplyChain parentEv={parentEv} setQuoteExpanded={vi.fn()} compactPreview={true} />,
+                withClientContextRenderOptions(cli),
+            );
+
+            const block = container.querySelector<HTMLElement>(".mx_TgReplyQuote_bubble");
+            expect(block).not.toBeNull();
+            expect(block!.className).toMatch(/mx_Username_color\d/);
+            expect(block!.querySelector(".mx_TgReplyQuote_subtitle")?.textContent).toBe("Quoted text");
+            expect(container.querySelector("[data-testid='reply-tile']")).toBeNull();
+            block!.click();
+            expect(dispatch).toHaveBeenCalledWith(
+                expect.objectContaining({ action: Action.ViewRoom, event_id: "$quoted", highlighted: true }),
+            );
         });
     });
 });

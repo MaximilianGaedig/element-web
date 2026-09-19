@@ -29,6 +29,9 @@ import { useMatrixClientContext } from "../../../contexts/MatrixClientContext";
 import { type GetRelationsForEvent } from "../rooms/EventTile";
 import { ReplyTileViewModel } from "../../../viewmodels/room/timeline/event-tile/ReplyTileViewModel";
 import { useUserStatus } from "../../../hooks/useUserStatus";
+import { isTelegramLayout } from "../../../utils/telegram/telegramLayout";
+import { TgReplyQuote } from "../telegram/TgReplyQuote";
+import { type ViewRoomPayload } from "../../../dispatcher/payloads/ViewRoomPayload";
 
 /**
  * This number is based on the previous behavior - if we have message of height
@@ -288,7 +291,29 @@ export default class ReplyChain extends React.Component<IProps, IState> {
         return getUserNameColorClass(ev.getSender()!).replace("Username", "ReplyChain");
     }
 
+    /** Fork (Telegram layout): clicking the reply jumps to the replied-to message, like tweb. */
+    private viewEvent(ev: MatrixEvent): void {
+        dis.dispatch<ViewRoomPayload>({
+            action: Action.ViewRoom,
+            event_id: ev.getId(),
+            highlighted: true,
+            room_id: ev.getRoomId(),
+            metricsTrigger: undefined,
+        });
+    }
+
     public render(): React.ReactNode {
+        // Fork: tweb's reply block (sender colour, bar, name + one line, media thumbnail) for the
+        // direct parent; the loading and error states below still hold its place.
+        const parent = this.state.events[this.state.events.length - 1];
+        if (isTelegramLayout() && !this.props.forExport && parent) {
+            return (
+                <ReplyChainPresentationWrapper>
+                    <TgReplyQuote variant="bubble" event={parent} onClick={() => this.viewEvent(parent)} />
+                </ReplyChainPresentationWrapper>
+            );
+        }
+
         let header: JSX.Element | undefined;
         if (this.state.err) {
             header = (
