@@ -781,7 +781,8 @@ function TgMediaViewer({ items, index: startIndex, source, onClosed }: Props): J
             const next = indexRef.current + (older ? -1 : 1);
             if (next < 0 || next >= items.length) return;
             setIndex(next);
-            c.switchTo(items[next], older ? 1 : -1);
+            // Older media is to the left (tweb): it slides in from the left.
+            c.switchTo(items[next], older ? -1 : 1);
         },
         [items],
     );
@@ -791,8 +792,8 @@ function TgMediaViewer({ items, index: startIndex, source, onClosed }: Props): J
         const onKeyDown = (e: KeyboardEvent): void => {
             if (e.ctrlKey || e.metaKey) c.ctrlKeyDown = true;
             if (e.key === "Escape") close();
-            else if (e.key === "ArrowRight") go(true);
-            else if (e.key === "ArrowLeft") go(false);
+            else if (e.key === "ArrowLeft") go(true);
+            else if (e.key === "ArrowRight") go(false);
             else return;
             e.preventDefault();
             e.stopPropagation();
@@ -878,7 +879,7 @@ function TgMediaViewer({ items, index: startIndex, source, onClosed }: Props): J
         }
         if (Math.abs(xDiff) / UIStore.instance.windowWidth > 0.2 || Math.abs(xDiff) > 125) {
             t.x = Number.NaN;
-            go(xDiff < 0);
+            go(xDiff > 0); // swiping right brings in the older one, on the left
         } else if (Math.abs(yDiff) / UIStore.instance.windowHeight > 0.2 || Math.abs(yDiff) > 125) {
             t.x = Number.NaN;
             close();
@@ -1069,20 +1070,20 @@ function TgMediaViewer({ items, index: startIndex, source, onClosed }: Props): J
                     <PlusIcon />
                 </button>
             </div>
-            {index < items.length - 1 && (
+            {index > 0 && (
                 // oxlint-disable-next-line jsx-a11y/click-events-have-key-events
                 <div
                     className="mx_TgMediaViewer_chrome mx_TgMediaViewer_switcher mx_TgMediaViewer_switcher_left"
-                    onClick={() => go(false)}
+                    onClick={() => go(true)}
                 >
                     <ChevronLeftIcon className="mx_TgMediaViewer_sibling" />
                 </div>
             )}
-            {index > 0 && (
+            {index < items.length - 1 && (
                 // oxlint-disable-next-line jsx-a11y/click-events-have-key-events
                 <div
                     className="mx_TgMediaViewer_chrome mx_TgMediaViewer_switcher mx_TgMediaViewer_switcher_right"
-                    onClick={() => go(true)}
+                    onClick={() => go(false)}
                 >
                     <ChevronRightIcon className="mx_TgMediaViewer_sibling" />
                 </div>
