@@ -7,7 +7,7 @@ Please see LICENSE files in the repository root for full details.
 
 import React, { type ComponentProps, type JSX, useEffect, useMemo, useRef, useState } from "react";
 import classNames from "classnames";
-import { EventType, type MatrixClient } from "matrix-js-sdk/src/matrix";
+import { EventType, type MatrixClient, type Room } from "matrix-js-sdk/src/matrix";
 import { logger } from "matrix-js-sdk/src/logger";
 
 import Stickerpicker from "../rooms/Stickerpicker";
@@ -28,7 +28,7 @@ const MAX_SEARCH_RESULTS = 200;
 type Props = ComponentProps<typeof Stickerpicker>;
 
 /** Sends a pack image as m.sticker, keeping its info and fi.mau.* bridge metadata. */
-async function sendPackSticker(
+export async function sendPackSticker(
     client: MatrixClient,
     roomId: string,
     threadId: string | null | undefined,
@@ -150,13 +150,15 @@ function matches(image: PackImage, query: string): boolean {
     return image.shortcode.toLowerCase().includes(query) || image.body.toLowerCase().includes(query);
 }
 
-/** Pack tabs, search and the sticker grid. */
-function PackStickerPickerPanel({
+/** Pack tabs, search and the sticker grid. `fill` sizes it to its container (Telegram emoticons dropdown). */
+export function PackStickerPickerPanel({
     packs,
     onSend,
+    fill,
 }: {
     packs: StickerPack[] | null;
     onSend: (image: PackImage) => void;
+    fill?: boolean;
 }): JSX.Element {
     const [selectedId, setSelectedId] = useState<string | undefined>();
     const [query, setQuery] = useState("");
@@ -197,7 +199,10 @@ function PackStickerPickerPanel({
     }
 
     return (
-        <div className="mx_PackStickerPicker" style={{ width: PICKER_WIDTH, height: PICKER_HEIGHT }}>
+        <div
+            className="mx_PackStickerPicker"
+            style={fill ? { width: "100%", height: "100%" } : { width: PICKER_WIDTH, height: PICKER_HEIGHT }}
+        >
             <input
                 className="mx_PackStickerPicker_search"
                 type="search"
@@ -232,18 +237,13 @@ function PackStickerPickerPanel({
     );
 }
 
-/**
- * The composer's sticker picker: MSC2545 image packs (e.g. the Telegram bridge's sticker packs)
- * when there are any, otherwise Element's integration-manager sticker picker.
- */
-export default function PackStickerPicker(props: Props): JSX.Element {
+/** The room's MSC2545 sticker packs, loaded while `active`; null until loaded. */
+export function useStickerPacks(room: Room, active: boolean): StickerPack[] | null {
     const client = useMatrixClientContext();
-    const { room, threadId, isStickerPickerOpen, setStickerPickerOpen } = props;
     const [packs, setPacks] = useState<StickerPack[] | null>(null);
     const [loadedFor, setLoadedFor] = useState<string | undefined>();
-
     useEffect(() => {
-        if (!isStickerPickerOpen) return;
+        if (!active) return;
         let cancelled = false;
         loadStickerPacks(client, room).then(
             (loaded) => {
@@ -261,10 +261,18 @@ export default function PackStickerPicker(props: Props): JSX.Element {
         return () => {
             cancelled = true;
         };
-    }, [client, room, isStickerPickerOpen]);
+    }, [client, room, active]);
+    return loadedFor === room.roomId ? packs : null;
+}
 
-    // Packs from another room may include that room's own packs; don't flash them here.
-    const current = loadedFor === room.roomId ? packs : null;
+/**
+ * The composer's sticker picker: MSC2545 image packs (e.g. the Telegram bridge's sticker packs)
+ * when there are any, otherwise Element's integration-manager sticker picker.
+ */
+export default function PackStickerPicker(props: Props): JSX.Element {
+    const client = useMatrixClientContext();
+    const { room, threadId, isStickerPickerOpen, setStickerPickerOpen } = props;
+    const current = useStickerPacks(room, isStickerPickerOpen);
     const useElementPicker = current !== null && current.length === 0;
 
     const onSend = (image: PackImage): void => {

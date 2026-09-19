@@ -15,7 +15,7 @@ import {
     THREAD_RELATION_TYPE,
     M_POLL_START,
 } from "matrix-js-sdk/src/matrix";
-import React, { type JSX, type ReactElement, type ReactNode, useContext } from "react";
+import React, { type JSX, type ReactElement, type ReactNode, useContext, useRef } from "react";
 import {
     MicOnIcon,
     OverflowHorizontalIcon,
@@ -39,6 +39,8 @@ import IconizedContextMenu, {
     IconizedContextMenuOptionList,
 } from "../context_menus/IconizedContextMenu";
 import { EmojiButton } from "./EmojiButton";
+import { TgEmoticonsDropdown } from "../telegram/TgEmoticonsDropdown";
+import UIStore from "../../../stores/UIStore";
 import { filterBoolean } from "../../../utils/arrays";
 import { useSettingValue } from "../../../hooks/useSettings";
 import AccessibleButton, { type ButtonEvent } from "../elements/AccessibleButton";
@@ -58,6 +60,11 @@ interface IProps {
     showPollsButton: boolean;
     /** The Telegram-style composer records from its send capsule instead. */
     hideVoiceButton?: boolean;
+    /**
+     * Telegram-style composer: the smiley opens tweb's combined emoji/sticker dropdown (so there is no
+     * separate sticker button), and the buttons get classes the Telegram layout orders by.
+     */
+    telegram?: boolean;
     showStickersButton: boolean;
     toggleButtonMenu: () => void;
     isRichTextEnabled: boolean;
@@ -71,6 +78,7 @@ const MessageComposerButtons: React.FC<IProps> = (props: IProps) => {
     const { room, narrow } = useScopedRoomContext("room", "narrow");
 
     const isWysiwygLabEnabled = useSettingValue("feature_wysiwyg_composer");
+    const moreButton = useRef<HTMLDivElement>(null);
 
     if (!matrixClient || !room || props.haveRecording) {
         return null;
@@ -78,7 +86,31 @@ const MessageComposerButtons: React.FC<IProps> = (props: IProps) => {
 
     let mainButtons: ReactNode[];
     let moreButtons: ReactNode[];
-    if (narrow) {
+    const uploadOptions = roomUploadSnapshot.options.map(({ type, icon: Icon, label }) => (
+        <IconizedContextMenuOption
+            onClick={() => roomUploadVM.onUploadOptionSelected(type)}
+            icon={Icon && <Icon />}
+            label={label}
+            key={type}
+        />
+    ));
+    if (props.telegram && !isWysiwygLabEnabled) {
+        // Telegram-style: one menu button at the start holding the attachment options, polls and
+        // location; the smiley at the end opens the combined emoji/sticker dropdown.
+        mainButtons = [
+            <TgEmoticonsDropdown
+                key="emoticons"
+                room={room}
+                threadId={props.relation?.rel_type === THREAD_RELATION_TYPE.name ? props.relation.event_id! : null}
+                addEmoji={props.addEmoji}
+            />,
+        ];
+        moreButtons = [
+            uploadOptions,
+            props.showPollsButton ? pollButton(room, props.relation) : null,
+            showLocationButton(props, room, matrixClient),
+        ];
+    } else if (narrow) {
         mainButtons = [
             isWysiwygLabEnabled ? (
                 <ComposerModeButton
@@ -92,14 +124,7 @@ const MessageComposerButtons: React.FC<IProps> = (props: IProps) => {
         ];
         moreButtons = [
             // This a textual list of buttons, so we can't use the UploadButton here.
-            roomUploadSnapshot.options.map(({ type, icon: Icon, label }) => (
-                <IconizedContextMenuOption
-                    onClick={() => roomUploadVM.onUploadOptionSelected(type)}
-                    icon={Icon && <Icon />}
-                    label={label}
-                    key={type}
-                />
-            )),
+            uploadOptions,
             showStickersButton(props),
             voiceRecordingButton(props, narrow),
             props.showPollsButton ? pollButton(room, props.relation) : null,
@@ -140,6 +165,7 @@ const MessageComposerButtons: React.FC<IProps> = (props: IProps) => {
             {mainButtons}
             {moreButtons.length > 0 && (
                 <AccessibleButton
+                    ref={moreButton}
                     className={moreOptionsClasses}
                     onClick={props.toggleButtonMenu}
                     title={_t("quick_settings|sidebar_settings")}
@@ -150,7 +176,7 @@ const MessageComposerButtons: React.FC<IProps> = (props: IProps) => {
             {props.isMenuOpen && (
                 <IconizedContextMenu
                     onFinished={props.toggleButtonMenu}
-                    {...props.menuPosition}
+                    {...(props.telegram ? telegramMenuPosition(moreButton.current) : props.menuPosition)}
                     wrapperClassName="mx_MessageComposer_Menu"
                     compact={true}
                 >
@@ -162,6 +188,13 @@ const MessageComposerButtons: React.FC<IProps> = (props: IProps) => {
         </>
     );
 };
+
+/** tweb's attach menu opens above its button, aligned to the button's start. */
+function telegramMenuPosition(button: HTMLElement | null): MenuProps | undefined {
+    const rect = button?.getBoundingClientRect();
+    if (!rect) return undefined;
+    return { left: rect.left, bottom: UIStore.instance.windowHeight - rect.top + 8 };
+}
 
 function emojiButton(props: IProps): ReactElement {
     return (

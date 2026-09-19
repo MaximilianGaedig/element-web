@@ -43,6 +43,12 @@ import { RoomUploadContextProvider } from "../../../viewmodels/room/RoomUploadVi
 import { SDKContext } from "../../../contexts/SDKContext.ts";
 import { SDKContextClass } from "../../../contexts/SDKContextClass.ts";
 
+// These tests cover Element's own composer; the Telegram-style one is tested separately.
+vi.mock("../../../utils/telegram/telegramLayout", async (importOriginal) => ({
+    ...(await importOriginal<typeof import("../../../utils/telegram/telegramLayout")>()),
+    isTelegramLayout: () => false,
+}));
+
 const openStickerPicker = async (): Promise<void> => {
     await userEvent.click(screen.getByLabelText("More options"));
     await userEvent.click(screen.getByLabelText("Sticker"));

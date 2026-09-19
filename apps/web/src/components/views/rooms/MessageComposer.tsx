@@ -417,6 +417,12 @@ export class MessageComposer extends React.Component<IProps, IState> {
         if (this.state.bridgePlaceholder && !this.props.replyToEvent && this.isMainRoomComposer) {
             return this.state.bridgePlaceholder;
         }
+        // tweb's input placeholder is just "Message" (or "Reply" while replying), encrypted or not.
+        if (isTelegramLayout()) {
+            return this.props.replyToEvent
+                ? _t("bridge|telegram_composer_reply")
+                : _t("bridge|telegram_composer_message");
+        }
         if (this.props.replyToEvent) {
             const replyingToThread = this.props.relation?.rel_type === THREAD_RELATION_TYPE.name;
             if (replyingToThread && this.props.e2eStatus) {
@@ -779,6 +785,7 @@ export class MessageComposer extends React.Component<IProps, IState> {
                                     }
                                     showPollsButton={this.state.showPollsButton}
                                     hideVoiceButton={telegram}
+                                    telegram={telegram}
                                     showStickersButton={this.showStickersButton}
                                     isRichTextEnabled={this.state.isRichTextEnabled}
                                     onComposerModeClick={this.onRichTextToggle}

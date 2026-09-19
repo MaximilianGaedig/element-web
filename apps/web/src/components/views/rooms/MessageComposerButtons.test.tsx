@@ -20,6 +20,12 @@ import { ScopedRoomContextProvider } from "../../../contexts/ScopedRoomContext.t
 import { type RoomContextType } from "../../../contexts/RoomContext.ts";
 import { RoomUploadContextProvider } from "../../../viewmodels/room/RoomUploadViewModel.tsx";
 
+// These tests cover Element's own composer; the Telegram-style one is tested separately.
+vi.mock("../../../utils/telegram/telegramLayout", async (importOriginal) => ({
+    ...(await importOriginal<typeof import("../../../utils/telegram/telegramLayout")>()),
+    isTelegramLayout: () => false,
+}));
+
 describe("MessageComposerButtons", () => {
     // @ts-ignore - we're deliberately not implementing the whole interface here, but
     // can't use Partial<> for types because it'll annoy TS more than it helps.
@@ -172,6 +178,24 @@ describe("MessageComposerButtons", () => {
                     "Location",
                 ],
             ]);
+        });
+    });
+
+    describe("Telegram-style composer", () => {
+        it("has one menu button with the attachment options and the combined emoji/sticker button", () => {
+            wrapAndRender(
+                <MessageComposerButtons
+                    {...mockProps}
+                    telegram={true}
+                    isMenuOpen={true}
+                    showLocationButton={true}
+                    showPollsButton={true}
+                    showStickersButton={true}
+                />,
+                false,
+            );
+            // No separate attachment or sticker buttons: attachments live in the menu, stickers in the dropdown.
+            expect(getButtonLabels()).toEqual(["Emoji", "More options", ["Attachment", "Poll", "Location"]]);
         });
     });
 });

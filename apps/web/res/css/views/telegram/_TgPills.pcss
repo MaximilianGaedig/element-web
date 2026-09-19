@@ -65,6 +65,76 @@ html[data-tg-screen] .mx_RoomView_body[data-telegram-layout="true"] {
         box-shadow: var(--tg-chat-input-box-shadow);
     }
 
+    /*
+     * tweb .rows-wrapper-row: attach (and "more") at the start, the input, then the smiley that opens the
+     * emoticons dropdown and the send capsule. The composer's own input layout is left alone; only the
+     * buttons are ordered (the actions container dissolves into the row). Buttons sit at the bottom as
+     * the input grows, with tweb's .25rem gap.
+     */
+    .mx_MessageComposer_tg {
+        /* tweb .rows-wrapper: 3rem tall with .25rem padding (Element reserves 42px for the encryption badge). */
+        .mx_MessageComposer_wrapper {
+            box-sizing: border-box;
+            padding: 0.25rem;
+        }
+
+        .mx_MessageComposer_row {
+            align-items: flex-end;
+            gap: 0.25rem;
+        }
+
+        /* tweb .input-message-container: at least 2.5rem, text padded .5rem vertically. */
+        .mx_SendMessageComposer {
+            order: 0;
+            margin: 0;
+        }
+
+        .mx_BasicMessageComposer {
+            justify-content: center;
+            min-height: 2.5rem;
+        }
+
+        .mx_BasicMessageComposer_input {
+            min-height: 0;
+            margin: 0;
+            padding: 0.5rem 0;
+        }
+
+        /* tweb .btn-icon: 2.5rem round buttons; icons a little bigger than tweb's 1.5rem (asked for). */
+        .mx_MessageComposer_button {
+            box-sizing: border-box;
+            display: flex;
+            flex: 0 0 auto;
+            align-items: center;
+            justify-content: center;
+            width: 2.5rem;
+            height: 2.5rem;
+            padding: 0.375rem;
+            border-radius: 50%;
+
+            svg {
+                width: 1.75rem;
+                height: 1.75rem;
+            }
+        }
+
+        .mx_MessageComposer_actions {
+            display: contents;
+        }
+
+        .mx_MessageComposer_buttonMenu {
+            order: -2;
+        }
+
+        .mx_TgEmoticonsButton {
+            order: 1;
+        }
+
+        .mx_TgSendButton {
+            order: 2;
+        }
+    }
+
     /* tweb .btn-send: min-width 3rem, 2.5rem tall, 1.25rem radius, accent colour, white icon. */
     .mx_TgSendButton {
         display: flex;
@@ -207,5 +277,87 @@ html[data-tg-screen="mobile"] {
 
     100% {
         transform: scale(1);
+    }
+}
+
+/*
+ * tweb .emoji-dropdown (scss/partials/_emojiDropdown.scss): 23.875rem x 26.25rem, 1.25rem radius, the
+ * dropdown shadow, anchored above the input's inline end and scaling in from .85 with
+ * --btn-menu-transition (.2s cubic-bezier(.4, 0, .2, 1)); .emoji-tabs along the bottom with a top border.
+ */
+.mx_TgEmoticonsDropdown {
+    position: fixed;
+    z-index: 4000;
+    display: flex;
+    flex-direction: column;
+    width: 23.875rem;
+    height: 26.25rem;
+    max-width: calc(100vw - 1rem);
+    max-height: calc(100vh - 6rem);
+    overflow: hidden;
+    border-radius: 1.25rem;
+    background-color: var(--cpd-color-bg-canvas-default);
+    box-shadow: 0 5px 10px 5px rgb(16 35 47 / 14%);
+    transform-origin: 100% 100%;
+    animation: mx_TgEmoticonsDropdown_in 0.2s cubic-bezier(0.4, 0, 0.2, 1) both;
+
+    .mx_TgEmoticonsDropdown_body {
+        flex: 1 1 auto;
+        min-height: 0;
+        overflow: hidden;
+        display: flex;
+
+        > * {
+            flex: 1 1 auto;
+            width: 100%;
+            height: 100%;
+            min-width: 0;
+        }
+    }
+
+    .mx_TgEmoticonsDropdown_tabs {
+        display: flex;
+        flex: 0 0 3.0625rem;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        border-top: 1px solid var(--cpd-color-border-interactive-secondary);
+    }
+
+    /* tweb .emoji-tabs .menu-horizontal-div-item: icon tabs, .75rem apart. */
+    .mx_TgEmoticonsDropdown_tab {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 2.5rem;
+        height: 2.5rem;
+        margin: 0 0.25rem;
+        border-radius: 50%;
+        color: var(--cpd-color-icon-secondary);
+
+        svg {
+            width: 1.5rem;
+            height: 1.5rem;
+        }
+
+        &:hover {
+            background-color: var(--cpd-color-bg-subtle-secondary);
+        }
+    }
+
+    .mx_TgEmoticonsDropdown_tab_active {
+        color: var(--cpd-color-icon-accent-primary);
+    }
+}
+
+@keyframes mx_TgEmoticonsDropdown_in {
+    from {
+        transform: scale(0.85);
+        opacity: 0;
+    }
+
+    to {
+        transform: scale(1);
+        opacity: 1;
     }
 }

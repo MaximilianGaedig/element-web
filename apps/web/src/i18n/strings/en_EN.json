@@ -415,10 +415,6 @@
             "other": "%(count)s files can't be sent"
         },
         "features_formatting_unsupported": "Not supported on %(network)s",
-        "features_reactions_limited": {
-            "one": "%(network)s only allows %(count)s reaction here",
-            "other": "%(network)s only allows these %(count)s reactions here"
-        },
         "features_reactions_unsupported": "%(network)s doesn't support reactions",
         "last_active_date_at": "active %(date)s at %(time)s",
         "last_active_just_now": "active just now",
@@ -485,6 +481,9 @@
         "sticker_picker_loading": "Loading stickers…",
         "sticker_picker_search": "Search stickers",
         "sticker_picker_title": "Stickers",
+        "telegram_composer_message": "Message",
+        "telegram_composer_reply": "Reply",
+        "telegram_emoticons_stickers": "Stickers",
         "telegram_menu_copy_image": "Copy image",
         "telegram_menu_copy_message_link": "Copy Message Link",
         "telegram_menu_copy_selected": "Copy Selected Text",
