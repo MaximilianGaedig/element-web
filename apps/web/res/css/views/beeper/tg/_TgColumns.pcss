@@ -1,0 +1,184 @@
+/*
+Copyright 2026 New Vector Ltd.
+
+SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only OR LicenseRef-Element-Commercial
+Please see LICENSE files in the repository root for full details.
+*/
+
+/*
+ * Telegram-style columns (TgColumns.tsx). Ported from Telegram Web K (GPL-3.0):
+ *   src/scss/partials/_leftSidebar.scss  #column-left, .is-collapsed, .sidebar-resize-handle
+ *   src/scss/partials/_chatlist.scss     .avatar-badge (unread badge on the collapsed avatar)
+ */
+.mx_TgColumns {
+    /* Set inline by TgColumns from tweb's computeVisualLeftWidth. */
+    --TgColumns-left-width: 360px;
+
+    display: flex;
+    position: relative;
+    height: 100%;
+    min-width: 0;
+    overflow: hidden;
+}
+
+.mx_TgColumns_left {
+    display: flex;
+    flex: 0 0 auto;
+    position: relative;
+    height: 100%;
+    background-color: var(--cpd-color-bg-canvas-default);
+}
+
+.mx_TgColumns_list {
+    position: relative;
+    width: var(--TgColumns-left-width);
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+
+    .mx_LeftPanel_outerWrapper {
+        height: 100%;
+        max-width: none;
+        flex: 1 1 auto;
+        min-height: 0;
+    }
+
+    .mx_LeftPanel_wrapper--user {
+        width: 100%;
+    }
+}
+
+.mx_TgColumns_center {
+    position: relative;
+    flex: 1 1 0;
+    min-width: 0;
+    height: 100%;
+    background-color: $background;
+
+    .mx_RoomView_wrapper {
+        height: 100%;
+    }
+}
+
+/* _leftSidebar.scss .sidebar-resize-handle(-left) */
+.mx_TgColumns_resizeHandle {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    right: -3px;
+    width: 5px;
+    z-index: 3;
+    background-color: var(--tg-primary-color);
+    opacity: 0;
+    transition: opacity 0.2s;
+    cursor: col-resize;
+    touch-action: none;
+    box-shadow: 0 0 1.5px 0.5px rgb(255, 255, 255, 1);
+
+    &:hover,
+    &[data-active] {
+        opacity: 1;
+    }
+
+    /* Make the primary colour a bit lighter / darker. */
+    &::before {
+        content: "";
+        display: block;
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgb(255, 255, 255, 0.375);
+    }
+
+    /* A wider hit area while dragging. */
+    &[data-active]::after {
+        content: "";
+        display: block;
+        position: absolute;
+        top: 0;
+        left: 50%;
+        transform: translate(-50%, 0);
+        width: 32px;
+        height: 100%;
+    }
+}
+
+.cpd-theme-dark .mx_TgColumns_resizeHandle {
+    box-shadow: 0 0 0 0.5px rgb(128, 128, 128, 1);
+
+    &::before {
+        background-color: rgb(0, 0, 0, 0.25);
+    }
+}
+
+/* While dragging the edge the column tracks the pointer instantly (tweb body.resizing-left-sidebar). */
+.mx_TgColumns[data-resizing] {
+    cursor: col-resize;
+    user-select: none;
+
+    .mx_TgColumns_list {
+        transition: none;
+    }
+}
+
+/*
+ * _leftSidebar.scss #column-left.is-collapsed: the 80px avatars-only column. The width change animates
+ * with --transition-standard-in except during a drag, where it snaps like tweb.
+ */
+.mx_TgColumns[data-collapsed] {
+    .mx_TgColumns_list {
+        transition: width var(--tg-transition-standard-in);
+    }
+
+    [data-testid="room-list-search"],
+    [data-testid="room-list-header"],
+    [data-testid="primary-filters"],
+    .mx_LeftPanelLiveShareWarning {
+        display: none;
+    }
+
+    .mx_RoomListItemView {
+        justify-content: center;
+
+        [class*="_container_"] {
+            flex: 0 0 auto;
+            position: relative;
+            margin: 0;
+            padding: 0 var(--cpd-space-2x);
+            justify-content: center;
+        }
+
+        /* Name, preview and hover menu go; the unread decoration moves onto the avatar. */
+        [class*="_content_"] {
+            flex: 0 0 0;
+            width: 0;
+            overflow: visible;
+        }
+
+        [class*="_ellipsis_"],
+        [class*="_hoverMenu_"] {
+            display: none;
+        }
+
+        [class*="_notificationDecoration_"] {
+            display: flex;
+            position: absolute;
+            top: 50%;
+            inset-inline-start: calc(50% + 4px);
+            pointer-events: none;
+
+            > * {
+                border-radius: 999px;
+                box-shadow: 0 0 0 2px var(--cpd-color-bg-canvas-default);
+            }
+        }
+
+        /* The row's selected marker would sit on the avatar in the narrow column. */
+        [class*="_container_"]::before {
+            display: none;
+        }
+    }
+}

@@ -1,0 +1,38 @@
+/*
+Copyright 2026 New Vector Ltd.
+
+SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only OR LicenseRef-Element-Commercial
+Please see LICENSE files in the repository root for full details.
+*/
+
+/*
+ * Motion and shape tokens of Telegram Web K (GPL-3.0), src/scss/base.scss and
+ * src/scss/partials/_chatVariables.scss. The Telegram-style layout reads only these, so every
+ * duration and curve stays tweb's. Like tweb, layout transitions do not switch off for
+ * prefers-reduced-motion (tweb gates them on its own "animations" lite-mode setting instead).
+ */
+:root {
+    --tg-transition-standard-easing: cubic-bezier(0.4, 0, 0.2, 1);
+    --tg-transition-standard-in: 0.3s var(--tg-transition-standard-easing);
+    --tg-transition-standard-out: 0.25s var(--tg-transition-standard-easing);
+    --tg-layer-transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    --tg-tabs-transition: 0.2s ease-in-out;
+    --tg-pm-transition: 0.2s ease-in-out;
+    --tg-input-transition-time: 0.2s;
+    --tg-border-radius: 12px;
+    --tg-border-radius-medium: 16px;
+    --tg-border-radius-big: 24px;
+    --tg-sidebar-collapsed-width: 80px;
+    --tg-chat-topbar-height: 3rem;
+    --tg-chat-input-height: 3rem;
+    --tg-chat-helper-size: 3rem;
+    --tg-plates-gap: 0.5rem;
+    --tg-page-chats-padding: 16px;
+    --tg-topbar-box-shadow: 0px 1px 5px -1px rgb(0, 0, 0, 0.21);
+    --tg-chat-input-box-shadow: 0px 1px 8px 1px rgb(0 0 0 / 12%);
+    --tg-surface-color: var(--cpd-color-bg-canvas-default);
+    --tg-primary-color: var(--cpd-color-text-action-accent);
+    --tg-secondary-text-color: var(--cpd-color-text-secondary);
+    /* src/index.ts setVH: 1% of the visual viewport height, written by JS (viewportHeight.ts). */
+    --tg-vh: 1vh;
+}

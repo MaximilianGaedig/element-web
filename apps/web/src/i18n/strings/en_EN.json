@@ -3355,6 +3355,9 @@
         "tac_title": "Terms and Conditions",
         "tos": "Terms of Service"
     },
+    "tg_layout": {
+        "resize_chat_list": "Resize chat list"
+    },
     "theme": {
         "light_high_contrast": "Light high contrast",
         "match_system": "Match system"
