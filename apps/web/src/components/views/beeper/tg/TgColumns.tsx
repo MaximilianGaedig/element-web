@@ -14,7 +14,11 @@ Please see LICENSE files in the repository root for full details.
  *     and a chat slides over it (src/scss/partials/_chat.scss #column-center, _leftSidebar.scss
  *     #column-left: 100vw / -25vw with --tabs-transition), with a back button and tweb's edge swipe
  *     back (src/helpers/dom/handleHorizontalSwipe.ts, handleTabSwipe.ts), the --vh viewport height
- *     (src/index.ts) and long-press context menus (src/helpers/dom/attachContextMenuListener.ts).
+ *     (src/index.ts) and long-press context menus (src/helpers/dom/attachContextMenuListener.ts);
+ *   - chat switching as tweb does it: in place when picked from the chat list, but a chat opened from
+ *     inside another (a permalink, "message user", a room upgrade) is pushed with _chat.scss
+ *     `.chat:not(.active)`'s translate3d(200px, 0, 0) + opacity 0 over --tabs-transition; and the
+ *     newest messages of a freshly opened chat appear in bubbles.ts's zoom-fade ladder.
  */
 
 import React, {
@@ -52,6 +56,10 @@ import {
     needsLongPressEmulation,
 } from "../../../../utils/beeper/tgLayout/longPress";
 import { TABS_TRANSITION_MS } from "../../../../utils/beeper/tgLayout/constants";
+import { playLadder } from "../../../../utils/beeper/tgLayout/ladder";
+import dis from "../../../../dispatcher/dispatcher";
+import { Action } from "../../../../dispatcher/actions";
+import { type ActionPayload } from "../../../../dispatcher/payloads";
 import { type TgNavigation, TgNavigationContext } from "./TgNavigation";
 
 interface TgColumnsProps {
@@ -69,6 +77,15 @@ interface TgColumnsProps {
     /** Leave the open chat; called once the handheld slide-out has finished. */
     onBack?: () => void;
 }
+
+/**
+ * ViewRoom triggers that open a chat from inside another one, which tweb pushes as a new chat
+ * (appImManager.ts createNewChat) instead of switching in place.
+ */
+export const PUSH_TRIGGERS = new Set(["Timeline", "MessageUser", "Predecessor", "Tombstone"]);
+
+/** How long to wait for a newly opened chat's first messages before giving up on the ladder. */
+const LADDER_WAIT_MS = 5000;
 
 /** The attribute on <html> that lets overlays (dialogs, menus) follow the tier. */
 export const SCREEN_ATTRIBUTE = "data-tg-screen";
@@ -226,6 +243,47 @@ export function TgColumns({
 
     const navigation = useMemo<TgNavigation>(() => ({ handheld, goBack }), [handheld, goBack]);
 
+    // Chats opened from inside another chat are pushed (slide in from 200px) rather than swapped.
+    const [pushedRoomId, setPushedRoomId] = useState<string | undefined>();
+    const chatKeyRef = useRef(chatKey);
+    chatKeyRef.current = chatKey;
+    useEffect(() => {
+        const ref = dis.register((payload: ActionPayload) => {
+            // Jumps inside the open chat (permalinks to it, pinned messages) are not chat switches.
+            if (payload.action !== Action.ViewRoom || payload.room_id === chatKeyRef.current) return;
+            setPushedRoomId(PUSH_TRIGGERS.has(payload.metricsTrigger) ? payload.room_id : undefined);
+        });
+        return () => dis.unregister(ref);
+    }, []);
+
+    // bubbles.ts animateAsLadder: the first messages of a freshly opened chat.
+    useEffect(() => {
+        const center = centerRef.current;
+        if (!center || !chatKey) return;
+        let raf = 0;
+        const tryPlay = (): boolean => {
+            const list = center.querySelector(".mx_RoomView_MessageList");
+            if (!list?.querySelector('[data-testid="event-tile"]')) return false;
+            raf = window.requestAnimationFrame(() => {
+                const viewport = (center.querySelector(".mx_RoomView_messagePanel") ?? center).getBoundingClientRect();
+                playLadder(list, viewport);
+            });
+            return true;
+        };
+        if (tryPlay()) return () => window.cancelAnimationFrame(raf);
+
+        const observer = new MutationObserver(() => {
+            if (tryPlay()) observer.disconnect();
+        });
+        observer.observe(center, { childList: true, subtree: true });
+        const timeout = window.setTimeout(() => observer.disconnect(), LADDER_WAIT_MS);
+        return () => {
+            observer.disconnect();
+            window.clearTimeout(timeout);
+            window.cancelAnimationFrame(raf);
+        };
+    }, [chatKey]);
+
     // ---- Render --------------------------------------------------------------------------------
     const collapsed = isEffectivelyCollapsed(pref, screen);
     const width = viewportWidth();
@@ -274,7 +332,13 @@ export function TgColumns({
                     ref={centerRef}
                     aria-hidden={(handheld && !chatShown) || undefined}
                 >
-                    {children}
+                    <div
+                        className="mx_TgColumns_chat"
+                        key={chatKey ?? "none"}
+                        data-pushed={(!handheld && !!chatKey && pushedRoomId === chatKey) || undefined}
+                    >
+                        {children}
+                    </div>
                 </div>
             </div>
         </TgNavigationContext.Provider>

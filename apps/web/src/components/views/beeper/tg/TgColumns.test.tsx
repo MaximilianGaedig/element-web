@@ -15,6 +15,8 @@ import UIStore from "../../../../stores/UIStore";
 import ResizeNotifier from "../../../../utils/ResizeNotifier";
 import { TgColumns } from "./TgColumns";
 import { TgBackButton } from "./TgNavigation";
+import dis from "../../../../dispatcher/dispatcher";
+import { Action } from "../../../../dispatcher/actions";
 import { STORAGE_KEY_LEFT } from "../../../../utils/beeper/tgLayout/constants";
 
 function setViewport(width: number, height: number): void {
@@ -197,6 +199,64 @@ describe("TgColumns", () => {
             act(() => void center.dispatchEvent(touch("touchmove", 300, 400)));
             expect(root.dataset.swiping).toBeUndefined();
             expect(root.dataset.chatShown).toBe("true");
+        });
+    });
+
+    describe("chat switching", () => {
+        function renderChat(chatKey: string): ReturnType<typeof render> {
+            return render(
+                <TgColumns
+                    spacePanel={<div>spaces</div>}
+                    leftPanel={<div>chat list</div>}
+                    resizeNotifier={new ResizeNotifier()}
+                    chatOpen
+                    chatKey={chatKey}
+                >
+                    <div>{chatKey}</div>
+                </TgColumns>,
+            );
+        }
+
+        beforeEach(() => setViewport(1440, 900));
+
+        it("switches in place when the chat is picked from the list", () => {
+            const { container, rerender } = renderChat("!a:x");
+            act(() => dis.dispatch({ action: Action.ViewRoom, room_id: "!b:x", metricsTrigger: "RoomList" }, true));
+            rerender(
+                <TgColumns
+                    spacePanel={null}
+                    leftPanel={null}
+                    resizeNotifier={new ResizeNotifier()}
+                    chatOpen
+                    chatKey="!b:x"
+                >
+                    <div>!b:x</div>
+                </TgColumns>,
+            );
+            expect(container.querySelector<HTMLElement>(".mx_TgColumns_chat")!.dataset.pushed).toBeUndefined();
+        });
+
+        it("pushes a chat opened from inside another one", () => {
+            const { container, rerender } = renderChat("!a:x");
+            act(() => dis.dispatch({ action: Action.ViewRoom, room_id: "!b:x", metricsTrigger: "Timeline" }, true));
+            rerender(
+                <TgColumns
+                    spacePanel={null}
+                    leftPanel={null}
+                    resizeNotifier={new ResizeNotifier()}
+                    chatOpen
+                    chatKey="!b:x"
+                >
+                    <div>!b:x</div>
+                </TgColumns>,
+            );
+            expect(container.querySelector<HTMLElement>(".mx_TgColumns_chat")!.dataset.pushed).toBe("true");
+        });
+
+        it("does not treat a jump inside the open chat as a switch", () => {
+            const { container } = renderChat("!a:x");
+            act(() => dis.dispatch({ action: Action.ViewRoom, room_id: "!a:x", metricsTrigger: "Timeline" }, true));
+            expect(container.querySelector<HTMLElement>(".mx_TgColumns_chat")!.dataset.pushed).toBeUndefined();
         });
     });
 });

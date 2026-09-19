@@ -1,0 +1,71 @@
+/*
+Copyright 2026 New Vector Ltd.
+
+SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only OR LicenseRef-Element-Commercial
+Please see LICENSE files in the repository root for full details.
+*/
+
+/*
+ * Telegram Web K's transitions (GPL-3.0) for the Telegram-style layout:
+ *   src/scss/partials/_chat.scss   .chat:not(.active): a chat pushed from inside another one comes in
+ *                                  from translate3d(200px, 0, 0) and opacity 0 with --tabs-transition;
+ *                                  .reply-wrapper: the composer's reply/edit helper grows from 0 to its
+ *                                  height with --transition-standard-out.
+ * The message "ladder" on opening a chat runs from JS (ladder.ts), the side panel in _TgPanes.pcss,
+ * the handheld columns in _TgColumns.pcss and the sheets in _TgHandheld.pcss.
+ */
+
+.mx_TgColumns_chat {
+    position: relative;
+    height: 100%;
+
+    &[data-pushed] {
+        animation: mx_TgChat_push var(--tg-tabs-transition);
+    }
+}
+
+@keyframes mx_TgChat_push {
+    from {
+        transform: translate3d(200px, 0, 0);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateZ(0);
+        opacity: 1;
+    }
+}
+
+/* The reply helper sits inside the composer plate and opens like tweb's .reply-wrapper. */
+html[data-tg-screen] .mx_RoomView_body[data-telegram-layout="true"] .mx_ReplyPreview {
+    display: grid;
+    grid-template-rows: 1fr;
+    border: none;
+    border-radius: 0;
+    background: none;
+    box-shadow: none;
+    animation: mx_TgHelper_in var(--tg-transition-standard-out);
+
+    .mx_ReplyPreview_section {
+        min-height: 0;
+        overflow: hidden;
+        border-bottom: none;
+    }
+}
+
+/* Editing happens in the message itself in Element; the editor fades in over the helper's timing. */
+html[data-tg-screen] .mx_EditMessageComposer {
+    animation: mx_TgFade_in var(--tg-transition-standard-out);
+}
+
+@keyframes mx_TgHelper_in {
+    from {
+        grid-template-rows: 0fr;
+        opacity: 0;
+    }
+
+    to {
+        grid-template-rows: 1fr;
+        opacity: 1;
+    }
+}
