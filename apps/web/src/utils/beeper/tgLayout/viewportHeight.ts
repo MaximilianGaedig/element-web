@@ -54,4 +54,3 @@ export function installViewportHeight(win: Window = window): () => void {
         root.style.removeProperty(VH_PROPERTY);
     };
 }
-
