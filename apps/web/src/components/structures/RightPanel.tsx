@@ -19,7 +19,7 @@ import RoomSummaryCardView from "../views/right_panel/RoomSummaryCardView";
 import WidgetCard from "../views/right_panel/WidgetCard";
 import UserInfo from "../views/right_panel/UserInfo";
 import ThirdPartyMemberInfo from "../views/rooms/ThirdPartyMemberInfo";
-import FilePanel from "./FilePanel";
+import SharedMediaPanel from "../views/beeper/SharedMediaPanel";
 import ThreadView from "./ThreadView";
 import ThreadPanel from "./ThreadPanel";
 import NotificationPanel from "./NotificationPanel";
@@ -215,8 +215,8 @@ export default class RightPanel extends React.Component<Props, IState> {
                 }
                 break;
             case RightPanelPhases.FilePanel:
-                if (!!roomId) {
-                    card = <FilePanel roomId={roomId} onClose={this.onClose} />;
+                if (this.props.room) {
+                    card = <SharedMediaPanel room={this.props.room} onClose={this.onClose} />;
                 }
                 break;
 

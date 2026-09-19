@@ -26,7 +26,7 @@ import LinkIcon from "@vector-im/compound-design-tokens/assets/web/icons/link";
 import SettingsIcon from "@vector-im/compound-design-tokens/assets/web/icons/settings";
 import ExportArchiveIcon from "@vector-im/compound-design-tokens/assets/web/icons/export-archive";
 import LeaveIcon from "@vector-im/compound-design-tokens/assets/web/icons/leave";
-import FilesIcon from "@vector-im/compound-design-tokens/assets/web/icons/files";
+import ImageIcon from "@vector-im/compound-design-tokens/assets/web/icons/image";
 import ExtensionsIcon from "@vector-im/compound-design-tokens/assets/web/icons/extensions";
 import UserProfileIcon from "@vector-im/compound-design-tokens/assets/web/icons/user-profile";
 import ThreadsIcon from "@vector-im/compound-design-tokens/assets/web/icons/threads";
@@ -258,7 +258,7 @@ const RoomSummaryCardView: React.FC<IProps> = ({
                             {vm.pinCount}
                         </Text>
                     </MenuItem>
-                    <MenuItem Icon={FilesIcon} label={_t("right_panel|files_button")} onSelect={vm.onRoomFilesClick} />
+                    <MenuItem Icon={ImageIcon} label={_t("beeper|shared_media|title")} onSelect={vm.onRoomFilesClick} />
                     <MenuItem
                         Icon={ExtensionsIcon}
                         label={_t("right_panel|extensions_button")}

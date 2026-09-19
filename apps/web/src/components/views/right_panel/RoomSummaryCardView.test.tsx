@@ -197,7 +197,7 @@ describe("<RoomSummaryCard />", () => {
     it("opens room file panel on button click", () => {
         const { getByText } = getComponent();
 
-        fireEvent.click(getByText("Files"));
+        fireEvent.click(getByText("Shared media"));
 
         expect(vmDefaultValues.onRoomFilesClick).toHaveBeenCalled();
     });
@@ -274,7 +274,7 @@ describe("<RoomSummaryCard />", () => {
         const { queryByText } = getComponent();
 
         // options not rendered
-        expect(queryByText("Files")).not.toBeInTheDocument();
+        expect(queryByText("Shared media")).not.toBeInTheDocument();
         expect(queryByText("Pinned")).not.toBeInTheDocument();
         expect(queryByText("Export chat")).not.toBeInTheDocument();
     });
