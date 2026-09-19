@@ -26,7 +26,8 @@ html[data-tg-screen] .mx_RoomHeader {
     padding-inline: 0.25rem 0.5rem;
     border-bottom: none;
     border-radius: var(--tg-border-radius-big);
-    background-color: var(--tg-surface-color);
+    background-color: var(--tg-glass-background);
+    backdrop-filter: var(--tg-glass-backdrop);
     box-shadow: var(--tg-topbar-box-shadow);
     flex: 0 0 auto;
     transition:
@@ -34,7 +35,7 @@ html[data-tg-screen] .mx_RoomHeader {
         background-color var(--tg-transition-standard-in);
 
     &:hover {
-        background-color: var(--tg-surface-color);
+        background-color: var(--tg-glass-background);
     }
 
     .mx_RoomHeader_info {
@@ -55,13 +56,17 @@ html[data-tg-screen] .mx_RoomView_body[data-telegram-layout="true"] {
         width: calc(100% - 2 * var(--tg-page-chats-padding));
         max-width: var(--tg-chat-width);
         margin: 0 auto var(--tg-page-chats-padding);
+        /* Element pads the composer's bottom by 15px; the page padding alone matches the header's gap. */
+        padding-bottom: 0;
     }
 
+    /* Translucent like Telegram iOS: the timeline scrolls behind and shows through, blurred. */
     .mx_MessageComposer_wrapper {
         min-height: var(--tg-chat-input-height);
         border-top: none;
         border-radius: var(--tg-border-radius-big);
-        background-color: var(--tg-surface-color);
+        background-color: var(--tg-glass-background);
+        backdrop-filter: var(--tg-glass-backdrop);
         box-shadow: var(--tg-chat-input-box-shadow);
     }
 
@@ -95,7 +100,8 @@ html[data-tg-screen] .mx_RoomView_body[data-telegram-layout="true"] {
         height: var(--tg-chat-input-height);
         overflow: hidden;
         border-radius: 50%;
-        background-color: var(--tg-surface-color);
+        background-color: var(--tg-glass-background);
+        backdrop-filter: var(--tg-glass-backdrop);
         box-shadow: var(--tg-chat-input-box-shadow);
         transition:
             width var(--tg-transition-standard-in),
@@ -157,10 +163,11 @@ html[data-tg-screen] .mx_RoomView_body[data-telegram-layout="true"] {
             min-height: 2.5rem;
         }
 
+        /* No button left of the text inside the pill any more (the + is its own island): inset the text like iOS. */
         .mx_BasicMessageComposer_input {
             min-height: 0;
             margin: 0;
-            padding: 0.5rem 0;
+            padding: 0.5rem 0 0.5rem 0.5rem;
         }
 
         /* tweb .btn-icon: 2.5rem round buttons; icons a little bigger than tweb's 1.5rem (asked for). */
@@ -532,5 +539,25 @@ html[data-tg-screen="mobile"] {
         justify-content: center;
         height: 100%;
         color: var(--cpd-color-text-secondary);
+    }
+}
+
+/*
+ * The floating bars are translucent glass: the timeline scrolls behind them and shows through, blurred.
+ * Low power mode (html[data-low-power], see ROADMAP wave 6) turns every backdrop blur off: solid bars,
+ * no blur edges.
+ */
+:root,
+[class*="cpd-theme-"] {
+    --tg-glass-background: color-mix(in srgb, var(--tg-surface-color) 50%, transparent);
+    --tg-glass-backdrop: blur(24px) saturate(180%);
+}
+
+html[data-low-power] {
+    --tg-glass-background: var(--tg-surface-color);
+    --tg-glass-backdrop: none;
+
+    .mx_TgBlurEdge {
+        display: none;
     }
 }

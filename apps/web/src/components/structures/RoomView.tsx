@@ -82,6 +82,7 @@ import RoomPreviewBar from "../views/rooms/RoomPreviewBar";
 import RoomPreviewCard from "../views/rooms/RoomPreviewCard";
 import RoomUpgradeWarningBar from "../views/rooms/RoomUpgradeWarningBar";
 import AuxPanel from "../views/rooms/AuxPanel";
+import { TgChatChrome } from "../views/telegram/TgChatChrome";
 import RoomHeader from "../views/rooms/RoomHeader/RoomHeader";
 import BulkActionsBar from "../views/rooms/BulkActionsBar";
 import { MessageSelectionStore } from "../../stores/MessageSelectionStore";
@@ -2788,6 +2789,7 @@ export class RoomView extends React.Component<IRoomProps, IRoomState> {
                                     <RoomHeader room={this.state.room} extraButtons={<>{extraButtons}</>} />
                                 )}
                                 {mainSplitBody}
+                                {this.state.telegramLayout && <TgChatChrome body={this.roomViewBody} />}
                                 {this.state.room && (
                                     <BulkActionsBar room={this.state.room} permalinkCreator={this.permalinkCreator} />
                                 )}

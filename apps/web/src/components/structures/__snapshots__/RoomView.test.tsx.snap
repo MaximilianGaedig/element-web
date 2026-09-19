@@ -1140,6 +1140,7 @@ exports[`RoomView > should hide the composer when hideComposer=true 1`] = `
         class="mx_RoomView_body mx_MainSplit_timeline"
         data-layout="group"
         data-telegram-layout="true"
+        style="--tg-header-block: 0px; --tg-composer-block: 0px;"
       >
         <header
           class="_flex_4dswl_9 mx_RoomHeader light-panel"
@@ -1352,6 +1353,26 @@ exports[`RoomView > should hide the composer when hideComposer=true 1`] = `
           style="display: none;"
           type="file"
         />
+        <div
+          aria-hidden="true"
+          class="mx_TgBlurEdge mx_TgBlurEdge_top"
+        >
+          <i />
+          <i />
+          <i />
+          <i />
+          <i />
+        </div>
+        <div
+          aria-hidden="true"
+          class="mx_TgBlurEdge mx_TgBlurEdge_bottom"
+        >
+          <i />
+          <i />
+          <i />
+          <i />
+          <i />
+        </div>
       </div>
     </div>
   </div>

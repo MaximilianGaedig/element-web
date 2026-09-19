@@ -6,8 +6,10 @@ Please see LICENSE files in the repository root for full details.
 */
 
 /*
- * Presence badge as Messenger/Facebook draw it: a grass-green dot while online, a small green
- * "12m" tag for someone active within the hour. Placement follows Telegram Web K
+ * Presence badge as Messenger/Facebook draw it: a green dot while online, a small green "12m" tag
+ * for someone active within the hour. Colours are Facebook's own tokens (read from facebook.com's
+ * :root / .__fb-dark-mode): --badge-background-color-green for the dot, --positive text on
+ * --positive-background for the tag. Placement follows Telegram Web K
  * (src/scss/partials/_avatar.scss .is-online:after: 14px on a 54px avatar at 39px, i.e. tucked into
  * the bottom-right corner), and the pop-in is tweb's badge transition
  * (--chatlist-badge-transition-in: .25s cubic-bezier(.35,.35,.47,1.34)). Instead of tweb's ring in
@@ -16,15 +18,15 @@ Please see LICENSE files in the repository root for full details.
  */
 :root,
 [class*="cpd-theme-"] {
-    --ActivityDot-online: #31a24c;
-    --ActivityDot-recent-bg: #ddf3e2;
-    --ActivityDot-recent-fg: #1f7a37;
+    --ActivityDot-online: #24832c;
+    --ActivityDot-recent-bg: #deefe1;
+    --ActivityDot-recent-fg: #24832c;
 }
 
 .cpd-theme-dark {
-    --ActivityDot-online: #45bd62;
-    --ActivityDot-recent-bg: #1c3a24;
-    --ActivityDot-recent-fg: #6fd68a;
+    --ActivityDot-online: #3fbb46;
+    --ActivityDot-recent-bg: #1f3520;
+    --ActivityDot-recent-fg: #3fbb46;
 }
 
 .mx_ActivityDot {
@@ -45,6 +47,7 @@ Please see LICENSE files in the repository root for full details.
     border-radius: 6px;
     font: var(--cpd-font-body-xs-semibold);
     font-size: 9px;
+    font-weight: 700;
     line-height: 12px;
     text-align: center;
     white-space: nowrap;
@@ -62,8 +65,11 @@ Please see LICENSE files in the repository root for full details.
     }
 }
 
-/* Room list (32px avatar): cut-outs in res/img/presence/avatar-mask-{dot,tag}.svg. */
-.mx_RoomAvatarView {
+/*
+ * Room list (32px avatar): cut-outs in res/img/presence/avatar-mask-{dot,tag}.svg. The doubled class
+ * outranks Element's own placement (_RoomAvatarView.pcss: left: size - 4px), whatever the file order.
+ */
+.mx_RoomAvatarView.mx_RoomAvatarView {
     .mx_RoomAvatarView_RoomAvatar_presence {
         mask-image: url("/res/img/presence/avatar-mask-dot.svg");
     }

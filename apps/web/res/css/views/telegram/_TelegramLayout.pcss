@@ -102,3 +102,116 @@ Please see LICENSE files in the repository root for full details.
 .cpd-theme-dark .mx_RoomView_body[data-telegram-layout="true"] {
     --TelegramLayout-media-edge: rgb(255 255 255 / 10%);
 }
+
+/*
+ * The chat's header and composer float over the timeline, which scrolls behind them (tweb's .bubbles
+ * spans the whole chat, padded by --chat-padding-top/-bottom). Towards both edges the timeline is
+ * blurred progressively like Telegram iOS: five stacked backdrop blurs (0.5-8px), each masked to its band.
+ * TgChatChrome keeps --tg-header-block / --tg-composer-block (the space the floating parts take).
+ */
+html[data-tg-screen] .mx_RoomView_body[data-telegram-layout="true"] {
+    position: relative;
+
+    > .mx_RoomHeader {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 3;
+    }
+
+    > .mx_MessageComposer {
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 3;
+    }
+
+    > .mx_RoomView_statusArea {
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: var(--tg-composer-block, 0px);
+        z-index: 3;
+    }
+
+    > .mx_RoomView_timeline {
+        flex: 1 1 auto;
+        min-height: 0;
+    }
+
+    .mx_RoomView_MessageList {
+        padding-top: calc(var(--tg-header-block, 0px) + 8px);
+        padding-bottom: calc(var(--tg-composer-block, 0px) + 8px);
+    }
+
+    .mx_JumpToBottomButton {
+        bottom: calc(var(--tg-composer-block, 0px) + 0.5rem);
+    }
+
+    .mx_TgBlurEdge {
+        position: absolute;
+        left: 0;
+        right: 0;
+        z-index: 2;
+        pointer-events: none;
+
+        > i {
+            position: absolute;
+            inset: 0;
+        }
+    }
+
+    .mx_TgBlurEdge_top {
+        top: 0;
+        height: calc(var(--tg-header-block, 0px) + 1rem);
+
+        > i:nth-child(1) {
+            backdrop-filter: blur(0.5px);
+            mask-image: linear-gradient(to top, transparent 0%, #000 20%);
+        }
+        > i:nth-child(2) {
+            backdrop-filter: blur(1px);
+            mask-image: linear-gradient(to top, transparent 20%, #000 40%);
+        }
+        > i:nth-child(3) {
+            backdrop-filter: blur(2px);
+            mask-image: linear-gradient(to top, transparent 40%, #000 60%);
+        }
+        > i:nth-child(4) {
+            backdrop-filter: blur(4px);
+            mask-image: linear-gradient(to top, transparent 60%, #000 80%);
+        }
+        > i:nth-child(5) {
+            backdrop-filter: blur(8px);
+            mask-image: linear-gradient(to top, transparent 80%, #000 100%);
+        }
+    }
+
+    .mx_TgBlurEdge_bottom {
+        bottom: 0;
+        height: calc(var(--tg-composer-block, 0px) + 1rem);
+
+        > i:nth-child(1) {
+            backdrop-filter: blur(0.5px);
+            mask-image: linear-gradient(to bottom, transparent 0%, #000 20%);
+        }
+        > i:nth-child(2) {
+            backdrop-filter: blur(1px);
+            mask-image: linear-gradient(to bottom, transparent 20%, #000 40%);
+        }
+        > i:nth-child(3) {
+            backdrop-filter: blur(2px);
+            mask-image: linear-gradient(to bottom, transparent 40%, #000 60%);
+        }
+        > i:nth-child(4) {
+            backdrop-filter: blur(4px);
+            mask-image: linear-gradient(to bottom, transparent 60%, #000 80%);
+        }
+        > i:nth-child(5) {
+            backdrop-filter: blur(8px);
+            mask-image: linear-gradient(to bottom, transparent 80%, #000 100%);
+        }
+    }
+}
