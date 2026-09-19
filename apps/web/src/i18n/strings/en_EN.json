@@ -485,6 +485,7 @@
         "sticker_picker_loading": "Loading stickers…",
         "sticker_picker_search": "Search stickers",
         "sticker_picker_title": "Stickers",
+        "telegram_menu_copy_image": "Copy image",
         "telegram_menu_copy_message_link": "Copy Message Link",
         "telegram_menu_copy_selected": "Copy Selected Text",
         "telegram_menu_more_reactions": "More reactions",

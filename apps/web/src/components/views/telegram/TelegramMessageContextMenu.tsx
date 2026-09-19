@@ -114,6 +114,34 @@ function useMyReactions(reactions: Relations | null | undefined): Map<string, st
     return useMemo(() => new Map(JSON.parse(snapshot) as [string, string][]), [snapshot]);
 }
 
+/**
+ * tweb's "Copy Image": the clipboard only takes PNG, so the image is re-encoded through a canvas
+ * (tweb does the same for JPEG/WebP photos).
+ */
+async function copyImage(mxEvent: MatrixEvent): Promise<void> {
+    try {
+        const blob = await new MediaEventHelper(mxEvent).sourceBlob.value;
+        const png =
+            blob.type === "image/png"
+                ? blob
+                : await new Promise<Blob>((resolve, reject) => {
+                      void createImageBitmap(blob).then((bitmap) => {
+                          const canvas = document.createElement("canvas");
+                          canvas.width = bitmap.width;
+                          canvas.height = bitmap.height;
+                          canvas.getContext("2d")!.drawImage(bitmap, 0, 0);
+                          canvas.toBlob(
+                              (b) => (b ? resolve(b) : reject(new Error("PNG encoding failed"))),
+                              "image/png",
+                          );
+                      }, reject);
+                  });
+        await navigator.clipboard.write([new ClipboardItem({ "image/png": png })]);
+    } catch (e) {
+        logger.warn("Failed to copy image", e);
+    }
+}
+
 async function downloadMedia(mxEvent: MatrixEvent): Promise<void> {
     try {
         const helper = new MediaEventHelper(mxEvent);
@@ -224,6 +252,18 @@ export default function TelegramMessageContextMenu({
                 icon: "edit",
                 label: _t("action|edit"),
                 onClick: handlers.edit,
+            },
+    );
+
+    // tweb: Copy Image for photos.
+    add(
+        mxEvent.getContent().msgtype === "m.image" &&
+            contentActionable &&
+            typeof ClipboardItem !== "undefined" && {
+                key: "copyImage",
+                icon: "copy",
+                label: _t("bridge|telegram_menu_copy_image"),
+                onClick: () => void copyImage(mxEvent),
             },
     );
 

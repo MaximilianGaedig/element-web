@@ -65,58 +65,6 @@ html[data-tg-screen] .mx_RoomView_body[data-telegram-layout="true"] {
         box-shadow: var(--tg-chat-input-box-shadow);
     }
 
-    /*
-     * tweb .rows-wrapper: one row inside the pill - emoji button, the input, attach/more, and the
-     * send capsule - with the buttons pinned to the bottom as the input grows. .btn-icon are 2.5rem
-     * round buttons in the secondary colour. No encryption badge (MessageComposer drops it).
-     */
-    .mx_MessageComposer_tg .mx_MessageComposer_wrapper {
-        padding: 0.25rem 0.25rem 0.25rem 0.5rem;
-    }
-
-    .mx_MessageComposer_tg .mx_MessageComposer_row {
-        display: flex;
-        align-items: flex-end;
-        gap: 0.125rem;
-        min-height: 2.5rem;
-    }
-
-    .mx_MessageComposer_tg .mx_MessageComposer_actions {
-        display: contents;
-    }
-
-    .mx_MessageComposer_tg .mx_EmojiButton {
-        order: -1;
-    }
-
-    .mx_MessageComposer_tg .mx_BasicMessageComposer,
-    .mx_MessageComposer_tg .mx_SendMessageComposer {
-        flex: 1 1 auto;
-        align-self: center;
-        min-width: 0;
-    }
-
-    .mx_MessageComposer_tg .mx_MessageComposer_button {
-        box-sizing: border-box;
-        flex: 0 0 auto;
-        width: 2.5rem;
-        height: 2.5rem;
-        margin: 0;
-        padding: 0.5rem;
-        border-radius: 50%;
-        color: var(--cpd-color-icon-secondary);
-
-        svg {
-            width: 1.5rem;
-            height: 1.5rem;
-        }
-
-        &:hover {
-            background-color: var(--cpd-color-bg-subtle-secondary);
-            color: var(--cpd-color-icon-primary);
-        }
-    }
-
     /* tweb .btn-send: min-width 3rem, 2.5rem tall, 1.25rem radius, accent colour, white icon. */
     .mx_TgSendButton {
         display: flex;

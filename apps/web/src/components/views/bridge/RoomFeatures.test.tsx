@@ -151,7 +151,7 @@ describe("com.beeper.room_features", () => {
         expect(isReactionAllowed(room, "mxc://x/custom")).toBe(false);
     });
 
-    it("reaction picker refuses disallowed emoji and explains why", async () => {
+    it("reaction picker refuses disallowed emoji, without an explanation note (like Telegram)", async () => {
         vi.useRealTimers();
         setFeatures({ ...TELEGRAM_LIKE, allowed_reactions: ["😀", "👍"] });
         const target = mkEvent({
@@ -167,7 +167,7 @@ describe("com.beeper.room_features", () => {
                 <ReactionPicker mxEvent={target} onFinished={onFinished} />
             </ScopedRoomContextProvider>,
         );
-        expect(screen.getByRole("note")).toHaveTextContent("Telegram only allows these 2 reactions here");
+        expect(screen.queryByRole("note")).toBeNull();
         // The virtualised emoji grid renders nothing without layout, so use the quick reactions row,
         // which the picker only guards in onChoose.
         const quick = (emoji: string): HTMLElement =>

@@ -908,13 +908,17 @@ export class UnwrappedEventTile extends React.Component<EventTileProps, IState> 
         // Try to find an anchor element
         const anchorElement = clickTarget instanceof HTMLAnchorElement ? clickTarget : clickTarget.closest("a");
 
+        // The Telegram-style menu handles images (Copy image re-encodes to PNG) and links (Copy link)
+        // itself, like tweb; Element's own menu leaves both to the browser/Electron.
+        const ownMenuEverywhere = !!this.props.telegramBubbles;
+
         // There is no way to copy non-PNG images into clipboard, so we can't
         // have our own handling for copying images, so we leave it to the
         // Electron layer (webcontents-handler.ts)
-        if (clickTarget instanceof HTMLImageElement) return;
+        if (!ownMenuEverywhere && clickTarget instanceof HTMLImageElement) return;
 
         // Return if we're in a browser and click either an a tag, as in those cases we want to use the native browser menu
-        if (!PlatformPeg.get()?.allowOverridingNativeContextMenus() && anchorElement) return;
+        if (!ownMenuEverywhere && !PlatformPeg.get()?.allowOverridingNativeContextMenus() && anchorElement) return;
 
         // We don't want to show the menu when editing a message
         if (this.props.editState) return;

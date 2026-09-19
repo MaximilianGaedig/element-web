@@ -132,16 +132,6 @@ export function isReactionAllowed(room: Room | null, key: string): boolean {
     return features.allowed_reactions.some((r) => strip(r) === strip(key));
 }
 
-/** Explanation shown in the reaction picker when the network limits reactions, if it does. */
-export function reactionsLimitNotice(room: Room | null): string | undefined {
-    const features = getRoomFeatures(room);
-    if (!features?.allowed_reactions || !room) return undefined;
-    return _t("bridge|features_reactions_limited", {
-        network: getBridgeNetworkName(room),
-        count: features.allowed_reactions.length,
-    });
-}
-
 /** Why a formatting feature isn't available, or undefined if it is. */
 export function formattingBlockedReason(room: Room | null, feature: FormattingFeature): string | undefined {
     const features = getRoomFeatures(room);
