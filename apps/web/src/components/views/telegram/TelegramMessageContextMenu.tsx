@@ -14,6 +14,7 @@ Please see LICENSE files in the repository root for full details.
 
 import React, { type JSX, useContext, useMemo, useState, useSyncExternalStore, useCallback } from "react";
 import {
+    EventStatus,
     EventType,
     type MatrixEvent,
     type Relations,
@@ -61,6 +62,9 @@ export interface TelegramMenuHandlers {
     select: () => void;
     viewSource: () => void;
     redact: () => void;
+    /** A message that failed to send: send it again / drop it from the queue. */
+    resend: () => void;
+    cancelSend: () => void;
     endPoll: () => void;
     resendReactions: () => void;
     unhidePreview: () => void;
@@ -413,6 +417,19 @@ export default function TelegramMessageContextMenu({
         label: _t("timeline|context_menu|view_source"),
         onClick: handlers.viewSource,
     });
+
+    // tweb: Resend (rotate_right) right before Delete, for a message that failed to send.
+    const failed = mxEvent.status === EventStatus.NOT_SENT;
+    add(failed && { key: "resend", icon: "rotate_right", label: _t("action|resend"), onClick: handlers.resend });
+    add(
+        failed && {
+            key: "cancelSend",
+            icon: "delete",
+            label: _t("action|delete"),
+            onClick: handlers.cancelSend,
+            danger: true,
+        },
+    );
 
     // tweb: Delete last.
     add(

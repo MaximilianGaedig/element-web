@@ -236,6 +236,16 @@ export default class MessageContextMenu extends React.Component<IProps, IState> 
         return !!startTextBody && startTextBody === endTextBody;
     }
 
+    private onResendClick = (): void => {
+        void Resend.resend(MatrixClientPeg.safeGet(), this.props.mxEvent);
+        this.closeMenu();
+    };
+
+    private onCancelSendClick = (): void => {
+        Resend.removeFromQueue(MatrixClientPeg.safeGet(), this.props.mxEvent);
+        this.closeMenu();
+    };
+
     private onResendReactionsClick = (): void => {
         for (const reaction of this.getUnsentReactions()) {
             void Resend.resend(MatrixClientPeg.safeGet(), reaction);
@@ -455,6 +465,8 @@ export default class MessageContextMenu extends React.Component<IProps, IState> 
                         redact: this.onRedactClick,
                         endPoll: this.onEndPollClick,
                         resendReactions: this.onResendReactionsClick,
+                        resend: this.onResendClick,
+                        cancelSend: this.onCancelSendClick,
                         unhidePreview: this.onUnhidePreviewClick,
                         collapseReplyChain: this.onCollapseReplyChainClick,
                         viewInRoom: this.viewInRoom,

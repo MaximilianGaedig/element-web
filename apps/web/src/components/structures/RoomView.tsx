@@ -17,6 +17,7 @@ import React, {
     type RefObject,
     type JSX,
     useEffect,
+    useSyncExternalStore,
 } from "react";
 import classNames from "classnames";
 import {
@@ -47,11 +48,13 @@ import { CryptoEvent } from "matrix-js-sdk/src/crypto-api";
 import { type RoomViewProps } from "@element-hq/element-web-module-api";
 import {
     EncryptionEventView,
+    RoomStatusBarState,
     RoomStatusBarView,
     useCreateAutoDisposedViewModel,
 } from "@element-hq/web-shared-components";
 
 import shouldHideEvent from "../../shouldHideEvent";
+import { isTelegramLayout } from "../../utils/telegram/telegramLayout";
 import { reactionsBlockedReason } from "../../utils/bridge/roomFeatures";
 import { _t } from "../../languageHandler";
 import * as TimezoneHandler from "../../TimezoneHandler";
@@ -394,29 +397,28 @@ function LocalRoomCreateLoader(props: ILocalRoomCreateLoaderProps): ReactElement
 /**
  * Wrap a RoomStatusBarView and ViewModel into one component, for usage with legacy React components.
  */
-function RoomStatusBarWrappedView(props: ConstructorParameters<typeof RoomStatusBarViewModel>[0]): ReactElement {
+function RoomStatusBarWrappedView(props: ConstructorParameters<typeof RoomStatusBarViewModel>[0]): ReactElement | null {
     const vm = useCreateAutoDisposedViewModel(() => new RoomStatusBarViewModel(props));
+    // Fork: the Telegram layout has no "some messages have not been sent" banner, like tweb: the failed
+    // bubble shows the red error status and its context menu offers Resend / Delete.
+    const shows = (): boolean => {
+        const { state } = vm.getSnapshot();
+        return state !== null && !(state === RoomStatusBarState.UnsentMessages && isTelegramLayout());
+    };
+    const shown = useSyncExternalStore(
+        (cb) => vm.subscribe(cb),
+        () => shows(),
+    );
     useEffect(() => {
         // Note: We need to tell the parent component whether the viewmodel expects to render anything
         // (see onStatusBarVisible). This is ugly, but works.
         if ("onVisible" in props) {
-            // Initial setup
-            if (vm.getSnapshot().state !== null) {
-                props.onVisible();
-            } else {
-                props.onHidden?.();
-            }
-            vm.subscribe(() => {
-                if (vm.getSnapshot().state !== null) {
-                    props.onVisible?.();
-                } else {
-                    props.onHidden?.();
-                }
-            });
+            if (shown) props.onVisible();
+            else props.onHidden?.();
         }
-    }, [vm, props]);
+    }, [shown, props]);
 
-    return <RoomStatusBarView vm={vm} />;
+    return shown ? <RoomStatusBarView vm={vm} /> : null;
 }
 
 /**
