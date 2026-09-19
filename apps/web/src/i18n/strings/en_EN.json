@@ -3376,6 +3376,9 @@
         "tos": "Terms of Service"
     },
     "tg_layout": {
+        "connection_reconnecting": "Reconnecting...",
+        "connection_updating": "Updating...",
+        "connection_waiting": "Waiting for network...",
         "address": "Address",
         "bio": "Bio",
         "info": "Info",

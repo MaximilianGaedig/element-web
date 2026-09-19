@@ -16,6 +16,8 @@ import { shouldShowComponent } from "../../customisations/helpers/UIComponents";
 import defaultDispatcher from "../../dispatcher/dispatcher";
 import { Action } from "../../dispatcher/actions";
 import LegacyCallHandler, { LegacyCallHandlerEvent } from "../../LegacyCallHandler";
+import { ClientEvent, SyncState, type MatrixClient, TypedEventEmitter } from "matrix-js-sdk/src/matrix";
+import { MatrixClientPeg } from "../../MatrixClientPeg";
 
 vi.mock("../../customisations/helpers/UIComponents", () => ({
     shouldShowComponent: vi.fn(),
@@ -145,5 +147,37 @@ describe("RoomListSearchViewModel", () => {
         expect(vm.getSnapshot().displayDialButton).toBe(true);
 
         vm.dispose();
+    });
+
+    describe("connection status (tweb's chat-list search)", () => {
+        it("shows waiting / reconnecting / updating after tweb's 400ms delay, and nothing while connected", () => {
+            vi.useFakeTimers();
+            const client = new TypedEventEmitter<string, any>() as unknown as MatrixClient;
+            let state: SyncState | null = SyncState.Error;
+            (client as any).getSyncState = () => state;
+            vi.spyOn(MatrixClientPeg, "get").mockReturnValue(client);
+            const vm = new RoomListSearchViewModel({
+                activeSpace: MetaSpace.Home,
+                legacyCallHandler: context.legacyCallHandler,
+            });
+            expect(vm.getSnapshot().status).toBeUndefined(); // not before the delay
+            vi.advanceTimersByTime(400);
+            expect(vm.getSnapshot().status).toBe("Waiting for network...");
+
+            state = SyncState.Syncing;
+            client.emit(ClientEvent.Sync, state, null);
+            expect(vm.getSnapshot().status).toBeUndefined(); // clears at once
+
+            state = SyncState.Reconnecting;
+            client.emit(ClientEvent.Sync, state, null);
+            vi.advanceTimersByTime(400);
+            expect(vm.getSnapshot().status).toBe("Reconnecting...");
+
+            state = SyncState.Catchup;
+            client.emit(ClientEvent.Sync, state, null);
+            expect(vm.getSnapshot().status).toBe("Updating...");
+            vm.dispose();
+            vi.useRealTimers();
+        });
     });
 });

@@ -30,6 +30,11 @@ export interface RoomListSearchViewSnapshot {
      * For example: "⌘ K" on macOS or "Ctrl K" on other platforms.
      */
     searchShortcut: string;
+    /**
+     * Connection state shown in place of "Search" with a spinner, like Telegram Web's chat list
+     * ("Waiting for network…", "Reconnecting…", "Updating…"); unset while connected.
+     */
+    status?: string;
 }
 
 export interface RoomListSearchViewActions {
@@ -68,9 +73,18 @@ interface RoomListSearchViewProps {
  * <RoomListSearchView vm={roomListSearchViewModel} />
  * ```
  */
+/** A small spinner in the search icon's place while the connection status shows. */
+function StatusSpinner(props: React.SVGAttributes<SVGElement>): JSX.Element {
+    return (
+        <svg {...props} viewBox="0 0 24 24" className={styles["status_spinner"]} aria-hidden>
+            <circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" strokeWidth="2" strokeDasharray="36 60" />
+        </svg>
+    );
+}
+
 export function RoomListSearchView({ vm }: Readonly<RoomListSearchViewProps>): JSX.Element {
     const { translate: _t } = useI18n();
-    const { displayExploreButton, displayDialButton, searchShortcut } = useViewModel(vm);
+    const { displayExploreButton, displayDialButton, searchShortcut, status } = useViewModel(vm);
 
     return (
         <Flex
@@ -85,12 +99,15 @@ export function RoomListSearchView({ vm }: Readonly<RoomListSearchViewProps>): J
                 className={styles.search}
                 kind="secondary"
                 size="md"
-                Icon={SearchIcon}
+                Icon={status ? StatusSpinner : SearchIcon}
                 onClick={vm.onSearchClick}
+                data-status={status ? "" : undefined}
             >
                 <Flex className={styles["search_container"]} as="span" justify="space-between">
-                    <span className={styles["search_text"]}>{_t("action|search")}</span>
-                    <kbd>{searchShortcut}</kbd>
+                    <span className={styles["search_text"]} aria-live="polite">
+                        {status ?? _t("action|search")}
+                    </span>
+                    {!status && <kbd>{searchShortcut}</kbd>}
                 </Flex>
             </Button>
             {displayDialButton && (

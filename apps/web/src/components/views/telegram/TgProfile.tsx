@@ -90,6 +90,10 @@ export function TgTabs({ tabs, initial }: { tabs: TgTab[]; initial?: string }): 
         const el = current ? itemRefs.current.get(current.id) : undefined;
         if (!el) return;
         setPill({ left: el.offsetLeft, width: el.offsetWidth });
+        // tweb: the strip scrolls to centre the active tab (only the strip, not the pane). The strip is
+        // the items' offsetParent (position: relative), so offsetLeft is already strip-relative.
+        const strip = el.parentElement;
+        strip?.scrollTo?.({ left: el.offsetLeft - (strip.clientWidth - el.offsetWidth) / 2, behavior: "smooth" });
     }, [current]);
 
     if (!current) return null;

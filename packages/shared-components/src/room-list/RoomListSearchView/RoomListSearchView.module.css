@@ -44,3 +44,18 @@
     text-overflow: ellipsis;
     text-align: start;
 }
+
+/* Connection status (Telegram Web's chat-list search while connecting): the icon spins. */
+.status_spinner {
+    fill: none !important;
+    stroke: var(--cpd-color-icon-secondary);
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: status_spin 1s linear infinite;
+}
+
+@keyframes status_spin {
+    to {
+        transform: rotate(360deg);
+    }
+}

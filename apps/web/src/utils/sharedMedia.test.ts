@@ -90,6 +90,20 @@ describe("SharedMediaLoader", () => {
         expect(loader.state("media").done).toBe(true);
     });
 
+    it("keeps loading after its owner's effect re-runs (StrictMode destroy, then attach)", async () => {
+        const older = msg({ msgtype: "m.image", body: "old", url: "mxc://x/o" }, 10);
+        const { loader } = setup([], [{ chunk: [older.event], end: undefined }]);
+        // What React's StrictMode does to the owning effect in development: cleanup, then set up again.
+        loader.destroy();
+        loader.attach();
+        const listener = vi.fn();
+        loader.subscribe(listener);
+        await loader.loadMore("media");
+        expect(loader.state("media").loading).toBe(false);
+        expect(loader.state("media").items.map((e) => e.getContent().body)).toEqual(["old"]);
+        expect(listener).toHaveBeenCalled(); // the "loaded" state reaches the UI
+    });
+
     it("adds live events first and drops redacted ones", () => {
         const a = msg({ msgtype: "m.file", body: "a", url: "mxc://x/a" }, 100);
         const { loader } = setup([a], []);

@@ -147,9 +147,19 @@ export class SharedMediaLoader {
         if (changed) this.emit();
     }
 
+    /**
+     * Stops the loader when its component goes away. React (StrictMode in development) may run the
+     * owning effect again for the same loader, so {@link attach} brings it back rather than a destroyed
+     * loader silently never loading again (the "infinitely loading" media tab).
+     */
     public destroy(): void {
         this.destroyed = true;
         this.listeners.clear();
+    }
+
+    /** Undoes {@link destroy} when the owning effect runs again with this loader. */
+    public attach(): void {
+        this.destroyed = false;
     }
 
     /** Fetches older history until `tab` gained items (or history ran out). */

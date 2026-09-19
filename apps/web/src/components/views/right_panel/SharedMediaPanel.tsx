@@ -153,6 +153,7 @@ function useLoader(room: Room): SharedMediaLoader {
     const client = useMatrixClientContext();
     const loader = useMemo(() => new SharedMediaLoader(client, room), [client, room]);
     useEffect(() => {
+        loader.attach();
         const onTimeline = (ev: MatrixEvent, evRoom: Room | undefined, toStart?: boolean): void => {
             if (evRoom?.roomId !== room.roomId || toStart) return;
             loader.addLive(ev);

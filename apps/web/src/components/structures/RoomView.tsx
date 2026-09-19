@@ -399,11 +399,14 @@ function LocalRoomCreateLoader(props: ILocalRoomCreateLoaderProps): ReactElement
  */
 function RoomStatusBarWrappedView(props: ConstructorParameters<typeof RoomStatusBarViewModel>[0]): ReactElement | null {
     const vm = useCreateAutoDisposedViewModel(() => new RoomStatusBarViewModel(props));
-    // Fork: the Telegram layout has no "some messages have not been sent" banner, like tweb: the failed
-    // bubble shows the red error status and its context menu offers Resend / Delete.
+    // Fork: the Telegram layout has neither the "some messages have not been sent" nor the "connectivity
+    // lost" banner, like tweb: a failed bubble shows the red error status and its context menu offers
+    // Resend / Delete, and the connection state shows in the chat list's search field.
     const shows = (): boolean => {
         const { state } = vm.getSnapshot();
-        return state !== null && !(state === RoomStatusBarState.UnsentMessages && isTelegramLayout());
+        if (state === null) return false;
+        const tgHandled = state === RoomStatusBarState.UnsentMessages || state === RoomStatusBarState.ConnectionLost;
+        return !(tgHandled && isTelegramLayout());
     };
     const shown = useSyncExternalStore(
         (cb) => vm.subscribe(cb),
