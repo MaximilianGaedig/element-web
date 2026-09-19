@@ -20,9 +20,19 @@ import { _t } from "../../languageHandler";
 const logger = rootLogger.getChild("imagePacks");
 
 /** MSC2545 image packs, as used by the mautrix bridges (e.g. Telegram sticker packs). */
-const ROOM_EMOTES = "im.ponies.room_emotes";
-const USER_EMOTES = "im.ponies.user_emotes";
-const EMOTE_ROOMS = "im.ponies.emote_rooms";
+// MSC2545 event types, stable names first. Bridges built on mautrix-go (e.g. the Telegram bridge's
+// sticker pack sync) send the stable m.room.image_pack; older clients use the im.ponies.* names.
+const ROOM_PACK_TYPES = ["m.room.image_pack", "im.ponies.room_emotes"];
+const USER_PACK_TYPES = ["m.image_pack", "im.ponies.user_emotes"];
+const PACK_ROOMS_TYPES = ["m.image_pack.rooms", "im.ponies.emote_rooms"];
+
+function localPackEvents(room: Room): Array<{ stateKey: string; content: RawPack }> {
+    return ROOM_PACK_TYPES.flatMap((type) =>
+        room.currentState
+            .getStateEvents(type)
+            .map((ev: MatrixEvent) => ({ stateKey: ev.getStateKey() ?? "", content: ev.getContent() as RawPack })),
+    );
+}
 /** Where mautrix bridges put the original sticker's identity, inside `info`. */
 const BRIDGED_STICKER = "fi.mau.bridged_sticker";
 
@@ -148,7 +158,7 @@ async function remotePackEvents(
     const events = client.roomState(roomId).then(
         (state) =>
             state
-                .filter((ev) => ev.type === ROOM_EMOTES)
+                .filter((ev) => ROOM_PACK_TYPES.includes(ev.type))
                 .map((ev) => ({ stateKey: ev.state_key ?? "", content: ev.content as RawPack })),
         (e) => {
             logger.warn(`Couldn't fetch image packs of ${roomId}`, e);
@@ -170,11 +180,7 @@ async function roomPackEvents(
     onlyStateKeys?: string[],
 ): Promise<Array<{ stateKey: string; content: RawPack }>> {
     const room = client.getRoom(roomId);
-    let events: Array<{ stateKey: string; content: RawPack }> =
-        room?.currentState
-            .getStateEvents(ROOM_EMOTES)
-            .map((ev: MatrixEvent) => ({ stateKey: ev.getStateKey() ?? "", content: ev.getContent() as RawPack })) ??
-        [];
+    let events: Array<{ stateKey: string; content: RawPack }> = room ? localPackEvents(room) : [];
     if (!events.length && room?.getMyMembership() !== KnownMembership.Leave) {
         events = await remotePackEvents(client, roomId);
     }
@@ -189,17 +195,19 @@ async function currentRoomPackEvents(
     client: MatrixClient,
     room: Room,
 ): Promise<Array<{ stateKey: string; content: RawPack }>> {
-    const local = room.currentState
-        .getStateEvents(ROOM_EMOTES)
-        .map((ev: MatrixEvent) => ({ stateKey: ev.getStateKey() ?? "", content: ev.getContent() as RawPack }));
+    const local = localPackEvents(room);
     if (local.length) return local;
     const key = `${room.roomId}#default`;
     const cached = remoteCache.get(key);
     if (cached && Date.now() - cached.at < REMOTE_TTL_MS) return cached.events;
-    const events = client.getStateEvent(room.roomId, ROOM_EMOTES, "").then(
-        (content) => [{ stateKey: "", content: content as RawPack }],
-        () => [], // M_NOT_FOUND: no pack
-    );
+    const events = Promise.all(
+        ROOM_PACK_TYPES.map((type) =>
+            client.getStateEvent(room.roomId, type, "").then(
+                (content) => [{ stateKey: "", content: content as RawPack }],
+                () => [], // M_NOT_FOUND: no pack of this type
+            ),
+        ),
+    ).then((lists) => lists.flat());
     remoteCache.set(key, { at: Date.now(), events });
     return events;
 }
@@ -224,7 +232,7 @@ export async function loadStickerPacks(client: MatrixClient, room: Room | undefi
     };
 
     const userPack = (): StickerPack | undefined => {
-        const ev = accountData(client, USER_EMOTES);
+        const ev = USER_PACK_TYPES.map((type) => accountData(client, type)).find(Boolean);
         return ev
             ? parseStickerPack("user", ev.getContent() as RawPack, _t("beeper|sticker_pack_personal"))
             : undefined;
@@ -234,7 +242,9 @@ export async function loadStickerPacks(client: MatrixClient, room: Room | undefi
     const tasks: Array<[string, Promise<Array<{ stateKey: string; content: RawPack }>>]> = [];
     if (room) tasks.push([room.roomId, currentRoomPackEvents(client, room)]);
 
-    const rooms = accountData(client, EMOTE_ROOMS)?.getContent<EmoteRoomsContent>()?.rooms;
+    const rooms = PACK_ROOMS_TYPES.map((type) => accountData(client, type))
+        .find(Boolean)
+        ?.getContent<EmoteRoomsContent>()?.rooms;
     if (rooms && typeof rooms === "object") {
         for (const [roomId, stateKeys] of Object.entries(rooms)) {
             const keys = stateKeys && typeof stateKeys === "object" ? Object.keys(stateKeys) : [];
