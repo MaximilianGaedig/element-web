@@ -697,7 +697,7 @@ describe("RoomHeader", () => {
             expect(getByLabelText(document.body, _t("voip|get_call_link"))).toBeInTheDocument();
         });
 
-        it("gives the option of element call or legacy calling for video", async () => {
+        it("calls with Element Call directly in a DM, the call Element X can take", async () => {
             const user = userEvent.setup();
             mockRoomMembers(room, 2);
             vi.spyOn(room.currentState, "mayClientSendStateEvent").mockImplementation((key) => {
@@ -706,30 +706,40 @@ describe("RoomHeader", () => {
             });
             render(<RoomHeader room={room} />, getWrapper());
 
-            const button = screen.getByRole("button", { name: "Video call" });
-            expect(button).not.toHaveAttribute("aria-disabled", "true");
-            await user.click(button);
-            const elementCallButton = screen.getByRole("menuitem", { name: "Element Call" });
-            const legacyCallButton = screen.getByRole("menuitem", { name: "Legacy Call" });
-            expect(elementCallButton).toBeInTheDocument();
-            expect(legacyCallButton).toBeInTheDocument();
-        });
-        it("gives the option of element call or legacy calling for voice in DM rooms", async () => {
-            const user = userEvent.setup();
-            mockRoomMembers(room, 2);
-            vi.spyOn(room.currentState, "mayClientSendStateEvent").mockImplementation((key) => {
-                if (key === ElementCallMemberEventType.name) return true;
-                return false;
-            });
-            render(<RoomHeader room={room} />, getWrapper());
-
+            const dispatcherSpy = vi.spyOn(dispatcher, "dispatch").mockImplementation(() => {});
             const button = screen.getByRole("button", { name: "Voice call" });
             expect(button).not.toHaveAttribute("aria-disabled", "true");
             await user.click(button);
-            const elementCallButton = screen.getByRole("menuitem", { name: "Element Call" });
-            const legacyCallButton = screen.getByRole("menuitem", { name: "Legacy Call" });
-            expect(elementCallButton).toBeInTheDocument();
-            expect(legacyCallButton).toBeInTheDocument();
+            // No menu to choose from: it goes straight to the Element Call view.
+            expect(screen.queryByRole("menuitem", { name: "Legacy Call" })).not.toBeInTheDocument();
+            expect(dispatcherSpy).toHaveBeenCalledWith(expect.objectContaining({ view_call: true }));
+        });
+
+        it("keeps the legacy 1:1 call in bridged DMs", async () => {
+            const user = userEvent.setup();
+            mockRoomMembers(room, 3);
+            vi.spyOn(room.currentState, "mayClientSendStateEvent").mockImplementation((key) => {
+                if (key === ElementCallMemberEventType.name) return true;
+                return false;
+            });
+            const bridgeEvent = new MatrixEvent({
+                type: "m.bridge",
+                state_key: "fi.mau.meta://facebook/1",
+                room_id: room.roomId,
+                sender: "@facebookbot:example.org",
+                content: { "protocol": { id: "facebook" }, "com.beeper.room_type.v2": "dm" },
+            });
+            const getStateEvents = room.currentState.getStateEvents.bind(room.currentState);
+            vi.spyOn(room.currentState, "getStateEvents").mockImplementation(((type: string, key?: string) =>
+                type === "m.bridge" && key === undefined ? [bridgeEvent] : getStateEvents(type, key!)) as any);
+            const placeCallSpy = vi
+                .spyOn(SDKContextClass.instance.legacyCallHandler, "placeCall")
+                .mockResolvedValue(undefined);
+            render(<RoomHeader room={room} />, getWrapper());
+
+            await user.click(screen.getByRole("button", { name: "Video call" }));
+            expect(screen.queryByRole("menuitem", { name: "Element Call" })).not.toBeInTheDocument();
+            expect(placeCallSpy).toHaveBeenCalledWith(room.roomId, CallType.Video);
         });
     });
 

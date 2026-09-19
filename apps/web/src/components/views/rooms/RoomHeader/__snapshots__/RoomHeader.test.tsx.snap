@@ -45,24 +45,19 @@ exports[`RoomHeader > dm > does not show the face pile for DMs 1`] = `
     </div>
     <button
       aria-disabled="false"
-      aria-expanded="false"
-      aria-haspopup="menu"
       aria-label="Video call"
       class="_icon-button_1215g_8"
       data-kind="primary"
-      data-state="closed"
-      id="radix-react-use-id-1"
       role="button"
       style="--cpd-icon-button-size: 32px;"
       tabindex="0"
-      type="button"
     >
       <div
         class="_indicator-icon_147l5_17"
         style="--cpd-icon-button-size: 100%;"
       >
         <svg
-          aria-labelledby="react-use-id-2"
+          aria-labelledby="react-use-id-1"
           fill="currentColor"
           height="1em"
           viewBox="0 0 24 24"
@@ -77,24 +72,19 @@ exports[`RoomHeader > dm > does not show the face pile for DMs 1`] = `
     </button>
     <button
       aria-disabled="false"
-      aria-expanded="false"
-      aria-haspopup="menu"
       aria-label="Voice call"
       class="_icon-button_1215g_8"
       data-kind="primary"
-      data-state="closed"
-      id="radix-react-use-id-3"
       role="button"
       style="--cpd-icon-button-size: 32px;"
       tabindex="0"
-      type="button"
     >
       <div
         class="_indicator-icon_147l5_17"
         style="--cpd-icon-button-size: 100%;"
       >
         <svg
-          aria-labelledby="react-use-id-4"
+          aria-labelledby="react-use-id-2"
           fill="currentColor"
           height="1em"
           viewBox="0 0 24 24"
@@ -109,7 +99,7 @@ exports[`RoomHeader > dm > does not show the face pile for DMs 1`] = `
     </button>
     <button
       aria-label="Threads"
-      aria-labelledby="react-use-id-5"
+      aria-labelledby="react-use-id-3"
       class="_icon-button_1215g_8"
       data-kind="primary"
       role="button"
@@ -136,7 +126,7 @@ exports[`RoomHeader > dm > does not show the face pile for DMs 1`] = `
     </button>
     <button
       aria-label="Room info"
-      aria-labelledby="react-use-id-6"
+      aria-labelledby="react-use-id-4"
       class="_icon-button_1215g_8"
       data-kind="primary"
       role="button"

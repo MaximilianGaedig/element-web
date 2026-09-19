@@ -40,6 +40,7 @@ import { LocalRoom, LocalRoomState } from "../../models/LocalRoom";
 import { useScopedRoomContext } from "../../contexts/ScopedRoomContext";
 import { SDKContext } from "../../contexts/SDKContext.ts";
 import SdkConfig from "../../SdkConfig";
+import { getBridgeInfo } from "../../utils/bridge/bridgeInfo";
 
 const logger = rootLogger.getChild("useRoomCall");
 
@@ -173,6 +174,7 @@ export const useRoomCall = (
     ]);
 
     const mayCreateElementCalls = mayCreateElementCallState && serverIsConfiguredForElementCall;
+    const isBridged = useRoomState(room, () => !!getBridgeInfo(room));
 
     // The options provided to the RoomHeader.
     // If there are multiple options, the user will be prompted to choose.
@@ -182,8 +184,11 @@ export const useRoomCall = (
             if (useElementCallExclusively && !hasJitsiWidget) {
                 return [PlatformCallType.ElementCall];
             }
-            if (hasGroupCall || mayCreateElementCalls) {
-                options.push(PlatformCallType.ElementCall);
+            // Element Call (MatrixRTC) is what Element X speaks, so where it's available it is the one call:
+            // no prompt to pick, and a DM rings on Element X too. Bridged portals keep the legacy 1:1 call,
+            // which is what the bridges' call support speaks.
+            if ((hasGroupCall || mayCreateElementCalls) && !isBridged) {
+                return [PlatformCallType.ElementCall];
             }
         }
         // Bridged DMs also contain the bridge bot; they are still 1:1 calls (LegacyCallHandler.placeCall
@@ -200,6 +205,7 @@ export const useRoomCall = (
         return options;
     }, [
         room,
+        isBridged,
         memberCount,
         mayEditWidgets,
         hasJitsiWidget,

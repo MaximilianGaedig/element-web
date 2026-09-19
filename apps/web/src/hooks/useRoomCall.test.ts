@@ -106,9 +106,7 @@ describe("useRoomCall", () => {
             await setupAsyncStoreWithClient(CallStore.instance, client);
 
             const { result } = render();
-            await waitFor(() =>
-                expect(result.current.callOptions).toEqual([PlatformCallType.ElementCall, PlatformCallType.LegacyCall]),
-            );
+            await waitFor(() => expect(result.current.callOptions).toEqual([PlatformCallType.ElementCall]));
         });
         it("Allows Element Call if transport is provided by client discovery", async () => {
             vi.mocked(client.cachedRtcTransports.get).mockReturnValue([
@@ -119,9 +117,7 @@ describe("useRoomCall", () => {
             ]);
             await setupAsyncStoreWithClient(CallStore.instance, client);
             const { result } = render();
-            await waitFor(() =>
-                expect(result.current.callOptions).toEqual([PlatformCallType.ElementCall, PlatformCallType.LegacyCall]),
-            );
+            await waitFor(() => expect(result.current.callOptions).toEqual([PlatformCallType.ElementCall]));
         });
         it("Ensure handler reacts to transport changes", async () => {
             // Clear all transports
@@ -140,9 +136,7 @@ describe("useRoomCall", () => {
             });
 
             await setupAsyncStoreWithClient(CallStore.instance, client);
-            await waitFor(() =>
-                expect(result.current.callOptions).toEqual([PlatformCallType.ElementCall, PlatformCallType.LegacyCall]),
-            );
+            await waitFor(() => expect(result.current.callOptions).toEqual([PlatformCallType.ElementCall]));
         });
     });
 });
