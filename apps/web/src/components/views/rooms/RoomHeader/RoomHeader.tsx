@@ -39,6 +39,7 @@ import RoomAvatar from "../../avatars/RoomAvatar";
 import BeeperRoomHeaderBadges from "../../beeper/BeeperRoomHeaderBadges";
 import { BeeperDmLastSeenSubtitle } from "../../beeper/BeeperLastSeen";
 import { BeeperTypingSubtitle } from "../../beeper/BeeperTypingSubtitle";
+import { TgBackButton } from "../../beeper/tg/TgNavigation";
 import { formatCount } from "../../../../utils/FormattingUtils.ts";
 import PosthogTrackers from "../../../../PosthogTrackers.ts";
 import { VideoRoomChatButton } from "./VideoRoomChatButton.tsx";
@@ -437,6 +438,8 @@ export default function RoomHeader({
     return (
         <CurrentRightPanelPhaseContextProvider roomId={room.roomId}>
             <Flex as="header" align="center" gap="var(--cpd-space-3x)" className="mx_RoomHeader light-panel">
+                {/* Fork: back to the chat list in the handheld Telegram-style layout */}
+                <TgBackButton />
                 <WithPresenceIndicator room={room}>
                     {/* We hide this from the tabIndex list as it is a pointer shortcut and superfluous for a11y */}
                     {/* Disable on-click actions until the room is created */}

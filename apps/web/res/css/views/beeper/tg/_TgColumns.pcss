@@ -182,3 +182,69 @@ Please see LICENSE files in the repository root for full details.
         }
     }
 }
+
+/*
+ * Handhelds (≤600px, tweb $small-screen): a single pane. _leftSidebar.scss / _chat.scss
+ * respond-to(handhelds): the chat list moves to translate3d(-25vw) and fades when a chat is shown;
+ * the chat sits at translate3d(100vw) and faded while the list is shown; both animate with
+ * --tabs-transition once booted (pages/_chats.scss .main-column).
+ */
+.mx_TgColumns[data-screen="mobile"] {
+    --TgColumns-swipe-dx: 0px;
+    --TgColumns-swipe-progress: 0;
+
+    /*
+     * src/index.ts: the app is sized by --vh, which follows the visual viewport (the keyboard).
+     * Important: .mx_MatrixChat's child rule (height: 100%) is more specific.
+     */
+    height: calc(var(--tg-vh) * 100) !important;
+    align-self: flex-start;
+
+    .mx_TgColumns_left,
+    .mx_TgColumns_center {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+    }
+
+    .mx_TgColumns_list {
+        width: auto;
+        flex: 1 1 auto;
+    }
+
+    &[data-animated] .mx_TgColumns_left,
+    &[data-animated] .mx_TgColumns_center {
+        transition:
+            transform var(--tg-tabs-transition),
+            opacity var(--tg-tabs-transition);
+    }
+
+    &:not([data-chat-shown]) .mx_TgColumns_center {
+        transform: translate3d(100vw, 0, 0);
+        opacity: 0;
+        pointer-events: none;
+    }
+
+    &[data-chat-shown] .mx_TgColumns_left {
+        transform: translate3d(-25vw, 0, 0);
+        opacity: 0;
+        pointer-events: none;
+    }
+
+    /* The edge swipe drags the chat with the finger and brings the list back in proportion. */
+    &[data-swiping] {
+        .mx_TgColumns_left,
+        .mx_TgColumns_center {
+            transition: none;
+        }
+
+        .mx_TgColumns_center {
+            transform: translate3d(var(--TgColumns-swipe-dx), 0, 0);
+        }
+
+        .mx_TgColumns_left {
+            transform: translate3d(calc(-25vw * (1 - var(--TgColumns-swipe-progress))), 0, 0);
+            opacity: var(--TgColumns-swipe-progress);
+        }
+    }
+}

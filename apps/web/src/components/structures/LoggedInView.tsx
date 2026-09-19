@@ -280,6 +280,11 @@ class LoggedInView extends React.Component<IProps, IState> {
         void monitorSyncedPushRules(event, this._matrixClient);
     };
 
+    /** Fork: the handheld Telegram-style layout's back navigation, from a chat to the chat list. */
+    private onTgBack = (): void => {
+        dis.dispatch({ action: Action.ViewHomePage });
+    };
+
     private onCompactLayoutChanged = (): void => {
         this.setState({
             useCompactLayout: SettingsStore.getValue("useCompactLayout"),
@@ -710,6 +715,11 @@ class LoggedInView extends React.Component<IProps, IState> {
                     spacePanel={<SpacePanel />}
                     leftPanel={leftPanel}
                     resizeNotifier={this.context.resizeNotifier}
+                    chatOpen={
+                        this.props.page_type === PageTypes.RoomView || this.props.page_type === PageTypes.UserView
+                    }
+                    chatKey={this.props.currentRoomId ?? this.props.currentUserId ?? undefined}
+                    onBack={this.onTgBack}
                 >
                     {roomView}
                 </TgColumns>

@@ -7,13 +7,14 @@ Please see LICENSE files in the repository root for full details.
 
 // @vitest-environment happy-dom
 
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import React from "react";
-import { fireEvent, render, screen } from "test-utils-rtl";
+import { act, fireEvent, render, screen } from "test-utils-rtl";
 
 import UIStore from "../../../../stores/UIStore";
 import ResizeNotifier from "../../../../utils/ResizeNotifier";
 import { TgColumns } from "./TgColumns";
+import { TgBackButton } from "./TgNavigation";
 import { STORAGE_KEY_LEFT } from "../../../../utils/beeper/tgLayout/constants";
 
 function setViewport(width: number, height: number): void {
@@ -102,5 +103,100 @@ describe("TgColumns", () => {
         expect(root.dataset.screen).toBe("medium");
         expect(root.dataset.collapsed).toBeUndefined();
         expect(screen.queryByTestId("tg-resize-handle")).toBeNull();
+    });
+
+    describe("handhelds (390×844)", () => {
+        function renderHandheld(chatOpen: boolean, onBack = vi.fn()): ReturnType<typeof render> {
+            return render(
+                <TgColumns
+                    spacePanel={<div>spaces</div>}
+                    leftPanel={<div>chat list</div>}
+                    resizeNotifier={new ResizeNotifier()}
+                    chatOpen={chatOpen}
+                    chatKey="!room:example.org"
+                    onBack={onBack}
+                >
+                    <div>
+                        <TgBackButton />
+                        room
+                    </div>
+                </TgColumns>,
+            );
+        }
+
+        function touch(type: string, x: number, y: number): Event {
+            const event = new Event(type, { bubbles: true, cancelable: true });
+            Object.defineProperty(event, "touches", { value: type === "touchend" ? [] : [{ clientX: x, clientY: y }] });
+            return event;
+        }
+
+        beforeEach(() => setViewport(390, 844));
+
+        it("shows the chat list full screen when no chat is open, without a resize handle", () => {
+            const { container } = renderHandheld(false);
+            const root = container.querySelector<HTMLElement>(".mx_TgColumns")!;
+            expect(root.dataset.screen).toBe("mobile");
+            expect(root.dataset.chatShown).toBeUndefined();
+            expect(screen.queryByTestId("tg-resize-handle")).toBeNull();
+            expect(screen.queryByRole("button", { name: "Back" })).toBeNull();
+            expect(document.documentElement.getAttribute("data-tg-screen")).toBe("mobile");
+        });
+
+        it("slides the chat in, and back out before leaving it", () => {
+            vi.useFakeTimers();
+            try {
+                const onBack = vi.fn();
+                const { container } = renderHandheld(true, onBack);
+                const root = container.querySelector<HTMLElement>(".mx_TgColumns")!;
+                expect(root.dataset.chatShown).toBe("true");
+
+                fireEvent.click(screen.getByRole("button", { name: "Back" }));
+                expect(root.dataset.chatShown).toBeUndefined();
+                expect(onBack).not.toHaveBeenCalled();
+                act(() => void vi.advanceTimersByTime(200));
+                expect(onBack).toHaveBeenCalledTimes(1);
+            } finally {
+                vi.useRealTimers();
+            }
+        });
+
+        it("follows an edge swipe and goes back past 50px", () => {
+            vi.useFakeTimers();
+            try {
+                const onBack = vi.fn();
+                const { container } = renderHandheld(true, onBack);
+                const root = container.querySelector<HTMLElement>(".mx_TgColumns")!;
+                const center = container.querySelector<HTMLElement>(".mx_TgColumns_center")!;
+
+                act(() => void center.dispatchEvent(touch("touchstart", 10, 400)));
+                act(() => void center.dispatchEvent(touch("touchmove", 40, 402)));
+                expect(root.dataset.swiping).toBe("true");
+                expect(root.style.getPropertyValue("--TgColumns-swipe-dx")).toBe("30px");
+
+                // Released before the threshold: snaps back.
+                act(() => void center.dispatchEvent(touch("touchend", 40, 402)));
+                expect(root.dataset.swiping).toBeUndefined();
+                expect(root.dataset.chatShown).toBe("true");
+
+                act(() => void center.dispatchEvent(touch("touchstart", 10, 400)));
+                act(() => void center.dispatchEvent(touch("touchmove", 30, 401)));
+                act(() => void center.dispatchEvent(touch("touchmove", 70, 401)));
+                expect(root.dataset.chatShown).toBeUndefined();
+                act(() => void vi.advanceTimersByTime(200));
+                expect(onBack).toHaveBeenCalledTimes(1);
+            } finally {
+                vi.useRealTimers();
+            }
+        });
+
+        it("ignores swipes that do not start at the edge", () => {
+            const { container } = renderHandheld(true);
+            const root = container.querySelector<HTMLElement>(".mx_TgColumns")!;
+            const center = container.querySelector<HTMLElement>(".mx_TgColumns_center")!;
+            act(() => void center.dispatchEvent(touch("touchstart", 120, 400)));
+            act(() => void center.dispatchEvent(touch("touchmove", 300, 400)));
+            expect(root.dataset.swiping).toBeUndefined();
+            expect(root.dataset.chatShown).toBe("true");
+        });
     });
 });
