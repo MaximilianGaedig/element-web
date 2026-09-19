@@ -3365,6 +3365,7 @@
         "notifications_on": "On",
         "online": "online",
         "open_files": "Open files",
+        "pinned_message": "Pinned message",
         "resize_chat_list": "Resize chat list",
         "show_all_members": {
             "one": "Show %(count)s member",

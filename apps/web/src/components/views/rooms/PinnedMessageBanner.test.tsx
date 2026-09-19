@@ -24,6 +24,7 @@ import { RightPanelPhases } from "../../../stores/right-panel/RightPanelStorePha
 import { UPDATE_EVENT } from "../../../stores/AsyncStore";
 import { Action } from "../../../dispatcher/actions";
 import { SDKContextClass } from "../../../contexts/SDKContextClass";
+import SettingsStore from "../../../settings/SettingsStore";
 
 describe("<PinnedMessageBanner />", () => {
     const userId = "@alice:server.org";
@@ -33,12 +34,18 @@ describe("<PinnedMessageBanner />", () => {
     let room: Room;
     let permalinkCreator: RoomPermalinkCreator;
     let sdkContext: SDKContextClass;
+    let telegram = false;
     beforeEach(() => {
         mockClient = stubClient();
         room = new Room(roomId, mockClient, userId);
         permalinkCreator = new RoomPermalinkCreator(room);
         sdkContext = new SDKContextClass();
         vi.spyOn(dis, "dispatch").mockReturnValue(undefined);
+        // Element's banner unless a test opts into the fork's Telegram-style layout (on by default).
+        telegram = false;
+        const getValue = SettingsStore.getValue.bind(SettingsStore);
+        vi.spyOn(SettingsStore, "getValue").mockImplementation(((name: string, ...rest: any[]) =>
+            name === "telegramStyleLayout" ? telegram : (getValue as any)(name, ...rest)) as any);
     });
 
     afterEach(() => {
@@ -333,6 +340,55 @@ describe("<PinnedMessageBanner />", () => {
             act(() => {
                 RightPanelStore.instance.emit(UPDATE_EVENT);
             });
+            expect(screen.getByRole("button", { name: "View all" })).toBeVisible();
+        });
+    });
+
+    describe("Telegram Web K's pinned plate", () => {
+        beforeEach(() => {
+            telegram = true;
+        });
+
+        it("shows tweb's plate with a single bar and no counter for one pin", async () => {
+            vi.spyOn(pinnedEventHooks, "usePinnedEvents").mockReturnValue([event1.getId()!]);
+            vi.spyOn(pinnedEventHooks, "useSortedFetchedPinnedEvents").mockReturnValue([event1]);
+            const { container } = renderBanner();
+
+            await expect(screen.findByText("First pinned message")).resolves.toBeVisible();
+            expect(container.querySelector(".mx_TgPinned")).not.toBeNull();
+            expect(container.querySelector(".mx_TgPinnedBorder_wrapper1")).not.toBeNull();
+            expect(screen.getByTestId("tg-pinned-counter")).toHaveAttribute("data-last", "true");
+            expect(screen.queryByRole("button", { name: "View all" })).toBeNull();
+        });
+
+        it("starts on the newest pin and cycles to older ones, sliding the rows", async () => {
+            vi.spyOn(pinnedEventHooks, "usePinnedEvents").mockReturnValue([
+                event1.getId()!,
+                event2.getId()!,
+                event3.getId()!,
+            ]);
+            vi.spyOn(pinnedEventHooks, "useSortedFetchedPinnedEvents").mockReturnValue([event1, event2, event3]);
+            const { container } = renderBanner();
+
+            await expect(screen.findByText("Third pinned message")).resolves.toBeVisible();
+            const counter = screen.getByTestId("tg-pinned-counter");
+            expect(counter).toHaveAttribute("data-last", "true");
+            // Three pins: 12px bars, the mark on the newest (bottom) one.
+            const mark = container.querySelector<HTMLElement>(".mx_TgPinnedBorder_mark")!;
+            expect(mark.style.height).toBe("12px");
+            expect(mark.style.transform).toBe("translateY(29px)");
+
+            await userEvent.click(screen.getByRole("button", { name: /View the pinned message in the timeline/ }));
+            expect(dis.dispatch).toHaveBeenCalledWith(expect.objectContaining({ event_id: event3.getId() }));
+
+            await expect(screen.findByText("Second pinned message")).resolves.toBeVisible();
+            expect(counter).toHaveTextContent("2");
+            expect(counter).not.toHaveAttribute("data-last");
+            expect(mark.style.transform).toBe("translateY(14px)");
+            // Moving to an older pin: the new row comes from the top, the old one leaves downwards.
+            const leaving = container.querySelector(".mx_TgAnimatedSuper_row--from-bottom");
+            expect(leaving).toHaveClass("mx_TgAnimatedSuper_row--hiding");
+            expect(leaving).toHaveTextContent("Third pinned message");
             expect(screen.getByRole("button", { name: "View all" })).toBeVisible();
         });
     });

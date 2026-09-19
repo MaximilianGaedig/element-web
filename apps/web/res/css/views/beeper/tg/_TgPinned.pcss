@@ -1,0 +1,231 @@
+/*
+Copyright 2026 New Vector Ltd.
+
+SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only OR LicenseRef-Element-Commercial
+Please see LICENSE files in the repository root for full details.
+*/
+
+/*
+ * Telegram Web K's pinned-message plate (TgPinnedMessage.tsx), from tweb (GPL-3.0):
+ *   src/scss/partials/_chatPinned.scss    .pinned-message(-border, -title, -subtitle), .pinned-container
+ *   src/scss/partials/_animatedSuper.scss .animated-super-row (--pm-transition .2s ease-in-out)
+ *   src/scss/partials/_chatTopbar.scss    .topbar-floating-plates (24px radius, topbar shadow)
+ */
+.mx_TgPinned {
+    --pm-item-height: 2.5rem;
+    --pm-row-height: 1.25rem;
+
+    display: flex;
+    align-items: center;
+    box-sizing: border-box;
+    height: 3rem;
+    width: calc(100% - 2 * var(--tg-page-chats-padding));
+    max-width: 696px;
+    margin: var(--tg-plates-gap) auto 0;
+    padding: 0.25rem;
+    background-color: var(--tg-surface-color);
+    border-radius: var(--tg-border-radius-big);
+    box-shadow: var(--tg-topbar-box-shadow);
+    flex: 0 0 auto;
+}
+
+.mx_TgPinned_main {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex: 1 1 auto;
+    min-width: 0;
+    height: 2.75rem;
+    padding: 0.125rem 0.25rem 0.125rem 1rem;
+    border: none;
+    border-radius: 0.5rem;
+    background: none;
+    color: inherit;
+    font: inherit;
+    text-align: start;
+    cursor: pointer;
+
+    &:hover {
+        background-color: var(--cpd-color-bg-action-tertiary-hovered);
+    }
+}
+
+.mx_TgPinned_content {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    flex: 1 1 auto;
+    min-width: 0;
+    height: var(--pm-item-height);
+    overflow: visible;
+}
+
+.mx_TgPinned_title,
+.mx_TgPinned_subtitle {
+    position: relative;
+    height: var(--pm-row-height);
+    min-height: var(--pm-row-height);
+    font-size: 14px;
+    line-height: 18px;
+}
+
+.mx_TgPinned_title {
+    color: var(--tg-primary-color);
+    font-weight: var(--cpd-font-weight-semibold);
+    margin-bottom: -2px;
+    white-space: nowrap;
+}
+
+/* animatedCounter: "#N", scaled away on the newest pin. */
+.mx_TgPinned_counter {
+    display: inline-flex;
+    transition:
+        transform var(--tg-pm-transition),
+        opacity var(--tg-pm-transition);
+
+    &::before {
+        content: "#";
+    }
+
+    &[data-last] {
+        transform: scale(0.68);
+        opacity: 0;
+    }
+}
+
+.mx_TgPinned_subtitle {
+    .mx_TgAnimatedSuper {
+        --translateY: var(--pm-row-height);
+    }
+
+    .mx_TgAnimatedSuper_row {
+        overflow: hidden;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+    }
+
+    .mx_PinnedMessageBanner_message,
+    .mx_PinnedMessageBanner_redactedMessage {
+        display: block;
+        overflow: hidden;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+        line-height: 18px;
+        height: 18px;
+    }
+}
+
+.mx_TgPinned_list {
+    flex: 0 0 auto;
+    margin-inline-end: 0.25rem;
+}
+
+/* _animatedSuper.scss */
+.mx_TgAnimatedSuper {
+    --translateY: 100%;
+
+    position: relative;
+    height: 100%;
+}
+
+.mx_TgAnimatedSuper_row {
+    position: absolute;
+    inset: 0;
+    transition:
+        transform var(--tg-pm-transition),
+        opacity var(--tg-pm-transition);
+
+    &.mx_TgAnimatedSuper_row--hiding {
+        opacity: 0;
+
+        &.mx_TgAnimatedSuper_row--from-top {
+            transform: translate3d(0, calc(var(--translateY) * -1), 0);
+        }
+
+        &.mx_TgAnimatedSuper_row--from-bottom {
+            transform: translate3d(0, var(--translateY), 0);
+        }
+    }
+}
+
+/* pinnedMessageBorder: 3px bars, 40px tall; the mark and the track move with .25s ease-in-out. */
+.mx_TgPinnedBorder {
+    position: relative;
+    height: 2.5rem;
+    width: 0.1875rem;
+    flex: 0 0 auto;
+}
+
+.mx_TgPinnedBorder_wrapper1 {
+    position: relative;
+    top: 50%;
+    transform: translateY(-50%);
+    height: 2.5rem;
+    width: 0.1875rem;
+    border-radius: 3px;
+    background: var(--tg-primary-color);
+}
+
+.mx_TgPinnedBorder_mask {
+    --mask-height: 0.375rem;
+
+    height: 2.5rem;
+    overflow: hidden;
+
+    &::before,
+    &::after {
+        position: absolute;
+        left: 0;
+        right: 0;
+        content: " ";
+        display: block;
+        z-index: 1;
+        height: var(--mask-height);
+        opacity: 0;
+        transition: opacity 0.2s ease-in-out;
+    }
+
+    &::before {
+        top: 0;
+        background: linear-gradient(var(--tg-surface-color), transparent);
+    }
+
+    &::after {
+        bottom: 0;
+        background: linear-gradient(transparent, var(--tg-surface-color));
+    }
+
+    &.mx_TgPinnedBorder_maskTop::before,
+    &.mx_TgPinnedBorder_maskBottom::after {
+        opacity: 1;
+    }
+}
+
+.mx_TgPinnedBorder_wrapper {
+    color: var(--tg-primary-color);
+    position: relative;
+    transition: transform 0.25s ease-in-out;
+
+    &::before {
+        position: absolute;
+        content: " ";
+        inset: 0;
+        display: block;
+        background: var(--tg-primary-color);
+        opacity: 0.4;
+    }
+
+    > svg {
+        position: absolute;
+    }
+}
+
+.mx_TgPinnedBorder_mark {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 3px;
+    background: currentcolor;
+    border-radius: 3px;
+    transition: transform 0.25s ease-in-out;
+}
