@@ -34,6 +34,7 @@ import { DecryptError, DownloadError } from "../../utils/DecryptFile";
 import { BLURHASH_FIELD, createThumbnail } from "../../utils/image-media";
 import { isMimeTypeAllowed } from "../../utils/blobs";
 import ImageView from "../../components/views/elements/ImageView";
+import { openRoomMedia } from "../../components/views/telegram/TgMediaViewer";
 
 export interface ImageBodyViewModelProps {
     /**
@@ -464,6 +465,13 @@ export class ImageBodyViewModel
 
         if (!this.props.mediaVisible) {
             this.props.setMediaVisible?.(true);
+            return;
+        }
+
+        // Fork: the Telegram layout opens tweb's viewer (morph from the bubble, prev/next through the room's media).
+        if (isTelegramLayout()) {
+            const room = MatrixClientPeg.get()?.getRoom(this.props.mxEvent.getRoomId());
+            openRoomMedia(room, this.props.mxEvent, this.props.imageRef.current);
             return;
         }
 

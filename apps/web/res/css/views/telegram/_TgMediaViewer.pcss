@@ -1,0 +1,208 @@
+/*
+Copyright 2026 New Vector Ltd.
+
+SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only OR LicenseRef-Element-Commercial
+Please see LICENSE files in the repository root for full details.
+*/
+
+/*
+ * tweb mediaViewer.scss (.media-viewer-whole, -mover, -switcher, -topbar), with --open-duration .2s and
+ * --move-duration .35s. The backdrop is translucent + blurred instead of tweb's rgba(0,0,0,.88), and
+ * both its dim and its blur fade in with the morph.
+ */
+.mx_TgMediaViewer {
+    --TgMediaViewer-open-duration: 0.2s;
+    --TgMediaViewer-move-duration: 0.35s;
+    --TgMediaViewer-dim: rgb(0 0 0 / 55%);
+    --TgMediaViewer-blur: 24px;
+
+    position: fixed;
+    inset: 0;
+    z-index: 5000;
+    user-select: none;
+    touch-action: none;
+    color: #fff;
+
+    @media (prefers-reduced-motion: reduce) {
+        --TgMediaViewer-open-duration: 0s;
+        --TgMediaViewer-move-duration: 0s;
+    }
+}
+
+html[data-low-power] .mx_TgMediaViewer {
+    --TgMediaViewer-blur: 0px;
+    --TgMediaViewer-dim: rgb(0 0 0 / 88%);
+}
+
+.mx_TgMediaViewer_backdrop {
+    position: absolute;
+    inset: 0;
+    background-color: var(--TgMediaViewer-dim);
+    opacity: 0;
+    backdrop-filter: blur(0);
+    -webkit-backdrop-filter: blur(0);
+    transition:
+        opacity var(--TgMediaViewer-open-duration) ease-in-out,
+        backdrop-filter var(--TgMediaViewer-open-duration) ease-in-out,
+        -webkit-backdrop-filter var(--TgMediaViewer-open-duration) ease-in-out;
+
+    .mx_TgMediaViewer_active & {
+        opacity: 1;
+        backdrop-filter: blur(var(--TgMediaViewer-blur));
+        -webkit-backdrop-filter: blur(var(--TgMediaViewer-blur));
+    }
+}
+
+/* The zoom/pan transform lives here (tweb moversContainer, origin 0 0). */
+.mx_TgMediaViewer_movers {
+    position: absolute;
+    inset: 0;
+    transform-origin: 0 0;
+    transition: transform var(--TgMediaViewer-open-duration);
+
+    &.mx_TgMediaViewer_noTransition,
+    &.mx_TgMediaViewer_noTransition .mx_TgMediaViewer_mover {
+        transition: none !important;
+    }
+}
+
+.mx_TgMediaViewer_mover {
+    position: absolute;
+    left: 0;
+    top: 0;
+    overflow: hidden;
+    transform-origin: 0 0;
+    will-change: transform;
+
+    &.mx_TgMediaViewer_mover_active {
+        transition:
+            transform var(--TgMediaViewer-open-duration),
+            border-radius var(--TgMediaViewer-open-duration),
+            opacity var(--TgMediaViewer-open-duration);
+    }
+
+    &.mx_TgMediaViewer_mover_moving {
+        transition: transform var(--TgMediaViewer-move-duration) ease;
+    }
+
+    > img,
+    > video {
+        display: block;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    > video {
+        object-fit: contain;
+        background: #000;
+    }
+}
+
+.mx_TgMediaViewer_zoomed {
+    cursor: grab;
+}
+
+/* Chrome: fades in with the backdrop (tweb .media-viewer-appear). */
+.mx_TgMediaViewer_chrome {
+    opacity: 0;
+    transition: opacity var(--TgMediaViewer-open-duration);
+
+    .mx_TgMediaViewer_active & {
+        opacity: 1;
+    }
+}
+
+.mx_TgMediaViewer_topbar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 0.75rem 0 1.5rem;
+    padding-top: env(safe-area-inset-top);
+    z-index: 2;
+}
+
+.mx_TgMediaViewer_name {
+    font-weight: var(--cpd-font-weight-semibold);
+    line-height: 1.3125;
+}
+
+.mx_TgMediaViewer_date {
+    font-size: 0.875rem;
+    opacity: 0.7;
+}
+
+.mx_TgMediaViewer_buttons {
+    display: flex;
+    gap: 0.25rem;
+
+    button {
+        width: 2.5rem;
+        height: 2.5rem;
+        padding: 0.5rem;
+        border: none;
+        border-radius: 50%;
+        background: none;
+        color: rgb(255 255 255 / 70%);
+        cursor: pointer;
+        transition:
+            color var(--TgMediaViewer-open-duration),
+            background-color var(--TgMediaViewer-open-duration);
+
+        &:hover {
+            color: #fff;
+            background-color: rgb(255 255 255 / 8%);
+        }
+
+        svg {
+            width: 100%;
+            height: 100%;
+        }
+    }
+}
+
+/* tweb .media-viewer-switcher: 7rem side zones, the arrow shows on hover; none on handhelds (swipe). */
+.mx_TgMediaViewer_switcher {
+    position: absolute;
+    top: 3.75rem;
+    left: 0;
+    width: 7rem;
+    height: calc(100% - 3.75rem);
+    cursor: pointer;
+    z-index: 1;
+
+    &.mx_TgMediaViewer_switcher_right {
+        left: auto;
+        right: 0;
+    }
+
+    html[data-tg-screen="mobile"] & {
+        display: none;
+    }
+}
+
+.mx_TgMediaViewer_sibling {
+    position: absolute;
+    left: 1rem;
+    top: 50%;
+    width: 2.5rem;
+    height: 2.5rem;
+    transform: translateY(-50%);
+    color: #fff;
+    opacity: 0;
+    transition: opacity var(--TgMediaViewer-open-duration);
+
+    .mx_TgMediaViewer_switcher_right & {
+        left: auto;
+        right: 1rem;
+    }
+
+    .mx_TgMediaViewer_switcher:hover & {
+        opacity: 1;
+    }
+}

@@ -21,6 +21,9 @@ import { useMediaVisible } from "../../../hooks/useMediaVisible";
 import { _t } from "../../../languageHandler";
 import Modal from "../../../Modal";
 import AlbumLightbox from "../elements/AlbumLightbox";
+import { openRoomMedia } from "../telegram/TgMediaViewer";
+import { isTelegramLayout } from "../../../utils/telegram/telegramLayout";
+import { MatrixClientPeg } from "../../../MatrixClientPeg";
 import MessageContextMenu from "../context_menus/MessageContextMenu";
 import { aboveRightOf } from "../../structures/ContextMenu";
 
@@ -127,6 +130,7 @@ function AlbumCell({ event, position, total, style, onOpen, onItemContextMenu }:
             type="button"
             className={classNames("mx_MAlbumBody_cell", { mx_MAlbumBody_cell_video: isVideo })}
             data-testid="album-cell"
+            data-tg-media-id={event.getId()}
             aria-label={_t("timeline|media_album|item_label", {
                 index: position + 1,
                 count: total,
@@ -183,6 +187,14 @@ export default function MAlbumBody({ album, bodyProps, ItemBody }: Props): JSX.E
 
     const openLightbox = useCallback(
         (event: MatrixEvent): void => {
+            if (isTelegramLayout()) {
+                const room = MatrixClientPeg.get()?.getRoom(event.getRoomId());
+                const source = document.querySelector<HTMLElement>(
+                    `[data-tg-media-id="${CSS.escape(event.getId() ?? "")}"] img`,
+                );
+                openRoomMedia(room, event, source);
+                return;
+            }
             Modal.createDialog(
                 AlbumLightbox,
                 { items: visual, startIndex: visual.indexOf(event), permalinkCreator },

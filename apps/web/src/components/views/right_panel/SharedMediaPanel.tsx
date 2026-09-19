@@ -24,6 +24,8 @@ import OverflowVerticalIcon from "@vector-im/compound-design-tokens/assets/web/i
 import Spinner from "../elements/Spinner";
 import Modal from "../../../Modal";
 import AlbumLightbox from "../elements/AlbumLightbox";
+import { openTgMediaViewer } from "../telegram/TgMediaViewer";
+import { isTelegramLayout } from "../../../utils/telegram/telegramLayout";
 import MessageEvent from "../messages/MessageEvent";
 import dis from "../../../dispatcher/dispatcher";
 import { Action } from "../../../dispatcher/actions";
@@ -263,6 +265,7 @@ function GridThumb({ event, onOpen }: { event: MatrixEvent; onOpen: () => void }
             ref={ref}
             type="button"
             className="mx_SharedMedia_gridItem"
+            data-tg-media-id={event.getId()}
             onClick={onOpen}
             aria-label={typeof content.body === "string" ? content.body : undefined}
         >
@@ -275,6 +278,16 @@ function GridThumb({ event, onOpen }: { event: MatrixEvent; onOpen: () => void }
 function MediaGrid({ items }: { items: MatrixEvent[] }): JSX.Element {
     const open = useCallback(
         (index: number) => {
+            if (isTelegramLayout()) {
+                // Shared media lists newest first; the viewer wants oldest first.
+                const ordered = [...items].reverse();
+                const event = items[index];
+                const source = document.querySelector<HTMLElement>(
+                    `.mx_SharedMedia_grid [data-tg-media-id="${CSS.escape(event.getId() ?? "")}"] img`,
+                );
+                openTgMediaViewer(ordered, ordered.indexOf(event), source);
+                return;
+            }
             Modal.createDialog(AlbumLightbox, { items, startIndex: index }, "mx_Dialog_lightbox", undefined, true);
         },
         [items],
