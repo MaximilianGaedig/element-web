@@ -263,7 +263,9 @@ html[data-tg-screen] {
         height: var(--tg-chat-input-height);
         border: none;
         border-radius: 50%;
-        background-color: var(--tg-surface-color);
+        /* Glass like the header and composer islands. */
+        background-color: var(--tg-glass-background);
+        backdrop-filter: var(--tg-glass-backdrop);
         box-shadow: var(--tg-chat-input-box-shadow);
         transition: background-color var(--tg-layer-transition);
 
@@ -272,7 +274,7 @@ html[data-tg-screen] {
         }
 
         &:hover {
-            background-color: var(--cpd-color-bg-subtle-primary);
+            background-color: color-mix(in srgb, var(--cpd-color-bg-subtle-primary) 70%, transparent);
         }
     }
 
@@ -318,7 +320,8 @@ html[data-tg-screen] {
 
     .mx_TopUnreadMessagesBar_markAsRead {
         border: none;
-        background-color: var(--tg-surface-color);
+        background-color: var(--tg-glass-background);
+        backdrop-filter: var(--tg-glass-backdrop);
         box-shadow: var(--tg-chat-input-box-shadow);
     }
 }

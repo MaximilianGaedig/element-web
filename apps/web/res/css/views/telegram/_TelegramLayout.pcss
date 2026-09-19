@@ -162,6 +162,11 @@ html[data-tg-screen] .mx_RoomView_body[data-telegram-layout="true"] {
         bottom: calc(var(--tg-composer-block, 0px) + 0.5rem);
     }
 
+    /* The jump-up button sits under the floating header (and the pinned plate), not behind it. */
+    .mx_TopUnreadMessagesBar {
+        top: calc(var(--tg-header-block, 0px) + 0.5rem);
+    }
+
     .mx_TgBlurEdge {
         position: absolute;
         left: 0;
