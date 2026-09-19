@@ -5,7 +5,7 @@ SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only OR LicenseRef-Element-Com
 Please see LICENSE files in the repository root for full details.
 */
 
-import React, { type JSX } from "react";
+import React, { type JSX, useLayoutEffect, useRef } from "react";
 import classNames from "classnames";
 
 import { ACTIVITY_FADE_MS } from "../../../utils/presence/activity";
@@ -28,12 +28,41 @@ export function activityMinutes(level: number): number {
  * Telegram Web K's badge transition.
  */
 export function ActivityDot({ level, className, label }: Props): JSX.Element | null {
+    const tag = useRef<HTMLSpanElement>(null);
+    const recent = level > 0 && level < 1;
+    // The avatar's cut-out around the tag follows its size, which changes with the text ("1m" vs "59m"):
+    // publish it on the avatar view for the mask (_ActivityDot.pcss). Layout sizes, so the pop-in
+    // transform doesn't disturb them.
+    useLayoutEffect(() => {
+        const el = tag.current;
+        const host = el?.parentElement;
+        if (!recent || !el || !host) return;
+        const update = (): void => {
+            host.style.setProperty("--PresenceTag-width", `${el.offsetWidth}px`);
+            host.style.setProperty("--PresenceTag-height", `${el.offsetHeight}px`);
+        };
+        update();
+        if (typeof ResizeObserver === "undefined") return;
+        const observer = new ResizeObserver(update);
+        observer.observe(el);
+        return () => {
+            observer.disconnect();
+            host.style.removeProperty("--PresenceTag-width");
+            host.style.removeProperty("--PresenceTag-height");
+        };
+    }, [recent]);
+
     if (level <= 0) return null;
     if (level >= 1) {
         return <span className={classNames("mx_ActivityDot", className)} role="img" aria-label={label} />;
     }
     return (
-        <span className={classNames("mx_ActivityDot mx_ActivityDot_recent", className)} role="img" aria-label={label}>
+        <span
+            ref={tag}
+            className={classNames("mx_ActivityDot mx_ActivityDot_recent", className)}
+            role="img"
+            aria-label={label}
+        >
             {activityMinutes(level)}m
         </span>
     );

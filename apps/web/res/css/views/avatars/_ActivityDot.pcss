@@ -66,16 +66,85 @@ Please see LICENSE files in the repository root for full details.
 }
 
 /*
- * Room list (32px avatar): cut-outs in res/img/presence/avatar-mask-{dot,tag}.svg. The doubled class
+ * Room list (32px avatar): gradient cut-outs around the dot and the tag. The doubled class
  * outranks Element's own placement (_RoomAvatarView.pcss: left: size - 4px), whatever the file order.
  */
 .mx_RoomAvatarView.mx_RoomAvatarView {
+    /* Tunable (TgTweaksPanel sets the --tg-presence-* overrides): size, offsets from the corner, gap. */
+    --PresenceDot-size: var(--tg-presence-dot-size, 10px);
+    --PresenceDot-right: var(--tg-presence-dot-right, 0px);
+    --PresenceDot-bottom: var(--tg-presence-dot-bottom, 0px);
+    --PresenceDot-gap: var(--tg-presence-dot-gap, 1px);
+    --PresenceDot-cx: calc(100% - var(--PresenceDot-right) - var(--PresenceDot-size) / 2);
+    --PresenceDot-cy: calc(100% - var(--PresenceDot-bottom) - var(--PresenceDot-size) / 2);
+    --PresenceDot-hole: calc(var(--PresenceDot-size) / 2 + var(--PresenceDot-gap));
+
+    /* The cut-out follows the dot: a transparent circle around it. */
     .mx_RoomAvatarView_RoomAvatar_presence {
-        mask-image: url("/res/img/presence/avatar-mask-dot.svg");
+        mask-image: radial-gradient(
+            circle at var(--PresenceDot-cx) var(--PresenceDot-cy),
+            transparent var(--PresenceDot-hole),
+            #000 calc(var(--PresenceDot-hole) + 0.5px)
+        );
+        mask-size: 100% 100%;
     }
 
+    /*
+     * The tag's cut-out: its pill (ActivityDot measures --PresenceTag-width/-height) grown by the gap,
+     * following the tag sliders like the dot's. Full avatar minus (left cap + right cap + middle band);
+     * lengths, not percentages, since mask-position percentages are relative to (box - layer).
+     */
+    --PresenceTag-right: var(--tg-presence-tag-right, -8px);
+    --PresenceTag-bottom: var(--tg-presence-tag-bottom, -3px);
+    --PresenceTag-hole: calc(var(--PresenceTag-height, 12px) / 2 + var(--PresenceDot-gap));
+    --PresenceTag-cy: calc(
+        var(--room-avatar-size, 32px) - var(--PresenceTag-bottom) - var(--PresenceTag-height, 12px) / 2
+    );
+    --PresenceTag-cx-end: calc(
+        var(--room-avatar-size, 32px) - var(--PresenceTag-right) - var(--PresenceTag-height, 12px) / 2
+    );
+    --PresenceTag-cx-start: calc(
+        var(--room-avatar-size, 32px) - var(--PresenceTag-right) - var(--PresenceTag-width, 24px) +
+            var(--PresenceTag-height, 12px) / 2
+    );
+
     .mx_RoomAvatarView_RoomAvatar_recent {
-        mask-image: url("/res/img/presence/avatar-mask-tag.svg");
+        /*
+         * Every layer is full-size: a sized/positioned layer snaps to whole pixels while the caps sit on
+         * fractional ones (the tag is ~18.7px wide), which left steps where they met. The middle band is
+         * a horizontal band intersected with a vertical one, and its long edges share the caps' 0.5px ramp.
+         */
+        mask-image:
+            linear-gradient(#000, #000),
+            radial-gradient(
+                circle var(--PresenceTag-hole) at var(--PresenceTag-cx-start) var(--PresenceTag-cy),
+                #000 calc(var(--PresenceTag-hole) - 0.5px),
+                transparent var(--PresenceTag-hole)
+            ),
+            radial-gradient(
+                circle var(--PresenceTag-hole) at var(--PresenceTag-cx-end) var(--PresenceTag-cy),
+                #000 calc(var(--PresenceTag-hole) - 0.5px),
+                transparent var(--PresenceTag-hole)
+            ),
+            linear-gradient(
+                to right,
+                transparent var(--PresenceTag-cx-start),
+                #000 var(--PresenceTag-cx-start),
+                #000 var(--PresenceTag-cx-end),
+                transparent var(--PresenceTag-cx-end)
+            ),
+            linear-gradient(
+                to bottom,
+                transparent calc(var(--PresenceTag-cy) - var(--PresenceTag-hole)),
+                #000 calc(var(--PresenceTag-cy) - var(--PresenceTag-hole) + 0.5px),
+                #000 calc(var(--PresenceTag-cy) + var(--PresenceTag-hole) - 0.5px),
+                transparent calc(var(--PresenceTag-cy) + var(--PresenceTag-hole))
+            );
+        mask-size: 100% 100%;
+        mask-position: 0 0;
+        mask-repeat: no-repeat;
+        /* Top to bottom: full avatar minus (left cap + right cap + (horizontal band x vertical band)). */
+        mask-composite: subtract, add, add, intersect, add;
     }
 
     /* 8px presence icons and the 10px dot share the cut-out centred at (27, 27). */
@@ -86,14 +155,18 @@ Please see LICENSE files in the repository root for full details.
     }
 
     .mx_ActivityDot.mx_RoomAvatarView_PresenceDecoration {
-        right: 0;
-        bottom: 0;
+        width: var(--PresenceDot-size);
+        height: var(--PresenceDot-size);
+        right: var(--PresenceDot-right);
+        bottom: var(--PresenceDot-bottom);
     }
 
-    /* The "12m" tag hangs 3px below the avatar, level with the bridged-network badge on the left. */
+    /* The "12m" tag hangs 3px below the avatar and 8px past its edge, level with the bridged-network badge. */
     .mx_ActivityDot_recent.mx_RoomAvatarView_PresenceDecoration {
-        right: -3px;
-        bottom: -3px;
+        width: auto;
+        height: 12px;
+        right: var(--PresenceTag-right);
+        bottom: var(--PresenceTag-bottom);
         transform-origin: right bottom;
     }
 }

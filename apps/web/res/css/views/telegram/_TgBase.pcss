@@ -39,4 +39,22 @@ Please see LICENSE files in the repository root for full details.
     --tg-secondary-text-color: var(--cpd-color-text-secondary);
     /* src/index.ts setVH: 1% of the visual viewport height, written by JS (viewportHeight.ts). */
     --tg-vh: 1vh;
+    /* Floating bars are translucent glass (see below; low power mode makes them solid). */
+    --tg-glass-background: color-mix(in srgb, var(--tg-surface-color) 50%, transparent);
+    --tg-glass-backdrop: blur(24px) saturate(180%);
+}
+
+/*
+ * The floating bars are translucent glass: the timeline scrolls behind them and shows through, blurred.
+ * Low power mode (html[data-low-power], see ROADMAP wave 6) turns every backdrop blur off: solid bars,
+ * no blur edges.
+ */
+
+html[data-low-power] {
+    --tg-glass-background: var(--tg-surface-color);
+    --tg-glass-backdrop: none;
+
+    .mx_TgBlurEdge {
+        display: none;
+    }
 }

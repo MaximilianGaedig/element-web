@@ -29,23 +29,17 @@ export interface LastSeenOptions {
 }
 
 /**
- * Formats an exact time the way Telegram does. `kind` picks the wording: "seen" for the network's own
- * last-seen time, "active" for activity we observed ourselves (their last message or read receipt).
+ * Formats an exact time the way Telegram does ("last seen 5 minutes ago", "last seen yesterday at 13:06"),
+ * both for the network's own last-seen time and for activity we observed ourselves (their last message
+ * or read receipt).
  */
-export function formatLastSeenTime(ts: number, opts: LastSeenOptions = {}, kind: "seen" | "active" = "seen"): string {
+export function formatLastSeenTime(ts: number, opts: LastSeenOptions = {}): string {
     const now = opts.now ?? Date.now();
     const locale = opts.locale ?? getUserLanguage();
     const timeZone = opts.timeZone ?? getUserTimezone();
     const diff = now - ts;
-    if (diff < MINUTE) return kind === "active" ? _t("bridge|last_active_just_now") : _t("bridge|last_seen_just_now");
-    if (diff < HOUR)
-        return kind === "active"
-            ? _t("bridge|last_active_minutes_ago", {
-                  count: Math.floor(diff / MINUTE),
-              })
-            : _t("bridge|last_seen_minutes_ago", {
-                  count: Math.floor(diff / MINUTE),
-              });
+    if (diff < MINUTE) return _t("bridge|last_seen_just_now");
+    if (diff < HOUR) return _t("bridge|last_seen_minutes_ago", { count: Math.floor(diff / MINUTE) });
 
     const date = new Date(ts);
     const at = new Intl.DateTimeFormat(locale, {
@@ -56,18 +50,8 @@ export function formatLastSeenTime(ts: number, opts: LastSeenOptions = {}, kind:
     }).format(date);
 
     const day = dayKey(ts, timeZone);
-    if (day === dayKey(now, timeZone))
-        return kind === "active"
-            ? _t("bridge|last_active_today_at", { time: at })
-            : _t("bridge|last_seen_today_at", { time: at });
-    if (day === dayKey(now - 24 * HOUR, timeZone))
-        return kind === "active"
-            ? _t("bridge|last_active_yesterday_at", {
-                  time: at,
-              })
-            : _t("bridge|last_seen_yesterday_at", {
-                  time: at,
-              });
+    if (day === dayKey(now, timeZone)) return _t("bridge|last_seen_today_at", { time: at });
+    if (day === dayKey(now - 24 * HOUR, timeZone)) return _t("bridge|last_seen_yesterday_at", { time: at });
     const sameYear = day.slice(0, 4) === dayKey(now, timeZone).slice(0, 4);
     const dateStr = new Intl.DateTimeFormat(locale, {
         timeZone,
@@ -75,15 +59,7 @@ export function formatLastSeenTime(ts: number, opts: LastSeenOptions = {}, kind:
         month: "short",
         year: sameYear ? undefined : "numeric",
     }).format(date);
-    return kind === "active"
-        ? _t("bridge|last_active_date_at", {
-              date: dateStr,
-              time: at,
-          })
-        : _t("bridge|last_seen_date_at", {
-              date: dateStr,
-              time: at,
-          });
+    return _t("bridge|last_seen_date_at", { date: dateStr, time: at });
 }
 
 /**

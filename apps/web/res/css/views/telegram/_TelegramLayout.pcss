@@ -120,6 +120,18 @@ html[data-tg-screen] .mx_RoomView_body[data-telegram-layout="true"] {
         z-index: 3;
     }
 
+    /* The pinned plate floats under the header (TgChatChrome keeps --tg-header-bottom) and is glass too. */
+    > .mx_TgPinned {
+        position: absolute;
+        top: calc(var(--tg-header-bottom, 64px) + var(--tg-plates-gap));
+        left: 0;
+        right: 0;
+        z-index: 3;
+        margin: 0 auto;
+        background-color: var(--tg-glass-background);
+        backdrop-filter: var(--tg-glass-backdrop);
+    }
+
     > .mx_MessageComposer {
         position: absolute;
         left: 0;
@@ -165,7 +177,7 @@ html[data-tg-screen] .mx_RoomView_body[data-telegram-layout="true"] {
 
     .mx_TgBlurEdge_top {
         top: 0;
-        height: calc(var(--tg-header-block, 0px) + 1rem);
+        height: var(--tg-header-block, 0px);
 
         > i:nth-child(1) {
             backdrop-filter: blur(0.5px);
@@ -191,7 +203,7 @@ html[data-tg-screen] .mx_RoomView_body[data-telegram-layout="true"] {
 
     .mx_TgBlurEdge_bottom {
         bottom: 0;
-        height: calc(var(--tg-composer-block, 0px) + 1rem);
+        height: var(--tg-composer-block, 0px);
 
         > i:nth-child(1) {
             backdrop-filter: blur(0.5px);

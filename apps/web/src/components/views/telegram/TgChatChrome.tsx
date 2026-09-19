@@ -18,7 +18,7 @@ const LAYERS = 5;
 /**
  * The Telegram-style chat chrome: the header and composer float over the timeline (which scrolls behind
  * them), and the timeline is blurred progressively towards both edges like Telegram iOS. This keeps the
- * space the floating header and composer (plus status bar) take in `--tg-header-block` and
+ * space the floating header (plus pinned plate) and composer (plus status bar) take in `--tg-header-block` and
  * `--tg-composer-block` on the body, which pad the message list and size the blur edges.
  */
 export function TgChatChrome({ body }: Props): JSX.Element {
@@ -28,9 +28,14 @@ export function TgChatChrome({ body }: Props): JSX.Element {
         const update = (): void => {
             const b = el.getBoundingClientRect();
             const header = el.querySelector(":scope > .mx_RoomHeader")?.getBoundingClientRect();
+            const pinned = el.querySelector(":scope > .mx_TgPinned")?.getBoundingClientRect();
             const composer = el.querySelector(":scope > .mx_MessageComposer")?.getBoundingClientRect();
             const status = el.querySelector(":scope > .mx_RoomView_statusArea")?.getBoundingClientRect();
-            el.style.setProperty("--tg-header-block", `${header ? Math.max(0, header.bottom - b.top) : 0}px`);
+            const headerBottom = header ? Math.max(0, header.bottom - b.top) : 0;
+            // The pinned plate floats under the header; the top block (padding, blur) covers both.
+            const pinnedBottom = pinned?.height ? Math.max(0, pinned.bottom - b.top) : 0;
+            el.style.setProperty("--tg-header-bottom", `${headerBottom}px`);
+            el.style.setProperty("--tg-header-block", `${Math.max(headerBottom, pinnedBottom)}px`);
             el.style.setProperty(
                 "--tg-composer-block",
                 `${composer ? Math.max(0, b.bottom - composer.top) + (status?.height ?? 0) : 0}px`,
@@ -41,7 +46,7 @@ export function TgChatChrome({ body }: Props): JSX.Element {
             observer.disconnect();
             observer.observe(el);
             for (const child of el.querySelectorAll(
-                ":scope > .mx_RoomHeader, :scope > .mx_MessageComposer, :scope > .mx_RoomView_statusArea",
+                ":scope > .mx_RoomHeader, :scope > .mx_TgPinned, :scope > .mx_MessageComposer, :scope > .mx_RoomView_statusArea",
             )) {
                 observer.observe(child);
             }
@@ -54,6 +59,7 @@ export function TgChatChrome({ body }: Props): JSX.Element {
         return () => {
             observer.disconnect();
             mutations.disconnect();
+            el.style.removeProperty("--tg-header-bottom");
             el.style.removeProperty("--tg-header-block");
             el.style.removeProperty("--tg-composer-block");
         };

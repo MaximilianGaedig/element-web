@@ -89,7 +89,7 @@ export function DmLastSeenSubtitle({ room }: { room: Room }): JSX.Element | null
     // The network hid the exact time ("last seen recently"): show the newest activity we saw instead.
     const statusMsg = member?.userId ? room.client.getUser(member.userId)?.presenceStatusMsg : undefined;
     if (activity && isVagueLastSeen(statusMsg) && text !== _t("bridge|last_seen_online")) {
-        text = formatLastSeenTime(activity, { showTwelveHour }, "active");
+        text = formatLastSeenTime(activity, { showTwelveHour });
     }
     if (typing) return <TypingIndicatorLine text={typing} />;
     if (!text || !isPresenceEnabled(room.client)) return null;

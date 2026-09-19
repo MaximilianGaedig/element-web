@@ -21,7 +21,7 @@ html[data-tg-screen="mobile"] {
     .mx_RoomHeader {
         gap: var(--cpd-space-2x);
 
-        > button:not(.mx_TgBackButton, .mx_RoomHeader_join_button),
+        > button:not(.mx_TgBackButton, .mx_RoomHeader_join_button, .mx_BaseAvatar),
         > div:has(> .mx_RoomHeader_members) {
             display: none;
         }
@@ -32,6 +32,68 @@ html[data-tg-screen="mobile"] {
 
         .mx_RoomHeaderPath {
             display: none;
+        }
+    }
+
+    /*
+     * Telegram iOS header: three islands instead of one bar - the back button (round, left), the name
+     * and status (a centred pill) and the avatar (round, right) - each its own glass like the composer's.
+     */
+    .mx_RoomView_body[data-telegram-layout="true"] > .mx_RoomHeader {
+        gap: 0.5rem;
+        padding: 0;
+        background: none;
+        backdrop-filter: none;
+        box-shadow: none;
+
+        &:hover {
+            background: none;
+        }
+
+        > .mx_TgBackButton {
+            order: 0;
+            flex: 0 0 auto;
+            width: var(--tg-chat-input-height);
+            height: var(--tg-chat-input-height);
+            border-radius: 50%;
+            background-color: var(--tg-glass-background);
+            backdrop-filter: var(--tg-glass-backdrop);
+            box-shadow: var(--tg-chat-input-box-shadow);
+        }
+
+        > .mx_RoomHeader_info {
+            order: 1;
+            flex: 1 1 auto;
+            min-width: 0;
+            height: var(--tg-chat-input-height);
+            padding: 0 1rem;
+            border-radius: var(--tg-border-radius-big);
+            background-color: var(--tg-glass-background);
+            backdrop-filter: var(--tg-glass-backdrop);
+            box-shadow: var(--tg-chat-input-box-shadow);
+        }
+
+        .mx_RoomHeader_infoWrapper {
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 0;
+            text-align: center;
+        }
+
+        > .mx_BaseAvatar {
+            order: 2;
+            flex: 0 0 auto;
+            /* The avatar sizes its photo/initial from --cpd-avatar-size (inline 40px); grow both with the box. */
+            --cpd-avatar-size: var(--tg-chat-input-height) !important;
+            width: var(--tg-chat-input-height) !important;
+            height: var(--tg-chat-input-height) !important;
+            box-shadow: var(--tg-chat-input-box-shadow);
+
+            > img {
+                width: 100%;
+                height: 100%;
+            }
         }
     }
 
