@@ -15,7 +15,7 @@ import { type WebPanelResize } from "@matrix-org/analytics-events/types/typescri
 import { PosthogAnalytics } from "../../PosthogAnalytics.ts";
 import { SDKContext } from "../../contexts/SDKContext.ts";
 import SettingsStore from "../../settings/SettingsStore";
-import { TRANSITION_STANDARD_IN_MS, TRANSITION_STANDARD_OUT_MS } from "../../utils/beeper/tgLayout/constants";
+import { TRANSITION_STANDARD_IN_MS, TRANSITION_STANDARD_OUT_MS } from "../../utils/telegram/tgLayout/constants";
 
 interface IProps {
     collapsedRhs?: boolean;

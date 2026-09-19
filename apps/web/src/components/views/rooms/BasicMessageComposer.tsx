@@ -33,7 +33,7 @@ import { IS_MAC, Key } from "../../../Keyboard";
 import { CommandCategories, CommandMap, parseCommandString } from "../../../slash-commands/SlashCommands";
 import Range from "../../../editor/range";
 import MessageComposerFormatBar, { Formatting } from "./MessageComposerFormatBar";
-import { formattingDisabledReasons } from "../../../utils/beeper/roomFeatures";
+import { formattingDisabledReasons } from "../../../utils/bridge/roomFeatures";
 import type DocumentOffset from "../../../editor/offset";
 import { type IDiff } from "../../../editor/diff";
 import type AutocompleteWrapperModel from "../../../editor/autocomplete";

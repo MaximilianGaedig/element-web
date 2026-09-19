@@ -31,7 +31,7 @@ import { launchPollEditor } from "../components/views/messages/MPollBody";
 import { Action } from "../dispatcher/actions";
 import { type ViewRoomPayload } from "../dispatcher/payloads/ViewRoomPayload";
 import { ModuleApi } from "../modules/Api";
-import { editBlockedReason } from "./beeper/roomFeatures";
+import { editBlockedReason } from "./bridge/roomFeatures";
 
 /**
  * Returns whether an event should allow actions like reply, reactions, edit, etc.

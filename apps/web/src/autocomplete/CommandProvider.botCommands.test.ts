@@ -12,7 +12,7 @@ import { MatrixEvent, type Room } from "matrix-js-sdk/src/matrix";
 import { stubClient } from "test-utils";
 
 import CommandProvider from "./CommandProvider";
-import { BOT_COMMANDS_EVENT_TYPE } from "../utils/beeper/botCommands";
+import { BOT_COMMANDS_EVENT_TYPE } from "../utils/bridge/botCommands";
 
 const DM_CONTENT = {
     bot: "@telegram_123:server",

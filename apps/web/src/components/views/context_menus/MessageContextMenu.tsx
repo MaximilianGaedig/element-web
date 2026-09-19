@@ -52,8 +52,8 @@ import Resend from "../../../Resend";
 import SettingsStore from "../../../settings/SettingsStore";
 import { isUrlPermitted } from "../../../HtmlUtils";
 import { canEditContent, editEvent, isContentActionable } from "../../../utils/EventUtils";
-import { deleteBlockedReason } from "../../../utils/beeper/roomFeatures";
-import BeeperBlockedActionOptions from "../beeper/BeeperBlockedActionOptions";
+import { deleteBlockedReason } from "../../../utils/bridge/roomFeatures";
+import BlockedActionOptions from "../bridge/BlockedActionOptions";
 import IconizedContextMenu, { IconizedContextMenuOption, IconizedContextMenuOptionList } from "./IconizedContextMenu";
 import { Action } from "../../../dispatcher/actions";
 import { type RoomPermalinkCreator } from "../../../utils/permalinks/Permalinks";
@@ -79,7 +79,7 @@ import { CardContext } from "../right_panel/context";
 import PinningUtils from "../../../utils/PinningUtils";
 import PosthogTrackers from "../../../PosthogTrackers.ts";
 import { MessageSelectionStore } from "../../../stores/MessageSelectionStore";
-import TelegramMessageContextMenu from "../beeper/telegram/TelegramMessageContextMenu";
+import TelegramMessageContextMenu from "../telegram/TelegramMessageContextMenu";
 
 interface IReplyInThreadButton {
     mxEvent: MatrixEvent;
@@ -781,7 +781,7 @@ export default class MessageContextMenu extends React.Component<IProps, IState> 
                     {replyButton}
                     {replyInThreadButton}
                     {editButton}
-                    {rightClick && isSent && <BeeperBlockedActionOptions cli={cli} mxEvent={mxEvent} />}
+                    {rightClick && isSent && <BlockedActionOptions cli={cli} mxEvent={mxEvent} />}
                     {pinButton}
                 </IconizedContextMenuOptionList>
             );

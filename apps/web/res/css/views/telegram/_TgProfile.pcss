@@ -1,0 +1,221 @@
+/*
+Copyright 2026 New Vector Ltd.
+
+SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only OR LicenseRef-Element-Commercial
+Please see LICENSE files in the repository root for full details.
+*/
+
+/*
+ * Chat info laid out like Telegram Web K's profile tab (TgProfile.tsx). Ported from tweb (GPL-3.0):
+ *   src/scss/partials/_profile.scss  .profile-avatar / -name / -subtitle
+ *   src/scss/partials/_row.scss      .row, .row-grid, .row-icon ($row-border-radius 16px)
+ *   src/scss/partials/_section.scss  .sidebar-left-section (.5rem block padding)
+ *   src/scss/partials/_slider.scss   .menu-horizontal-div(-item) and its sliding background
+ */
+.mx_TgProfile {
+    display: flex;
+    flex-direction: column;
+    color: var(--cpd-color-text-primary);
+}
+
+.mx_TgProfile_header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 0 var(--cpd-space-4x);
+}
+
+.mx_TgProfile_avatar {
+    margin: 0.5rem auto 10px;
+    flex: 0 0 auto;
+}
+
+.mx_TgProfile_name {
+    text-align: center;
+    font-size: 20px;
+    line-height: 24px;
+    font-weight: var(--cpd-font-weight-semibold);
+    max-width: 21.25rem;
+    min-width: 0;
+    margin: 0 auto;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.mx_TgProfile_subtitle {
+    text-align: center;
+    color: var(--tg-secondary-text-color);
+    font-size: 14px;
+    line-height: 20px;
+    margin-top: 1px;
+    margin-bottom: 0.875rem;
+
+    .mx_LastSeen {
+        font: inherit;
+    }
+}
+
+.mx_TgProfile_online {
+    color: var(--tg-primary-color);
+}
+
+.mx_TgProfile_section {
+    padding: 0.5rem;
+    border-top: 1px solid var(--cpd-color-border-disabled);
+    border-bottom: 1px solid var(--cpd-color-border-disabled);
+}
+
+.mx_TgRow {
+    display: grid;
+    grid-template-columns: 3.5rem 1fr auto;
+    grid-template-areas:
+        "left title right"
+        "left subtitle right";
+    align-items: center;
+    width: 100%;
+    min-height: 3.5rem;
+    padding: 0.375rem 1rem 0.375rem 0;
+    border: none;
+    border-radius: var(--tg-border-radius-medium);
+    background: none;
+    color: inherit;
+    font: inherit;
+    text-align: start;
+    box-sizing: border-box;
+    transition: opacity var(--tg-transition-standard-in);
+
+    &.mx_TgRow--noSubtitle {
+        grid-template-areas: "left title right";
+    }
+}
+
+button.mx_TgRow {
+    cursor: pointer;
+
+    &:hover {
+        background-color: var(--cpd-color-bg-action-tertiary-hovered);
+    }
+}
+
+.mx_TgRow_icon {
+    grid-area: left;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: var(--tg-secondary-text-color);
+
+    > svg {
+        width: 1.5rem;
+        height: 1.5rem;
+    }
+}
+
+.mx_TgRow_title {
+    grid-area: title;
+    font-size: var(--cpd-font-size-body-lg);
+    line-height: 1.3125;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.mx_TgRow_preWrap {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+.mx_TgRow_subtitle {
+    grid-area: subtitle;
+    font-size: 14px;
+    line-height: 18px;
+    color: var(--tg-secondary-text-color);
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.mx_TgRow_right {
+    grid-area: right;
+    margin-inline-start: 0.5rem;
+}
+
+.mx_TgTabs {
+    display: flex;
+    flex-direction: column;
+    padding-top: 0.5rem;
+}
+
+.mx_TgTabs_menu {
+    position: relative;
+    display: flex;
+    padding: 0 0.25rem;
+    margin-bottom: 0.5rem;
+}
+
+.mx_TgTabs_item {
+    position: relative;
+    z-index: 2;
+    flex: 1 1 auto;
+    min-width: 1px;
+    height: 2.5rem;
+    margin: 0 0.25rem;
+    padding: 0 1rem;
+    border: none;
+    border-radius: 1.25rem;
+    background: none;
+    color: var(--tg-secondary-text-color);
+    font: inherit;
+    font-size: 1rem;
+    font-weight: var(--cpd-font-weight-semibold);
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background-color var(--tg-tabs-transition);
+
+    &[aria-selected="true"] {
+        color: var(--tg-primary-color);
+    }
+}
+
+.mx_TgTabs_pill {
+    position: absolute;
+    left: 0;
+    top: 0;
+    height: 2.5rem;
+    z-index: 1;
+    border-radius: 1.25rem;
+    /* tweb --light-filled-primary-color: a light fill of the primary colour. */
+    background-color: color-mix(in srgb, var(--tg-primary-color) 12%, transparent);
+    pointer-events: none;
+
+    &[data-animate] {
+        transition:
+            transform var(--tg-tabs-transition),
+            width var(--tg-tabs-transition);
+    }
+}
+
+.mx_TgProfile_mediaPlaceholder {
+    padding: 0 0.5rem;
+
+    > p {
+        margin: 1rem;
+        color: var(--tg-secondary-text-color);
+        text-align: center;
+    }
+}
+
+.mx_TgProfile_members {
+    padding: 0 0.5rem;
+}
+
+.mx_TgProfile_member .mx_TgRow_icon {
+    padding-inline-start: 0.5rem;
+}
+
+html[data-tg-screen="mobile"] .mx_TgProfile_avatar {
+    width: 100px !important;
+    height: 100px !important;
+}

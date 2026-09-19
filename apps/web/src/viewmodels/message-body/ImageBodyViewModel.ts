@@ -24,7 +24,7 @@ import { mediaFromContent } from "../../customisations/Media";
 import { TimelineRenderingType } from "../../contexts/RoomContext";
 import SettingsStore from "../../settings/SettingsStore";
 import { type ImageSize, suggestedSize as suggestedImageSize } from "../../settings/enums/ImageSize";
-import { effectiveImageSize, isTelegramLayout } from "../../utils/beeper/telegramLayout";
+import { effectiveImageSize, isTelegramLayout } from "../../utils/telegram/telegramLayout";
 import { presentableTextForFile } from "../../utils/FileUtils";
 import { type MediaEventHelper } from "../../utils/MediaEventHelper";
 import { blobIsAnimated, mayBeAnimated } from "../../utils/Image";

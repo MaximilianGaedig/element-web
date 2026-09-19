@@ -22,7 +22,7 @@ import {
 } from "@element-hq/web-shared-components";
 
 import { bodyToNode } from "../../HtmlUtils";
-import { stripPerMessageProfileFallback } from "../../utils/beeper/perMessageProfile";
+import { stripPerMessageProfileFallback } from "../../utils/bridge/perMessageProfile";
 import { stripBridgeButtonsFallback } from "../../utils/BridgeButtons";
 import PlatformPeg from "../../PlatformPeg";
 import {

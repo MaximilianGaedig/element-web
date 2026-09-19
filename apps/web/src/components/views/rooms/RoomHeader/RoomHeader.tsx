@@ -36,10 +36,10 @@ import { E2EStatus } from "../../../../utils/ShieldUtils.ts";
 import FacePile from "../../elements/FacePile.tsx";
 import { useRoomState } from "../../../../hooks/useRoomState.ts";
 import RoomAvatar from "../../avatars/RoomAvatar";
-import BeeperRoomHeaderBadges from "../../beeper/BeeperRoomHeaderBadges";
-import { BeeperDmLastSeenSubtitle } from "../../beeper/BeeperLastSeen";
-import { BeeperTypingSubtitle } from "../../beeper/BeeperTypingSubtitle";
-import { TgBackButton } from "../../beeper/tg/TgNavigation";
+import BridgeHeaderBadges from "../../bridge/BridgeHeaderBadges";
+import { DmLastSeenSubtitle } from "../../bridge/LastSeen";
+import { TypingSubtitle } from "../../bridge/TypingSubtitle";
+import { TgBackButton } from "../../telegram/TgNavigation";
 import { formatCount } from "../../../../utils/FormattingUtils.ts";
 import PosthogTrackers from "../../../../PosthogTrackers.ts";
 import { VideoRoomChatButton } from "./VideoRoomChatButton.tsx";
@@ -517,10 +517,10 @@ export default function RoomHeader({
 
                             {isRoomEncrypted && historyVisibilityIcon(historyVisibility)}
 
-                            {room instanceof Room && <BeeperRoomHeaderBadges room={room} />}
+                            {room instanceof Room && <BridgeHeaderBadges room={room} />}
                         </Text>
-                        {isDirectMessage && room instanceof Room && <BeeperDmLastSeenSubtitle room={room} />}
-                        {!isDirectMessage && room instanceof Room && <BeeperTypingSubtitle room={room} isDm={false} />}
+                        {isDirectMessage && room instanceof Room && <DmLastSeenSubtitle room={room} />}
+                        {!isDirectMessage && room instanceof Room && <TypingSubtitle room={room} isDm={false} />}
                     </button>
                     {room instanceof Room && <RoomHeaderPath room={room} />}
                 </Box>

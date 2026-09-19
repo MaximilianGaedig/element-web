@@ -26,7 +26,7 @@ import { MatrixClientPeg } from "../../MatrixClientPeg";
 import SettingsStore from "../../settings/SettingsStore";
 import RoomContext, { TimelineRenderingType } from "../../contexts/RoomContext";
 import { Layout } from "../../settings/enums/Layout";
-import { groupSenderRuns } from "../views/beeper/telegram/TelegramSenderRun";
+import { groupSenderRuns } from "../views/telegram/TelegramSenderRun";
 import EventTile, {
     type EventTileProps,
     type GetRelationsForEvent,
@@ -49,9 +49,9 @@ import { type IReadReceiptPosition } from "../views/rooms/ReadReceiptMarker";
 import { haveRendererForEvent } from "../../events/EventTileFactory";
 import { editorRoomKey } from "../../Editing";
 import { hasThreadSummary } from "../../utils/EventUtils";
-import { isOneToOneRoom, isTelegramLayout } from "../../utils/beeper/telegramLayout";
-import { getEventIdsReadByOthers, type ReadReceiptsStyle } from "../../utils/beeper/telegramTime";
-import { getBridgeBots } from "../../utils/beeper/bridgeInfo";
+import { isOneToOneRoom, isTelegramLayout } from "../../utils/telegram/telegramLayout";
+import { getEventIdsReadByOthers, type ReadReceiptsStyle } from "../../utils/telegram/telegramTime";
+import { getBridgeBots } from "../../utils/bridge/bridgeInfo";
 import { type BaseGrouper } from "./grouper/BaseGrouper";
 import { MessageSelectionStore } from "../../stores/MessageSelectionStore";
 import { MainGrouper } from "./grouper/MainGrouper";

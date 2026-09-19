@@ -14,7 +14,7 @@ import DMRoomMap from "../../../utils/DMRoomMap";
 import { getJoinedNonFunctionalMembers } from "../../../utils/room/getJoinedNonFunctionalMembers";
 import { useEventEmitter } from "../../../hooks/useEventEmitter";
 import { BUSY_PRESENCE_NAME } from "../rooms/PresenceLabel";
-import { getBridgedDmUserId } from "../../../utils/beeper/bridgeInfo";
+import { getBridgedDmUserId } from "../../../utils/bridge/bridgeInfo";
 import AvatarPresenceIconView from "../rooms/MemberList/tiles/common/PresenceIconView";
 import { activityLevel } from "../../../utils/presence/activity";
 import { ActivityDot } from "./ActivityDot";

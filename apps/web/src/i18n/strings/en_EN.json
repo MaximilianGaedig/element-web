@@ -394,7 +394,7 @@
         "verify_email_explainer": "We need to know it’s you before resetting your password. Click the link in the email we just sent to <b>%(email)s</b>",
         "verify_email_heading": "Verify your email to continue"
     },
-    "beeper": {
+    "bridge": {
         "animated_open_sticker_pack": "Open sticker pack",
         "animated_show_gif": "Show GIF",
         "animated_show_sticker": "Show sticker",

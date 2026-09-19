@@ -15,7 +15,7 @@ import dis from "../../../dispatcher/dispatcher";
 import { Action } from "../../../dispatcher/actions";
 import RoomContext from "../../../contexts/RoomContext";
 import { type FocusComposerPayload } from "../../../dispatcher/payloads/FocusComposerPayload";
-import { isReactionAllowed, reactionsLimitNotice } from "../../../utils/beeper/roomFeatures";
+import { isReactionAllowed, reactionsLimitNotice } from "../../../utils/bridge/roomFeatures";
 import { EmojiPickerWithRecents } from "../../../emojipicker/EmojiPickerWithRecents";
 
 interface IProps {
@@ -142,7 +142,7 @@ class ReactionPicker extends React.Component<IProps, IState> {
         if (!notice) return picker;
         return (
             <>
-                <div className="mx_BeeperReactionNotice" role="note">
+                <div className="mx_ReactionNotice" role="note">
                     {notice}
                 </div>
                 {picker}

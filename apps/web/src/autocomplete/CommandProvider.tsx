@@ -26,7 +26,7 @@ import {
     botCommandCompletion,
     findBotCommand,
     getRoomBotCommands,
-} from "../utils/beeper/botCommands";
+} from "../utils/bridge/botCommands";
 
 // `@username` is only used by Telegram bot commands in group chats (`/command@somebot`).
 const COMMAND_RE = /(^\/\w*(?:@\w*)?)(?: .*)?/g;

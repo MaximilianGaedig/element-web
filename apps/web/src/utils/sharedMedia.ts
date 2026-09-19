@@ -17,7 +17,7 @@ import {
 } from "matrix-js-sdk/src/matrix";
 import { logger } from "matrix-js-sdk/src/logger";
 
-import { isAnimatedSticker } from "./beeper/animatedMedia";
+import { isAnimatedSticker } from "./bridge/animatedMedia";
 
 /**
  * The shared-media tabs of Telegram Web K's profile (sidebarRight/tabs/sharedMedia.tsx): photos and

@@ -26,7 +26,7 @@ import { BLURHASH_FIELD, createThumbnail } from "../../../utils/image-media";
 import ImageView from "../elements/ImageView";
 import { type IBodyProps } from "./IBodyProps";
 import { type ImageSize, suggestedSize as suggestedImageSize } from "../../../settings/enums/ImageSize";
-import { effectiveImageSize } from "../../../utils/beeper/telegramLayout";
+import { effectiveImageSize } from "../../../utils/telegram/telegramLayout";
 import { MatrixClientPeg } from "../../../MatrixClientPeg";
 import RoomContext, { TimelineRenderingType } from "../../../contexts/RoomContext";
 import { blobIsAnimated, mayBeAnimated } from "../../../utils/Image";

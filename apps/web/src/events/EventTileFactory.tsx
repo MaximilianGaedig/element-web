@@ -56,8 +56,8 @@ import { TextualEventViewModel } from "../viewmodels/room/timeline/event-tile/Te
 import { HiddenBodyViewModel } from "../viewmodels/room/timeline/event-tile/body/HiddenBodyViewModel";
 import { ViewSourceEventViewModel } from "../viewmodels/room/timeline/event-tile/body/ViewSourceEventViewModel";
 import { ElementCallEventType } from "../call-types";
-import BeeperActionMessage from "../components/views/beeper/BeeperActionMessage";
-import { getActionMessage } from "../utils/beeper/actionMessage";
+import ActionMessage from "../components/views/bridge/ActionMessage";
+import { getActionMessage } from "../utils/bridge/actionMessage";
 import { RootCallTileViewModel } from "../viewmodels/room/timeline/event-tile/call/RootCallTileViewModel";
 import { SDKContext } from "../contexts/SDKContext";
 
@@ -215,8 +215,8 @@ export const CallStartedEventFactory: Factory = (ref, props) => {
 export const JSONEventFactory: Factory = (ref, props) => <ViewSourceEventWrappedView ref={ref} {...props} />;
 export const JitsiEventFactory: Factory = (ref, props) => <MJitsiWidgetEventWrappedView ref={ref} {...props} />;
 export const RoomCreateEventFactory: Factory = (_ref, props) => <RoomPredecessorTile {...props} />;
-// Beeper/mautrix action messages (e.g. bridged calls) render as a compact system line.
-export const BeeperActionMessageFactory: Factory = (_ref, props) => <BeeperActionMessage {...props} />;
+// mautrix action messages (e.g. bridged calls) render as a compact system line.
+export const ActionMessageFactory: Factory = (_ref, props) => <ActionMessage {...props} />;
 
 const EVENT_TILE_TYPES = new Map<string, Factory>([
     [EventType.RoomMessage, MessageEventFactory], // note that verification requests are handled in pickFactory()
@@ -309,7 +309,7 @@ export function pickFactory(
     }
 
     if (evType === EventType.RoomMessage) {
-        if (getActionMessage(mxEvent)) return BeeperActionMessageFactory;
+        if (getActionMessage(mxEvent)) return ActionMessageFactory;
 
         // don't show verification requests we're not involved in,
         // not even when showing hidden events

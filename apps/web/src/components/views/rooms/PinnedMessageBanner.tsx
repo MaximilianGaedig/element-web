@@ -29,7 +29,7 @@ import { SDKContext } from "../../../contexts/SDKContext.ts";
 import MatrixClientContext from "../../../contexts/MatrixClientContext";
 import { EventPreviewViewModel } from "../../../viewmodels/room/timeline/event-tile/EventPreviewViewModel";
 import { useSettingValue } from "../../../hooks/useSettings";
-import { TgPinnedPlate } from "../beeper/tg/TgPinnedMessage";
+import { TgPinnedPlate } from "../telegram/TgPinnedMessage";
 
 /**
  * The props for the {@link PinnedMessageBanner} component.

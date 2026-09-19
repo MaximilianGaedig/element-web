@@ -16,7 +16,7 @@ import { type IBodyProps } from "./IBodyProps";
 import { useMediaVisible } from "../../../hooks/useMediaVisible";
 import AccessibleButton, { type ButtonEvent } from "../elements/AccessibleButton.tsx";
 import { type ImageSize } from "../../../settings/enums/ImageSize";
-import { effectiveImageSize } from "../../../utils/beeper/telegramLayout";
+import { effectiveImageSize } from "../../../utils/telegram/telegramLayout";
 
 class MStickerBodyInner extends ImageBodyBaseInner {
     // Telegram-sized (200px) stickers in the Telegram-style layout.

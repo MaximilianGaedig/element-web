@@ -22,7 +22,7 @@ import SettingsStore from "../../settings/SettingsStore";
 import { mediaFromContent } from "../../customisations/Media";
 import { BLURHASH_FIELD } from "../../utils/image-media";
 import { type ImageSize, suggestedSize as suggestedVideoSize } from "../../settings/enums/ImageSize";
-import { effectiveImageSize, isTelegramLayout } from "../../utils/beeper/telegramLayout";
+import { effectiveImageSize, isTelegramLayout } from "../../utils/telegram/telegramLayout";
 import { type MediaEventHelper } from "../../utils/MediaEventHelper";
 
 export interface VideoBodyViewModelProps {

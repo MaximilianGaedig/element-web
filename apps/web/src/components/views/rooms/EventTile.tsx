@@ -65,14 +65,14 @@ import { isMessageEvent, renderTile, type EventTileTypeProps } from "../../../ev
 import { type ShowThreadPayload } from "../../../dispatcher/payloads/ShowThreadPayload";
 import { getLateEventInfo } from "../../structures/grouper/LateEventGrouper";
 import PinningUtils from "../../../utils/PinningUtils";
-import PerMessageProfileAvatar from "../beeper/PerMessageProfileAvatar";
-import BeeperEventTileExtras from "../beeper/BeeperEventTileExtras";
-import TelegramTimeSlot from "../beeper/telegram/TelegramTimeSlot";
-import { getTelegramTimePlacement } from "../../../utils/beeper/telegramTime";
-import { attachLongPress, isAppleTouch } from "../../../utils/beeper/telegramMenu";
-import { isBeeperDisappeared } from "../../../utils/beeper/shouldHideBeeperEvent";
-import { isAnimatedSticker } from "../../../utils/beeper/animatedMedia";
-import { getPerMessageProfile } from "../../../utils/beeper/perMessageProfile";
+import PerMessageProfileAvatar from "../bridge/PerMessageProfileAvatar";
+import BridgeEventTileExtras from "../bridge/BridgeEventTileExtras";
+import TelegramTimeSlot from "../telegram/TelegramTimeSlot";
+import { getTelegramTimePlacement } from "../../../utils/telegram/telegramTime";
+import { attachLongPress, isAppleTouch } from "../../../utils/telegram/telegramMenu";
+import { isDisappeared } from "../../../utils/bridge/shouldHideBridgeEvent";
+import { isAnimatedSticker } from "../../../utils/bridge/animatedMedia";
+import { getPerMessageProfile } from "../../../utils/bridge/perMessageProfile";
 import { MessageSelectionStore } from "../../../stores/MessageSelectionStore";
 import StyledCheckbox from "../elements/StyledCheckbox";
 import { ActionBarAdapter } from "./EventTile/ActionBarAdapter";
@@ -711,8 +711,8 @@ export class UnwrappedEventTile extends React.Component<EventTileProps, IState> 
         });
     };
 
-    // A disappearing message's timer ran out: re-render so the tile hides (mx_EventTile_beeperHidden).
-    private readonly onBeeperDisappeared = (): void => this.forceUpdate();
+    // A disappearing message's timer ran out: re-render so the tile hides (mx_EventTile_disappeared).
+    private readonly onDisappeared = (): void => this.forceUpdate();
 
     // Message selection mode. The shared EventTileView only binds a root click handler for preview
     // shapes, so the selection handlers are attached to the root element directly.
@@ -1269,7 +1269,7 @@ export class UnwrappedEventTile extends React.Component<EventTileProps, IState> 
                     isOwnEvent={rootState.isOwnEvent}
                     eventSendStatus={this.props.eventSendStatus}
                     readByOthers={!!this.props.readByOthers}
-                    onDisappeared={this.onBeeperDisappeared}
+                    onDisappeared={this.onDisappeared}
                 />
             ) : (
                 (timestamp ??
@@ -1332,9 +1332,9 @@ export class UnwrappedEventTile extends React.Component<EventTileProps, IState> 
                             eventTileRenderState.root.shape === "Thread" ? this.props.permalinkCreator! : undefined,
                     }),
                 )}
-                <BeeperEventTileExtras
+                <BridgeEventTileExtras
                     mxEvent={this.props.mxEvent}
-                    onDisappeared={this.onBeeperDisappeared}
+                    onDisappeared={this.onDisappeared}
                     telegramTime={telegramTime}
                 />
             </>
@@ -1408,8 +1408,8 @@ export class UnwrappedEventTile extends React.Component<EventTileProps, IState> 
                     ...eventTileRenderState.classNames,
                     root: classNames(eventTileRenderState.classNames.root, {
                         mx_EventTile_selecting: this.props.isSelecting,
-                        mx_EventTile_beeperHidden: isBeeperDisappeared(this.props.mxEvent),
-                        // Telegram-style bubbles (res/css/views/beeper/_TelegramMessages.pcss).
+                        mx_EventTile_disappeared: isDisappeared(this.props.mxEvent),
+                        // Telegram-style bubbles (res/css/views/telegram/_TelegramMessages.pcss).
                         mx_EventTile_tgTime: telegramTime,
                         mx_EventTile_tgTimeFloating:
                             telegramTime && getTelegramTimePlacement(this.props.mxEvent) === "floating",

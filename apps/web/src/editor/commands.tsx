@@ -18,7 +18,7 @@ import { UserFriendlyError, _t, _td } from "../languageHandler";
 import Modal from "../Modal";
 import ErrorDialog from "../components/views/dialogs/ErrorDialog";
 import QuestionDialog from "../components/views/dialogs/QuestionDialog";
-import { routeSlashMessage } from "../utils/beeper/botCommands";
+import { routeSlashMessage } from "../utils/bridge/botCommands";
 
 export function isSlashCommand(model: EditorModel): boolean {
     const parts = model.parts;

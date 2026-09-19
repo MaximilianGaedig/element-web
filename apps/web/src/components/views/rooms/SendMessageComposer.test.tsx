@@ -33,7 +33,7 @@ import { MessageComposerUrlPreviewViewModel } from "../../../viewmodels/composer
 import { SDKContext } from "../../../contexts/SDKContext.ts";
 import { UrlPreviewApi } from "../../../modules/UrlPreviewApi.ts";
 import { attachUrlPreviews } from "../../../utils/messages";
-import { BOT_COMMANDS_EVENT_TYPE } from "../../../utils/beeper/botCommands";
+import { BOT_COMMANDS_EVENT_TYPE } from "../../../utils/bridge/botCommands";
 import Modal from "../../../Modal";
 
 vi.mock("../../../utils/local-room", () => ({

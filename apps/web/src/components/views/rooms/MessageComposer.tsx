@@ -9,7 +9,7 @@ Please see LICENSE files in the repository root for full details.
 import React, { type JSX, createRef, type ReactNode, useEffect } from "react";
 import classNames from "classnames";
 
-import { isTelegramLayout } from "../../../utils/beeper/telegramLayout";
+import { isTelegramLayout } from "../../../utils/telegram/telegramLayout";
 import {
     type IEventRelation,
     type MatrixEvent,
@@ -27,7 +27,7 @@ import { _t } from "../../../languageHandler";
 import { MatrixClientPeg } from "../../../MatrixClientPeg";
 import dis from "../../../dispatcher/dispatcher";
 import { type ActionPayload } from "../../../dispatcher/payloads";
-import BeeperStickerPicker from "../beeper/BeeperStickerPicker";
+import PackStickerPicker from "../bridge/PackStickerPicker";
 import { makeRoomPermalink, type RoomPermalinkCreator } from "../../../utils/permalinks/Permalinks";
 import E2EIcon from "./E2EIcon";
 import SettingsStore from "../../../settings/SettingsStore";
@@ -723,7 +723,7 @@ export class MessageComposer extends React.Component<IProps, IState> {
             this.props.relation?.rel_type === THREAD_RELATION_TYPE.name ? this.props.relation.event_id : null;
 
         controls.push(
-            <BeeperStickerPicker
+            <PackStickerPicker
                 room={this.props.room}
                 threadId={threadId}
                 isStickerPickerOpen={this.state.isStickerPickerOpen}

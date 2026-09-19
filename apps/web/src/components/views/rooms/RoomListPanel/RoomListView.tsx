@@ -14,7 +14,7 @@ import {
 import { type Room } from "matrix-js-sdk/src/matrix";
 
 import { DecoratedRoomAvatarView } from "../../avatars/DecoratedRoomAvatarView";
-import { BridgedRoomAvatar } from "../../beeper/BridgeNetworkIcon";
+import { BridgedRoomAvatar } from "../../bridge/BridgeNetworkIcon";
 import { getKeyBindingsManager } from "../../../../KeyBindingsManager";
 import { KeyBindingAction } from "../../../../accessibility/KeyboardShortcuts";
 import { Landmark, LandmarkNavigation } from "../../../../accessibility/LandmarkNavigation";

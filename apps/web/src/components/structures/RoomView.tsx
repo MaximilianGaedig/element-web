@@ -52,7 +52,7 @@ import {
 } from "@element-hq/web-shared-components";
 
 import shouldHideEvent from "../../shouldHideEvent";
-import { reactionsBlockedReason } from "../../utils/beeper/roomFeatures";
+import { reactionsBlockedReason } from "../../utils/bridge/roomFeatures";
 import { _t } from "../../languageHandler";
 import * as TimezoneHandler from "../../TimezoneHandler";
 import { RoomPermalinkCreator } from "../../utils/permalinks/Permalinks";

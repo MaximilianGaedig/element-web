@@ -51,7 +51,7 @@ import { useRoomSummaryCardViewModel } from "../../viewmodels/right_panel/RoomSu
 import { useRoomTopicViewModel } from "../../viewmodels/right_panel/RoomSummaryCardTopicViewModel";
 import { useRoomName } from "../../../hooks/useRoomName.ts";
 import { useSettingValue } from "../../../hooks/useSettings.ts";
-import { TgProfile } from "../beeper/tg/TgProfile.tsx";
+import { TgProfile } from "../telegram/TgProfile.tsx";
 
 interface IProps {
     room: Room;
@@ -258,7 +258,7 @@ const RoomSummaryCardView: React.FC<IProps> = ({
                             {vm.pinCount}
                         </Text>
                     </MenuItem>
-                    <MenuItem Icon={ImageIcon} label={_t("beeper|shared_media|title")} onSelect={vm.onRoomFilesClick} />
+                    <MenuItem Icon={ImageIcon} label={_t("bridge|shared_media|title")} onSelect={vm.onRoomFilesClick} />
                     <MenuItem
                         Icon={ExtensionsIcon}
                         label={_t("right_panel|extensions_button")}

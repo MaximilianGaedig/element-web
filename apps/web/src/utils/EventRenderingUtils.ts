@@ -19,7 +19,7 @@ import {
 
 import SettingsStore from "../settings/SettingsStore";
 import {
-    BeeperActionMessageFactory,
+    ActionMessageFactory,
     haveRendererForEvent,
     JitsiEventFactory,
     JSONEventFactory,
@@ -96,7 +96,7 @@ export function getEventDisplayInfo(
             ElementCallEventType.matches(eventType));
     let isInfoMessage =
         calcIsInfoMessage(eventType, content, isBubbleMessage, isLeftAlignedBubbleMessage) ||
-        factory === BeeperActionMessageFactory;
+        factory === ActionMessageFactory;
     // Some non-info messages want to be rendered in the appropriate bubble column but without the bubble background
     const noBubbleEvent =
         (eventType === EventType.RoomMessage && msgtype === MsgType.Emote) ||

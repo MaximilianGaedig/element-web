@@ -65,7 +65,7 @@ import { Landmark, LandmarkNavigation } from "../../accessibility/LandmarkNaviga
 import { ModuleApi } from "../../modules/Api.ts";
 import { SDKContext } from "../../contexts/SDKContext.ts";
 import { ResizerViewModel } from "../../viewmodels/structures/ResizerViewModel.ts";
-import { TgColumns } from "../views/beeper/tg/TgColumns";
+import { TgColumns } from "../views/telegram/TgColumns";
 
 // We need to fetch each pinned message individually (if we don't already have it)
 // so each pinned message may trigger a request. Limit the number per room for sanity.

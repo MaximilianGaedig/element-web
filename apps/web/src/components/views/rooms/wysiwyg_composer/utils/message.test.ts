@@ -26,7 +26,7 @@ import * as Reply from "../../../../../utils/Reply";
 import { MatrixClientPeg } from "../../../../../MatrixClientPeg";
 import { Action } from "../../../../../dispatcher/actions";
 import { attachUrlPreviews } from "../../../../../utils/messages";
-import { BOT_COMMANDS_EVENT_TYPE } from "../../../../../utils/beeper/botCommands";
+import { BOT_COMMANDS_EVENT_TYPE } from "../../../../../utils/bridge/botCommands";
 
 // Wrapped rather than replaced: only the cancellation test below overrides it.
 vi.mock("../../../../../utils/messages", async (importOriginal) => {

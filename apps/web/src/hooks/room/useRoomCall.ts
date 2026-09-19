@@ -19,7 +19,7 @@ import { useWidgets } from "../../utils/WidgetUtils";
 import { WidgetType } from "../../widgets/WidgetType";
 import { useCall, useConnectionState, useParticipantCount } from "../useCall";
 import { useRoomMemberCount } from "../useRoomMembers";
-import { isOneToOneRoom } from "../../utils/beeper/telegramLayout";
+import { isOneToOneRoom } from "../../utils/telegram/telegramLayout";
 import { ConnectionState } from "../../models/Call";
 import { placeCall } from "../../utils/room/placeCall";
 import { WidgetLayoutStore } from "../../stores/widgets/WidgetLayoutStore";

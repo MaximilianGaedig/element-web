@@ -42,19 +42,19 @@ import {
 } from "../../../utils/sharedMedia";
 
 const TAB_LABELS: Record<SharedMediaTab, () => string> = {
-    media: () => _t("beeper|shared_media|media"),
-    files: () => _t("beeper|shared_media|files"),
-    links: () => _t("beeper|shared_media|links"),
-    music: () => _t("beeper|shared_media|music"),
-    voice: () => _t("beeper|shared_media|voice"),
+    media: () => _t("bridge|shared_media|media"),
+    files: () => _t("bridge|shared_media|files"),
+    links: () => _t("bridge|shared_media|links"),
+    music: () => _t("bridge|shared_media|music"),
+    voice: () => _t("bridge|shared_media|voice"),
 };
 
 const EMPTY_LABELS: Record<SharedMediaTab, () => string> = {
-    media: () => _t("beeper|shared_media|empty_media"),
-    files: () => _t("beeper|shared_media|empty_files"),
-    links: () => _t("beeper|shared_media|empty_links"),
-    music: () => _t("beeper|shared_media|empty_music"),
-    voice: () => _t("beeper|shared_media|empty_voice"),
+    media: () => _t("bridge|shared_media|empty_media"),
+    files: () => _t("bridge|shared_media|empty_files"),
+    links: () => _t("bridge|shared_media|empty_links"),
+    music: () => _t("bridge|shared_media|empty_music"),
+    voice: () => _t("bridge|shared_media|empty_voice"),
 };
 
 /** tweb sharedMediaFilters.ts: photos and/or videos, never neither. */
@@ -88,7 +88,7 @@ function MediaFilterMenu({
                 ref={button}
                 className="mx_SharedMedia_filterButton"
                 onClick={openMenu}
-                aria-label={_t("beeper|shared_media|filter")}
+                aria-label={_t("bridge|shared_media|filter")}
                 aria-expanded={menuOpen}
             >
                 <OverflowVerticalIcon />
@@ -102,12 +102,12 @@ function MediaFilterMenu({
                 >
                     <IconizedContextMenuOptionList>
                         <IconizedContextMenuCheckbox
-                            label={_t("beeper|shared_media|photos")}
+                            label={_t("bridge|shared_media|photos")}
                             active={filter.photos}
                             onClick={() => onChange(toggleMediaFilter(filter, "photos"))}
                         />
                         <IconizedContextMenuCheckbox
-                            label={_t("beeper|shared_media|videos")}
+                            label={_t("bridge|shared_media|videos")}
                             active={filter.videos}
                             onClick={() => onChange(toggleMediaFilter(filter, "videos"))}
                         />
@@ -123,8 +123,8 @@ function mediaSubtitle(items: MatrixEvent[], filter: MediaFilter): string {
     const videos = items.filter((e) => e.getContent().msgtype === "m.video").length;
     const photos = items.length - videos;
     const parts: string[] = [];
-    if (filter.photos && photos) parts.push(_t("beeper|shared_media|photo_count", { count: photos }));
-    if (filter.videos && videos) parts.push(_t("beeper|shared_media|video_count", { count: videos }));
+    if (filter.photos && photos) parts.push(_t("bridge|shared_media|photo_count", { count: photos }));
+    if (filter.videos && videos) parts.push(_t("bridge|shared_media|video_count", { count: videos }));
     return parts.join(", ");
 }
 
@@ -411,7 +411,7 @@ export default function SharedMediaPanel({ room, onClose }: Props): JSX.Element 
     const roomContext = useContext(RoomContext);
     return (
         <ScopedRoomContextProvider {...roomContext} timelineRenderingType={TimelineRenderingType.File}>
-            <BaseCard className="mx_SharedMedia" onClose={onClose} header={_t("beeper|shared_media|title")}>
+            <BaseCard className="mx_SharedMedia" onClose={onClose} header={_t("bridge|shared_media|title")}>
                 <div className="mx_SharedMedia_tabsRow">
                     <Tabs active={tab} onChange={setTab} />
                     {tab === "media" && <MediaFilterMenu filter={filter} onChange={setFilter} />}

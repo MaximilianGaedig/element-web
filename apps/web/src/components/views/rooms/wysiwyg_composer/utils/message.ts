@@ -32,7 +32,7 @@ import { createMessageContent, EMOTE_PREFIX } from "./createMessageContent";
 import { isContentModified } from "./isContentModified";
 import { CommandCategories, getCommand } from "../../../../../slash-commands/SlashCommands";
 import { runSlashCommand, shouldSendAnyway } from "../../../../../editor/commands";
-import { routeSlashMessage } from "../../../../../utils/beeper/botCommands";
+import { routeSlashMessage } from "../../../../../utils/bridge/botCommands";
 import { Action } from "../../../../../dispatcher/actions";
 import { addReplyToMessageContent } from "../../../../../utils/Reply";
 import { attachRelation, attachUrlPreviews } from "../../../../../utils/messages";

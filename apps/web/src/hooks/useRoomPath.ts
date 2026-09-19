@@ -10,7 +10,7 @@ import { type Room, RoomEvent } from "matrix-js-sdk/src/matrix";
 import { SDKContextClass } from "../contexts/SDKContextClass";
 import { UPDATE_SELECTED_SPACE } from "../stores/spaces";
 import { getSpacePath, type SpacePathEntry } from "../utils/SpaceHierarchyUtils";
-import { withoutBridgeRoot } from "../utils/beeper/bridgeSpaces";
+import { withoutBridgeRoot } from "../utils/bridge/bridgeSpaces";
 import { useEventEmitter } from "./useEventEmitter";
 
 /**
@@ -28,7 +28,9 @@ export function useRoomPath(room: Room, noPrune = false): SpacePathEntry[] {
 
     const updatePath = useCallback(() => {
         setPath(
-            withoutBridgeRoot(getSpacePath(room, noPrune ? undefined : SDKContextClass.instance.spaceStore.activeSpace)),
+            withoutBridgeRoot(
+                getSpacePath(room, noPrune ? undefined : SDKContextClass.instance.spaceStore.activeSpace),
+            ),
         );
     }, [room, noPrune]);
 

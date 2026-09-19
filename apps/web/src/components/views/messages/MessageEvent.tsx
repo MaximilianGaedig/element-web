@@ -46,8 +46,8 @@ import {
     VideoBodyFactory,
     renderMBody,
 } from "./MBodyFactory";
-import BeeperAnimatedVideoBody from "../beeper/BeeperAnimatedVideoBody";
-import { getAnimatedVideoHints, isAnimatedSticker } from "../../../utils/beeper/animatedMedia";
+import AnimatedVideoBody from "../bridge/AnimatedVideoBody";
+import { getAnimatedVideoHints, isAnimatedSticker } from "../../../utils/bridge/animatedMedia";
 import { TextualBodyFactory } from "./TextualBodyFactory";
 
 // onMessageAllowed is handled internally
@@ -306,7 +306,7 @@ export default class MessageEvent extends React.Component<IProps> implements IMe
                 (BodyType === VideoBodyFactory || type === EventType.Sticker) &&
                 getAnimatedVideoHints(this.props.mxEvent)
             ) {
-                BodyType = BeeperAnimatedVideoBody;
+                BodyType = AnimatedVideoBody;
             }
 
             // TODO: move to eventTypes when location sharing spec stabilises
