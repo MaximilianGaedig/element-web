@@ -17,7 +17,6 @@ Please see LICENSE files in the repository root for full details.
     width: 10px;
     height: 10px;
     border-radius: 50%;
-    border: 2px solid var(--cpd-color-bg-canvas-default);
     background-color: var(--cpd-color-icon-accent-primary);
     opacity: calc(0.25 + 0.75 * var(--mx-activity, 1));
     transition: opacity 1s linear;
@@ -32,4 +31,18 @@ Please see LICENSE files in the repository root for full details.
     to {
         transform: scale(1);
     }
+}
+
+/*
+ * Room list: the avatar is masked with a hole for the dot (room-avatar-view-presence-mask.svg, a
+ * radius-6 circle centred on the right edge, 6px above the bottom of a 32px avatar). The dot fills
+ * that hole exactly, at any avatar size.
+ */
+.mx_RoomAvatarView .mx_ActivityDot.mx_RoomAvatarView_PresenceDecoration {
+    --ActivityDot-size: calc(var(--room-avatar-size) * 12 / 32);
+
+    width: var(--ActivityDot-size);
+    height: var(--ActivityDot-size);
+    left: calc(var(--room-avatar-size) - var(--ActivityDot-size) / 2);
+    bottom: 0;
 }
