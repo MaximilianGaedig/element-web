@@ -182,20 +182,32 @@ describe("MessageComposerButtons", () => {
     });
 
     describe("Telegram-style composer", () => {
-        it("has one menu button with the attachment options and the combined emoji/sticker button", () => {
-            wrapAndRender(
-                <MessageComposerButtons
-                    {...mockProps}
-                    telegram={true}
-                    isMenuOpen={true}
-                    showLocationButton={true}
-                    showPollsButton={true}
-                    showStickersButton={true}
-                />,
+        const tgProps = {
+            ...mockProps,
+            telegram: true,
+            isMenuOpen: true,
+            showLocationButton: true,
+            showPollsButton: true,
+            showStickersButton: true,
+        };
+
+        it("puts the attachment options behind the + island", () => {
+            wrapAndRender(<MessageComposerButtons {...tgProps} telegramSlot="attach" />, false);
+            expect(getButtonLabels()).toEqual(["Attach", ["Attachment", "Poll", "Location"]]);
+        });
+
+        it("has only the sticker/emoji button inside the input, which follows whether there is text", () => {
+            const { unmount } = wrapAndRender(
+                <MessageComposerButtons {...tgProps} isMenuOpen={false} telegramSlot="inline" hasText={false} />,
                 false,
             );
-            // No separate attachment or sticker buttons: attachments live in the menu, stickers in the dropdown.
-            expect(getButtonLabels()).toEqual(["Emoji", "More options", ["Attachment", "Poll", "Location"]]);
+            expect(getButtonLabels()).toEqual(["Stickers"]);
+            unmount();
+            wrapAndRender(
+                <MessageComposerButtons {...tgProps} isMenuOpen={false} telegramSlot="inline" hasText={true} />,
+                false,
+            );
+            expect(getButtonLabels()).toEqual(["Emoji"]);
         });
     });
 });

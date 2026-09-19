@@ -71,6 +71,69 @@ html[data-tg-screen] .mx_RoomView_body[data-telegram-layout="true"] {
      * buttons are ordered (the actions container dissolves into the row). Buttons sit at the bottom as
      * the input grows, with tweb's .25rem gap.
      */
+    /*
+     * Telegram iOS composer: the + island, the input pill and the microphone island side by side,
+     * bottom-aligned, .5rem apart. The islands are 3rem circles in the pill's colour and shadow.
+     */
+    .mx_MessageComposer.mx_MessageComposer_tg {
+        display: flex;
+        align-items: flex-end;
+        gap: 0.5rem;
+
+        > .mx_MessageComposer_wrapper {
+            flex: 1 1 auto;
+            min-width: 0;
+        }
+    }
+
+    .mx_TgComposerIsland {
+        display: flex;
+        flex: 0 0 auto;
+        align-items: center;
+        justify-content: center;
+        width: var(--tg-chat-input-height);
+        height: var(--tg-chat-input-height);
+        overflow: hidden;
+        border-radius: 50%;
+        background-color: var(--tg-surface-color);
+        box-shadow: var(--tg-chat-input-box-shadow);
+        transition:
+            width var(--tg-transition-standard-in),
+            margin var(--tg-transition-standard-in),
+            opacity var(--tg-transition-standard-in),
+            transform var(--tg-transition-standard-in);
+
+        .mx_TgAttachButton,
+        .mx_TgSendButton {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            border-radius: 50%;
+            background: none;
+            color: var(--cpd-color-icon-secondary);
+
+            &:hover {
+                background-color: var(--cpd-color-bg-subtle-secondary);
+                color: var(--cpd-color-icon-primary);
+            }
+        }
+    }
+
+    /* The in-input sticker button morphs into the emoji button (and back) with tweb's grow-icon. */
+    .mx_TgEmoticonsButton_icon {
+        display: flex;
+        animation: mx_TgSendButton_grow 0.4s ease-in-out;
+    }
+
+    /* The microphone slides away (and gives its gap back) while the input has text. */
+    .mx_TgComposerIsland_hidden {
+        width: 0;
+        margin-inline-start: -0.5rem;
+        opacity: 0;
+        transform: scale(0.1);
+        pointer-events: none;
+    }
+
     .mx_MessageComposer_tg {
         /* tweb .rows-wrapper: 3rem tall with .25rem padding (Element reserves 42px for the encryption badge). */
         .mx_MessageComposer_wrapper {
@@ -120,10 +183,6 @@ html[data-tg-screen] .mx_RoomView_body[data-telegram-layout="true"] {
 
         .mx_MessageComposer_actions {
             display: contents;
-        }
-
-        .mx_MessageComposer_buttonMenu {
-            order: -2;
         }
 
         .mx_TgEmoticonsButton {

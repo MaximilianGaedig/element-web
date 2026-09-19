@@ -19,6 +19,7 @@ import React, { type JSX, type ReactElement, type ReactNode, useContext, useRef 
 import {
     MicOnIcon,
     OverflowHorizontalIcon,
+    PlusIcon,
     PollsIcon,
     StickerIcon,
     TextFormattingIcon,
@@ -65,6 +66,13 @@ interface IProps {
      * separate sticker button), and the buttons get classes the Telegram layout orders by.
      */
     telegram?: boolean;
+    /**
+     * Telegram-style composer islands: "attach" renders only the round + button with its menu (the
+     * island left of the input), "inline" only the sticker/emoji button inside the input.
+     */
+    telegramSlot?: "attach" | "inline";
+    /** Whether the input has text (the Telegram sticker button turns into the emoji button). */
+    hasText?: boolean;
     showStickersButton: boolean;
     toggleButtonMenu: () => void;
     isRichTextEnabled: boolean;
@@ -103,6 +111,7 @@ const MessageComposerButtons: React.FC<IProps> = (props: IProps) => {
                 room={room}
                 threadId={props.relation?.rel_type === THREAD_RELATION_TYPE.name ? props.relation.event_id! : null}
                 addEmoji={props.addEmoji}
+                hasText={!!props.hasText}
             />,
         ];
         moreButtons = [
@@ -160,20 +169,21 @@ const MessageComposerButtons: React.FC<IProps> = (props: IProps) => {
         mx_MessageComposer_closeButtonMenu: props.isMenuOpen,
     });
 
+    const slot = props.telegram ? props.telegramSlot : undefined;
     return (
         <>
-            {mainButtons}
-            {moreButtons.length > 0 && (
+            {slot !== "attach" && mainButtons}
+            {slot !== "inline" && moreButtons.length > 0 && (
                 <AccessibleButton
                     ref={moreButton}
-                    className={moreOptionsClasses}
+                    className={classNames(moreOptionsClasses, { mx_TgAttachButton: slot === "attach" })}
                     onClick={props.toggleButtonMenu}
-                    title={_t("quick_settings|sidebar_settings")}
+                    title={slot === "attach" ? _t("bridge|telegram_attach") : _t("quick_settings|sidebar_settings")}
                 >
-                    <OverflowHorizontalIcon />
+                    {slot === "attach" ? <PlusIcon /> : <OverflowHorizontalIcon />}
                 </AccessibleButton>
             )}
-            {props.isMenuOpen && (
+            {slot !== "inline" && props.isMenuOpen && (
                 <IconizedContextMenu
                     onFinished={props.toggleButtonMenu}
                     {...(props.telegram ? telegramMenuPosition(moreButton.current) : props.menuPosition)}

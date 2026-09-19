@@ -19,6 +19,7 @@ import IconizedContextMenu, {
 } from "../context_menus/IconizedContextMenu";
 import { useContextMenu } from "../../structures/ContextMenu";
 import UIStore from "../../../stores/UIStore";
+import { scrollStripTo } from "../telegram/TgStickersPanel";
 import OverflowVerticalIcon from "@vector-im/compound-design-tokens/assets/web/icons/overflow-vertical";
 import Spinner from "../elements/Spinner";
 import Modal from "../../../Modal";
@@ -192,8 +193,10 @@ function Tabs({ active, onChange }: { active: SharedMediaTab; onChange: (tab: Sh
         const el = refs.current.get(active);
         if (!el) return;
         setBg({ left: el.offsetLeft, width: el.offsetWidth });
-        // tweb .menu-horizontal-scrollable: the strip scrolls sideways and keeps the active tab in view.
-        el.scrollIntoView?.({ inline: "center", block: "nearest", behavior: "smooth" });
+        // tweb .menu-horizontal-scrollable: the strip scrolls sideways and keeps the active tab in view
+        // (scrolling only the strip; scrollIntoView would scroll the page too).
+        const strip = el.parentElement;
+        if (strip) scrollStripTo(strip, el, "center");
     }, [active]);
     return (
         <div className="mx_SharedMedia_tabs" role="tablist">

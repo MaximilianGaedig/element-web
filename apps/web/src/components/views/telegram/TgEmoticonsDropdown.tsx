@@ -31,6 +31,8 @@ interface Props {
     room: Room;
     threadId: string | null;
     addEmoji: (unicode: string) => boolean;
+    /** Telegram iOS: the button shows stickers while the input is empty and emoji once there's text. */
+    hasText: boolean;
 }
 
 /**
@@ -39,10 +41,10 @@ interface Props {
  * the end of the input - on click, or by hovering it. It sits above the input's inline end, 23.875rem x
  * 26.25rem with a 1.25rem radius, scales in from .85, and has its tabs along the bottom.
  */
-export function TgEmoticonsDropdown({ room, threadId, addEmoji }: Props): JSX.Element {
+export function TgEmoticonsDropdown({ room, threadId, addEmoji, hasText }: Props): JSX.Element {
     const client = useMatrixClientContext();
     const [open, setOpen] = useState(false);
-    const [tab, setTab] = useState<Tab>("emoji");
+    const [tab, setTab] = useState<Tab>(hasText ? "emoji" : "stickers");
     const [anchor, setAnchor] = useState<{ right: number; bottom: number } | null>(null);
     const button = useRef<HTMLDivElement>(null);
     const panel = useRef<HTMLDivElement>(null);
@@ -91,6 +93,7 @@ export function TgEmoticonsDropdown({ room, threadId, addEmoji }: Props): JSX.El
             if (open) return;
             hoverTimer.current = window.setTimeout(() => {
                 openedByHover.current = true;
+                setTab(hasText ? "emoji" : "stickers");
                 setOpen(true);
             }, HOVER_OPEN_MS);
         } else if (openedByHover.current) {
@@ -111,7 +114,7 @@ export function TgEmoticonsDropdown({ room, threadId, addEmoji }: Props): JSX.El
                 className={classNames("mx_MessageComposer_button mx_TgEmoticonsButton", {
                     mx_TgEmoticonsButton_active: open,
                 })}
-                title={_t("common|emoji")}
+                title={hasText ? _t("common|emoji") : _t("bridge|telegram_emoticons_stickers")}
                 onClick={() => {
                     window.clearTimeout(hoverTimer.current);
                     // A click on a hover-opened dropdown pins it open, like tweb.
@@ -120,12 +123,16 @@ export function TgEmoticonsDropdown({ room, threadId, addEmoji }: Props): JSX.El
                         return;
                     }
                     openedByHover.current = false;
+                    if (!open) setTab(hasText ? "emoji" : "stickers");
                     setOpen(!open);
                 }}
                 onMouseEnter={() => hover(true)}
                 onMouseLeave={() => hover(false)}
             >
-                <ReactionIcon />
+                {/* Keyed so the icon re-runs the grow animation when it morphs. */}
+                <span key={hasText ? "emoji" : "stickers"} className="mx_TgEmoticonsButton_icon">
+                    {hasText ? <ReactionIcon /> : <StickerIcon />}
+                </span>
             </AccessibleButton>
             {open &&
                 anchor &&
