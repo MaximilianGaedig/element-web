@@ -373,7 +373,7 @@ describe("<RoomSummaryCard />", () => {
             room.name = "Fox den";
         });
 
-        it("lays the group out like tweb's profile: header, info rows, then members/media/actions tabs", () => {
+        it("lays the group out like tweb's profile: header, info rows, then members, shared media and actions tabs", () => {
             vi.mocked(useRoomSummaryCardViewModel).mockReturnValue({ ...vmDefaultValues, alias: "#den:domain.org" });
             getComponent();
 
@@ -385,7 +385,7 @@ describe("<RoomSummaryCard />", () => {
             expect(screen.getByRole("switch", { name: "Notifications" })).toBeInTheDocument();
 
             const tabs = screen.getAllByRole("tab").map((t) => t.textContent);
-            expect(tabs).toEqual(["Members", "Media", "Actions"]);
+            expect(tabs).toEqual(["Members", "Media", "Files", "Links", "Music", "Voice", "Actions"]);
             expect(screen.getByRole("tab", { name: "Members" })).toHaveAttribute("aria-selected", "true");
             // Element's summary layout is not rendered.
             expect(screen.queryByText("Public room")).not.toBeInTheDocument();
@@ -399,17 +399,24 @@ describe("<RoomSummaryCard />", () => {
             expect(vmDefaultValues.onRoomSettingsClick).toHaveBeenCalled();
         });
 
-        it("links the media tab to the files panel", () => {
+        it("shows the shared media right in the profile instead of linking to the files panel", () => {
             getComponent();
-            fireEvent.click(screen.getByRole("tab", { name: "Media" }));
-            fireEvent.click(screen.getByRole("button", { name: "Open files" }));
-            expect(vmDefaultValues.onRoomFilesClick).toHaveBeenCalled();
+            fireEvent.click(screen.getByRole("tab", { name: "Files" }));
+            expect(screen.queryByRole("button", { name: "Open files" })).not.toBeInTheDocument();
+            expect(document.querySelector(".mx_SharedMedia_content_files")).toBeInTheDocument();
         });
 
         it("has no members tab for a DM and opens on media", () => {
             vi.mocked(useRoomSummaryCardViewModel).mockReturnValue({ ...vmDefaultValues, isDirectMessage: true });
             getComponent();
-            expect(screen.getAllByRole("tab").map((t) => t.textContent)).toEqual(["Media", "Actions"]);
+            expect(screen.getAllByRole("tab").map((t) => t.textContent)).toEqual([
+                "Media",
+                "Files",
+                "Links",
+                "Music",
+                "Voice",
+                "Actions",
+            ]);
             expect(screen.getByRole("tab", { name: "Media" })).toHaveAttribute("aria-selected", "true");
         });
     });

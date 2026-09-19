@@ -420,6 +420,38 @@ interface Props {
  * Telegram Web K's shared media (sidebarRight/tabs/sharedMedia.tsx + appSearchSuper.ts): Media, Files,
  * Links, Music and Voice tabs. Replaces Element's Files timeline.
  */
+export { useLoader as useSharedMediaLoader };
+
+/**
+ * One shared-media tab's list without tabs or a card around it (the Media tab with its photo/video filter
+ * and count). The Telegram profile puts these straight into its own tab strip, like tweb's profile
+ * search-super; `loader` is shared between the tabs so switching doesn't reload.
+ */
+export function SharedMediaPane({ loader, tab }: { loader: SharedMediaLoader; tab: SharedMediaTab }): JSX.Element {
+    const [filter, setFilter] = useState<MediaFilter>({ photos: true, videos: true });
+    const mediaState = useTabState(loader, "media");
+    const subtitle = tab === "media" ? mediaSubtitle(mediaState.items, filter) : "";
+    const roomContext = useContext(RoomContext);
+    return (
+        <ScopedRoomContextProvider {...roomContext} timelineRenderingType={TimelineRenderingType.File}>
+            <div className="mx_SharedMedia mx_SharedMedia_pane">
+                {tab === "media" && (
+                    <div className="mx_SharedMedia_paneHeader">
+                        <div className="mx_SharedMedia_subtitle">{subtitle}</div>
+                        <MediaFilterMenu filter={filter} onChange={setFilter} />
+                    </div>
+                )}
+                <TabContent key={tab} loader={loader} tab={tab} filter={filter} />
+            </div>
+        </ScopedRoomContextProvider>
+    );
+}
+
+/** The labels of the shared-media tabs, in tweb's order. */
+export const SHARED_MEDIA_TAB_LABELS: Array<{ id: SharedMediaTab; label: () => string }> = SHARED_MEDIA_TABS.map(
+    (id) => ({ id, label: TAB_LABELS[id] }),
+);
+
 export default function SharedMediaPanel({ room, onClose }: Props): JSX.Element {
     const loader = useLoader(room);
     const [tab, setTab] = useState<SharedMediaTab>("media");

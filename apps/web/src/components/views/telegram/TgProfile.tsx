@@ -21,7 +21,6 @@ import MentionIcon from "@vector-im/compound-design-tokens/assets/web/icons/ment
 import InfoIcon from "@vector-im/compound-design-tokens/assets/web/icons/info";
 import LinkIcon from "@vector-im/compound-design-tokens/assets/web/icons/link";
 import NotificationsIcon from "@vector-im/compound-design-tokens/assets/web/icons/notifications";
-import ImageIcon from "@vector-im/compound-design-tokens/assets/web/icons/image";
 
 import { _t } from "../../../languageHandler";
 import RoomAvatar from "../avatars/RoomAvatar";
@@ -36,6 +35,7 @@ import { DmLastSeenSubtitle } from "../bridge/LastSeen";
 import { copyPlaintext } from "../../../utils/strings";
 import dis from "../../../dispatcher/dispatcher";
 import { Action } from "../../../dispatcher/actions";
+import { SHARED_MEDIA_TAB_LABELS, SharedMediaPane, useSharedMediaLoader } from "../right_panel/SharedMediaPanel";
 
 /** tweb _row.scss .row-grid: icon, title, subtitle. */
 export function TgRow({
@@ -186,7 +186,6 @@ interface TgProfileProps {
     /** A shareable link to the room. */
     link: string;
     onRoomMembersClick: () => void;
-    onRoomFilesClick: () => void;
     /** Element's room actions (favourite, invite, threads, settings, leave …). */
     actions: ReactNode;
 }
@@ -198,10 +197,10 @@ export function TgProfile({
     topic,
     link,
     onRoomMembersClick,
-    onRoomFilesClick,
     actions,
 }: TgProfileProps): JSX.Element {
     const name = useRoomName(room);
+    const mediaLoader = useSharedMediaLoader(room);
     const dmMember = useDmMember(room);
     const members = useRoomMembers(room);
     const [notifState, setNotifState] = useNotificationState(room);
@@ -237,21 +236,10 @@ export function TgProfile({
             content: <MembersTab room={room} members={members} onShowAll={onRoomMembersClick} />,
         });
     }
-    tabs.push({
-        id: "media",
-        label: _t("tg_layout|tab_media"),
-        content: (
-            <div className="mx_TgProfile_mediaPlaceholder">
-                <p>{_t("tg_layout|media_placeholder")}</p>
-                <TgRow
-                    icon={<ImageIcon />}
-                    title={_t("tg_layout|open_files")}
-                    onClick={onRoomFilesClick}
-                    className="mx_TgProfile_openFiles"
-                />
-            </div>
-        ),
-    });
+    // tweb: the profile's search-super tabs (Media, Files, Links, Music, Voice) sit right in this strip.
+    for (const { id, label } of SHARED_MEDIA_TAB_LABELS) {
+        tabs.push({ id, label: label(), content: <SharedMediaPane loader={mediaLoader} tab={id} /> });
+    }
     tabs.push({ id: "actions", label: _t("tg_layout|tab_actions"), content: actions });
 
     return (

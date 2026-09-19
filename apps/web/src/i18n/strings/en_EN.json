@@ -3380,7 +3380,6 @@
         "bio": "Bio",
         "info": "Info",
         "link": "Link",
-        "media_placeholder": "Shared photos and videos will appear here.",
         "n_online": {
             "one": "%(count)s online",
             "other": "%(count)s online"
@@ -3389,7 +3388,6 @@
         "notifications_off": "Off",
         "notifications_on": "On",
         "online": "online",
-        "open_files": "Open files",
         "pinned_message": "Pinned message",
         "resize_chat_list": "Resize chat list",
         "show_all_members": {
@@ -3397,7 +3395,6 @@
             "other": "Show all %(count)s members"
         },
         "tab_actions": "Actions",
-        "tab_media": "Media",
         "tab_members": "Members",
         "username": "Username"
     },

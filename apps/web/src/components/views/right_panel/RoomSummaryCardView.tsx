@@ -324,7 +324,6 @@ const RoomSummaryCardView: React.FC<IProps> = ({
                     topic={topicVm.topic?.text}
                     link={permalinkCreator.forShareableRoom()}
                     onRoomMembersClick={vm.onRoomMembersClick}
-                    onRoomFilesClick={vm.onRoomFilesClick}
                     actions={actions}
                 />
             </BaseCard>
