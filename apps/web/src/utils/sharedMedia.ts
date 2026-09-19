@@ -18,6 +18,8 @@ import {
 import { logger } from "matrix-js-sdk/src/logger";
 
 import { isAnimatedSticker } from "./bridge/animatedMedia";
+import { getRoomHistoryState, mediaPage, setRoomHistoryState } from "./history/db";
+import { historyIndexer } from "./history/indexer";
 
 /**
  * The shared-media tabs of Telegram Web K's profile (sidebarRight/tabs/sharedMedia.tsx): photos and
@@ -99,6 +101,8 @@ export class SharedMediaLoader {
     private readonly doneFor = new Set<"url" | "all">();
     private loadingFor: "url" | "all" | undefined;
     private destroyed = false;
+    /** What earlier visits already found and how far they scanned; read before touching the network. */
+    private restored?: Promise<void>;
 
     public constructor(
         private readonly client: MatrixClient,
@@ -114,6 +118,46 @@ export class SharedMediaLoader {
         const back = timeline.getPaginationToken(Direction.Backward) ?? undefined;
         this.tokens.set("url", back);
         this.tokens.set("all", back);
+        this.restored = this.restore();
+    }
+
+    /**
+     * Shows what earlier visits found, from the local message database, and carries the scan on from
+     * where it stopped. Without this every visit pages back through the room's history again, which is
+     * what made the tabs take seconds to fill (and for links and encrypted rooms the server cannot
+     * filter at all, so it is a full scan).
+     */
+    private async restore(): Promise<void> {
+        const stored = await Promise.all(
+            SHARED_MEDIA_TABS.map((tab) => mediaPage(this.room.roomId, tab, SHARED_MEDIA_PAGE)),
+        );
+        if (this.destroyed) return;
+        const mapper = this.client.getEventMapper();
+        const events = stored.flat().map(({ raw }) => mapper(raw));
+        await Promise.all(events.filter((ev) => ev.isEncrypted()).map((ev) => this.client.decryptEventIfNeeded(ev)));
+        if (this.destroyed) return;
+        let added = false;
+        for (const event of events) added = this.add(event, false) || added;
+        const state = await getRoomHistoryState(this.room.roomId);
+        for (const source of ["url", "all"] as const) {
+            if (state?.mediaTokens?.[source]) this.tokens.set(source, state.mediaTokens[source]);
+            if (state?.mediaDone?.includes(source)) this.doneFor.add(source);
+        }
+        if (added) this.emit();
+    }
+
+    /** Remembers where the scan got to, so the next visit continues instead of starting over. */
+    private async saveProgress(): Promise<void> {
+        const state = (await getRoomHistoryState(this.room.roomId)) ?? {
+            roomId: this.room.roomId,
+            updatedAt: Date.now(),
+        };
+        await setRoomHistoryState({
+            ...state,
+            mediaTokens: { url: this.tokens.get("url"), all: this.tokens.get("all") },
+            mediaDone: [...this.doneFor],
+            updatedAt: Date.now(),
+        });
     }
 
     public subscribe(listener: Listener): () => void {
@@ -170,6 +214,7 @@ export class SharedMediaLoader {
         this.emit();
         const before = this.items.get(tab)!.length;
         try {
+            await this.restored; // what earlier visits found comes first, and sets where to carry on
             for (let i = 0; i < MAX_REQUESTS_PER_LOAD && !this.destroyed; i++) {
                 await this.fetchPage(source);
                 if (this.doneFor.has(source) || this.items.get(tab)!.length >= before + SHARED_MEDIA_PAGE / 2) break;
@@ -211,8 +256,10 @@ export class SharedMediaLoader {
         const events = res.chunk.map((raw: IRoomEvent) => mapper(raw));
         await Promise.all(events.filter((ev) => ev.isEncrypted()).map((ev) => this.client.decryptEventIfNeeded(ev)));
         for (const ev of events) this.add(ev, false);
+        historyIndexer.add(events); // keep them, so the next visit doesn't scan again
         this.tokens.set(source, res.end ?? undefined);
         if (!res.end || res.chunk.length === 0) this.doneFor.add(source);
+        void this.saveProgress();
     }
 
     private add(event: MatrixEvent, newest: boolean): boolean {

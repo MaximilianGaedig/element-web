@@ -29,6 +29,8 @@ import PlatformPeg from "./PlatformPeg";
 import { sendLoginRequest } from "./Login";
 import * as StorageManager from "./utils/StorageManager";
 import * as StorageAccess from "./utils/StorageAccess";
+import { clearHistoryDb } from "./utils/history/db";
+import { historyIndexer } from "./utils/history/indexer";
 import SettingsStore from "./settings/SettingsStore";
 import { SettingLevel } from "./settings/SettingLevel";
 import ToastStore from "./stores/ToastStore";
@@ -1171,6 +1173,7 @@ export async function clearStorage(opts?: { deleteEverything?: boolean }): Promi
     }
 
     window.sessionStorage?.clear();
+    await clearHistoryDb();
 
     // create a temporary client to clear out the persistent stores.
     const cli = createMatrixClient({
@@ -1200,6 +1203,7 @@ export function stopMatrixClient(unsetClient = true): void {
     Mjolnir.sharedInstance().stop();
     DeviceListener.sharedInstance().stop();
     CallStatusListener.sharedInstance().stop();
+    historyIndexer.stop();
     DMRoomMap.shared()?.stop();
     EventIndexPeg.stop();
     const cli = MatrixClientPeg.get();

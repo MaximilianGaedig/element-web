@@ -33,6 +33,7 @@ import PlatformPeg from "./PlatformPeg";
 import SdkConfig from "./SdkConfig";
 import { setDeviceIsolationMode } from "./settings/controllers/DeviceIsolationModeController.ts";
 import { initialiseDehydrationIfEnabled } from "./utils/device/dehydration";
+import { historyIndexer } from "./utils/history/indexer";
 
 export interface MatrixClientPegAssignOpts {
     /**
@@ -364,6 +365,9 @@ class MatrixClientPegClass implements IMatrixClientPeg {
         logger.log(`MatrixClientPeg: really starting MatrixClient`);
         await this.matrixClient!.startClient(opts);
         logger.log(`MatrixClientPeg: MatrixClient started`);
+        // Keep what we have seen (utils/history), so the shared-media tabs don't scan the room again
+        // on the next visit.
+        historyIndexer.start(this.matrixClient!);
     }
 }
 
