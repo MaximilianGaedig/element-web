@@ -16,6 +16,7 @@ import {
 
 import { type IOOBData } from "../../../stores/ThreepidInviteStore";
 import { RoomAvatarViewModel } from "../../../viewmodels/avatars/RoomAvatarViewModel";
+import { GroupMembersAvatar, useGroupAvatarMembers } from "./GroupMembersAvatar";
 
 interface Props {
     /**
@@ -150,6 +151,22 @@ function RoomAvatar({
             ariaHidden,
         });
     }, [size, avatarClassName, altText, title, tabIndex, role, ariaHidden, vm]);
+
+    // A group without a picture shows its members, like Messenger.
+    const members = useGroupAvatarMembers(room);
+    if (members.length >= 2 && !oobData?.avatarUrl) {
+        return (
+            <GroupMembersAvatar
+                members={members}
+                size={size}
+                className={avatarClassName}
+                title={title}
+                label={altText ?? room?.name}
+                onClick={onClick}
+                ref={ref}
+            />
+        );
+    }
 
     return <RoomAvatarPresentationView vm={vm} ref={ref} />;
 }

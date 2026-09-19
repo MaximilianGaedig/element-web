@@ -60,6 +60,45 @@ describe("RoomAvatar", () => {
         expect(render(<RoomAvatar room={room} />).container).toMatchSnapshot();
     });
 
+    describe("group without a picture", () => {
+        const groupRoom = (ids: string[]): Room => {
+            const room = new Room("!group:example.com", client, client.getSafeUserId());
+            room.name = "group";
+            const members = ids.map((id) => {
+                const m = new RoomMember(room.roomId, id);
+                m.membership = "join";
+                return m;
+            });
+            vi.spyOn(room, "getMyMembership").mockReturnValue("join");
+            vi.spyOn(room, "getJoinedMembers").mockReturnValue(members);
+            vi.spyOn(room, "getMember").mockImplementation((id) => members.find((m) => m.userId === id) ?? null);
+            return room;
+        };
+
+        it("shows two members overlapping, Messenger-style", () => {
+            const { container } = render(<RoomAvatar room={groupRoom(["@a:x", "@b:x"])} />);
+            const petals = container.querySelectorAll(".mx_GroupMembersAvatar_petal");
+            expect(petals).toHaveLength(2);
+            // Only the back one is cut by the front one.
+            expect((petals[0] as HTMLElement).style.maskImage).toBe("");
+            expect((petals[1] as HTMLElement).style.maskImage).toContain("data:image/svg+xml");
+            expect(container.querySelector(".mx_GroupMembersAvatar")).toHaveAttribute("aria-label", "group");
+        });
+
+        it("shows a three-petal pinwheel for three or more, skipping us", () => {
+            const room = groupRoom([client.getSafeUserId(), "@a:x", "@b:x", "@c:x", "@d:x"]);
+            const { container } = render(<RoomAvatar room={room} />);
+            const petals = container.querySelectorAll<HTMLElement>(".mx_GroupMembersAvatar_petal");
+            expect(petals).toHaveLength(3);
+            for (const petal of petals) expect(petal.style.maskImage).toContain("data:image/svg+xml");
+        });
+
+        it("keeps the normal avatar with fewer than two others", () => {
+            const { container } = render(<RoomAvatar room={groupRoom(["@a:x"])} />);
+            expect(container.querySelector(".mx_GroupMembersAvatar")).toBeNull();
+        });
+    });
+
     it("should render as expected for a DM room", () => {
         const userId = "@dm_user@example.com";
         const room = new Room("!room:example.com", client, client.getSafeUserId());

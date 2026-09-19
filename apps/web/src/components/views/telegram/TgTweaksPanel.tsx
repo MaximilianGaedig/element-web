@@ -7,7 +7,7 @@ Please see LICENSE files in the repository root for full details.
 
 import React, { type JSX, useEffect, useState } from "react";
 
-import { ActivityDot } from "../avatars/ActivityDot";
+import { ActivityDot, PRESENCE_TWEAKS_EVENT } from "../avatars/ActivityDot";
 import { ACTIVITY_FADE_MS } from "../../../utils/presence/activity";
 
 /**
@@ -79,6 +79,7 @@ export function TgTweaksPanel(): JSX.Element | null {
         } catch {
             // private mode
         }
+        window.dispatchEvent(new Event(PRESENCE_TWEAKS_EVENT));
     }, [values]);
 
     if (!enabled) return null;
