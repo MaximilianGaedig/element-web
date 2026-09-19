@@ -26,6 +26,7 @@ import { MatrixClientPeg } from "../../MatrixClientPeg";
 import SettingsStore from "../../settings/SettingsStore";
 import RoomContext, { TimelineRenderingType } from "../../contexts/RoomContext";
 import { Layout } from "../../settings/enums/Layout";
+import { groupSenderRuns } from "../views/beeper/telegram/TelegramSenderRun";
 import EventTile, {
     type EventTileProps,
     type GetRelationsForEvent,
@@ -805,6 +806,10 @@ export default class MessagePanel extends React.Component<IProps, IState> {
             ret.push(...grouper.getTiles());
         }
 
+        // Telegram-style group chats: incoming messages grouped per sender with a sticky avatar.
+        if (this.telegramBubbles && this.props.room && !this.isTelegramOneToOne()) {
+            return groupSenderRuns(ret, MatrixClientPeg.safeGet().getSafeUserId(), this.props.room);
+        }
         return ret;
     }
 

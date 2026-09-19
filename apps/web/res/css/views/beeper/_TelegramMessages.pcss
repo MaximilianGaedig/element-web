@@ -454,3 +454,66 @@ Please see LICENSE files in the repository root for full details.
     background-color: var(--cpd-color-bg-canvas-default);
     box-shadow: 0 0 10px rgb(0 0 0 / 15%);
 }
+
+/*
+ * tweb bubble groups (src/scss/partials/_chatBubble.scss .bubbles-group, _chat.scss .is-chat): a
+ * sender's run of incoming messages with a 40px avatar in a column spanning the group. The avatar is
+ * sticky at the bottom, so it rides along while the group scrolls and rests next to the last bubble;
+ * incoming bubbles are indented 2.875rem from the avatar's edge. Element's own per-tile avatar is
+ * hidden inside a run.
+ */
+.mx_TgSenderRun {
+    --TgSenderRun-inset: 8px;
+
+    position: relative;
+    list-style: none;
+
+    .mx_TgSenderRun_tiles {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+    }
+
+    [data-testid="event-tile"] {
+        --event-tile-bubble-margin-inline-start: calc(var(--TgSenderRun-inset) + 2.875rem);
+    }
+
+    [data-testid="event-tile-slot-avatar"] {
+        display: none;
+    }
+}
+
+.mx_TgSenderRun_avatarColumn {
+    position: absolute;
+    inset-block: 0;
+    inset-inline-start: var(--TgSenderRun-inset);
+    z-index: 2;
+    display: flex;
+    flex-direction: column-reverse;
+    width: 40px;
+    pointer-events: none;
+}
+
+.mx_TgSenderRun_avatar {
+    position: sticky;
+    bottom: calc(var(--event-tile-bubble-gutter, 5px) / 2);
+    pointer-events: all;
+    cursor: pointer;
+}
+
+/* tweb .can-zoom-fade.zoom-fade -> --bubble-transition-in (.3s standard-in). */
+.mx_TgSenderRun_avatar_new {
+    animation: mx_TgSenderRun_zoomFade 0.3s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+@keyframes mx_TgSenderRun_zoomFade {
+    from {
+        transform: scale3d(0.8, 0.8, 1);
+        opacity: 0;
+    }
+
+    to {
+        transform: scale3d(1, 1, 1);
+        opacity: 1;
+    }
+}
