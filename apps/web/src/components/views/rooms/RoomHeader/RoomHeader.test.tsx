@@ -401,6 +401,24 @@ describe("RoomHeader", () => {
             expect(videoCallButton).not.toHaveAttribute("aria-disabled", "true");
         });
 
+        it("allows 1:1 calls in bridged DMs, which also contain the bridge bot", () => {
+            mockRoomMembers(room, 3);
+            vi.spyOn(room.currentState, "mayClientSendStateEvent").mockReturnValue(false);
+            const bridgeEvent = new MatrixEvent({
+                type: "m.bridge",
+                state_key: "fi.mau.meta://facebook/1",
+                room_id: room.roomId,
+                sender: "@facebookbot:example.org",
+                content: { "protocol": { id: "facebook" }, "com.beeper.room_type.v2": "dm" },
+            });
+            const getStateEvents = room.currentState.getStateEvents.bind(room.currentState);
+            vi.spyOn(room.currentState, "getStateEvents").mockImplementation(((type: string, key?: string) =>
+                type === "m.bridge" && key === undefined ? [bridgeEvent] : getStateEvents(type, key!)) as any);
+            render(<RoomHeader room={room} />, getWrapper());
+            const videoCallButton = screen.getByRole("button", { name: "Video call" });
+            expect(videoCallButton).not.toHaveAttribute("aria-disabled", "true");
+        });
+
         it("disable calls in large rooms by default", () => {
             mockRoomMembers(room, 10);
             vi.spyOn(room.currentState, "mayClientSendStateEvent").mockReturnValue(false);

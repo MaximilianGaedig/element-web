@@ -19,6 +19,7 @@ import { useWidgets } from "../../utils/WidgetUtils";
 import { WidgetType } from "../../widgets/WidgetType";
 import { useCall, useConnectionState, useParticipantCount } from "../useCall";
 import { useRoomMemberCount } from "../useRoomMembers";
+import { isOneToOneRoom } from "../../utils/beeper/telegramLayout";
 import { ConnectionState } from "../../models/Call";
 import { placeCall } from "../../utils/room/placeCall";
 import { WidgetLayoutStore } from "../../stores/widgets/WidgetLayoutStore";
@@ -185,7 +186,9 @@ export const useRoomCall = (
                 options.push(PlatformCallType.ElementCall);
             }
         }
-        if (memberCount <= 2) {
+        // Bridged DMs also contain the bridge bot; they are still 1:1 calls (LegacyCallHandler.placeCall
+        // skips functional members like the bot the same way).
+        if (memberCount <= 2 || isOneToOneRoom(room)) {
             options.push(PlatformCallType.LegacyCall);
         } else if (mayEditWidgets || hasJitsiWidget) {
             options.push(PlatformCallType.JitsiCall);
@@ -196,6 +199,7 @@ export const useRoomCall = (
         }
         return options;
     }, [
+        room,
         memberCount,
         mayEditWidgets,
         hasJitsiWidget,
