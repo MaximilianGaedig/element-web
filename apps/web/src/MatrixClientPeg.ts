@@ -9,7 +9,13 @@ SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only OR LicenseRef-Element-Com
 Please see LICENSE files in the repository root for full details.
 */
 
-import { type IStartClientOpts, type MatrixClient, MemoryStore, PendingEventOrdering } from "matrix-js-sdk/src/matrix";
+import {
+    EventType,
+    type IStartClientOpts,
+    type MatrixClient,
+    MemoryStore,
+    PendingEventOrdering,
+} from "matrix-js-sdk/src/matrix";
 import * as utils from "matrix-js-sdk/src/utils";
 import { logger } from "matrix-js-sdk/src/logger";
 import type { X509ClientInitOpts } from "@element-hq/element-web-module-api";
@@ -275,6 +281,15 @@ class MatrixClientPegClass implements IMatrixClientPeg {
             opts.clientWellKnownPollPeriod = 2 * 60 * 60; // 2 hours
         }
         opts.threadSupport = true;
+        // Start with each room's latest events only (enough for the room list); the room about to be shown
+        // gets its stored history, and every other room reads it back from the store when opened.
+        opts.savedSyncTrim = {
+            tail: SAVED_SYNC_TAIL,
+            fullRoomIds: roomsShownAtStartup(),
+            fullRoomTags: ["m.favourite"], // favourites are replayed in full too
+            listStateTypes: ROOM_LIST_STATE_TYPES,
+            userId: this.matrixClient.getUserId() ?? undefined,
+        };
         if (SettingsStore.getValue("feature_user_status")) {
             opts.unstableMSC4429SyncUserProfileFields = ["org.matrix.msc4426.status", "org.matrix.msc4426.call"];
         }
@@ -328,16 +343,16 @@ class MatrixClientPegClass implements IMatrixClientPeg {
         // key cached, and we don't have to try to rehydrate a device. If this
         // is a new login, we will start dehydration after Secret Storage is
         // unlocked.
-        try {
-            await initialiseDehydrationIfEnabled(this.matrixClient, { onlyIfKeyCached: true, rehydrate: false });
-        } catch (e) {
-            // We may get an error dehydrating, such as if cross-signing and
-            // SSSS are not set up yet.  Just log the error and continue.
-            // If SSSS gets set up later, we will re-try dehydration.
-            console.log("Error starting device dehydration", e);
-        }
-
-        return;
+        // It takes a dozen requests and an upload, so it runs alongside the client starting rather than
+        // before it: the cached rooms must not wait on the network (or, offline, on it failing).
+        void initialiseDehydrationIfEnabled(this.matrixClient, { onlyIfKeyCached: true, rehydrate: false }).catch(
+            (e) => {
+                // We may get an error dehydrating, such as if cross-signing and
+                // SSSS are not set up yet.  Just log the error and continue.
+                // If SSSS gets set up later, we will re-try dehydration.
+                console.log("Error starting device dehydration", e);
+            },
+        );
     }
 
     /**
@@ -350,6 +365,45 @@ class MatrixClientPegClass implements IMatrixClientPeg {
         await this.matrixClient!.startClient(opts);
         logger.log(`MatrixClientPeg: MatrixClient started`);
     }
+}
+
+/**
+ * The state every room keeps in memory, for the room list, spaces, calls, notifications and encryption.
+ * Everything else (members beyond the ones shown, topics, sticker packs, bridge features, …) is read from
+ * the store when the room is opened: MatrixClient.loadStoredRoomState.
+ */
+const ROOM_LIST_STATE_TYPES: string[] = [
+    EventType.RoomCreate,
+    EventType.RoomName,
+    EventType.RoomAvatar,
+    EventType.RoomCanonicalAlias,
+    EventType.RoomEncryption,
+    EventType.RoomTombstone,
+    EventType.RoomJoinRules,
+    EventType.RoomPowerLevels,
+    EventType.SpaceChild,
+    EventType.SpaceParent,
+    EventType.GroupCallPrefix,
+    EventType.GroupCallMemberPrefix,
+    EventType.RTCMembership,
+    "org.matrix.msc3946.room_predecessor",
+    "im.vector.modular.widgets",
+    // Bridge info: the room list's network badges and bridged-DM detection
+    "m.bridge",
+    "uk.half-shot.bridge",
+];
+
+/** How many of each room's latest stored events are replayed at startup. */
+const SAVED_SYNC_TAIL = 3;
+
+/** The room the app will open: the one in the URL, else the last one viewed. */
+function roomsShownAtStartup(): string[] {
+    const rooms: string[] = [];
+    const match = /^#\/room\/(![^/?]+)/.exec(window.location.hash);
+    if (match) rooms.push(decodeURIComponent(match[1]));
+    const last = window.localStorage?.getItem("mx_last_room_id");
+    if (last && !rooms.includes(last)) rooms.push(last);
+    return rooms;
 }
 
 /**

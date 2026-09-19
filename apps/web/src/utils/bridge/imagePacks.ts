@@ -180,6 +180,7 @@ async function roomPackEvents(
     onlyStateKeys?: string[],
 ): Promise<Array<{ stateKey: string; content: RawPack }>> {
     const room = client.getRoom(roomId);
+    await client.loadStoredRoomState(roomId); // packs of rooms not opened yet are in the store, not memory
     let events: Array<{ stateKey: string; content: RawPack }> = room ? localPackEvents(room) : [];
     if (!events.length && room?.getMyMembership() !== KnownMembership.Leave) {
         events = await remotePackEvents(client, roomId);
@@ -195,6 +196,7 @@ async function currentRoomPackEvents(
     client: MatrixClient,
     room: Room,
 ): Promise<Array<{ stateKey: string; content: RawPack }>> {
+    await client.loadStoredRoomState(room.roomId);
     const local = localPackEvents(room);
     if (local.length) return local;
     const key = `${room.roomId}#default`;

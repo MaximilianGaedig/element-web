@@ -646,6 +646,8 @@ export class RoomView extends React.Component<IRoomProps, IRoomState> {
         }
         const roomViewStore = this.roomViewStore;
         const roomId = roomViewStore.getRoomId() ?? null;
+        // Rooms other than the one opened at startup keep only room-list state in memory: bring the rest in.
+        if (roomId) void this.context.client?.loadStoredRoomState?.(roomId);
         const roomAlias = roomViewStore.getRoomAlias() ?? undefined;
         const roomLoading = roomViewStore.isRoomLoading();
         const joining = roomViewStore.isJoining();

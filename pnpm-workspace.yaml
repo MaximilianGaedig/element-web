@@ -111,6 +111,9 @@ patchedDependencies:
     "@types/auto-launch": patches/@types__auto-launch.patch
     # Workaround for missing return types
     postcss-mixins: patches/postcss-mixins.patch
+    # Start from cache without waiting on the network: cached /versions, no parent fetches while replaying
+    # the cached sync, and a replay of only each room's latest events (older ones are read back from the store)
+    matrix-js-sdk@42.3.0: patches/matrix-js-sdk@42.3.0.patch
     # Workaround for some babel rules being false positively flagged
     knip: patches/knip.patch
     # Workaround for being stuck on an old version of plist due to electron-builder not supporting ESM yet

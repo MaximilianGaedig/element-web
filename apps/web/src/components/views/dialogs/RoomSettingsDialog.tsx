@@ -74,6 +74,8 @@ class RoomSettingsDialog extends React.Component<IProps, IState> {
         MatrixClientPeg.safeGet().on(RoomEvent.Name, this.onRoomName);
         MatrixClientPeg.safeGet().on(RoomStateEvent.Events, this.onStateEvent);
         this.onRoomName();
+        // Opened from the room list, the room's state may still be in the store only.
+        void MatrixClientPeg.safeGet().loadStoredRoomState(this.props.roomId);
     }
 
     public componentDidUpdate(): void {

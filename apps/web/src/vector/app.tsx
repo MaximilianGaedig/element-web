@@ -159,7 +159,86 @@ export async function loadApp(urlParams: URLParams, matrixChatRef: React.Ref<Mat
     );
 }
 
+/** The last validated server config, so a returning session can start without waiting on the network. */
+const VALIDATED_CONFIG_KEY = "mx_validated_server_config";
+
+interface CachedValidatedConfig {
+    /** The config inputs the result was validated from; a different config.json invalidates it. */
+    input: string;
+    config: ValidatedServerConfig;
+}
+
+function serverConfigInput(): string {
+    const config = SdkConfig.get();
+    return JSON.stringify([
+        config["default_server_config"],
+        config["default_server_name"],
+        config["default_hs_url"],
+        config["default_is_url"],
+    ]);
+}
+
+function loadCachedServerConfig(): ValidatedServerConfig | undefined {
+    try {
+        const cached: CachedValidatedConfig | null = JSON.parse(localStorage.getItem(VALIDATED_CONFIG_KEY) ?? "null");
+        if (cached?.input === serverConfigInput() && cached.config?.hsUrl) return cached.config;
+    } catch {}
+    return undefined;
+}
+
+function storeServerConfig(config: ValidatedServerConfig): void {
+    if (config.warning) return; // only remember a clean result
+    try {
+        const cached: CachedValidatedConfig = { input: serverConfigInput(), config };
+        localStorage.setItem(VALIDATED_CONFIG_KEY, JSON.stringify(cached));
+    } catch {}
+}
+
+function applyServerConfig(validatedConfig: ValidatedServerConfig): IConfigOptions {
+    validatedConfig.isDefault = true;
+
+    // Just in case we ever have to debug this
+    logger.log("Using homeserver config:", validatedConfig);
+
+    // Add the newly built config to the actual config for use by the app
+    logger.log("Updating SdkConfig with validated discovery information");
+    SdkConfig.add({ validated_server_config: validatedConfig });
+
+    return SdkConfig.get();
+}
+
+/**
+ * The server config the app starts with. A signed-in session starts from the last validated config (or, the
+ * first time or offline, from the session's own homeserver) without a network round trip; discovery then
+ * runs in the background and refreshes it. Without a session discovery must finish first: login needs it.
+ */
 async function verifyServerConfig(): Promise<IConfigOptions> {
+    const { hsUrl, isUrl, userId } = await Lifecycle.getStoredSessionVars();
+    if (hsUrl && userId) {
+        const known: ValidatedServerConfig = loadCachedServerConfig() ?? {
+            hsUrl,
+            hsName: new URL(hsUrl).hostname,
+            hsNameIsDifferent: false,
+            isUrl: isUrl ?? "",
+            isDefault: true,
+            isNameResolvable: false,
+            warning: "",
+        };
+        void discoverServerConfig().then(
+            (config) => {
+                storeServerConfig(config);
+                applyServerConfig(config);
+            },
+            (e) => logger.warn("Background server config check failed; keeping the last known config", e),
+        );
+        return applyServerConfig(known);
+    }
+    const config = await discoverServerConfig();
+    storeServerConfig(config);
+    return applyServerConfig(config);
+}
+
+async function discoverServerConfig(): Promise<ValidatedServerConfig> {
     let validatedConfig: ValidatedServerConfig;
     try {
         logger.log("Verifying homeserver configuration");
@@ -242,14 +321,5 @@ async function verifyServerConfig(): Promise<IConfigOptions> {
         }
     }
 
-    validatedConfig.isDefault = true;
-
-    // Just in case we ever have to debug this
-    logger.log("Using homeserver config:", validatedConfig);
-
-    // Add the newly built config to the actual config for use by the app
-    logger.log("Updating SdkConfig with validated discovery information");
-    SdkConfig.add({ validated_server_config: validatedConfig });
-
-    return SdkConfig.get();
+    return validatedConfig;
 }
