@@ -42,6 +42,16 @@ Please see LICENSE files in the repository root for full details.
     /* Floating bars are translucent glass (see below; low power mode makes them solid). */
     --tg-glass-background: color-mix(in srgb, var(--tg-surface-color) 50%, transparent);
     --tg-glass-backdrop: blur(24px) saturate(180%);
+    /*
+     * The screen's unsafe edges (notch/status bar, home indicator): viewport-fit=cover draws under them,
+     * which a home-screen app (PWA) does. The keyboard covers the bottom one, so it's 0 while that's up.
+     */
+    --tg-safe-top: env(safe-area-inset-top, 0px);
+    --tg-safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+html[data-tg-keyboard] {
+    --tg-safe-bottom: 0px;
 }
 
 /*

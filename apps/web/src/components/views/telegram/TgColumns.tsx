@@ -47,6 +47,7 @@ import {
     beginSwipeBack,
     moveSwipeBack,
     shouldPreventScroll,
+    swipeBlockedAt,
     type SwipeBackState,
 } from "../../../utils/telegram/tgLayout/swipeBack";
 import { installViewportHeight } from "../../../utils/telegram/tgLayout/viewportHeight";
@@ -62,6 +63,7 @@ import { Action } from "../../../dispatcher/actions";
 import { type ActionPayload } from "../../../dispatcher/payloads";
 import { type TgNavigation, TgNavigationContext } from "./TgNavigation";
 import { haptic } from "../../../utils/haptics";
+import RightPanelStore from "../../../stores/right-panel/RightPanelStore";
 
 interface TgColumnsProps {
     /** The spaces bar, rendered at the outer edge of the chat-list column. */
@@ -87,6 +89,13 @@ export const PUSH_TRIGGERS = new Set(["Timeline", "MessageUser", "Predecessor", 
 
 /** How long to wait for a newly opened chat's first messages before giving up on the ladder. */
 const LADDER_WAIT_MS = 5000;
+
+/** Leaves the chat info sheet: back to its previous page (member info → people), else closes it. */
+function closeInfo(): void {
+    const store = RightPanelStore.instance;
+    if (store.roomPhaseHistory.length > 1) store.popCard();
+    else store.hide(null);
+}
 
 /** The attribute on <html> that lets overlays (dialogs, menus) follow the tier. */
 export const SCREEN_ATTRIBUTE = "data-tg-screen";
@@ -187,7 +196,10 @@ export function TgColumns({
         let swipe: SwipeBackState | null = null;
 
         const onTouchStart = (e: TouchEvent): void => {
-            swipe = e.touches.length === 1 ? beginSwipeBack(e.touches[0].clientX, e.touches[0].clientY) : null;
+            swipe =
+                e.touches.length === 1 && !swipeBlockedAt(e.target as Element | null, center)
+                    ? beginSwipeBack(e.touches[0].clientX, e.touches[0].clientY)
+                    : null;
         };
         const onTouchMove = (e: TouchEvent): void => {
             if (!swipe) return;
@@ -201,13 +213,17 @@ export function TgColumns({
                 if (e.cancelable) e.preventDefault();
                 cancelContextMenuOpening();
             }
+            // The chat info sheet sits over the chat: going back leaves it (a sub-page first), not the chat.
+            const infoOpen = RightPanelStore.instance.isOpen;
             if (swipe.phase === "committed") {
                 haptic("light");
                 swipe = null;
-                goBack();
+                if (infoOpen) closeInfo();
+                else goBack();
                 return;
             }
-            setSwipeDx(swipe.phase === "horizontal" ? swipe.dx : null);
+            // Sliding the chat would carry the sheet with it and reveal the chat list, so the sheet doesn't follow.
+            setSwipeDx(swipe.phase === "horizontal" && !infoOpen ? swipe.dx : null);
         };
         const onTouchEnd = (): void => {
             swipe = null;

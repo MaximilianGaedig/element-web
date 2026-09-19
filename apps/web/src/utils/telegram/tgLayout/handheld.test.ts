@@ -9,7 +9,7 @@ Please see LICENSE files in the repository root for full details.
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { beginSwipeBack, moveSwipeBack, shouldPreventScroll } from "./swipeBack";
+import { beginSwipeBack, moveSwipeBack, shouldPreventScroll, swipeBlockedAt } from "./swipeBack";
 import { computeVh, installViewportHeight, keyboardClosed, VH_PROPERTY } from "./viewportHeight";
 import { attachLongPressContextMenu, cancelContextMenuOpening } from "./longPress";
 
@@ -21,23 +21,36 @@ function touchEvent(type: string, x: number, y: number, count = 1): Event {
 }
 
 describe("swipe back (tweb handleHorizontalSwipe / handleTabSwipe / isSwipingBackSafari)", () => {
-    it("only starts within 30px of the left edge", () => {
+    it("starts anywhere, like Telegram iOS", () => {
         expect(beginSwipeBack(29, 300)).not.toBeNull();
-        expect(beginSwipeBack(30, 300)).toBeNull();
+        expect(beginSwipeBack(200, 300)).not.toBeNull();
+    });
+
+    it("leaves horizontal drags to text fields and sideways scrollers", () => {
+        const boundary = document.createElement("div");
+        boundary.innerHTML = `<input id="field"><div id="strip" style="overflow-x:auto"><span id="item"></span></div><p id="text"></p>`;
+        document.body.appendChild(boundary);
+        const strip = boundary.querySelector("#strip")!;
+        Object.defineProperty(strip, "scrollWidth", { value: 500 });
+        Object.defineProperty(strip, "clientWidth", { value: 300 });
+        expect(swipeBlockedAt(boundary.querySelector("#field"), boundary)).toBe(true);
+        expect(swipeBlockedAt(boundary.querySelector("#item"), boundary)).toBe(true);
+        expect(swipeBlockedAt(boundary.querySelector("#text"), boundary)).toBe(false);
+        boundary.remove();
     });
 
     it("cancels when the finger travels more than 20px vertically before turning horizontal", () => {
-        let s = beginSwipeBack(5, 300)!;
+        let s = beginSwipeBack(5, 300);
         s = moveSwipeBack(s, 8, 315);
         expect(s.phase).toBe("cancelled");
 
-        s = beginSwipeBack(5, 300)!;
+        s = beginSwipeBack(5, 300);
         s = moveSwipeBack(s, 6, 321);
         expect(s.phase).toBe("cancelled");
     });
 
     it("locks horizontal once |x| > |y|, then tolerates vertical drift", () => {
-        let s = beginSwipeBack(5, 300)!;
+        let s = beginSwipeBack(5, 300);
         s = moveSwipeBack(s, 20, 305);
         expect(s.phase).toBe("horizontal");
         expect(shouldPreventScroll(s)).toBe(true);
@@ -47,7 +60,7 @@ describe("swipe back (tweb handleHorizontalSwipe / handleTabSwipe / isSwipingBac
     });
 
     it("navigates past 50px of rightward travel", () => {
-        let s = beginSwipeBack(5, 300)!;
+        let s = beginSwipeBack(5, 300);
         s = moveSwipeBack(s, 30, 300);
         s = moveSwipeBack(s, 55, 302);
         expect(s.phase).toBe("horizontal");
@@ -56,7 +69,7 @@ describe("swipe back (tweb handleHorizontalSwipe / handleTabSwipe / isSwipingBac
     });
 
     it("does not navigate for a leftward swipe", () => {
-        let s = beginSwipeBack(25, 300)!;
+        let s = beginSwipeBack(25, 300);
         s = moveSwipeBack(s, 0, 300);
         expect(s.phase).toBe("horizontal");
         expect(s.dx).toBe(0);

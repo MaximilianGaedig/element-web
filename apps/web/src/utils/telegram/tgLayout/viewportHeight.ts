@@ -14,6 +14,10 @@ Please see LICENSE files in the repository root for full details.
  */
 
 export const VH_PROPERTY = "--tg-vh";
+/** Set on <html> while the on-screen keyboard is up (it then covers the home-indicator inset). */
+export const KEYBOARD_ATTRIBUTE = "data-tg-keyboard";
+/** How much shorter than the layout viewport the visual one must be to count as the keyboard. */
+const KEYBOARD_MIN_PX = 120;
 
 /** tweb setVH: 1% of `height`, to 2 decimals. */
 export function computeVh(height: number): number {
@@ -38,6 +42,7 @@ export function installViewportHeight(win: Window = window): () => void {
 
     const setVh = (): void => {
         const height = win.visualViewport?.height ?? win.innerHeight;
+        root.toggleAttribute(KEYBOARD_ATTRIBUTE, isTouch && win.innerHeight - height > KEYBOARD_MIN_PX);
         const vh = computeVh(height);
         if (lastVh === vh) return;
         if (keyboardClosed(lastVh, vh, isTouch)) {
@@ -52,5 +57,6 @@ export function installViewportHeight(win: Window = window): () => void {
     return () => {
         viewport.removeEventListener("resize", setVh);
         root.style.removeProperty(VH_PROPERTY);
+        root.removeAttribute(KEYBOARD_ATTRIBUTE);
     };
 }

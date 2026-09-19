@@ -17,6 +17,14 @@ Please see LICENSE files in the repository root for full details.
  */
 
 html[data-tg-screen="mobile"] {
+    /* The chat list and the chat info sheet clear the notch and the home indicator (a PWA draws under them). */
+    .mx_TgColumns_left,
+    .mx_RightPanel_ResizeWrapper {
+        box-sizing: border-box;
+        padding-top: var(--tg-safe-top);
+        padding-bottom: var(--tg-safe-bottom);
+    }
+
     /* Compact chat header: back, avatar, title; everything else lives in the chat info sheet. */
     .mx_RoomHeader {
         gap: var(--cpd-space-2x);

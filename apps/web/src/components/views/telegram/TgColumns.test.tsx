@@ -18,6 +18,7 @@ import { TgBackButton } from "./TgNavigation";
 import dis from "../../../dispatcher/dispatcher";
 import { Action } from "../../../dispatcher/actions";
 import { STORAGE_KEY_LEFT } from "../../../utils/telegram/tgLayout/constants";
+import RightPanelStore from "../../../stores/right-panel/RightPanelStore";
 
 function setViewport(width: number, height: number): void {
     UIStore.instance.windowWidth = width;
@@ -191,14 +192,42 @@ describe("TgColumns", () => {
             }
         });
 
-        it("ignores swipes that do not start at the edge", () => {
-            const { container } = renderHandheld(true);
+        it("goes back from a swipe anywhere on the screen, like Telegram iOS", () => {
+            vi.useFakeTimers();
+            try {
+                const onBack = vi.fn();
+                const { container } = renderHandheld(true, onBack);
+                const root = container.querySelector<HTMLElement>(".mx_TgColumns")!;
+                const center = container.querySelector<HTMLElement>(".mx_TgColumns_center")!;
+                act(() => void center.dispatchEvent(touch("touchstart", 200, 400)));
+                act(() => void center.dispatchEvent(touch("touchmove", 220, 401)));
+                expect(root.dataset.swiping).toBe("true");
+                act(() => void center.dispatchEvent(touch("touchmove", 260, 401)));
+                expect(root.dataset.chatShown).toBeUndefined();
+                act(() => void vi.advanceTimersByTime(200));
+                expect(onBack).toHaveBeenCalledTimes(1);
+            } finally {
+                vi.useRealTimers();
+            }
+        });
+
+        it("closes the chat info instead of the chat when it's open", () => {
+            const store = RightPanelStore.instance;
+            vi.spyOn(store, "isOpen", "get").mockReturnValue(true);
+            vi.spyOn(store, "roomPhaseHistory", "get").mockReturnValue([{ phase: null }]);
+            const hide = vi.spyOn(store, "hide").mockImplementation(() => {});
+            const onBack = vi.fn();
+            const { container } = renderHandheld(true, onBack);
             const root = container.querySelector<HTMLElement>(".mx_TgColumns")!;
             const center = container.querySelector<HTMLElement>(".mx_TgColumns_center")!;
-            act(() => void center.dispatchEvent(touch("touchstart", 120, 400)));
-            act(() => void center.dispatchEvent(touch("touchmove", 300, 400)));
+            act(() => void center.dispatchEvent(touch("touchstart", 200, 400)));
+            act(() => void center.dispatchEvent(touch("touchmove", 220, 401)));
+            // The chat doesn't slide (the sheet over it would go along and reveal the chat list).
             expect(root.dataset.swiping).toBeUndefined();
+            act(() => void center.dispatchEvent(touch("touchmove", 260, 401)));
+            expect(hide).toHaveBeenCalledWith(null);
             expect(root.dataset.chatShown).toBe("true");
+            expect(onBack).not.toHaveBeenCalled();
         });
     });
 

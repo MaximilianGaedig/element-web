@@ -34,8 +34,6 @@ export const PERSIST_THROTTLE_MS = 200;
 /** tweb src/helpers/updateColumnWidths.ts CHAT_WIDTH_MAX. */
 export const CHAT_WIDTH_MAX = 696;
 
-/** tweb src/helpers/dom/isSwipingBackSafari.ts: touches starting this close to the left edge are a back swipe. */
-export const SWIPE_BACK_EDGE = 30;
 /** tweb src/helpers/dom/handleHorizontalSwipe.ts: vertical travel that cancels a not-yet-horizontal swipe. */
 export const SWIPE_VERTICAL_CANCEL = 20;
 /** tweb src/helpers/dom/handleTabSwipe.ts: horizontal travel past which the swipe navigates. */

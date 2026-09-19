@@ -22,7 +22,8 @@ html[data-tg-screen] .mx_RoomHeader {
     width: calc(100% - 2 * var(--tg-page-chats-padding));
     max-width: var(--tg-chat-width);
     height: var(--tg-chat-topbar-height);
-    margin: var(--tg-page-chats-padding) auto 0;
+    /* Clear of the notch/status bar where the page draws under it (a PWA). */
+    margin: max(var(--tg-page-chats-padding), var(--tg-safe-top)) auto 0;
     padding-inline: 0.25rem 0.5rem;
     border-bottom: none;
     border-radius: var(--tg-border-radius-big);
@@ -63,7 +64,8 @@ html[data-tg-screen] .mx_RoomView_body[data-telegram-layout="true"] {
         box-sizing: border-box;
         width: calc(100% - 2 * var(--tg-page-chats-padding));
         max-width: var(--tg-chat-width);
-        margin: 0 auto var(--tg-page-chats-padding);
+        /* Above the home indicator where the page draws under it (a PWA), except while the keyboard is up. */
+        margin: 0 auto max(var(--tg-page-chats-padding), var(--tg-safe-bottom));
         /* Element pads the composer's bottom by 15px; the page padding alone matches the header's gap. */
         padding-bottom: 0;
     }

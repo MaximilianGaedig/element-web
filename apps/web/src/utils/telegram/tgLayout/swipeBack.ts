@@ -6,15 +6,15 @@ Please see LICENSE files in the repository root for full details.
 */
 
 /*
- * The edge swipe that goes back from a chat to the chat list, with Telegram Web K's gesture rules
- * (GPL-3.0):
- *   src/helpers/dom/isSwipingBackSafari.ts   a back swipe starts within 30px of the left edge
+ * The swipe that goes back from a chat to the chat list (or out of the chat info). Like Telegram iOS it
+ * starts anywhere on the screen, not only at tweb's 30px left edge, except on things that take a
+ * horizontal drag themselves (see swipeBlockedAt). Telegram Web K's gesture rules otherwise (GPL-3.0):
  *   src/helpers/dom/handleHorizontalSwipe.ts vertical travel > 20px before the swipe turns horizontal
  *                                            cancels it; once |x| > |y| the swipe locks horizontal
  *   src/helpers/dom/handleTabSwipe.ts        past 50px of horizontal travel the swipe navigates
  */
 
-import { SWIPE_BACK_EDGE, SWIPE_COMMIT_THRESHOLD, SWIPE_VERTICAL_CANCEL } from "./constants";
+import { SWIPE_COMMIT_THRESHOLD, SWIPE_VERTICAL_CANCEL } from "./constants";
 
 export type SwipePhase = "pending" | "horizontal" | "cancelled" | "committed";
 
@@ -26,10 +26,24 @@ export interface SwipeBackState {
     dx: number;
 }
 
-/** A swipe begins only for a touch starting at the left edge (isSwipingBackSafari). */
-export function beginSwipeBack(x: number, y: number): SwipeBackState | null {
-    if (x >= SWIPE_BACK_EDGE) return null;
+/** A swipe can begin anywhere; whether it turns horizontal decides whether it's a back swipe. */
+export function beginSwipeBack(x: number, y: number): SwipeBackState {
     return { startX: x, startY: y, phase: "pending", dx: 0 };
+}
+
+/**
+ * Whether a touch starting at `target` must keep its horizontal drag: text fields (selecting text),
+ * sliders, and anything scrolled sideways (sticker strips, tab bars, code blocks) up to `boundary`.
+ */
+export function swipeBlockedAt(target: Element | null, boundary: Element): boolean {
+    if (target?.closest("input, textarea, select, [contenteditable=''], [contenteditable='true']")) return true;
+    for (let el = target; el && el !== boundary; el = el.parentElement) {
+        if (el.scrollWidth > el.clientWidth + 1) {
+            const overflowX = getComputedStyle(el).overflowX;
+            if (overflowX === "auto" || overflowX === "scroll") return true;
+        }
+    }
+    return false;
 }
 
 /** handleHorizontalSwipe onSwipe + handleTabSwipe onSwipe for one move to (x, y). */
