@@ -1,0 +1,166 @@
+/*
+Copyright 2026 New Vector Ltd.
+
+SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only OR LicenseRef-Element-Commercial
+Please see LICENSE files in the repository root for full details.
+*/
+
+/*
+ * Telegram Web K's floating "plates" (GPL-3.0) for the chat's header and footer, in the
+ * Telegram-style layout (TgColumns marks <html> with data-tg-screen while it is on):
+ *   src/scss/partials/_chatTopbar.scss  .topbar: 3rem tall, $border-radius-big (24px), surface
+ *                                       colour, 0 1px 5px -1px rgba(0,0,0,.21), --chat-width wide
+ *   src/scss/partials/_chat.scss        .chat-input-wrapper: 24px radius, min-height 3rem,
+ *                                       $chat-input-box-shadow; .bubbles-go-down / .chat-secondary-button:
+ *                                       round, surface colour, same shadow, fading with --layer-transition;
+ *                                       .bubbles-corner-button .badge at -.25rem
+ *   helpers/updateColumnWidths.ts       --page-chats-padding: 16px desktop, 8px handheld
+ */
+
+html[data-tg-screen] .mx_RoomHeader {
+    box-sizing: border-box;
+    width: calc(100% - 2 * var(--tg-page-chats-padding));
+    max-width: var(--tg-chat-width);
+    height: var(--tg-chat-topbar-height);
+    margin: var(--tg-page-chats-padding) auto 0;
+    padding-inline: 0.25rem 0.5rem;
+    border-bottom: none;
+    border-radius: var(--tg-border-radius-big);
+    background-color: var(--tg-surface-color);
+    box-shadow: var(--tg-topbar-box-shadow);
+    flex: 0 0 auto;
+    transition:
+        transform var(--tg-transition-standard-in),
+        background-color var(--tg-transition-standard-in);
+
+    &:hover {
+        background-color: var(--tg-surface-color);
+    }
+
+    .mx_RoomHeader_info {
+        padding-right: 0;
+    }
+
+    /* tweb .btn-icon: 2.5rem round buttons. */
+    > button,
+    .mx_TgBackButton {
+        border-radius: 50%;
+    }
+}
+
+/* The composer: a floating pill above the bottom edge. */
+html[data-tg-screen] .mx_RoomView_body[data-telegram-layout="true"] {
+    .mx_MessageComposer {
+        box-sizing: border-box;
+        width: calc(100% - 2 * var(--tg-page-chats-padding));
+        max-width: var(--tg-chat-width);
+        margin: 0 auto var(--tg-page-chats-padding);
+    }
+
+    .mx_MessageComposer_wrapper {
+        min-height: var(--tg-chat-input-height);
+        border-top: none;
+        border-radius: var(--tg-border-radius-big);
+        background-color: var(--tg-surface-color);
+        box-shadow: var(--tg-chat-input-box-shadow);
+    }
+
+    /* Status bar and the "jump" corner buttons above the composer. */
+    .mx_RoomView_statusArea {
+        border-top: none;
+    }
+}
+
+/* .bubbles-go-down: a round 3rem button in the corner above the composer. */
+html[data-tg-screen] {
+    /* helpers/updateColumnWidths.ts CHAT_WIDTH_MAX */
+    --tg-chat-width: 696px;
+
+    .mx_JumpToBottomButton {
+        width: var(--tg-chat-input-height);
+        height: var(--tg-chat-input-height);
+        bottom: 0.5rem;
+        animation: mx_TgFade_in var(--tg-layer-transition);
+    }
+
+    .mx_JumpToBottomButton_scrollDown,
+    .mx_TopUnreadMessagesBar_scrollUp {
+        width: var(--tg-chat-input-height);
+        height: var(--tg-chat-input-height);
+        border: none;
+        border-radius: 50%;
+        background-color: var(--tg-surface-color);
+        box-shadow: var(--tg-chat-input-box-shadow);
+        transition: background-color var(--tg-layer-transition);
+
+        svg {
+            color: var(--tg-secondary-text-color);
+        }
+
+        &:hover {
+            background-color: var(--cpd-color-bg-subtle-primary);
+        }
+    }
+
+    .mx_JumpToBottomButton_scrollDown svg {
+        padding: 12px;
+    }
+
+    .mx_TopUnreadMessagesBar_scrollUp svg {
+        width: 100%;
+        height: 100%;
+        padding: 12px;
+        box-sizing: border-box;
+    }
+
+    /* .bubbles-corner-button .badge */
+    .mx_JumpToBottomButton_badge {
+        position: absolute;
+        top: -0.25rem;
+        inset-inline-end: -0.25rem;
+        z-index: 1;
+        min-width: 1.375rem;
+        height: 1.375rem;
+        box-sizing: border-box;
+        padding: 0 0.4375rem;
+        border-radius: 0.6875rem;
+        line-height: 1.375rem;
+        font-size: 14px;
+        background-color: var(--tg-primary-color);
+    }
+
+    .mx_JumpToBottomButton_highlight .mx_JumpToBottomButton_badge {
+        background-color: var(--cpd-color-icon-critical-primary);
+    }
+
+    .mx_TopUnreadMessagesBar {
+        width: var(--tg-chat-input-height);
+        animation: mx_TgFade_in var(--tg-layer-transition);
+
+        &::after {
+            display: none;
+        }
+    }
+
+    .mx_TopUnreadMessagesBar_markAsRead {
+        border: none;
+        background-color: var(--tg-surface-color);
+        box-shadow: var(--tg-chat-input-box-shadow);
+    }
+}
+
+/* Handhelds: 8px around the plates and no width cap (declared after the defaults above). */
+html[data-tg-screen="mobile"] {
+    --tg-page-chats-padding: 8px;
+    --tg-chat-width: 100%;
+}
+
+@keyframes mx_TgFade_in {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}

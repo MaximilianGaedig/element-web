@@ -8,14 +8,15 @@ Please see LICENSE files in the repository root for full details.
 
 // @vitest-environment happy-dom
 
-import { describe, it, beforeEach, expect, vi } from "vitest";
+import { describe, it, beforeEach, afterEach, expect, vi } from "vitest";
 import React from "react";
-import { render, fireEvent } from "test-utils-rtl";
+import { act, render, fireEvent } from "test-utils-rtl";
 
 import MainSplit from "./MainSplit";
 import { PosthogAnalytics } from "../../PosthogAnalytics.ts";
 import { SDKContext } from "../../contexts/SDKContext.ts";
 import { SDKContextClass } from "../../contexts/SDKContextClass";
+import SettingsStore from "../../settings/SettingsStore";
 
 describe("<MainSplit/>", () => {
     const children = (
@@ -29,6 +30,14 @@ describe("<MainSplit/>", () => {
     beforeEach(() => {
         localStorage.clear();
         sdkContext = new SDKContextClass();
+        // Element's layout unless a test opts into the fork's Telegram-style one (on by default).
+        const getValue = SettingsStore.getValue.bind(SettingsStore);
+        vi.spyOn(SettingsStore, "getValue").mockImplementation(((name: string, ...rest: any[]) =>
+            name === "telegramStyleLayout" ? false : (getValue as any)(name, ...rest)) as any);
+    });
+
+    afterEach(() => {
+        vi.restoreAllMocks();
     });
 
     it("renders", () => {
@@ -88,6 +97,53 @@ describe("<MainSplit/>", () => {
             panel: "right",
             roomType: "other_room",
             size: 400,
+        });
+    });
+
+    describe("in the Telegram-style layout", () => {
+        beforeEach(() => {
+            vi.useFakeTimers();
+            vi.mocked(SettingsStore.getValue).mockImplementation(((name: string) =>
+                name === "telegramStyleLayout" ? true : undefined) as any);
+        });
+
+        afterEach(() => {
+            vi.useRealTimers();
+        });
+
+        const wrapper = ({ children }: { children: React.ReactNode }): React.ReactNode => (
+            <SDKContext.Provider value={sdkContext}>{children}</SDKContext.Provider>
+        );
+
+        it("slides the panel in over tweb's 300ms without animating the first render", () => {
+            const { container, rerender } = render(
+                <MainSplit children={children} panel={panel} collapsedRhs analyticsRoomType="other_room" />,
+                { wrapper },
+            );
+            expect(container.querySelector(".mx_RightPanel_ResizeWrapper")).toBeNull();
+
+            rerender(<MainSplit children={children} panel={panel} analyticsRoomType="other_room" />);
+            const pane = container.querySelector<HTMLElement>(".mx_RightPanel_ResizeWrapper")!;
+            expect(pane.dataset.tgPane).toBe("in");
+            expect(pane.style.getPropertyValue("--MainSplit-panel-width")).toBe("320px");
+            act(() => void vi.advanceTimersByTime(300));
+            expect(pane.dataset.tgPane).toBeUndefined();
+        });
+
+        it("keeps the closed panel for tweb's 250ms slide-out", () => {
+            const { container, rerender, getByText } = render(
+                <MainSplit children={children} panel={panel} analyticsRoomType="other_room" />,
+                { wrapper },
+            );
+            expect(
+                container.querySelector<HTMLElement>(".mx_RightPanel_ResizeWrapper")!.dataset.tgPane,
+            ).toBeUndefined();
+
+            rerender(<MainSplit children={children} panel={panel} collapsedRhs analyticsRoomType="other_room" />);
+            expect(container.querySelector<HTMLElement>(".mx_RightPanel_ResizeWrapper")!.dataset.tgPane).toBe("out");
+            expect(getByText("Right panel")).toBeTruthy();
+            act(() => void vi.advanceTimersByTime(250));
+            expect(container.querySelector(".mx_RightPanel_ResizeWrapper")).toBeNull();
         });
     });
 });

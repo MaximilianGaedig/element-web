@@ -530,22 +530,42 @@ describe("<LoggedInView />", () => {
     describe("module-rendered fullscreen view (e.g. multiroom)", () => {
         // A page_type for which a module registers a custom full-screen renderer.
         const modulePageType = "io.element.test_fullscreen";
+        let telegram = false;
+        let getValueSpy: ReturnType<typeof vi.spyOn> | undefined;
 
         beforeEach(() => {
             ModuleApi.instance.navigation.registerLocationRenderer(modulePageType, () => (
                 <div data-testid="module-content" />
             ));
+            telegram = false;
+            const original = SettingsStore.getValue.bind(SettingsStore);
+            getValueSpy = vi
+                .spyOn(SettingsStore, "getValue")
+                .mockImplementation(((name: string, ...rest: any[]) =>
+                    name === "telegramStyleLayout" ? telegram : (original as any)(name, ...rest)) as any);
         });
 
         afterEach(() => {
             ModuleApi.instance.navigation.locationRenderers.delete(modulePageType);
+            getValueSpy?.mockRestore();
         });
 
         it("renders the resizable separator for a normal room view with the new room list", () => {
+            telegram = false;
             const { container } = getComponent({ page_type: "room" });
 
             // With the new room list and no module renderer, the resizable left panel and its separator are used.
             expect(container.querySelector(".mx_Separator")).toBeInTheDocument();
+            expect(container.querySelector(".mx_TgColumns")).not.toBeInTheDocument();
+        });
+
+        it("renders Telegram Web K's columns instead in the Telegram-style layout", () => {
+            telegram = true;
+            const { container } = getComponent({ page_type: "room" });
+
+            expect(container.querySelector(".mx_TgColumns")).toBeInTheDocument();
+            expect(container.querySelector(".mx_Separator")).not.toBeInTheDocument();
+            expect(container.querySelector(".mx_TgColumns_left .mx_SpacePanel")).toBeInTheDocument();
         });
 
         it("does not render the resizer for a module-rendered fullscreen view, but keeps the space panel", () => {

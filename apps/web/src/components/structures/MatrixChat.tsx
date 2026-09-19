@@ -76,7 +76,6 @@ import ThreepidInviteStore, {
 } from "../../stores/ThreepidInviteStore";
 import { UIFeature } from "../../settings/UIFeature";
 import DialPadModal from "../views/voip/DialPadModal";
-import { showToast as showMobileGuideToast } from "../../toasts/MobileGuideToast";
 import { shouldUseLoginForWelcome } from "../../utils/pages";
 import Spinner from "../views/elements/Spinner";
 import QuestionDialog from "../views/dialogs/QuestionDialog";
@@ -1423,12 +1422,6 @@ export default class MatrixChat extends React.PureComponent<IProps, IState> {
         } else {
             logger.debug("onShowPostLoginScreen: showScreenAfterLogin");
             this.showScreenAfterLogin();
-        }
-
-        if (SdkConfig.get("mobile_guide_toast")) {
-            // The toast contains further logic to detect mobile platforms,
-            // check if it has been dismissed before, etc.
-            showMobileGuideToast();
         }
 
         const userNotice = SdkConfig.get("user_notice");

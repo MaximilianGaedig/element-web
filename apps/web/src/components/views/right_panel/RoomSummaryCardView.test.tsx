@@ -27,6 +27,7 @@ import {
 import DMRoomMap from "../../../utils/DMRoomMap";
 import { SDKContext } from "../../../contexts/SDKContext";
 import { SDKContextClass } from "../../../contexts/SDKContextClass";
+import SettingsStore from "../../../settings/SettingsStore";
 
 // Mock the viewmodel hooks
 vi.mock("../../viewmodels/right_panel/RoomSummaryCardViewModel", () => ({
@@ -39,6 +40,7 @@ describe("<RoomSummaryCard />", () => {
     const roomId = "!room:domain.org";
     let mockClient!: MockedObject<MatrixClient>;
     let room!: Room;
+    let telegram = false;
 
     const getComponent = (props = {}) => {
         const defaultProps = {
@@ -92,6 +94,11 @@ describe("<RoomSummaryCard />", () => {
         mockClient = vi.mocked(stubClient());
         room = new Room(roomId, mockClient, userId);
         vi.mocked(useRoomSummaryCardViewModel).mockReturnValue(vmDefaultValues);
+        // Element's layout unless a test opts into the fork's Telegram-style one (on by default).
+        telegram = false;
+        const getValue = SettingsStore.getValue.bind(SettingsStore);
+        vi.spyOn(SettingsStore, "getValue").mockImplementation(((name: string, ...rest: any[]) =>
+            name === "telegramStyleLayout" ? telegram : (getValue as any)(name, ...rest)) as any);
         DMRoomMap.makeShared(mockClient);
 
         mockClient.getRoom.mockReturnValue(room);
@@ -357,6 +364,53 @@ describe("<RoomSummaryCard />", () => {
             getComponent();
 
             expect(screen.queryByText("In a meeting")).not.toBeInTheDocument();
+        });
+    });
+
+    describe("in the Telegram-style layout", () => {
+        beforeEach(() => {
+            telegram = true;
+            room.name = "Fox den";
+        });
+
+        it("lays the group out like tweb's profile: header, info rows, then members/media/actions tabs", () => {
+            vi.mocked(useRoomSummaryCardViewModel).mockReturnValue({ ...vmDefaultValues, alias: "#den:domain.org" });
+            getComponent();
+
+            const profile = screen.getByTestId("tg-profile");
+            expect(profile.querySelector(".mx_TgProfile_name")?.textContent).toBe("Fox den");
+            expect(screen.getByText("#den:domain.org")).toBeInTheDocument();
+            expect(screen.getByText("Address")).toBeInTheDocument();
+            expect(screen.getByText("Link")).toBeInTheDocument();
+            expect(screen.getByRole("switch", { name: "Notifications" })).toBeInTheDocument();
+
+            const tabs = screen.getAllByRole("tab").map((t) => t.textContent);
+            expect(tabs).toEqual(["Members", "Media", "Actions"]);
+            expect(screen.getByRole("tab", { name: "Members" })).toHaveAttribute("aria-selected", "true");
+            // Element's summary layout is not rendered.
+            expect(screen.queryByText("Public room")).not.toBeInTheDocument();
+        });
+
+        it("keeps Element's room actions under the actions tab", () => {
+            getComponent();
+            expect(screen.queryByRole("menuitem", { name: "Settings" })).not.toBeInTheDocument();
+            fireEvent.click(screen.getByRole("tab", { name: "Actions" }));
+            fireEvent.click(screen.getByRole("menuitem", { name: "Settings" }));
+            expect(vmDefaultValues.onRoomSettingsClick).toHaveBeenCalled();
+        });
+
+        it("links the media tab to the files panel", () => {
+            getComponent();
+            fireEvent.click(screen.getByRole("tab", { name: "Media" }));
+            fireEvent.click(screen.getByRole("button", { name: "Open files" }));
+            expect(vmDefaultValues.onRoomFilesClick).toHaveBeenCalled();
+        });
+
+        it("has no members tab for a DM and opens on media", () => {
+            vi.mocked(useRoomSummaryCardViewModel).mockReturnValue({ ...vmDefaultValues, isDirectMessage: true });
+            getComponent();
+            expect(screen.getAllByRole("tab").map((t) => t.textContent)).toEqual(["Media", "Actions"]);
+            expect(screen.getByRole("tab", { name: "Media" })).toHaveAttribute("aria-selected", "true");
         });
     });
 });

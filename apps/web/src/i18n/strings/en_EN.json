@@ -1773,11 +1773,6 @@
     "member_list_back_action_label": "Room members",
     "message_edit_dialog_title": "Message edits",
     "migrating_crypto": "Hang tight. We are updating %(brand)s to make encryption faster and more reliable.",
-    "mobile_guide": {
-        "toast_accept": "Use app",
-        "toast_description": "%(brand)s is experimental on a mobile web browser. For a better experience and the latest features, use our free native app.",
-        "toast_title": "Use app for a better experience"
-    },
     "name_and_id": "%(name)s (%(userId)s)",
     "no_more_results": "No more results",
     "notif_panel": {
@@ -3364,6 +3359,32 @@
         "tac_description": "To continue using the %(homeserverDomain)s homeserver you must review and agree to our terms and conditions.",
         "tac_title": "Terms and Conditions",
         "tos": "Terms of Service"
+    },
+    "tg_layout": {
+        "address": "Address",
+        "bio": "Bio",
+        "info": "Info",
+        "link": "Link",
+        "media_placeholder": "Shared photos and videos will appear here.",
+        "n_online": {
+            "one": "%(count)s online",
+            "other": "%(count)s online"
+        },
+        "notifications": "Notifications",
+        "notifications_off": "Off",
+        "notifications_on": "On",
+        "online": "online",
+        "open_files": "Open files",
+        "pinned_message": "Pinned message",
+        "resize_chat_list": "Resize chat list",
+        "show_all_members": {
+            "one": "Show %(count)s member",
+            "other": "Show all %(count)s members"
+        },
+        "tab_actions": "Actions",
+        "tab_media": "Media",
+        "tab_members": "Members",
+        "username": "Username"
     },
     "theme": {
         "light_high_contrast": "Light high contrast",

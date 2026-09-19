@@ -68,6 +68,8 @@ module.exports = {
                     { from: "res/css/views/elements/_ToggleSwitch.pcss", type: "css" },
                     { from: "res/css/views/settings/tabs/_SettingsTab.pcss", type: "css" },
                     { from: "res/css/structures/_RoomView.pcss", type: "css" },
+                    // Fork: Telegram-style layout tokens, shared by every res/css/views/beeper/tg file
+                    { from: "res/css/views/beeper/tg/_TgBase.pcss", type: "css" },
                     // Compound vars
                     "./node_modules/@vector-im/compound-design-tokens/assets/web/css/cpd-common-base.css",
                     "./node_modules/@vector-im/compound-design-tokens/assets/web/css/cpd-common-semantic.css",

@@ -8,7 +8,8 @@
 
 import React, { type JSX, useCallback, useContext, useEffect, useId, useRef, useState } from "react";
 import PinIcon from "@vector-im/compound-design-tokens/assets/web/icons/pin-solid";
-import { Button } from "@vector-im/compound-web";
+import { Button, IconButton } from "@vector-im/compound-web";
+import ListViewIcon from "@vector-im/compound-design-tokens/assets/web/icons/list-view";
 import { type MatrixEvent, type Room } from "matrix-js-sdk/src/matrix";
 import classNames from "classnames";
 import { EventPreviewView, useCreateAutoDisposedViewModel } from "@element-hq/web-shared-components";
@@ -27,6 +28,8 @@ import PosthogTrackers from "../../../PosthogTrackers.ts";
 import { SDKContext } from "../../../contexts/SDKContext.ts";
 import MatrixClientContext from "../../../contexts/MatrixClientContext";
 import { EventPreviewViewModel } from "../../../viewmodels/room/timeline/event-tile/EventPreviewViewModel";
+import { useSettingValue } from "../../../hooks/useSettings";
+import { TgPinnedPlate } from "../beeper/tg/TgPinnedMessage";
 
 /**
  * The props for the {@link PinnedMessageBanner} component.
@@ -63,6 +66,7 @@ export function PinnedMessageBanner({ room, permalinkCreator }: PinnedMessageBan
     useNotifyTimeline(pinnedEvent);
 
     const id = useId();
+    const telegramLayout = useSettingValue("telegramStyleLayout");
 
     if (!pinnedEvent) return null;
 
@@ -84,6 +88,37 @@ export function PinnedMessageBanner({ room, permalinkCreator }: PinnedMessageBan
         // When we reach the first message, we go back to the last message
         setCurrentEventIndex((currentEventIndex) => (--currentEventIndex === -1 ? eventCount - 1 : currentEventIndex));
     };
+
+    if (telegramLayout) {
+        // Fork: Telegram Web K's pinned-message plate (segmented border, sliding rows, "#N" counter).
+        return (
+            <TgPinnedPlate
+                count={eventCount}
+                currentEventIndex={currentEventIndex}
+                onFollow={onBannerClick}
+                followLabel={
+                    isLastMessage
+                        ? _t("room|pinned_message_banner|go_to_newest_message")
+                        : _t("room|pinned_message_banner|go_to_next_message")
+                }
+                preview={
+                    shouldUseMessageEvent ? (
+                        <div className="mx_PinnedMessageBanner_redactedMessage">
+                            <MessageEvent
+                                mxEvent={pinnedEvent}
+                                maxImageHeight={20}
+                                permalinkCreator={permalinkCreator}
+                                replacingEventId={pinnedEvent.replacingEventId()}
+                            />
+                        </div>
+                    ) : (
+                        <EventPreviewWrapper mxEvent={pinnedEvent} className="mx_PinnedMessageBanner_message" />
+                    )
+                }
+                listButton={<BannerButton room={room} compact />}
+            />
+        );
+    }
 
     return (
         <div
@@ -262,12 +297,16 @@ interface BannerButtonProps {
      * The room where the banner is displayed
      */
     room: Room;
+    /**
+     * Fork: an icon button, like Telegram Web K's pinned-list button.
+     */
+    compact?: boolean;
 }
 
 /**
  * A button that allows the user to view or close the list of pinned messages.
  */
-function BannerButton({ room }: BannerButtonProps): JSX.Element {
+function BannerButton({ room, compact }: BannerButtonProps): JSX.Element {
     const sdkContext = useContext(SDKContext);
 
     const getRightPanelPhase = useCallback(
@@ -281,6 +320,29 @@ function BannerButton({ room }: BannerButtonProps): JSX.Element {
     const [currentPhase, setCurrentPhase] = useState<RightPanelPhases | null>(getRightPanelPhase(room.roomId));
     useEventEmitter(sdkContext.rightPanelStore, UPDATE_EVENT, () => setCurrentPhase(getRightPanelPhase(room.roomId)));
     const isPinnedMessagesPhase = currentPhase === RightPanelPhases.PinnedMessages;
+
+    const onClick = (): void => {
+        if (isPinnedMessagesPhase) PosthogTrackers.trackInteraction("PinnedMessageBannerCloseListButton");
+        else PosthogTrackers.trackInteraction("PinnedMessageBannerViewAllButton");
+
+        sdkContext.rightPanelStore.showOrHidePhase(RightPanelPhases.PinnedMessages);
+    };
+
+    if (compact) {
+        return (
+            <IconButton
+                className="mx_TgPinned_list"
+                onClick={onClick}
+                aria-label={
+                    isPinnedMessagesPhase
+                        ? _t("room|pinned_message_banner|button_close_list")
+                        : _t("room|pinned_message_banner|button_view_all")
+                }
+            >
+                <ListViewIcon />
+            </IconButton>
+        );
+    }
 
     return (
         <Button

@@ -163,6 +163,23 @@ describe("MSC2545 sticker packs", () => {
         expect(client.roomState).not.toHaveBeenCalledWith("!dm:x");
     });
 
+    it("reads the stable m.room.image_pack type the Telegram bridge's pack sync sends", async () => {
+        const current = fakeRoom("!dm:x", {});
+        const space = fakeRoom("!tgspace:x", {}, { space: true, name: "Telegram" });
+        const client = fakeClient([current, space]);
+        client.getStateEvent.mockRejectedValue(new Error("M_NOT_FOUND"));
+        client.roomState.mockImplementation(async (roomId: string) =>
+            roomId === "!tgspace:x"
+                ? [
+                      { type: "m.room.image_pack", state_key: "HotCherry", content: TELEGRAM_PACK },
+                      { type: "m.room.image_pack", state_key: "Empty", content: {} },
+                  ]
+                : [],
+        );
+        const packs = await loadStickerPacks(client, current);
+        expect(packs.map((p) => [p.id, p.name])).toEqual([["room:!tgspace:x/HotCherry", "Hot Cherry"]]);
+    });
+
     it("only fetches the default pack of the open room when its state isn't loaded", async () => {
         const current = fakeRoom("!big:x", {});
         const client = fakeClient([current]);

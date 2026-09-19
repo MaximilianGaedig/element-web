@@ -65,6 +65,7 @@ import { Landmark, LandmarkNavigation } from "../../accessibility/LandmarkNaviga
 import { ModuleApi } from "../../modules/Api.ts";
 import { SDKContext } from "../../contexts/SDKContext.ts";
 import { ResizerViewModel } from "../../viewmodels/structures/ResizerViewModel.ts";
+import { TgColumns } from "../views/beeper/tg/TgColumns";
 
 // We need to fetch each pinned message individually (if we don't already have it)
 // so each pinned message may trigger a request. Limit the number per room for sanity.
@@ -101,6 +102,8 @@ interface IState {
     usageLimitEventContent?: IUsageLimit;
     usageLimitEventTs?: number;
     useCompactLayout: boolean;
+    /** Fork: the Telegram-style layout (setting "telegramStyleLayout"). */
+    telegramLayout: boolean;
     activeCalls: Array<MatrixCall>;
     backgroundImage?: string;
 }
@@ -122,6 +125,7 @@ class LoggedInView extends React.Component<IProps, IState> {
     protected layoutWatcherRef?: string;
     protected compactLayoutWatcherRef?: string;
     protected backgroundImageWatcherRef?: string;
+    protected telegramLayoutWatcherRef?: string;
     protected timezoneProfileUpdateRef?: string[];
 
     private resizerViewModel?: ResizerViewModel;
@@ -136,6 +140,7 @@ class LoggedInView extends React.Component<IProps, IState> {
             syncErrorData: undefined,
             // use compact timeline view
             useCompactLayout: SettingsStore.getValue("useCompactLayout"),
+            telegramLayout: !!SettingsStore.getValue("telegramStyleLayout"),
             usageLimitDismissed: false,
             activeCalls: context.legacyCallHandler.getAllActiveCalls(),
         };
@@ -167,6 +172,9 @@ class LoggedInView extends React.Component<IProps, IState> {
             "useCompactLayout",
             null,
             this.onCompactLayoutChanged,
+        );
+        this.telegramLayoutWatcherRef = SettingsStore.watchSetting("telegramStyleLayout", null, () =>
+            this.setState({ telegramLayout: !!SettingsStore.getValue("telegramStyleLayout") }),
         );
         this.backgroundImageWatcherRef = SettingsStore.watchSetting(
             "RoomList.backgroundImage",
@@ -236,6 +244,7 @@ class LoggedInView extends React.Component<IProps, IState> {
         SettingsStore.unwatchSetting(this.layoutWatcherRef);
         SettingsStore.unwatchSetting(this.compactLayoutWatcherRef);
         SettingsStore.unwatchSetting(this.backgroundImageWatcherRef);
+        SettingsStore.unwatchSetting(this.telegramLayoutWatcherRef);
         this.timezoneProfileUpdateRef?.forEach((s) => SettingsStore.unwatchSetting(s));
         this.disposeResizerViewModel();
     }
@@ -269,6 +278,11 @@ class LoggedInView extends React.Component<IProps, IState> {
             dis.dispatch({ action: "ignore_state_changed" });
         }
         void monitorSyncedPushRules(event, this._matrixClient);
+    };
+
+    /** Fork: the handheld Telegram-style layout's back navigation, from a chat to the chat list. */
+    private onTgBack = (): void => {
+        dis.dispatch({ action: Action.ViewHomePage });
     };
 
     private onCompactLayoutChanged = (): void => {
@@ -692,8 +706,25 @@ class LoggedInView extends React.Component<IProps, IState> {
         const roomView = <div className="mx_RoomView_wrapper">{pageElement}</div>;
 
         let content: React.ReactNode;
-        const resizerViewModel = !moduleRenderer ? this.getResizerViewModel() : undefined;
-        if (resizerViewModel && !moduleRenderer) {
+        const resizerViewModel = !moduleRenderer && !this.state.telegramLayout ? this.getResizerViewModel() : undefined;
+        if (!moduleRenderer && this.state.telegramLayout) {
+            // Fork: Telegram Web K's columns (draggable chat-list edge, collapsed avatars column,
+            // single-pane handheld navigation) replace the resizable panel group.
+            content = (
+                <TgColumns
+                    spacePanel={<SpacePanel />}
+                    leftPanel={leftPanel}
+                    resizeNotifier={this.context.resizeNotifier}
+                    chatOpen={
+                        this.props.page_type === PageTypes.RoomView || this.props.page_type === PageTypes.UserView
+                    }
+                    chatKey={this.props.currentRoomId ?? this.props.currentUserId ?? undefined}
+                    onBack={this.onTgBack}
+                >
+                    {roomView}
+                </TgColumns>
+            );
+        } else if (resizerViewModel && !moduleRenderer) {
             // Resizable layout with a draggable separator. The SpacePanel lives inside GroupView
             // (leftPanel omits it).
             content = (
