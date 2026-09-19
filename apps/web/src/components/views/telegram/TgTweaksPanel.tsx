@@ -8,7 +8,6 @@ Please see LICENSE files in the repository root for full details.
 import React, { type JSX, useEffect, useState } from "react";
 
 import { ActivityDot, PRESENCE_TWEAKS_EVENT } from "../avatars/ActivityDot";
-import { ACTIVITY_FADE_MS } from "../../../utils/presence/activity";
 
 /**
  * A floating panel of sliders for tuning layout values on screen (the presence dot and "12m" tag so far).
@@ -105,7 +104,9 @@ export function TgTweaksPanel(): JSX.Element | null {
                                     className={`mx_RoomAvatarView_RoomAvatar mx_TgTweaksPanel_avatar mx_RoomAvatarView_RoomAvatar_${kind === "online" ? "presence" : "recent"}`}
                                 />
                                 <ActivityDot
-                                    level={kind === "online" ? 1 : 1 - (minutes * 60000) / ACTIVITY_FADE_MS}
+                                    info={
+                                        kind === "online" ? { online: true } : { online: false, lastActive: 0, minutes }
+                                    }
                                     className="mx_RoomAvatarView_PresenceDecoration"
                                 />
                             </div>

@@ -8,15 +8,7 @@
 // @vitest-environment happy-dom
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import {
-    JoinRule,
-    type MatrixClient,
-    MatrixEvent,
-    type Room,
-    RoomEvent,
-    RoomMember,
-    User,
-} from "matrix-js-sdk/src/matrix";
+import { JoinRule, type MatrixClient, MatrixEvent, type Room, RoomEvent } from "matrix-js-sdk/src/matrix";
 import { act } from "react";
 import { renderHook, waitFor } from "test-utils-rtl";
 import { createTestClient, mkStubRoom } from "test-utils";
@@ -41,8 +33,7 @@ describe("RoomAvatarViewModel", () => {
         DMRoomMap.makeShared(matrixClient);
         vi.spyOn(DMRoomMap.shared(), "getUserIdForRoomId").mockReturnValue(undefined);
 
-        vi.spyOn(PresenceIndicatorModule, "useDmMember").mockReturnValue(null);
-        vi.spyOn(PresenceIndicatorModule, "usePresence").mockReturnValue(null);
+        vi.spyOn(PresenceIndicatorModule, "useDmPresence").mockReturnValue({ presence: null, info: undefined });
     });
 
     it("should have badgeDecoration set to LowPriority", () => {
@@ -65,11 +56,10 @@ describe("RoomAvatarViewModel", () => {
 
     it("should set badgeDecoration based on priority", () => {
         // 1. Presence has the least priority
-        const user = User.createUser("userId", matrixClient);
-        const roomMember = new RoomMember(room.roomId, "userId");
-        roomMember.user = user;
-        vi.spyOn(PresenceIndicatorModule, "useDmMember").mockReturnValue(roomMember);
-        vi.spyOn(PresenceIndicatorModule, "usePresence").mockReturnValue(PresenceIndicatorModule.Presence.Online);
+        vi.spyOn(PresenceIndicatorModule, "useDmPresence").mockReturnValue({
+            presence: PresenceIndicatorModule.Presence.Online,
+            info: { online: true },
+        });
 
         const { result: vm1 } = renderHook(() => useRoomAvatarViewModel(room));
         expect(vm1.current.badgeDecoration).toBe(AvatarBadgeDecoration.Presence);
@@ -104,11 +94,10 @@ describe("RoomAvatarViewModel", () => {
     });
 
     it("should return presence", async () => {
-        const user = User.createUser("userId", matrixClient);
-        const roomMember = new RoomMember(room.roomId, "userId");
-        roomMember.user = user;
-        vi.spyOn(PresenceIndicatorModule, "useDmMember").mockReturnValue(roomMember);
-        vi.spyOn(PresenceIndicatorModule, "usePresence").mockReturnValue(PresenceIndicatorModule.Presence.Online);
+        vi.spyOn(PresenceIndicatorModule, "useDmPresence").mockReturnValue({
+            presence: PresenceIndicatorModule.Presence.Online,
+            info: { online: true },
+        });
 
         const { result: vm } = renderHook(() => useRoomAvatarViewModel(room));
         expect(vm.current.presence).toBe(PresenceIndicatorModule.Presence.Online);

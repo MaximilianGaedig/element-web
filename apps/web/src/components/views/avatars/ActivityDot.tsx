@@ -8,24 +8,13 @@ Please see LICENSE files in the repository root for full details.
 import React, { type JSX, useLayoutEffect, useRef } from "react";
 import classNames from "classnames";
 
-import { ACTIVITY_FADE_MS } from "../../../utils/presence/activity";
+import { presenceTag, type PresenceInfo } from "../../../utils/presence/activity";
 
 interface Props {
-    /** 0–1 from activityLevel(): 1 = online, falling towards 0 over the day after the user was last active. */
-    level: number;
+    /** From usePresenceInfo(): a dot while online, the "5m" tag while recently active, else nothing. */
+    info: PresenceInfo | undefined;
     className?: string;
     label?: string;
-}
-
-/** Minutes since the user was last active, from an activity level (which fades over ACTIVITY_FADE_MS). */
-export function activityMinutes(level: number): number {
-    return Math.max(1, Math.round(((1 - level) * ACTIVITY_FADE_MS) / 60000));
-}
-
-/** The tag text, Messenger style: "1m" to "59m", then "1h" to "23h". */
-export function activityLabel(level: number): string {
-    const minutes = activityMinutes(level);
-    return minutes < 60 ? `${minutes}m` : `${Math.floor(minutes / 60)}h`;
 }
 
 /**
@@ -66,10 +55,11 @@ export function presenceCutout(host: HTMLElement, badge: HTMLElement): string | 
     return `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
 }
 
-export function ActivityDot({ level, className, label }: Props): JSX.Element | null {
+export function ActivityDot({ info, className, label }: Props): JSX.Element | null {
     const badge = useRef<HTMLSpanElement>(null);
-    const shown = level > 0;
-    const online = level >= 1;
+    const online = !!info?.online;
+    const tag = presenceTag(info);
+    const shown = online || tag !== undefined;
     // Publish the cut-out on the avatar view (_ActivityDot.pcss uses it as the avatar's mask), redrawn when
     // the badge resizes ("1m" vs "59m"), the avatar resizes, or a tweak changes.
     useLayoutEffect(() => {
@@ -104,7 +94,7 @@ export function ActivityDot({ level, className, label }: Props): JSX.Element | n
             role="img"
             aria-label={label}
         >
-            {activityLabel(level)}
+            {tag}
         </span>
     );
 }

@@ -48,7 +48,7 @@ import { isVideoRoom as calcIsVideoRoom } from "../../../../utils/video-rooms.ts
 import { notificationLevelToIndicator } from "../../../../utils/notifications.ts";
 import { CallGuestLinkButton } from "./CallGuestLinkButton.tsx";
 import { type ButtonEvent } from "../../elements/AccessibleButton.tsx";
-import WithPresenceIndicator, { useDmMember } from "../../avatars/WithPresenceIndicator.tsx";
+import { useDmMember } from "../../avatars/WithPresenceIndicator.tsx";
 import { type IOOBData } from "../../../../stores/ThreepidInviteStore.ts";
 import { MainSplitContentType } from "../../../../contexts/RoomContext.ts";
 import defaultDispatcher from "../../../../dispatcher/dispatcher.ts";
@@ -440,18 +440,17 @@ export default function RoomHeader({
             <Flex as="header" align="center" gap="var(--cpd-space-3x)" className="mx_RoomHeader light-panel">
                 {/* Fork: back to the chat list in the handheld Telegram-style layout */}
                 <TgBackButton />
-                <WithPresenceIndicator room={room}>
-                    {/* We hide this from the tabIndex list as it is a pointer shortcut and superfluous for a11y */}
-                    {/* Disable on-click actions until the room is created */}
-                    <RoomAvatar
-                        room={room}
-                        size="40px"
-                        oobData={oobData}
-                        onClick={room instanceof LocalRoom ? undefined : onAvatarClick}
-                        tabIndex={-1}
-                        altText={_t("room|header_avatar_open_settings_label")}
-                    />
-                </WithPresenceIndicator>
+                {/* Fork: no presence badge here, the "last seen" subtitle already says it */}
+                {/* We hide this from the tabIndex list as it is a pointer shortcut and superfluous for a11y */}
+                {/* Disable on-click actions until the room is created */}
+                <RoomAvatar
+                    room={room}
+                    size="40px"
+                    oobData={oobData}
+                    onClick={room instanceof LocalRoom ? undefined : onAvatarClick}
+                    tabIndex={-1}
+                    altText={_t("room|header_avatar_open_settings_label")}
+                />
                 {/* Fork: the info column also holds the space path under the (clickable) room name */}
                 <Box flex="1" className="mx_RoomHeader_info">
                     {/* Disable on-click actions until the room is created */}

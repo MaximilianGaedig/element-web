@@ -22,6 +22,7 @@ import RoomAvatar from "./RoomAvatar";
 import { AvatarBadgeDecoration, useRoomAvatarViewModel } from "../../viewmodels/avatars/RoomAvatarViewModel";
 import { _t } from "../../../languageHandler";
 import { Presence } from "./WithPresenceIndicator";
+import { type PresenceInfo } from "../../../utils/presence/activity";
 
 interface DecoratedRoomAvatarViewProps {
     /**
@@ -41,13 +42,13 @@ export const DecoratedRoomAvatarView = memo(function DecoratedRoomAvatarView({
     // No decoration, we just show the avatar
     if (!vm.badgeDecoration) return <RoomAvatar size="32px" room={room} />;
 
-    const icon = getAvatarDecoration(vm.badgeDecoration, vm.presence, vm.activity);
+    const icon = getAvatarDecoration(vm.badgeDecoration, vm.presence, vm.presenceInfo);
     const label = getDecorationLabel(vm.badgeDecoration, vm.presence);
 
     // Presence indicator and video/public icons don't have the same size
     // We use different masks
     // (The "12m" recently-active tag is wider than the online dot and gets its own cut-out.)
-    const recent = vm.presence === Presence.Online && vm.activity !== undefined && vm.activity < 1;
+    const recent = vm.presence === Presence.Online && !!vm.presenceInfo && !vm.presenceInfo.online;
     const maskClass =
         vm.badgeDecoration === AvatarBadgeDecoration.Presence
             ? recent
@@ -66,12 +67,12 @@ export const DecoratedRoomAvatarView = memo(function DecoratedRoomAvatarView({
 /**
  * Get the decoration for the avatar based on the presence.
  */
-function getPresenceDecoration(presence: Presence, activity = 1): JSX.Element {
+function getPresenceDecoration(presence: Presence, info?: PresenceInfo): JSX.Element {
     switch (presence) {
         case Presence.Online:
             return (
                 <ActivityDot
-                    level={activity}
+                    info={info ?? { online: true }}
                     className="mx_RoomAvatarView_PresenceDecoration"
                     label={getPresenceLabel(presence)}
                 />
@@ -112,7 +113,7 @@ function getPresenceDecoration(presence: Presence, activity = 1): JSX.Element {
 function getAvatarDecoration(
     decoration: AvatarBadgeDecoration,
     presence: Presence | null,
-    activity?: number,
+    info?: PresenceInfo,
 ): React.ReactNode {
     if (decoration === AvatarBadgeDecoration.LowPriority) {
         return (
@@ -145,7 +146,7 @@ function getAvatarDecoration(
             />
         );
     } else if (decoration === AvatarBadgeDecoration.Presence) {
-        return getPresenceDecoration(presence!, activity);
+        return getPresenceDecoration(presence!, info);
     }
 }
 

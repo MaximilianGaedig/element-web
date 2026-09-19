@@ -17,6 +17,7 @@ import { getMockClientWithEventEmitter, stubClient } from "test-utils";
 import { MatrixClientPeg } from "../../../MatrixClientPeg";
 import DMRoomMap from "../../../utils/DMRoomMap";
 import WithPresenceIndicator, { Presence, usePresence } from "./WithPresenceIndicator";
+import { usePresenceInfo } from "../../../utils/presence/activity";
 import { isPresenceEnabled } from "../../../utils/presence";
 import { getJoinedNonFunctionalMembers } from "../../../utils/room/getJoinedNonFunctionalMembers";
 
@@ -79,10 +80,12 @@ describe("WithPresenceIndicator", () => {
             },
         } as unknown as DMRoomMap;
         vi.spyOn(DMRoomMap, "shared").mockReturnValue(dmRoomMap);
+        const user = new User(DM_USER_ID);
+        user.presence = presenceStr;
+        vi.mocked(mockClient.getUser).mockImplementation((userId) => (userId === DM_USER_ID ? user : null));
         room.getMember = vi.fn((userId) => {
             const member = new RoomMember(room.roomId, userId);
-            member.user = new User(userId);
-            member.user.presence = presenceStr;
+            member.user = user;
             return member;
         });
 
@@ -92,6 +95,10 @@ describe("WithPresenceIndicator", () => {
         if (shown) expect(asFragment()).toMatchSnapshot();
     });
 });
+
+/** usePresence fed by the one presence hook, the way useDmPresence wires it. */
+const usePresenceOf = (room: Room, member: RoomMember | null): Presence | null =>
+    usePresence(room, member, usePresenceInfo(room.client, member?.userId));
 
 describe("usePresence", () => {
     const ROOM_ID = "roomId";
@@ -117,6 +124,7 @@ describe("usePresence", () => {
         user.presence = "online";
         member = new RoomMember(ROOM_ID, DM_USER_ID);
         member.user = user;
+        vi.mocked(mockClient.getUser).mockImplementation((userId) => (userId === DM_USER_ID ? user : null));
     });
 
     afterEach(() => {
@@ -125,7 +133,7 @@ describe("usePresence", () => {
 
     it("returns null when presence is disabled", () => {
         vi.mocked(isPresenceEnabled).mockReturnValue(false);
-        const { result } = renderHook(() => usePresence(room, member));
+        const { result } = renderHook(() => usePresenceOf(room, member));
         expect(result.current).toBeNull();
     });
 
@@ -133,12 +141,12 @@ describe("usePresence", () => {
         // Fork: fewer than 2 joined members means the (sliding sync) member list isn't loaded yet, so
         // the DM partner is trusted; a group room is the case that must stay hidden.
         vi.mocked(getJoinedNonFunctionalMembers).mockReturnValue([1, 2, 3] as any);
-        const { result } = renderHook(() => usePresence(room, member));
+        const { result } = renderHook(() => usePresenceOf(room, member));
         expect(result.current).toBeNull();
     });
 
     it("returns null when member is null", () => {
-        const { result } = renderHook(() => usePresence(room, null));
+        const { result } = renderHook(() => usePresenceOf(room, null));
         expect(result.current).toBeNull();
     });
 
@@ -149,7 +157,7 @@ describe("usePresence", () => {
         ["busy", Presence.Busy],
     ])("returns correct presence for user with '%s' presence state", (presenceStr, expectedPresence) => {
         user.presence = presenceStr;
-        const { result } = renderHook(() => usePresence(room, member));
+        const { result } = renderHook(() => usePresenceOf(room, member));
         expect(result.current).toBe(expectedPresence);
     });
 
@@ -157,25 +165,25 @@ describe("usePresence", () => {
         user.presence = "unavailable";
         user.lastPresenceTs = Date.now();
         user.lastActiveAgo = 2 * 60 * 1000;
-        const { result } = renderHook(() => usePresence(room, member));
+        const { result } = renderHook(() => usePresenceOf(room, member));
         expect(result.current).toBe(Presence.Online);
     });
 
     it("returns Online when user.currentlyActive is true regardless of presence string", () => {
         user.presence = "offline";
         user.currentlyActive = true;
-        const { result } = renderHook(() => usePresence(room, member));
+        const { result } = renderHook(() => usePresenceOf(room, member));
         expect(result.current).toBe(Presence.Online);
     });
 
     it("updates when UserEvent.Presence fires on member.user", async () => {
         user.presence = "online";
-        const { result } = renderHook(() => usePresence(room, member));
+        const { result } = renderHook(() => usePresenceOf(room, member));
         expect(result.current).toBe(Presence.Online);
 
         act(() => {
             user.presence = "offline";
-            user.emit(UserEvent.Presence, null as any, user);
+            mockClient.emit(UserEvent.Presence, null as any, user);
         });
 
         await waitFor(() => expect(result.current).toBeNull());
@@ -184,12 +192,12 @@ describe("usePresence", () => {
     it("updates when UserEvent.CurrentlyActive fires on member.user", async () => {
         user.presence = "offline";
         user.currentlyActive = false;
-        const { result } = renderHook(() => usePresence(room, member));
+        const { result } = renderHook(() => usePresenceOf(room, member));
         expect(result.current).toBeNull();
 
         act(() => {
             user.currentlyActive = true;
-            user.emit(UserEvent.CurrentlyActive, null as any, user);
+            mockClient.emit(UserEvent.CurrentlyActive, null as any, user);
         });
 
         await waitFor(() => expect(result.current).toBe(Presence.Online));
@@ -200,7 +208,7 @@ describe("usePresence", () => {
         vi.mocked(mockClient.getUser).mockImplementation((userId) => (userId === DM_USER_ID ? user : null));
 
         user.presence = "online";
-        const { result } = renderHook(() => usePresence(room, member));
+        const { result } = renderHook(() => usePresenceOf(room, member));
         expect(result.current).toBe("online");
     });
 
@@ -209,7 +217,7 @@ describe("usePresence", () => {
         vi.mocked(mockClient.getUser).mockImplementation((userId) => (userId === DM_USER_ID ? user : null));
         user.presence = "online";
 
-        const { result } = renderHook(() => usePresence(room, member));
+        const { result } = renderHook(() => usePresenceOf(room, member));
         expect(result.current).toBe(Presence.Online);
 
         act(() => {
@@ -222,7 +230,7 @@ describe("usePresence", () => {
 
     it("does not update when client emits UserEvent.Presence for a different user", async () => {
         user.presence = "online";
-        const { result } = renderHook(() => usePresence(room, member));
+        const { result } = renderHook(() => usePresenceOf(room, member));
         expect(result.current).toBe(Presence.Online);
 
         act(() => {

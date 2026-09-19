@@ -28,6 +28,7 @@ import WithPresenceIndicator from "../avatars/WithPresenceIndicator";
 import { mkEvent, mkMembership, stubClient } from "test-utils";
 import { unmockIntlDateTimeFormat } from "test-utils/date";
 import { formatPresence } from "../../../utils/presence/lastSeen";
+import { type PresenceInfo } from "../../../utils/presence/activity";
 import { getBridgedDmUserId } from "../../../utils/bridge/bridgeInfo";
 import { DmLastSeenSubtitle, LastSeenLabel } from "./LastSeen";
 import { TypingSubtitle, typingText } from "./TypingSubtitle";
@@ -35,6 +36,11 @@ import { TypingSubtitle, typingText } from "./TypingSubtitle";
 // Fri 18 Sep 2026, 21:45:00 in Berlin (UTC+2).
 const NOW = Date.parse("2026-09-18T19:45:00Z");
 const OPTS = { now: NOW, locale: "en-GB", timeZone: "Europe/Berlin" };
+const seen = (lastActive: number, online = false): PresenceInfo => ({
+    online,
+    lastActive,
+    minutes: Math.floor((NOW - lastActive) / 60_000),
+});
 
 describe("Telegram-style last seen", () => {
     describe("formatPresence", () => {
@@ -50,16 +56,16 @@ describe("Telegram-style last seen", () => {
             ["2026-09-12T19:40:00Z", "last seen 12 Sept at 21:40"],
             ["2025-12-24T19:40:00+00:00", "last seen 24 Dec 2025 at 20:40"],
         ])("last active %s -> %j", (at, expected) => {
-            expect(formatPresence(false, Date.parse(at), OPTS)).toBe(expected);
+            expect(formatPresence(seen(Date.parse(at)), OPTS)).toBe(expected);
         });
 
         it("says online, and nothing without a last-active time", () => {
-            expect(formatPresence(true, Date.parse("2026-09-18T10:00:00Z"), OPTS)).toBe("online");
-            expect(formatPresence(false, undefined, OPTS)).toBeUndefined();
+            expect(formatPresence(seen(Date.parse("2026-09-18T10:00:00Z"), true), OPTS)).toBe("online");
+            expect(formatPresence({ online: false }, OPTS)).toBeUndefined();
         });
 
         it("uses the 12-hour clock when asked", () => {
-            expect(formatPresence(false, Date.parse("2026-09-18T08:05:00Z"), { ...OPTS, showTwelveHour: true })).toBe(
+            expect(formatPresence(seen(Date.parse("2026-09-18T08:05:00Z")), { ...OPTS, showTwelveHour: true })).toBe(
                 "last seen today at 10:05 am",
             );
         });
