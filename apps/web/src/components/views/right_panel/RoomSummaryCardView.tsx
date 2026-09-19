@@ -50,6 +50,8 @@ import { topicToHtml } from "../../../HtmlUtils.tsx";
 import { useRoomSummaryCardViewModel } from "../../viewmodels/right_panel/RoomSummaryCardViewModel";
 import { useRoomTopicViewModel } from "../../viewmodels/right_panel/RoomSummaryCardTopicViewModel";
 import { useRoomName } from "../../../hooks/useRoomName.ts";
+import { useSettingValue } from "../../../hooks/useSettings.ts";
+import { TgProfile } from "../beeper/tg/TgProfile.tsx";
 
 interface IProps {
     room: Room;
@@ -131,6 +133,8 @@ const RoomSummaryCardView: React.FC<IProps> = ({
     searchTerm = "",
 }) => {
     const vm = useRoomSummaryCardViewModel(room, permalinkCreator, onSearchCancel);
+    const topicVm = useRoomTopicViewModel(room);
+    const telegramLayout = useSettingValue("telegramStyleLayout");
     // XXX: this name should be part of the view model
     const name = useRoomName(room);
 
@@ -224,6 +228,109 @@ const RoomSummaryCardView: React.FC<IProps> = ({
         </Form.Root>
     );
 
+    const actions = (
+        <div role="menubar" aria-orientation="vertical">
+            <ToggleMenuItem
+                Icon={FavouriteIcon}
+                label={_t("room|context_menu|favourite")}
+                checked={vm.isFavorite}
+                onSelect={vm.onFavoriteToggleClick}
+            />
+            <MenuItem
+                Icon={UserAddIcon}
+                label={_t("action|invite")}
+                disabled={!vm.canInviteToState}
+                onSelect={vm.onInviteToRoomClick}
+            />
+
+            <Separator />
+
+            <MenuItem Icon={UserProfileIcon} label={_t("common|people")} onSelect={vm.onRoomMembersClick} />
+            <MenuItem Icon={ThreadsIcon} label={_t("common|threads")} onSelect={vm.onRoomThreadsClick} />
+            {!vm.isVideoRoom && (
+                <>
+                    <MenuItem
+                        Icon={PinIcon}
+                        label={_t("right_panel|pinned_messages_button")}
+                        onSelect={vm.onRoomPinsClick}
+                    >
+                        <Text as="span" size="sm">
+                            {vm.pinCount}
+                        </Text>
+                    </MenuItem>
+                    <MenuItem Icon={FilesIcon} label={_t("right_panel|files_button")} onSelect={vm.onRoomFilesClick} />
+                    <MenuItem
+                        Icon={ExtensionsIcon}
+                        label={_t("right_panel|extensions_button")}
+                        onSelect={vm.onRoomExtensionsClick}
+                    />
+                </>
+            )}
+
+            <Separator />
+
+            <MenuItem Icon={LinkIcon} label={_t("action|copy_link")} onSelect={vm.onShareRoomClick} />
+
+            {!vm.isVideoRoom && (
+                <>
+                    <MenuItem
+                        Icon={PollsIcon}
+                        label={_t("right_panel|polls_button")}
+                        onSelect={vm.onRoomPollHistoryClick}
+                    />
+                    <MenuItem
+                        Icon={ExportArchiveIcon}
+                        label={_t("export_chat|title")}
+                        onSelect={vm.onRoomExportClick}
+                    />
+                </>
+            )}
+
+            <MenuItem Icon={SettingsIcon} label={_t("common|settings")} onSelect={vm.onRoomSettingsClick} />
+
+            <Separator />
+            <div className="mx_RoomSummaryCard_bottomOptions">
+                <MenuItem
+                    Icon={ErrorIcon}
+                    kind="critical"
+                    label={_t("action|report_room")}
+                    onSelect={vm.onReportRoomClick}
+                />
+                <MenuItem
+                    className="mx_RoomSummaryCard_leave"
+                    Icon={LeaveIcon}
+                    kind="critical"
+                    label={_t("action|leave_room")}
+                    onSelect={vm.onLeaveRoomClick}
+                />
+            </div>
+        </div>
+    );
+
+    if (telegramLayout) {
+        // Fork: laid out like Telegram Web K's profile tab.
+        return (
+            <BaseCard
+                id="room-summary-panel"
+                className="mx_RoomSummaryCard mx_RoomSummaryCard--telegram"
+                ariaLabelledBy="room-summary-panel-tab"
+                role="tabpanel"
+                header={header}
+            >
+                <TgProfile
+                    room={room}
+                    isDirectMessage={vm.isDirectMessage}
+                    alias={vm.alias}
+                    topic={topicVm.topic?.text}
+                    link={permalinkCreator.forShareableRoom()}
+                    onRoomMembersClick={vm.onRoomMembersClick}
+                    onRoomFilesClick={vm.onRoomFilesClick}
+                    actions={actions}
+                />
+            </BaseCard>
+        );
+    }
+
     return (
         <BaseCard
             id="room-summary-panel"
@@ -236,86 +343,7 @@ const RoomSummaryCardView: React.FC<IProps> = ({
 
             <Separator />
 
-            <div role="menubar" aria-orientation="vertical">
-                <ToggleMenuItem
-                    Icon={FavouriteIcon}
-                    label={_t("room|context_menu|favourite")}
-                    checked={vm.isFavorite}
-                    onSelect={vm.onFavoriteToggleClick}
-                />
-                <MenuItem
-                    Icon={UserAddIcon}
-                    label={_t("action|invite")}
-                    disabled={!vm.canInviteToState}
-                    onSelect={vm.onInviteToRoomClick}
-                />
-
-                <Separator />
-
-                <MenuItem Icon={UserProfileIcon} label={_t("common|people")} onSelect={vm.onRoomMembersClick} />
-                <MenuItem Icon={ThreadsIcon} label={_t("common|threads")} onSelect={vm.onRoomThreadsClick} />
-                {!vm.isVideoRoom && (
-                    <>
-                        <MenuItem
-                            Icon={PinIcon}
-                            label={_t("right_panel|pinned_messages_button")}
-                            onSelect={vm.onRoomPinsClick}
-                        >
-                            <Text as="span" size="sm">
-                                {vm.pinCount}
-                            </Text>
-                        </MenuItem>
-                        <MenuItem
-                            Icon={FilesIcon}
-                            label={_t("right_panel|files_button")}
-                            onSelect={vm.onRoomFilesClick}
-                        />
-                        <MenuItem
-                            Icon={ExtensionsIcon}
-                            label={_t("right_panel|extensions_button")}
-                            onSelect={vm.onRoomExtensionsClick}
-                        />
-                    </>
-                )}
-
-                <Separator />
-
-                <MenuItem Icon={LinkIcon} label={_t("action|copy_link")} onSelect={vm.onShareRoomClick} />
-
-                {!vm.isVideoRoom && (
-                    <>
-                        <MenuItem
-                            Icon={PollsIcon}
-                            label={_t("right_panel|polls_button")}
-                            onSelect={vm.onRoomPollHistoryClick}
-                        />
-                        <MenuItem
-                            Icon={ExportArchiveIcon}
-                            label={_t("export_chat|title")}
-                            onSelect={vm.onRoomExportClick}
-                        />
-                    </>
-                )}
-
-                <MenuItem Icon={SettingsIcon} label={_t("common|settings")} onSelect={vm.onRoomSettingsClick} />
-
-                <Separator />
-                <div className="mx_RoomSummaryCard_bottomOptions">
-                    <MenuItem
-                        Icon={ErrorIcon}
-                        kind="critical"
-                        label={_t("action|report_room")}
-                        onSelect={vm.onReportRoomClick}
-                    />
-                    <MenuItem
-                        className="mx_RoomSummaryCard_leave"
-                        Icon={LeaveIcon}
-                        kind="critical"
-                        label={_t("action|leave_room")}
-                        onSelect={vm.onLeaveRoomClick}
-                    />
-                </div>
-            </div>
+            {actions}
         </BaseCard>
     );
 };

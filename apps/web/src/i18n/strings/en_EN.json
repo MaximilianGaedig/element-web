@@ -3351,7 +3351,29 @@
         "tos": "Terms of Service"
     },
     "tg_layout": {
-        "resize_chat_list": "Resize chat list"
+        "address": "Address",
+        "bio": "Bio",
+        "info": "Info",
+        "link": "Link",
+        "media_placeholder": "Shared photos and videos will appear here.",
+        "n_online": {
+            "one": "%(count)s online",
+            "other": "%(count)s online"
+        },
+        "notifications": "Notifications",
+        "notifications_off": "Off",
+        "notifications_on": "On",
+        "online": "online",
+        "open_files": "Open files",
+        "resize_chat_list": "Resize chat list",
+        "show_all_members": {
+            "one": "Show %(count)s member",
+            "other": "Show all %(count)s members"
+        },
+        "tab_actions": "Actions",
+        "tab_media": "Media",
+        "tab_members": "Members",
+        "username": "Username"
     },
     "theme": {
         "light_high_contrast": "Light high contrast",

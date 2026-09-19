@@ -1,0 +1,70 @@
+/*
+Copyright 2026 New Vector Ltd.
+
+SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only OR LicenseRef-Element-Commercial
+Please see LICENSE files in the repository root for full details.
+*/
+
+/*
+ * The side panel slides like Telegram Web K's right column (src/scss/partials/_rightSidebar.scss,
+ * GPL-3.0): in over --transition-standard-in, out over --transition-standard-out. MainSplit sets
+ * data-tg-pane while it animates. On desktop the panel also grows from zero width so the chat makes
+ * room in step (tweb shifts the chat with the same transition); as a full-screen handheld sheet it
+ * only slides (translate3d(100vw) → 0).
+ */
+.mx_RightPanel_ResizeWrapper {
+    --MainSplit-panel-width: 320px;
+
+    &[data-tg-pane="in"] {
+        animation: mx_TgPane_in var(--tg-transition-standard-in);
+    }
+
+    &[data-tg-pane="out"] {
+        animation: mx_TgPane_out var(--tg-transition-standard-out) forwards;
+        pointer-events: none;
+    }
+}
+
+html[data-tg-screen="mobile"] .mx_RightPanel_ResizeWrapper {
+    &[data-tg-pane="in"] {
+        animation-name: mx_TgSheet_in;
+    }
+
+    &[data-tg-pane="out"] {
+        animation-name: mx_TgSheet_out;
+    }
+}
+
+@keyframes mx_TgPane_in {
+    from {
+        margin-inline-start: calc(-1 * var(--MainSplit-panel-width));
+        transform: translate3d(100%, 0, 0);
+    }
+
+    to {
+        margin-inline-start: 0;
+        transform: translateZ(0);
+    }
+}
+
+@keyframes mx_TgPane_out {
+    from {
+        margin-inline-start: 0;
+        transform: translateZ(0);
+    }
+
+    to {
+        margin-inline-start: calc(-1 * var(--MainSplit-panel-width));
+        transform: translate3d(100%, 0, 0);
+    }
+}
+
+@keyframes mx_TgSheet_out {
+    from {
+        transform: translateZ(0);
+    }
+
+    to {
+        transform: translate3d(100%, 0, 0);
+    }
+}
