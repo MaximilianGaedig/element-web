@@ -56,7 +56,7 @@ function isAnimatedMime(mimetype: unknown): boolean {
 }
 
 /** One sticker; video (webm) stickers play while visible, animated images animate. */
-function StickerThumb({ image, onSend }: { image: PackImage; onSend: (image: PackImage) => void }): JSX.Element {
+export function StickerThumb({ image, onSend }: { image: PackImage; onSend: (image: PackImage) => void }): JSX.Element {
     const client = useMatrixClientContext();
     const ref = useRef<HTMLButtonElement>(null);
     const inView = useInView(ref);
@@ -106,7 +106,7 @@ function StickerThumb({ image, onSend }: { image: PackImage; onSend: (image: Pac
     );
 }
 
-function PackTab({
+export function PackTab({
     pack,
     selected,
     onSelect,
@@ -146,7 +146,7 @@ function PackTab({
     );
 }
 
-function matches(image: PackImage, query: string): boolean {
+export function matchesSticker(image: PackImage, query: string): boolean {
     return image.shortcode.toLowerCase().includes(query) || image.body.toLowerCase().includes(query);
 }
 
@@ -171,7 +171,7 @@ export function PackStickerPickerPanel({
         const out: PackImage[] = [];
         for (const pack of packs) {
             for (const image of pack.images) {
-                if (matches(image, q)) out.push(image);
+                if (matchesSticker(image, q)) out.push(image);
                 if (out.length >= MAX_SEARCH_RESULTS) return out;
             }
         }

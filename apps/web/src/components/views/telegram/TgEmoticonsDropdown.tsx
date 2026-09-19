@@ -15,7 +15,8 @@ import { ReactionIcon, StickerIcon } from "@vector-im/compound-design-tokens/ass
 import { _t } from "../../../languageHandler";
 import AccessibleButton from "../elements/AccessibleButton";
 import { EmojiPickerWithRecents } from "../../../emojipicker/EmojiPickerWithRecents";
-import { PackStickerPickerPanel, sendPackSticker, useStickerPacks } from "../bridge/PackStickerPicker";
+import { sendPackSticker, useStickerPacks } from "../bridge/PackStickerPicker";
+import { TgStickersPanel } from "./TgStickersPanel";
 import { useMatrixClientContext } from "../../../contexts/MatrixClientContext";
 import { type PackImage } from "../../../utils/bridge/imagePacks";
 import UIStore from "../../../stores/UIStore";
@@ -140,7 +141,7 @@ export function TgEmoticonsDropdown({ room, threadId, addEmoji }: Props): JSX.El
                             {tab === "emoji" ? (
                                 <EmojiPickerWithRecents onChoose={addEmoji} onFinished={close} />
                             ) : (
-                                <PackStickerPickerPanel packs={packs} onSend={onSticker} fill />
+                                <TgStickersPanel packs={packs} onSend={onSticker} />
                             )}
                         </div>
                         <div className="mx_TgEmoticonsDropdown_tabs" role="tablist">
