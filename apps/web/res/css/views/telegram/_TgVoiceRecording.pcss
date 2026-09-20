@@ -1,0 +1,180 @@
+/*
+Copyright 2026 New Vector Ltd.
+
+SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only OR LicenseRef-Element-Commercial
+Please see LICENSE files in the repository root for full details.
+*/
+
+/*
+ * Recording a voice message, laid out like Telegram Web K's recording state (GPL-3.0,
+ * https://github.com/morethanwords/tweb, src/scss/partials/_voiceRecordingPanel.scss): the cancel button
+ * at the start, then a tinted pill holding the blinking dot, the waveform and the timer, with the send
+ * button left where the composer already puts it.
+ *
+ * Element lays the same parts out for its own composer - a 32px box with fixed margins, and the dot
+ * positioned absolutely at a hard-coded offset that assumes that box - which is why the parts sat at the
+ * wrong heights inside this layout's 2.5rem pill. Nothing is re-implemented here: the same elements are
+ * given tweb's geometry.
+ *
+ * tweb's constants: the pill is `--light-primary-color` at $border-radius-big with .25rem/.375rem padding
+ * and a 10px gap; the dot is 10px of `--danger-color` blinking on tweb's `recordBlink` (1.25s, down to
+ * 20% opacity at the half way point); the timer is the secondary text size, tabular, 3rem wide, aligned
+ * to the end; the waveform fills what is left at 1.75rem tall.
+ */
+
+html[data-tg-screen] .mx_MessageComposer_tg {
+    /* tweb .voice-recording-cancel: a plain round button before the pill. */
+    .mx_VoiceRecordComposerTile_delete {
+        order: 0;
+        flex: 0 0 auto;
+        width: 2.5rem;
+        height: 2.5rem;
+        margin: 0;
+        padding: 0.5rem;
+        border-radius: 50%;
+        color: var(--cpd-color-icon-critical-primary);
+
+        svg {
+            width: 1.5rem;
+            height: 1.5rem;
+        }
+    }
+
+    /* tweb .voice-recording-pill: the dot, the waveform and the timer in one tinted row. */
+    .mx_VoiceMessagePrimaryContainer {
+        order: 1;
+        display: flex;
+        flex: 1 1 auto;
+        align-items: center;
+        gap: 10px;
+        box-sizing: border-box;
+        min-width: 0;
+        height: 2.5rem;
+        margin: 0;
+        padding: 0.375rem 0.75rem 0.375rem 0.5rem;
+        border-radius: var(--tg-border-radius-big);
+        background-color: color-mix(in srgb, var(--cpd-color-bg-accent-rest) 10%, transparent);
+
+        /*
+         * Element renders the timer before the waveform, and Telegram puts it after it: the order is set
+         * here rather than in the component, which other layouts share.
+         */
+        .mx_Waveform,
+        .mx_RecordingPlayback_timelineLayoutMiddle {
+            order: 1;
+            flex: 1 1 auto;
+            min-width: 0;
+            margin: 0;
+            height: 1.75rem;
+            /* The bars are drawn with a border trick that leaves them a pixel low. */
+            top: 0;
+        }
+
+        /* The bars carry the accent, as tweb's do, rather than the grey of a played-back message. */
+        .mx_Waveform_bar {
+            background-color: color-mix(in srgb, var(--cpd-color-icon-accent-primary) 45%, transparent);
+
+            &.mx_Waveform_bar_100pct {
+                background-color: var(--cpd-color-icon-accent-primary);
+            }
+        }
+
+        /* tweb .voice-recording-timer: tabular, so counting seconds don't shuffle the waveform. */
+        .mx_Clock {
+            order: 2;
+            flex: 0 0 auto;
+            width: auto;
+            min-width: 3rem;
+            padding: 0;
+            font-size: var(--cpd-font-size-body-sm);
+            font-variant-numeric: tabular-nums;
+            text-align: end;
+            user-select: none;
+        }
+
+        /* tweb .voice-recording-play: the preview's play button, a small accent circle before the wave. */
+        .mx_PlayPauseButton {
+            order: 0;
+            flex: 0 0 auto;
+            width: 1.5rem;
+            height: 1.5rem;
+            min-width: 0;
+            margin: 0;
+            border-radius: 50%;
+            background-color: var(--cpd-color-bg-accent-rest);
+            color: #fff;
+
+            &:hover {
+                background-color: var(--cpd-color-bg-accent-hovered);
+            }
+
+            &::before {
+                width: 1rem;
+                height: 1rem;
+                background-color: currentcolor;
+            }
+        }
+    }
+
+    /*
+     * tweb .voice-recording-dot. Element draws it as an absolutely positioned ::before at a fixed offset
+     * from the top of its own composer box; here it is the pill's first item, so it takes part in the
+     * row instead of being placed against it.
+     */
+    .mx_VoiceMessagePrimaryContainer.mx_VoiceRecordComposerTile_recording {
+        padding-left: 0.5rem;
+
+        &::before {
+            position: static;
+            order: 0;
+            flex: 0 0 auto;
+            width: 10px;
+            height: 10px;
+            margin-inline: 0.4375rem;
+            animation: mx_TgRecordBlink 1.25s infinite;
+            background-color: var(--cpd-color-icon-critical-primary);
+        }
+    }
+
+    /* tweb .voice-recording-pause-toggle: the round button that ends the recording, after the pill. */
+    .mx_VoiceRecordComposerTile_stop {
+        order: 2;
+        flex: 0 0 auto;
+        box-sizing: border-box;
+        width: 2.5rem;
+        height: 2.5rem;
+        margin: 0;
+        padding: 0.625rem;
+        border: none;
+        border-radius: 50%;
+        color: var(--cpd-color-icon-critical-primary);
+
+        svg {
+            width: 1.25rem;
+            height: 1.25rem;
+        }
+    }
+
+    /* Uploading or failed: keep the row's rhythm rather than Element's own margins. */
+    .mx_VoiceRecordComposerTile_uploadingState,
+    .mx_VoiceRecordComposerTile_failedState {
+        order: 1;
+        display: flex;
+        flex: 1 1 auto;
+        align-items: center;
+        gap: 0.5rem;
+        margin: 0 0.5rem;
+    }
+}
+
+/* tweb's recordBlink: a lamp, not a fade - full brightness at both ends, 20% in the middle. */
+@keyframes mx_TgRecordBlink {
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.2;
+    }
+}
