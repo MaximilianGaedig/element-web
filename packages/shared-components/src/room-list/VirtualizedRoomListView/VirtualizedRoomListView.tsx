@@ -113,7 +113,9 @@ type Context = {
  * list quickly will still show blank space. We would likely need to simplify the item content to
  * improve this case.
  */
-const EXTENDED_VIEWPORT_HEIGHT = 25 * ROOM_LIST_ITEM_HEIGHT;
+// Rows kept rendered above and below the visible area. Each row carries its own menu buttons, so a
+// deep buffer multiplies the work of every scroll; ten rows is still well ahead of a fast flick.
+const EXTENDED_VIEWPORT_HEIGHT = 10 * ROOM_LIST_ITEM_HEIGHT;
 
 /**
  * Work out which entry to put at the top of a grouped list to show the room at `roomIndex`.
@@ -374,8 +376,11 @@ export function VirtualizedRoomListView({
             const isLastItem = Boolean((isFlatList || isInLastSection) && index === roomCount - 1);
 
             return (
+                // Deliberately unkeyed: the virtualized list reuses a fixed set of slots, so letting
+                // React match by position updates the row that is already there. Keying by room id
+                // rebuilds the whole row (and its styles) for every room that scrolls in, which is
+                // most of the cost of scrolling a long list.
                 <RoomListItemWrapper
-                    key={roomId}
                     vm={roomItemVM}
                     renderAvatar={renderAvatar}
                     renderRoomPath={renderRoomPath}

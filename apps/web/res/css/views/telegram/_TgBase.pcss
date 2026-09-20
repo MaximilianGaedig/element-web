@@ -60,11 +60,22 @@ html[data-tg-keyboard] {
  * no blur edges.
  */
 
-html[data-low-power] {
+/*
+ * The variables above are set on the theme element inside <html>, so overriding them on <html> alone
+ * would be shadowed by it: match both.
+ */
+html[data-low-power],
+html[data-no-glass],
+html[data-scrolling],
+html[data-low-power] [class*="cpd-theme-"],
+html[data-no-glass] [class*="cpd-theme-"],
+html[data-scrolling] [class*="cpd-theme-"] {
     --tg-glass-background: var(--tg-surface-color);
     --tg-glass-backdrop: none;
+}
 
-    .mx_TgBlurEdge {
-        display: none;
-    }
+html[data-low-power] .mx_TgBlurEdge,
+html[data-no-glass] .mx_TgBlurEdge,
+html[data-scrolling] .mx_TgBlurEdge {
+    display: none;
 }

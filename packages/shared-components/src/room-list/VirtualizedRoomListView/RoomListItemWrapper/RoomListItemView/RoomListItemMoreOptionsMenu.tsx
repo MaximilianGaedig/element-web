@@ -55,7 +55,9 @@ export function RoomListItemMoreOptionsMenu({ vm }: RoomListItemMoreOptionsMenuP
             align="start"
             trigger={
                 <IconButton
-                    tooltip={_t("room_list|room|more_options")}
+                    // A plain browser tooltip: the styled one is a positioned element that keeps
+                    // recalculating while the list scrolls, once per button on every rendered row.
+                    title={_t("room_list|room|more_options")}
                     aria-label={_t("room_list|room|more_options")}
                     size="24px"
                     style={{ padding: "2px" }}

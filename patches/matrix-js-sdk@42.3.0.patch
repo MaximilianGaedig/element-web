@@ -451,7 +451,7 @@ index ac58e614055cf0d301d6af0773cba280d4cb69ce..e8e905a7d32088eb86a9ba2a118658ee
      public isNewlyCreated = this.degradable((): Promise<boolean> => {
          return this.backend.isNewlyCreated();
 diff --git a/src/sync-accumulator.ts b/src/sync-accumulator.ts
-index fa12145b0c8a94e4defd95c0147cd0c626853215..eaa385ced313ac5da174a6ee531ed088d50485ef 100644
+index fa12145b0c8a94e4defd95c0147cd0c626853215..7f3676f260732959c44c1476c286eb005469c056 100644
 --- a/src/sync-accumulator.ts
 +++ b/src/sync-accumulator.ts
 @@ -217,12 +217,14 @@ export enum Category {
@@ -541,7 +541,25 @@ index fa12145b0c8a94e4defd95c0147cd0c626853215..eaa385ced313ac5da174a6ee531ed088
              });
  
              // Add state data: roll back current state to the start of timeline,
-@@ -760,6 +752,14 @@ export class SyncAccumulator {
+@@ -747,12 +739,17 @@ export class SyncAccumulator {
+                 }
+                 setState(rollBackState, prevStateEvent);
+             }
++            // A replay is built from `state_after` alone, so the rolled-back copy of the same state is
++            // only worth producing for storage, where it is kept for downgrade compatibility. Sending
++            // it to the client as well doubles the state it has to clone and turn into events.
++            const withRolledBackState = forDatabase || !trim;
+             Object.keys(roomData._currentState).forEach((evType) => {
+                 Object.keys(roomData._currentState[evType]).forEach((stateKey) => {
+                     let ev = roomData._currentState[evType][stateKey];
+                     // Push to both fields to provide downgrade compatibility in the sync accumulator db
+                     // the code will prefer `state_after` if it is present
+                     roomJson["org.matrix.msc4222.state_after"].events.push(ev);
++                    if (!withRolledBackState) return;
+                     // Roll the state back to the value at the start of the timeline if it was changed
+                     if (rollBackState[evType] && rollBackState[evType][stateKey]) {
+                         ev = rollBackState[evType][stateKey];
+@@ -760,6 +757,14 @@ export class SyncAccumulator {
                      roomJson.state.events.push(ev);
                  });
              });
@@ -556,7 +574,7 @@ index fa12145b0c8a94e4defd95c0147cd0c626853215..eaa385ced313ac5da174a6ee531ed088
              data.join[roomId] = roomJson;
          });
  
-@@ -776,6 +776,59 @@ export class SyncAccumulator {
+@@ -776,6 +781,59 @@ export class SyncAccumulator {
          };
      }
  
@@ -616,7 +634,7 @@ index fa12145b0c8a94e4defd95c0147cd0c626853215..eaa385ced313ac5da174a6ee531ed088
      public getNextBatchToken(): string {
          return this.nextBatch!;
      }
-@@ -790,6 +843,66 @@ export class SyncAccumulator {
+@@ -790,6 +848,66 @@ export class SyncAccumulator {
      }
  }
  
@@ -684,7 +702,7 @@ index fa12145b0c8a94e4defd95c0147cd0c626853215..eaa385ced313ac5da174a6ee531ed088
      if ((event as IStateEvent).state_key === null || (event as IStateEvent).state_key === undefined || !event.type) {
          return;
 diff --git a/src/sync.ts b/src/sync.ts
-index 3035f4bf1613ff85f3c59c8bca6e92ecba26b5e2..a4c81acf11cf920aa6e62e04893c7b99f3b2b711 100644
+index 3035f4bf1613ff85f3c59c8bca6e92ecba26b5e2..8a1e20b9add19d594a25a2d46de749a7e78ac69f 100644
 --- a/src/sync.ts
 +++ b/src/sync.ts
 @@ -52,6 +52,7 @@ import {
@@ -716,3 +734,44 @@ index 3035f4bf1613ff85f3c59c8bca6e92ecba26b5e2..a4c81acf11cf920aa6e62e04893c7b99
          const data: ISyncResponse = {
              next_batch: nextSyncToken,
              rooms: savedSync.roomsData,
+@@ -1263,7 +1269,12 @@ export class SyncApi {
+         await Promise.all(
+             joinRooms.map(async (joinObj) => {
+                 const room = joinObj.room;
+-                const stateEvents = this.mapSyncEventsFormat(joinObj.state, room);
++                // `state` and `state_after` (MSC4222) carry the same state twice, before and after the
++                // timeline block. When the server sends `state_after` that is what the room is built
++                // from, so turning the other copy into events as well is pure waste: on a large account
++                // that is thousands of objects per sync and per replay of the stored sync.
++                const hasStateAfter = "org.matrix.msc4222.state_after" in joinObj;
++                const stateEvents = hasStateAfter ? [] : this.mapSyncEventsFormat(joinObj.state, room);
+                 const stateAfterEvents = this.mapSyncEventsFormat(joinObj["org.matrix.msc4222.state_after"], room);
+                 // Prevent events from being decrypted ahead of time
+                 // this helps large account to speed up faster
+@@ -1278,7 +1289,7 @@ export class SyncApi {
+                 // regular timeline events do *not* count towards state. If it's not present, then the state is formed by
+                 // the state events plus the timeline events. Note mapSyncEventsFormat returns an empty array if the field
+                 // is absent so we explicitly check the field on the original object.
+-                const eventsFormingFinalState = joinObj["org.matrix.msc4222.state_after"]
++                const eventsFormingFinalState = hasStateAfter
+                     ? stateAfterEvents
+                     : stateEvents.concat(timelineEvents);
+ 
+@@ -1428,7 +1439,7 @@ export class SyncApi {
+                 }
+ 
+                 try {
+-                    if ("org.matrix.msc4222.state_after" in joinObj) {
++                    if (hasStateAfter) {
+                         await this.injectRoomEvents(
+                             room,
+                             undefined,
+@@ -1485,7 +1496,7 @@ export class SyncApi {
+                 const emitEvent = (e: MatrixEvent): boolean => client.emit(ClientEvent.Event, e);
+                 // this fires a couple of times for some events. (eg state events are in the timeline and the state)
+                 // should this get a sync section as an additional event emission param (e, syncSection))?
+-                stateEvents.forEach(emitEvent);
++                (hasStateAfter ? stateAfterEvents : stateEvents).forEach(emitEvent);
+                 timelineEvents.forEach(emitEvent);
+                 ephemeralEvents.forEach(emitEvent);
+                 accountDataEvents.forEach(emitEvent);

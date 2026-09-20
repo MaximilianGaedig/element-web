@@ -117,6 +117,8 @@ patchedDependencies:
     # Start from cache without waiting on the network: cached /versions, no parent fetches while replaying
     # the cached sync, and a replay of only each room's latest events (older ones are read back from the store)
     matrix-js-sdk@42.3.0: patches/matrix-js-sdk@42.3.0.patch
+    # Tooltips kept recalculating their position while closed: one layout per tooltip per scrolled frame
+    "@vector-im/compound-web@10.0.1": patches/@vector-im__compound-web@10.0.1.patch
     # Workaround for some babel rules being false positively flagged
     knip: patches/knip.patch
     # Workaround for being stuck on an old version of plist due to electron-builder not supporting ESM yet

@@ -52,7 +52,8 @@ export function RoomListItemNotificationMenu({ vm }: RoomListItemNotificationMen
                 <IconButton
                     size="24px"
                     style={{ padding: "2px" }}
-                    tooltip={_t("room_list|notification_options")}
+                    // See RoomListItemMoreOptionsMenu: a plain browser tooltip costs nothing to scroll.
+                    title={_t("room_list|notification_options")}
                     aria-label={_t("room_list|notification_options")}
                 >
                     {isMuted ? <NotificationsOffSolidIcon /> : <NotificationsSolidIcon />}

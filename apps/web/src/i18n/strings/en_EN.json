@@ -3134,7 +3134,9 @@
             "voice_section": "Voice settings"
         },
         "warn_quit": "Warn before quitting",
-        "warning": "<w>WARNING:</w> <description/>"
+        "warning": "<w>WARNING:</w> <description/>",
+        "glass_effects": "Frosted glass panels",
+        "glass_effects_description": "Blurs what is behind the header, the composer and menus. It costs a lot of graphics work while scrolling, so it is off by default and the panels are drawn plain instead."
     },
     "share": {
         "link_copied": "Link copied",

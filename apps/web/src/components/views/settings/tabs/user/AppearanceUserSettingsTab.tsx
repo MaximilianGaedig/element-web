@@ -112,6 +112,7 @@ export default class AppearanceUserSettingsTab extends React.Component<EmptyObje
                     <SettingsSubsection>
                         <Form.Root onSubmit={(evt) => evt.preventDefault()}>
                             <SettingsFlag name="telegramStyleLayout" level={SettingLevel.ACCOUNT} />
+                            <SettingsFlag name="glassEffects" level={SettingLevel.ACCOUNT} />
                             <SettingsDropdown
                                 settingKey="readReceiptsStyle"
                                 label={_t("settings|read_receipts_style")}

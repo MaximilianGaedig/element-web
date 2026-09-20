@@ -33,6 +33,7 @@ import React, {
 } from "react";
 
 import { _t } from "../../../languageHandler";
+import { useSettingValue } from "../../../hooks/useSettings";
 import type ResizeNotifier from "../../../utils/ResizeNotifier";
 import {
     createLeftPreferencePersister,
@@ -99,6 +100,15 @@ function closeInfo(): void {
 
 /** The attribute on <html> that lets overlays (dialogs, menus) follow the tier. */
 export const SCREEN_ATTRIBUTE = "data-tg-screen";
+
+/** The attribute on <html> that turns the frosted-glass panels into plain ones. */
+export const NO_GLASS_ATTRIBUTE = "data-no-glass";
+
+/** The attribute on <html> while something is being scrolled; the glass drops its blur meanwhile. */
+export const SCROLLING_ATTRIBUTE = "data-scrolling";
+
+/** How long after the last scroll event the blur comes back. */
+const SCROLL_SETTLE_MS = 160;
 
 export function TgColumns({
     spacePanel,
@@ -258,6 +268,37 @@ export function TgColumns({
         root.setAttribute(SCREEN_ATTRIBUTE, screen);
         return () => root.removeAttribute(SCREEN_ATTRIBUTE);
     }, [screen]);
+
+    // The frosted panels are drawn by the GPU on every frame behind them, which is most of the
+    // graphics work while scrolling; turning them off leaves plain panels (see _TgBase.pcss).
+    const glass = useSettingValue("glassEffects");
+    useEffect(() => {
+        const root = document.documentElement;
+        if (glass) root.removeAttribute(NO_GLASS_ATTRIBUTE);
+        else root.setAttribute(NO_GLASS_ATTRIBUTE, "true");
+        return () => root.removeAttribute(NO_GLASS_ATTRIBUTE);
+    }, [glass]);
+
+    // A blurred panel forces everything moving beneath it to be drawn again each frame, which is
+    // most of the cost of a scroll. So the blur pauses while anything scrolls and returns once it
+    // settles: the panels look the same at rest, which is when anyone looks at them.
+    useEffect(() => {
+        if (!glass) return;
+        const root = document.documentElement;
+        let settle: ReturnType<typeof setTimeout> | undefined;
+        const onScroll = (): void => {
+            root.setAttribute(SCROLLING_ATTRIBUTE, "true");
+            clearTimeout(settle);
+            settle = setTimeout(() => root.removeAttribute(SCROLLING_ATTRIBUTE), SCROLL_SETTLE_MS);
+        };
+        // Capture: scrolls happen inside panels, and they don't bubble.
+        window.addEventListener("scroll", onScroll, { capture: true, passive: true });
+        return () => {
+            window.removeEventListener("scroll", onScroll, { capture: true });
+            clearTimeout(settle);
+            root.removeAttribute(SCROLLING_ATTRIBUTE);
+        };
+    }, [glass]);
 
     const navigation = useMemo<TgNavigation>(() => ({ handheld, goBack }), [handheld, goBack]);
 

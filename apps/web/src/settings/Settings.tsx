@@ -267,6 +267,7 @@ export interface Settings {
     "autoplayGifs": IBaseSetting<boolean>;
     "autoplayVideo": IBaseSetting<boolean>;
     "groupConsecutiveImages": IBaseSetting<boolean>;
+    "glassEffects": IBaseSetting<boolean>;
     "telegramStyleLayout": IBaseSetting<boolean>;
     "readReceiptsStyle": IBaseSetting<"avatars" | "ticks">;
     "enableSyntaxHighlightLanguageDetection": IBaseSetting<boolean>;
@@ -892,6 +893,14 @@ export const SETTINGS: Settings = {
         // On by default, but only for untagged media sent within NATIVE_GROUP_WINDOW_MS (3 s): that
         // groups albums sent from Element and albums bridged before bridges tagged them.
         default: true,
+    },
+    "glassEffects": {
+        supportedLevels: LEVELS_ACCOUNT_SETTINGS,
+        displayName: _td("settings|glass_effects"),
+        description: _td("settings|glass_effects_description"),
+        // Off by default: a backdrop filter makes everything moving beneath it repaint every frame,
+        // which measured about twenty points of a core while scrolling, whatever the blur radius.
+        default: false,
     },
     "telegramStyleLayout": {
         supportedLevels: LEVELS_ACCOUNT_SETTINGS,

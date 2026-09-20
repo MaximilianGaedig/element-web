@@ -1,0 +1,28 @@
+diff --git a/dist/components/Tooltip/useTooltip.cjs b/dist/components/Tooltip/useTooltip.cjs
+index 552636a3ff616c5b3f90a887ca29dd19ccaa4222..d86cd74e45689f3cd4a4e9a70883f4de5ba4beea 100644
+--- a/dist/components/Tooltip/useTooltip.cjs
++++ b/dist/components/Tooltip/useTooltip.cjs
+@@ -17,7 +17,7 @@ function useTooltip({ open: controlledOpen, disabled = false, onOpenChange, plac
+ 		placement,
+ 		open,
+ 		onOpenChange: setOpen,
+-		whileElementsMounted: _floating_ui_react.autoUpdate,
++		whileElementsMounted: open ? _floating_ui_react.autoUpdate : void 0,
+ 		middleware: [
+ 			(0, _floating_ui_react.offset)(6),
+ 			(0, _floating_ui_react.flip)({
+diff --git a/dist/components/Tooltip/useTooltip.js b/dist/components/Tooltip/useTooltip.js
+index 05d405799e3e04f1d26351ac6b7458c23c03950b..33321806e1de7192b52c09efcacf30d96393ee27 100644
+--- a/dist/components/Tooltip/useTooltip.js
++++ b/dist/components/Tooltip/useTooltip.js
+@@ -16,7 +16,9 @@ function useTooltip({ open: controlledOpen, disabled = false, onOpenChange, plac
+ 		placement,
+ 		open,
+ 		onOpenChange: setOpen,
+-		whileElementsMounted: autoUpdate,
++		// Only track the anchor while the tooltip is shown: a mounted-but-closed tooltip that keeps
++		// recalculating its position costs a layout on every scrolled frame, once per tooltip on screen.
++		whileElementsMounted: open ? autoUpdate : void 0,
+ 		middleware: [
+ 			offset(6),
+ 			flip({
