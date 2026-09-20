@@ -50,8 +50,8 @@ import { haveRendererForEvent } from "../../events/EventTileFactory";
 import { editorRoomKey } from "../../Editing";
 import { hasThreadSummary } from "../../utils/EventUtils";
 import { isOneToOneRoom, isTelegramLayout } from "../../utils/telegram/telegramLayout";
-import { getEventIdsReadByOthers, type ReadReceiptsStyle } from "../../utils/telegram/telegramTime";
 import { getBridgeBots } from "../../utils/bridge/bridgeInfo";
+import { getEventIdsReadByOthers, type ReadReceiptsStyle } from "../../utils/telegram/telegramTime";
 import { type BaseGrouper } from "./grouper/BaseGrouper";
 import { MessageSelectionStore } from "../../stores/MessageSelectionStore";
 import { MainGrouper } from "./grouper/MainGrouper";
@@ -981,9 +981,17 @@ export default class MessagePanel extends React.Component<IProps, IState> {
             return receipts;
         }
 
+        // A bridge's bot is in every room it bridges to keep the room's state up to date, and the server
+        // marks a sender as having read what it just sent. Its marker would otherwise sit at the bottom
+        // of every bridged chat, looking like someone reading along.
+        const bots = getBridgeBots(room);
+
         receiptDestination.getReceiptsForEvent(event).forEach((r) => {
             if (!r.userId || !isSupportedReceiptType(r.type) || r.userId === myUserId) {
                 return; // ignore non-read receipts and receipts from self.
+            }
+            if (bots.has(r.userId)) {
+                return; // a bridge's bot is not someone reading the chat
             }
             if (MatrixClientPeg.safeGet().isUserIgnored(r.userId)) {
                 return; // ignore ignored users
