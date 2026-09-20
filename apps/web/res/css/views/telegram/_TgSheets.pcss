@@ -235,9 +235,9 @@ html[data-tg-screen="mobile"] {
         }
     }
 
-    /* Only the user settings replace their header with the navigation bar; the room and space settings
-       keep theirs, or they would open with no heading and no accessible name at all. */
-    .mx_UserSettingsDialog {
+    /* The navigation bar replaces the dialog's own header wherever one is rendered. */
+    .mx_UserSettingsDialog,
+    .mx_RoomSettingsDialog {
         .mx_Dialog_header,
         > h2,
         .mx_UserSettingsDialog_title {
@@ -296,9 +296,76 @@ html[data-tg-screen="mobile"] {
         justify-self: end;
     }
 
-    /* The sections are listed in the user menu's drawer, not here: this is one section's page. */
-    .mx_UserSettingsDialog .mx_TabbedView_tabsOnLeft .mx_TabbedView_tabLabels {
+    /* The user settings' sections are listed in the user menu's drawer, so the dialog is only ever a
+       page. The room settings carry their own list, and show one screen at a time. */
+    .mx_UserSettingsDialog .mx_TabbedView_tabsOnLeft .mx_TabbedView_tabLabels,
+    .mx_SettingsDialog_content[data-page="page"] .mx_TabbedView_tabsOnLeft .mx_TabbedView_tabLabels {
         display: none;
+    }
+
+    .mx_SettingsDialog_content[data-page="list"] .mx_TabbedView_tabPanel {
+        display: none;
+    }
+
+    /* The list: plain rows, like the user menu's. */
+    .mx_RoomSettingsDialog .mx_TabbedView_tabsOnLeft .mx_TabbedView_tabLabels {
+        display: flex;
+        flex-direction: column;
+        gap: 0;
+        width: auto;
+        max-width: none;
+        margin: 0;
+        padding: 0 0 1rem;
+        list-style: none;
+    }
+
+    .mx_RoomSettingsDialog .mx_TabbedView_tabLabel {
+        position: relative;
+        display: flex;
+        gap: 1rem;
+        align-items: center;
+        justify-content: flex-start;
+        min-height: 3.25rem;
+        padding: 0.5rem 2.5rem 0.5rem 1.25rem;
+        border-radius: 0;
+        font: var(--cpd-font-body-lg-regular);
+        color: var(--cpd-color-text-primary);
+        white-space: normal;
+
+        > svg {
+            flex: 0 0 auto;
+            width: 1.5rem;
+            height: 1.5rem;
+            color: var(--cpd-color-icon-secondary);
+            fill: currentcolor;
+        }
+
+        &::after {
+            content: "›";
+            position: absolute;
+            inset-inline-end: 1.25rem;
+            color: var(--cpd-color-icon-secondary);
+            font-size: 1.5rem;
+        }
+
+        & + .mx_TabbedView_tabLabel::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            inset-inline: 3.75rem 0;
+            border-top: 1px solid var(--cpd-color-border-disabled);
+        }
+    }
+
+    /* The responsive strip hides the words on narrow screens; this list has room and needs them. */
+    .mx_RoomSettingsDialog .mx_TabbedView_tabsOnLeft.mx_TabbedView_responsive {
+        .mx_TabbedView_tabLabel_text {
+            display: inline;
+        }
+
+        .mx_TabbedView_tabPanel {
+            margin-left: 0;
+        }
     }
 
     .mx_SettingsDialog_content .mx_TabbedView {

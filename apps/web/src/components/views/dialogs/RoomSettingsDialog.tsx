@@ -35,6 +35,7 @@ import dis from "../../../dispatcher/dispatcher";
 import SettingsStore from "../../../settings/SettingsStore";
 import { UIFeature } from "../../../settings/UIFeature";
 import BaseDialog from "./BaseDialog";
+import { SettingsNavBar } from "./SettingsNav";
 import { Action } from "../../../dispatcher/actions";
 import { VoipRoomSettingsTab } from "../settings/tabs/room/VoipRoomSettingsTab";
 import { type ActionPayload } from "../../../dispatcher/payloads";
@@ -57,6 +58,11 @@ interface IProps {
 interface IState {
     room: Room;
     activeTabId: RoomSettingsTab;
+    /**
+     * Which screen a handheld shows: the list of sections, or the chosen one. A desktop shows both at
+     * once and ignores this (see _TgSheets.pcss).
+     */
+    page: "list" | "page";
 }
 
 class RoomSettingsDialog extends React.Component<IProps, IState> {
@@ -66,7 +72,11 @@ class RoomSettingsDialog extends React.Component<IProps, IState> {
         super(props);
 
         const room = this.getRoom();
-        this.state = { room, activeTabId: props.initialTabId || RoomSettingsTab.General };
+        this.state = {
+            room,
+            activeTabId: props.initialTabId || RoomSettingsTab.General,
+            page: props.initialTabId ? "page" : "list",
+        };
     }
 
     public componentDidMount(): void {
@@ -75,7 +85,7 @@ class RoomSettingsDialog extends React.Component<IProps, IState> {
         MatrixClientPeg.safeGet().on(RoomStateEvent.Events, this.onStateEvent);
         this.onRoomName();
         // Opened from the room list, the room's state may still be in the store only.
-        void MatrixClientPeg.safeGet().loadStoredRoomState(this.props.roomId);
+        void MatrixClientPeg.safeGet().loadStoredRoomState?.(this.props.roomId);
     }
 
     public componentDidUpdate(): void {
@@ -125,7 +135,7 @@ class RoomSettingsDialog extends React.Component<IProps, IState> {
     };
 
     private onTabChange = (tabId: RoomSettingsTab): void => {
-        this.setState({ activeTabId: tabId });
+        this.setState({ activeTabId: tabId, page: "page" });
     };
 
     private getTabs(): NonEmptyArray<Tab<RoomSettingsTab>> {
@@ -232,6 +242,8 @@ class RoomSettingsDialog extends React.Component<IProps, IState> {
 
     public render(): React.ReactNode {
         const roomName = this.state.room.name;
+        const tabs = this.getTabs();
+        const activeTab = tabs.find((tab) => tab.id === this.state.activeTabId);
         return (
             <SDKContext.Provider value={this.props.sdkContext}>
                 <BaseDialog
@@ -240,12 +252,19 @@ class RoomSettingsDialog extends React.Component<IProps, IState> {
                     onFinished={this.props.onFinished}
                     title={_t("room_settings|title", { roomName })}
                 >
-                    <div className="mx_SettingsDialog_content">
+                    <div className="mx_SettingsDialog_content" data-page={this.state.page}>
+                        <SettingsNavBar
+                            page={this.state.page}
+                            title={this.state.page === "page" && activeTab ? _t(activeTab.label) : roomName}
+                            onBack={(): void => this.setState({ page: "list" })}
+                            onClose={this.props.onFinished}
+                        />
                         <TabbedView
-                            tabs={this.getTabs()}
+                            tabs={tabs}
                             activeTabId={this.state.activeTabId}
                             screenName="RoomSettings"
                             onChange={this.onTabChange}
+                            responsive={true}
                         />
                     </div>
                 </BaseDialog>
