@@ -88,6 +88,59 @@ describe("collectImports", () => {
     });
 });
 
+describe("a bridge's own totals", () => {
+    const now = 1_000 + 1000;
+    // The management room, where the bridge says what it holds across every chat - including the ones
+    // this client is not holding. Sliding sync means that is most of them.
+    const management = {
+        roomId: "!tg-management",
+        name: "Telegram bridge",
+        getAccountData: (type: string) =>
+            type === "im.mxg.backfill_summary"
+                ? {
+                      getContent: () => ({
+                          network: "Telegram",
+                          chats: 60,
+                          chats_by_state: { complete: 50, running: 9, skipped: 1 },
+                          bridged_messages: 240_000,
+                          remote_messages: 241_000,
+                          counted_imported: 239_000,
+                          counted_chats: 58,
+                      }),
+                  }
+                : undefined,
+        currentState: { getStateEvents: () => null },
+    } as unknown as Room;
+    const client = {
+        getRooms: () => [
+            management,
+            room("!now", { ...base, state: "running", active: true, network: "Telegram", bridged_messages: 200 }),
+            room("!done", { ...base, state: "complete", network: "Telegram", bridged_messages: 500 }),
+        ],
+    } as unknown as MatrixClient;
+
+    it("replaces what the loaded rooms add up to", () => {
+        const o = collectImports(client, now);
+        expect(o).toMatchObject({
+            chats: 60,
+            messages: 240_000,
+            countedChats: 58,
+            countedImported: 239_000,
+            countedTotal: 241_000,
+        });
+    });
+
+    it("keeps the chat it can see importing, and counts the rest of the running ones as queued", () => {
+        const o = collectImports(client, now);
+        expect(o.byPhase).toMatchObject({ complete: 50, importing: 1, queued: 8, skipped: 1 });
+    });
+
+    it("still lists only the chats it holds", () => {
+        const o = collectImports(client, now);
+        expect(o.entries.map((e) => e.room.roomId)).toEqual(["!now", "!done"]);
+    });
+});
+
 describe("importHeadline", () => {
     const login = (network: string, health: BridgeLogin["health"]): BridgeLogin => ({ network, health }) as BridgeLogin;
     const client = {

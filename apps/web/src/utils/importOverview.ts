@@ -16,6 +16,62 @@ import { type MatrixClient, type Room } from "matrix-js-sdk/src/matrix";
 import { type BackfillStatus, backfillStatusOf, type HistoryPhase, historyPhase } from "./chatHistory";
 import { type BridgeLogin } from "./bridgeLogins";
 
+/** Where a bridge publishes its own totals: account data in the management room, state as the fallback. */
+export const BACKFILL_SUMMARY_EVENT_TYPE = "im.mxg.backfill_summary";
+
+/** A bridge's totals for its whole import, as published in [BACKFILL_SUMMARY_EVENT_TYPE]. */
+interface PublishedSummary {
+    network: string;
+    chats: number;
+    chats_by_state: Record<string, number>;
+    bridged_messages: number;
+    remote_messages?: number;
+    counted_imported?: number;
+    counted_chats?: number;
+}
+
+/** The bridge's own words for a chat's state, in the phases this file counts. */
+const PHASE_OF_STATE: Record<string, HistoryPhase> = {
+    complete: "complete",
+    unavailable: "unavailable",
+    skipped: "skipped",
+    manual: "paused",
+    // A bridge says only that a chat is being imported; which one it has in hand right now is something
+    // the loaded rooms say, so that count is kept and taken off the queue below.
+    running: "queued",
+};
+
+function publishedSummaries(client: MatrixClient): Map<string, PublishedSummary> {
+    const byNetwork = new Map<string, PublishedSummary>();
+    for (const room of client.getRooms()) {
+        const content =
+            room.getAccountData(BACKFILL_SUMMARY_EVENT_TYPE)?.getContent<PublishedSummary>() ??
+            room.currentState.getStateEvents(BACKFILL_SUMMARY_EVENT_TYPE, "")?.getContent<PublishedSummary>();
+        if (content?.network && content.chats) byNetwork.set(content.network, content);
+    }
+    return byNetwork;
+}
+
+/**
+ * Replaces what was counted from the loaded rooms with what the bridge counted from all of them. With
+ * sliding sync a client only ever holds some of the rooms, so every total it adds up itself reads low.
+ */
+function applyPublished(summary: ImportSummary, published: PublishedSummary): void {
+    const importing = Math.min(summary.byPhase.importing, published.chats);
+    summary.chats = published.chats;
+    summary.messages = published.bridged_messages;
+    summary.countedChats = published.counted_chats ?? 0;
+    summary.countedTotal = published.remote_messages ?? 0;
+    summary.countedImported = published.counted_imported ?? 0;
+    for (const phase of PHASES) summary.byPhase[phase] = 0;
+    for (const [state, count] of Object.entries(published.chats_by_state ?? {})) {
+        const phase = PHASE_OF_STATE[state];
+        if (phase) summary.byPhase[phase] += count;
+    }
+    summary.byPhase.importing = importing;
+    summary.byPhase.queued = Math.max(0, summary.byPhase.queued - importing);
+}
+
 export interface ImportEntry {
     room: Room;
     status: BackfillStatus;
@@ -82,16 +138,15 @@ function finish(summary: ImportSummary, entries: ImportEntry[]): void {
 }
 
 export function collectImports(client: MatrixClient, now = Date.now()): ImportOverview {
+    const published = publishedSummaries(client);
     const entries: ImportEntry[] = [];
     for (const room of client.getRooms()) {
         const status = backfillStatusOf(room);
         if (status) entries.push({ room, status, phase: historyPhase(status, now) });
     }
 
-    const overall = emptySummary();
     const byNetwork = new Map<string, { summary: ImportSummary; entries: ImportEntry[] }>();
     for (const entry of entries) {
-        add(overall, entry);
         const key = entry.status.network || "?";
         let group = byNetwork.get(key);
         if (!group) byNetwork.set(key, (group = { summary: emptySummary(), entries: [] }));
@@ -101,10 +156,24 @@ export function collectImports(client: MatrixClient, now = Date.now()): ImportOv
 
     const networks: NetworkSummary[] = [...byNetwork.entries()]
         .map(([network, { summary, entries }]) => {
+            const totals = published.get(network);
+            if (totals) applyPublished(summary, totals);
             finish(summary, entries);
             return { ...summary, network, entries };
         })
         .sort((a, b) => b.messages - a.messages);
+
+    // The whole is the sum of the networks, each of which speaks for every chat it has, loaded or not.
+    const overall = emptySummary();
+    for (const network of networks) {
+        overall.chats += network.chats;
+        overall.messages += network.messages;
+        overall.countedChats += network.countedChats;
+        overall.countedImported += network.countedImported;
+        overall.countedTotal += network.countedTotal;
+        overall.ratePerMinute += network.ratePerMinute;
+        for (const phase of PHASES) overall.byPhase[phase] += network.byPhase[phase];
+    }
 
     // Each bridge imports on its own, so the whole takes as long as the slowest of them.
     const etas = networks.map((n) => n.etaMs).filter((e): e is number => e !== undefined);
