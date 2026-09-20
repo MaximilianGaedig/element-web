@@ -490,7 +490,7 @@ index fa12145b0c8a94e4defd95c0147cd0c626853215..7f3676f260732959c44c1476c286eb00
              } = {
                  "ephemeral": { events: [] },
                  "account_data": { events: [] },
-@@ -687,8 +690,18 @@ export class SyncAccumulator {
+@@ -687,8 +690,22 @@ export class SyncAccumulator {
                  roomJson.ephemeral.events.push(receiptEvent);
              }
  
@@ -501,6 +501,10 @@ index fa12145b0c8a94e4defd95c0147cd0c626853215..7f3676f260732959c44c1476c286eb00
 +            const trimRoom = !!trim && !this.isReplayedInFull(roomId, roomData, trim);
 +            let entries = roomData._timeline;
 +            if (trimRoom) {
++                if (trim.skipTimelineTypes?.length) {
++                    const skip = new Set(trim.skipTimelineTypes);
++                    entries = entries.filter((entry) => !skip.has(entry.event.type));
++                }
 +                const start = trimmedTimelineStart(entries, trim.tail);
 +                if (start > 0) {
 +                    entries = entries.slice(start);
@@ -634,7 +638,7 @@ index fa12145b0c8a94e4defd95c0147cd0c626853215..7f3676f260732959c44c1476c286eb00
      public getNextBatchToken(): string {
          return this.nextBatch!;
      }
-@@ -790,6 +848,66 @@ export class SyncAccumulator {
+@@ -790,6 +848,73 @@ export class SyncAccumulator {
      }
  }
  
@@ -653,6 +657,13 @@ index fa12145b0c8a94e4defd95c0147cd0c626853215..7f3676f260732959c44c1476c286eb00
 +    listStateTypes?: string[];
 +    /** The user's own ID, whose member event every room keeps. */
 +    userId?: string;
++    /**
++     * Event types left out of the replayed timeline of a trimmed room. Bookkeeping state a bridge keeps
++     * up to date (import progress, connection state) is rewritten constantly and is only ever read as
++     * current state, so replaying it wastes the room's few kept events and the memory they take. The
++     * state itself is unaffected: list it in {@link listStateTypes} to keep that.
++     */
++    skipTimelineTypes?: string[];
 +}
 +
 +/** Marks a replayed room whose state was trimmed (see {@link SavedSyncTrim.listStateTypes}). */

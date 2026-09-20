@@ -291,6 +291,7 @@ class MatrixClientPegClass implements IMatrixClientPeg {
             fullRoomIds: roomsShownAtStartup(),
             fullRoomTags: ["m.favourite"], // favourites are replayed in full too
             listStateTypes: ROOM_LIST_STATE_TYPES,
+            skipTimelineTypes: BOOKKEEPING_STATE_TYPES,
             userId: this.matrixClient.getUserId() ?? undefined,
         };
         if (SettingsStore.getValue("feature_user_status")) {
@@ -402,6 +403,13 @@ const ROOM_LIST_STATE_TYPES: string[] = [
     BACKFILL_EVENT_TYPE,
     BRIDGE_LOGIN_EVENT_TYPE,
 ];
+
+/**
+ * State a bridge rewrites as things change, which is only ever read as the room's current state. Keeping
+ * it out of the replayed timeline leaves those few events for real messages: with a bridge per network
+ * and hundreds of chats, this was over a third of everything replayed.
+ */
+const BOOKKEEPING_STATE_TYPES: string[] = [BACKFILL_EVENT_TYPE, BRIDGE_LOGIN_EVENT_TYPE];
 
 /** How many of each room's latest stored events are replayed at startup. */
 const SAVED_SYNC_TAIL = 3;
