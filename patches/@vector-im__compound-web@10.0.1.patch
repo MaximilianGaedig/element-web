@@ -1,3 +1,71 @@
+diff --git a/dist/components/Tooltip/Tooltip.cjs b/dist/components/Tooltip/Tooltip.cjs
+index edb5179ca24a7ebf4310aba3d9ce3805117a3a47..f738512a48a5a1ef47c1870bd98cb0a6e2184297 100644
+--- a/dist/components/Tooltip/Tooltip.cjs
++++ b/dist/components/Tooltip/Tooltip.cjs
+@@ -10,6 +10,11 @@ let react_jsx_runtime = require("react/jsx-runtime");
+ let _floating_ui_react = require("@floating-ui/react");
+ //#region src/components/Tooltip/Tooltip.tsx
+ var hasLabel = (props) => "label" in props && !!props.label;
++const offstage = {
++	position: "fixed",
++	top: 0,
++	left: 0
++};
+ /**
+ * A tooltip component
+ */
+@@ -52,6 +57,17 @@ function Caption() {
+ function TooltipContent({ children }) {
+ 	const { context: floatingContext, open, arrowRef, purpose, ...rest } = require_TooltipContext.useTooltipContext();
+ 	if (!open && purpose !== "label") return null;
++	// A closed label tooltip is in the DOM only so that aria-labelledby resolves to it: it is clipped
++	// away and takes no pointer events. Handing it to the positioner regardless makes Floating UI
++	// measure the anchor, the tooltip and every scrolling ancestor the moment it mounts, about fifty
++	// geometry reads per tooltip whose answer is thrown away. Keep it out of the positioner until it is
++	// shown - pinned at the origin meanwhile, so it stays out of the page's flow.
++	if (!open) return /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_floating_ui_react.FloatingPortal, { children: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
++		...rest.tooltipProps,
++		style: offstage,
++		className: (0, classnames.default)(require_Tooltip_module.default.tooltip, require_Tooltip_module.default.invisible),
++		children
++	}) });
+ 	const escaped = floatingContext.middlewareData?.hide?.escaped ?? false;
+ 	return /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_floating_ui_react.FloatingPortal, { children: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+ 		ref: rest.refs.setFloating,
+diff --git a/dist/components/Tooltip/Tooltip.js b/dist/components/Tooltip/Tooltip.js
+index 1d14ed6b4588276ffc1e5fa219c3f213b83ad748..392ec25650a8c312d74e0938c19a19a35eb16d59 100644
+--- a/dist/components/Tooltip/Tooltip.js
++++ b/dist/components/Tooltip/Tooltip.js
+@@ -7,6 +7,11 @@ import { jsx, jsxs } from "react/jsx-runtime";
+ import { FloatingArrow, FloatingPortal, useMergeRefs } from "@floating-ui/react";
+ //#region src/components/Tooltip/Tooltip.tsx
+ var hasLabel = (props) => "label" in props && !!props.label;
++const offstage = {
++	position: "fixed",
++	top: 0,
++	left: 0
++};
+ /**
+ * A tooltip component
+ */
+@@ -49,6 +54,17 @@ function Caption() {
+ function TooltipContent({ children }) {
+ 	const { context: floatingContext, open, arrowRef, purpose, ...rest } = useTooltipContext();
+ 	if (!open && purpose !== "label") return null;
++	// A closed label tooltip is in the DOM only so that aria-labelledby resolves to it: it is clipped
++	// away and takes no pointer events. Handing it to the positioner regardless makes Floating UI
++	// measure the anchor, the tooltip and every scrolling ancestor the moment it mounts, about fifty
++	// geometry reads per tooltip whose answer is thrown away. Keep it out of the positioner until it is
++	// shown - pinned at the origin meanwhile, so it stays out of the page's flow.
++	if (!open) return /* @__PURE__ */ jsx(FloatingPortal, { children: /* @__PURE__ */ jsxs("div", {
++		...rest.tooltipProps,
++		style: offstage,
++		className: classNames(Tooltip_module_default.tooltip, Tooltip_module_default.invisible),
++		children
++	}) });
+ 	const escaped = floatingContext.middlewareData?.hide?.escaped ?? false;
+ 	return /* @__PURE__ */ jsx(FloatingPortal, { children: /* @__PURE__ */ jsxs("div", {
+ 		ref: rest.refs.setFloating,
 diff --git a/dist/components/Tooltip/useTooltip.cjs b/dist/components/Tooltip/useTooltip.cjs
 index 552636a3ff616c5b3f90a887ca29dd19ccaa4222..d86cd74e45689f3cd4a4e9a70883f4de5ba4beea 100644
 --- a/dist/components/Tooltip/useTooltip.cjs
