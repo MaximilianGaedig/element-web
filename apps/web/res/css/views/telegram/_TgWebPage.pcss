@@ -1,0 +1,155 @@
+/*
+Copyright 2026 New Vector Ltd.
+
+SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only OR LicenseRef-Element-Commercial
+Please see LICENSE files in the repository root for full details.
+*/
+
+/*
+ * The link preview inside the bubble, ported from Telegram Web K (GPL-3.0,
+ * https://github.com/morethanwords/tweb): src/scss/partials/_chatBubble.scss `.webpage` and its
+ * `-quote` / `-content` / `-name` / `-text` / `-preview` rows, on top of _quote.scss `.quote-like`
+ * (the tint and the 3px accent bar it shares with reply quotes, see _TgReplyQuote.pcss).
+ *
+ * The colour is the sender's: mx_Username_colorN on the box sets `color`, so the bar and the tint are
+ * currentColor-based and only the title and description state a colour of their own - tweb's
+ * `.webpage` sets `color: var(--primary-text-color)` and paints just `.webpage-name` in the accent.
+ */
+.mx_TgWebPage {
+    /* .quote-like --border-radius */
+    --TgWebPage-radius: 0.25rem;
+    /* .webpage $webpage-padding / $webpage-padding-vertical */
+    --TgWebPage-padding: 0.375rem;
+    --TgWebPage-padding-block: 0.25rem;
+    /* base.scss --messages-secondary-text-size: the message text size - 2px; line height + 4px. */
+    --TgWebPage-font-size: calc(var(--cpd-font-size-body-md) - 2px);
+    --TgWebPage-line-height: calc(var(--TgWebPage-font-size) + 4px);
+    /* helpers/mediaSizes.ts mediaSizes.active.webpage: 420x380, the preview's box. */
+    --TgWebPage-media-max-width: 420px;
+    --TgWebPage-media-max-height: 380px;
+
+    position: relative;
+    display: block;
+    margin: var(--TgWebPage-padding-block) 0;
+    overflow: hidden;
+    border-radius: var(--TgWebPage-radius);
+    /* .quote-like: rgba(peer, .1), and .quote-like-hoverable:hover rgba(peer, .2) */
+    background-color: color-mix(in srgb, currentColor 10%, transparent);
+    font-size: var(--TgWebPage-font-size);
+    line-height: var(--TgWebPage-line-height);
+    cursor: pointer;
+
+    &:hover {
+        background-color: color-mix(in srgb, currentColor 20%, transparent);
+    }
+
+    /* .quote-like-border::before: the 3px bar */
+    &::before {
+        content: "";
+        position: absolute;
+        inset-block: 0;
+        inset-inline-start: 0;
+        z-index: 1;
+        width: 0.1875rem;
+        background: currentColor;
+    }
+}
+
+/* tweb .webpage-quote; the two classes outrank the global `a:link` colour (_common.pcss). */
+.mx_TgWebPage .mx_TgWebPage_quote {
+    display: flex;
+    width: 100%;
+    max-width: 100%;
+    overflow: hidden;
+    color: inherit;
+    text-decoration: none;
+}
+
+/* tweb .webpage-content: the padding at the start clears the bar. */
+.mx_TgWebPage_content {
+    flex: 1 1 auto;
+    overflow: hidden;
+    padding: var(--TgWebPage-padding-block) var(--TgWebPage-padding);
+    padding-inline-start: calc(var(--TgWebPage-padding) + 3px);
+}
+
+/* tweb .webpage-name / .webpage-title / .webpage-text, the name and title bold from their <strong>. */
+.mx_TgWebPage_name,
+.mx_TgWebPage_title,
+.mx_TgWebPage_text {
+    display: block;
+}
+
+.mx_TgWebPage_name,
+.mx_TgWebPage_title {
+    font-weight: var(--cpd-font-weight-semibold);
+}
+
+.mx_TgWebPage_title,
+.mx_TgWebPage_text {
+    color: var(--cpd-color-text-primary);
+}
+
+.mx_TgWebPage_text {
+    word-break: break-word;
+}
+
+/* tweb .webpage-preview-resizer */
+.mx_TgWebPage_mediaResizer {
+    display: flex;
+    margin: calc(var(--TgWebPage-padding-block) - 1px) 0;
+}
+
+/* tweb .webpage-preview */
+.mx_TgWebPage_media {
+    position: relative;
+    width: max-content;
+    max-width: min(var(--TgWebPage-media-max-width), 100%);
+    overflow: hidden;
+    border-radius: var(--TgWebPage-radius);
+    user-select: none;
+
+    /*
+     * tweb fits the photo element itself to the box (wrapPhoto with mediaSizes.active.webpage), so the
+     * limits sit on the image here: a replaced element keeps its ratio under a max-width and a
+     * max-height, which a percentage max-height on an auto-height box could not do.
+     */
+    > img {
+        display: block;
+        max-width: 100%;
+        max-height: var(--TgWebPage-media-max-height);
+    }
+}
+
+/* tweb .webpage.has-square-photo: a 3rem thumbnail (bubbles.ts squareBoxSize = 48) floated to the end. */
+.mx_TgWebPage_squarePhoto {
+    .mx_TgWebPage_mediaResizer {
+        float: inline-end;
+        width: 3rem;
+        height: 3rem;
+        margin: 0;
+        margin-inline-start: 0.625rem;
+    }
+
+    .mx_TgWebPage_media {
+        max-width: 100%;
+
+        > img {
+            width: 100%;
+            height: 100%;
+            max-height: none;
+            object-fit: cover;
+        }
+    }
+}
+
+/* tweb's handheld mediaSizes.active.webpage. */
+html[data-tg-screen="mobile"] .mx_TgWebPage {
+    --TgWebPage-media-max-width: 340px;
+    --TgWebPage-media-max-height: 200px;
+}
+
+/* tweb .bubble.is-out: an outgoing message's box takes the outgoing accent, as its reply quote does. */
+.mx_EventTile_tgOwn .mx_TgWebPage {
+    color: var(--cpd-color-text-success-primary);
+}

@@ -32,6 +32,13 @@ export const STORAGE_KEY_LEFT = "sidebar-left-width";
 /** tweb src/helpers/updateColumnWidths.ts persistLeftPreference throttle (ms). */
 export const PERSIST_THROTTLE_MS = 200;
 
+/** tweb src/components/wrappers/webPageTitle.ts limitSymbols(title, 80, 100). */
+export const WEBPAGE_TITLE_LIMIT = 80;
+export const WEBPAGE_TITLE_LIMIT_FROM = 100;
+/** tweb src/components/wrappers/webPageDescription.ts limitSymbols(description, 150, 180). */
+export const WEBPAGE_DESCRIPTION_LIMIT = 150;
+export const WEBPAGE_DESCRIPTION_LIMIT_FROM = 180;
+
 /** tweb src/helpers/dom/handleHorizontalSwipe.ts: vertical travel that cancels a not-yet-horizontal swipe. */
 export const SWIPE_VERTICAL_CANCEL = 20;
 /** tweb src/helpers/dom/handleTabSwipe.ts: horizontal travel past which the swipe navigates. */

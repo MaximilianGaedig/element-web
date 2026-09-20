@@ -548,20 +548,24 @@ describe("<TextualBody />", () => {
             });
         });
 
-        it("should listen to showUrlPreview change", () => {
+        // The preview appears only once the view model has fetched it, so the second check has to be
+        // awaited; unawaited, it asserted nothing at all (against a class no layout renders any more).
+        it("should listen to showUrlPreview change", async () => {
             const ev = mkRoomTextMessage("Visit https://matrix.org/");
+            vi.spyOn(matrixClient, "getUrlPreview").mockResolvedValue({
+                "og:title": "Matrix",
+                "og:type": "website",
+                "og:url": "https://matrix.org/",
+            });
 
             const { container, rerender } = getComponent({ mxEvent: ev, showUrlPreview: false }, matrixClient);
-            expect(container.querySelector(".mx_LinkPreviewGroup")).toBeNull();
+            expect(container.querySelector(".mx_TgWebPage")).toBeNull();
 
             getComponent({ mxEvent: ev, showUrlPreview: true }, matrixClient, rerender);
-            waitFor(() => {
-                // Asynchronous check since the VM needs to recalcuate.
-                expect(container.querySelector(".mx_LinkPreviewGroup")).toBeTruthy();
-            });
+            await waitFor(() => expect(container.querySelector(".mx_TgWebPage")).toBeTruthy());
         });
     });
-    describe("url preview tiles", () => {
+    describe("url previews", () => {
         const link = "https://matrix.org/";
         let matrixClient: MockedObject<MatrixClient>;
 
@@ -604,71 +608,126 @@ describe("<TextualBody />", () => {
             return result;
         };
 
-        it("renders a preview without an image as a text tile", async () => {
-            await renderPreviews();
-
-            expect(screen.getByRole("link", { name: "Matrix" })).toHaveAttribute("href", link);
-            expect(screen.getByText("An open network for secure, decentralised communication")).toBeInTheDocument();
-            expect(screen.queryByRole("button", { name: "View image" })).not.toBeInTheDocument();
+        afterEach(() => {
+            vi.restoreAllMocks();
         });
 
-        it("falls back to the site name when the preview has no description", async () => {
-            vi.mocked(matrixClient.getUrlPreview).mockResolvedValue(ogData({ "og:description": undefined }));
+        describe("Element's preview card", () => {
+            beforeEach(() => {
+                // The Telegram-style layout, which this fork defaults to, replaces the card with the
+                // tweb box tested below.
+                const original = SettingsStore.getValue;
+                vi.spyOn(SettingsStore, "getValue").mockImplementation((setting, ...rest) =>
+                    setting === "telegramStyleLayout" ? false : original(setting, ...rest),
+                );
+            });
 
-            await renderPreviews();
+            it("renders a preview without an image as a text tile", async () => {
+                await renderPreviews();
 
-            expect(screen.getByText("matrix.org")).toBeInTheDocument();
+                expect(screen.getByRole("link", { name: "Matrix" })).toHaveAttribute("href", link);
+                expect(screen.getByText("An open network for secure, decentralised communication")).toBeInTheDocument();
+                expect(screen.queryByRole("button", { name: "View image" })).not.toBeInTheDocument();
+            });
+
+            it("falls back to the site name when the preview has no description", async () => {
+                vi.mocked(matrixClient.getUrlPreview).mockResolvedValue(ogData({ "og:description": undefined }));
+
+                await renderPreviews();
+
+                expect(screen.getByText("matrix.org")).toBeInTheDocument();
+            });
+
+            it("renders a preview with an image and opens the lightbox when it is clicked", async () => {
+                vi.mocked(matrixClient.getUrlPreview).mockResolvedValue(ogData(ogImage));
+                const createDialog = vi.spyOn(Modal, "createDialog").mockReturnValue({} as never);
+
+                await renderPreviews();
+
+                fireEvent.click(screen.getByRole("button", { name: "View image" }));
+
+                expect(createDialog).toHaveBeenCalledWith(
+                    ImageView,
+                    expect.objectContaining({ src: "mxc://example.org/preview", name: "Thumbnail of Matrix" }),
+                    "mx_Dialog_lightbox",
+                    undefined,
+                    true,
+                );
+            });
+
+            it("opens the previewed link in a new tab", async () => {
+                const open = vi.spyOn(window, "open").mockReturnValue(null);
+
+                await renderPreviews();
+
+                fireEvent.click(screen.getByRole("button", { name: "Open link" }));
+
+                expect(open).toHaveBeenCalledWith(link, "_blank", "noreferrer");
+            });
+
+            it("expands the group when more previews are available than are shown", async () => {
+                vi.mocked(matrixClient.getUrlPreview).mockImplementation(async (url: string) =>
+                    ogData({ "og:title": `Preview of ${url}`, "og:url": url }),
+                );
+
+                const { container } = getComponent(
+                    {
+                        mxEvent: mkRoomTextMessage(
+                            "Visit https://one.example.com/ and https://two.example.com/ and https://three.example.com/",
+                        ),
+                        showUrlPreview: true,
+                    },
+                    matrixClient,
+                );
+
+                const toggle = await screen.findByRole("button", { name: "Show 1 other preview" });
+                expect(container.querySelectorAll("a[href^='https://one']")).toHaveLength(2);
+
+                fireEvent.click(toggle);
+
+                await screen.findByRole("link", { name: "Preview of https://three.example.com/" });
+                expect(screen.getByRole("button", { name: "Collapse" })).toBeInTheDocument();
+            });
         });
 
-        it("renders a preview with an image and opens the lightbox when it is clicked", async () => {
-            vi.mocked(matrixClient.getUrlPreview).mockResolvedValue(ogData(ogImage));
-            const createDialog = vi.spyOn(Modal, "createDialog").mockReturnValue({} as never);
+        // The Telegram-style layout draws the same previews as tweb's .webpage box inside the bubble.
+        describe("the Telegram box", () => {
+            const box = (container: HTMLElement): HTMLElement => container.querySelector<HTMLElement>(".mx_TgWebPage")!;
 
-            await renderPreviews();
+            it("stacks the site name, the title and the description under the message", async () => {
+                const { container } = await renderPreviews();
 
-            fireEvent.click(screen.getByRole("button", { name: "View image" }));
+                expect(box(container).querySelector(".mx_TgWebPage_name")).toHaveTextContent("matrix.org");
+                expect(box(container).querySelector(".mx_TgWebPage_title")).toHaveTextContent("Matrix");
+                expect(box(container).querySelector(".mx_TgWebPage_text")).toHaveTextContent(
+                    "An open network for secure, decentralised communication",
+                );
+                // The box is the link, so it carries no separate "open link" button.
+                expect(screen.getByRole("link", { name: "Matrix" })).toHaveAttribute("href", link);
+                expect(screen.queryByRole("button", { name: "Open link" })).not.toBeInTheDocument();
+            });
 
-            expect(createDialog).toHaveBeenCalledWith(
-                ImageView,
-                expect.objectContaining({ src: "mxc://example.org/preview", name: "Thumbnail of Matrix" }),
-                "mx_Dialog_lightbox",
-                undefined,
-                true,
-            );
-        });
+            it("puts a landscape photo under the text as the full preview", async () => {
+                vi.mocked(matrixClient.getUrlPreview).mockResolvedValue(ogData(ogImage));
 
-        it("opens the previewed link in a new tab", async () => {
-            const open = vi.spyOn(window, "open").mockReturnValue(null);
+                const { container } = await renderPreviews();
 
-            await renderPreviews();
+                const content = box(container).querySelector(".mx_TgWebPage_content")!;
+                expect(box(container)).not.toHaveClass("mx_TgWebPage_squarePhoto");
+                expect(content.lastElementChild).toHaveClass("mx_TgWebPage_mediaResizer");
+            });
 
-            fireEvent.click(screen.getByRole("button", { name: "Open link" }));
+            it("floats a square photo beside the text as a thumbnail", async () => {
+                vi.mocked(matrixClient.getUrlPreview).mockResolvedValue(
+                    ogData({ ...ogImage, "og:image:width": 320, "og:image:height": 320 }),
+                );
 
-            expect(open).toHaveBeenCalledWith(link, "_blank", "noreferrer");
-        });
+                const { container } = await renderPreviews();
 
-        it("expands the group when more previews are available than are shown", async () => {
-            vi.mocked(matrixClient.getUrlPreview).mockImplementation(async (url: string) =>
-                ogData({ "og:title": `Preview of ${url}`, "og:url": url }),
-            );
-
-            const { container } = getComponent(
-                {
-                    mxEvent: mkRoomTextMessage(
-                        "Visit https://one.example.com/ and https://two.example.com/ and https://three.example.com/",
-                    ),
-                    showUrlPreview: true,
-                },
-                matrixClient,
-            );
-
-            const toggle = await screen.findByRole("button", { name: "Show 1 other preview" });
-            expect(container.querySelectorAll("a[href^='https://one']")).toHaveLength(2);
-
-            fireEvent.click(toggle);
-
-            await screen.findByRole("link", { name: "Preview of https://three.example.com/" });
-            expect(screen.getByRole("button", { name: "Collapse" })).toBeInTheDocument();
+                const content = box(container).querySelector(".mx_TgWebPage_content")!;
+                expect(box(container)).toHaveClass("mx_TgWebPage_squarePhoto");
+                expect(content.firstElementChild).toHaveClass("mx_TgWebPage_mediaResizer");
+            });
         });
     });
 

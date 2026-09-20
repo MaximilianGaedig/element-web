@@ -43,6 +43,8 @@ import PopOutIcon from "@vector-im/compound-design-tokens/assets/web/icons/pop-o
 import { EditMessageComposerWrapper } from "../rooms/EditMessageComposerWrapper";
 import { ModuleApi } from "../../../modules/Api";
 import BridgeButtons from "./BridgeButtons";
+import { isTelegramLayout } from "../../../utils/telegram/telegramLayout";
+import { TgWebPage } from "../telegram/TgWebPage";
 
 const logger = rootLogger.getChild("TextualBodyFactory");
 
@@ -334,7 +336,13 @@ export function TextualBodyFactory(props: Readonly<IBodyProps>): JSX.Element {
             bodyRef={contentRef}
             urlPreviews={
                 <>
-                    <MediaPreviewGroupPreview vm={mediaPreviewVm} />
+                    {/* Fork: Telegram draws the preview as part of the message rather than as a card
+                        below it, from the same previews this view model resolved. */}
+                    {isTelegramLayout() ? (
+                        <TgWebPage previews={previews} sender={props.mxEvent.getSender() ?? ""} collapse={collapse} />
+                    ) : (
+                        <MediaPreviewGroupPreview vm={mediaPreviewVm} />
+                    )}
                     <BridgeButtons mxEvent={props.mxEvent} inhibitInteraction={props.inhibitInteraction} />
                 </>
             }
