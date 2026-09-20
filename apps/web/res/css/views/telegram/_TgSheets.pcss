@@ -152,3 +152,223 @@ html[data-tg-screen="mobile"] {
         }
     }
 }
+
+/*
+ * Settings on a handheld, as Telegram iOS's Settings: a full-height sheet whose first screen is your
+ * profile and a grouped list of sections (a coloured rounded-square icon, the name, a chevron), and whose
+ * second screen is the chosen section under a "‹ Settings" bar. The desktop layout is untouched.
+ */
+.mx_SettingsNavBar,
+.mx_SettingsNavProfile {
+    display: none;
+}
+
+html[data-tg-screen="mobile"] {
+    .mx_UserSettingsDialog {
+        height: calc(100dvh - var(--tg-safe-top, 0px) - 1.5rem);
+        background: var(--cpd-color-bg-subtle-secondary);
+
+        /* The dialog's own header is replaced by the navigation bar. */
+        .mx_Dialog_header,
+        > h2,
+        .mx_UserSettingsDialog_title {
+            display: none;
+        }
+    }
+
+    .mx_SettingsDialog_content {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+        min-height: 0;
+    }
+
+    .mx_SettingsNavBar {
+        display: grid;
+        grid-template-columns: 1fr auto 1fr;
+        align-items: center;
+        flex: 0 0 auto;
+        min-height: 3.25rem;
+        padding: 0.75rem 0.5rem 0.25rem;
+        background: var(--cpd-color-bg-subtle-secondary);
+    }
+
+    .mx_SettingsNavBar_title {
+        font: var(--cpd-font-body-lg-semibold);
+        text-align: center;
+    }
+
+    .mx_SettingsNavBar_back,
+    .mx_SettingsNavBar_done {
+        all: unset;
+        display: inline-flex;
+        align-items: center;
+        min-height: 2.75rem;
+        padding: 0 0.5rem;
+        color: var(--tg-primary-color);
+        font-size: 1.0625rem;
+        cursor: pointer;
+
+        &:focus-visible {
+            outline: 2px solid var(--cpd-color-border-focused);
+            border-radius: 0.5rem;
+        }
+    }
+
+    .mx_SettingsNavBar_done {
+        justify-self: end;
+        font-weight: 600;
+    }
+
+    .mx_SettingsNavBar_chevron {
+        margin-inline-end: 0.125rem;
+        font-size: 2rem;
+        line-height: 1;
+    }
+
+    .mx_SettingsNavProfile {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.25rem;
+        padding: 0.75rem 1rem 1.25rem;
+    }
+
+    .mx_SettingsNavProfile_name {
+        margin-top: 0.5rem;
+        font: var(--cpd-font-heading-md-semibold);
+    }
+
+    .mx_SettingsNavProfile_id {
+        font: var(--cpd-font-body-md-regular);
+        color: var(--cpd-color-text-secondary);
+    }
+
+    /* The responsive strip hides the words on narrow screens; the list here has room and needs them. */
+    .mx_UserSettingsDialog .mx_TabbedView_tabsOnLeft.mx_TabbedView_responsive {
+        .mx_TabbedView_tabLabel_text {
+            display: inline;
+        }
+
+        .mx_TabbedView_tabPanel {
+            margin-left: 0;
+        }
+
+        .mx_TabbedView_tabLabel {
+            justify-content: flex-start;
+            padding-inline: 1rem 2.25rem;
+        }
+    }
+
+    /* One screen at a time. */
+    .mx_SettingsDialog_content[data-page="list"] .mx_TabbedView_tabPanel {
+        display: none;
+    }
+
+    .mx_SettingsDialog_content[data-page="page"] .mx_TabbedView_tabLabels {
+        display: none;
+    }
+
+    .mx_SettingsDialog_content .mx_TabbedView {
+        flex: 1 1 auto;
+        min-height: 0;
+        overflow-y: auto;
+        padding: 0;
+    }
+
+    /* The list: one inset card of rows. */
+    .mx_UserSettingsDialog .mx_TabbedView_tabsOnLeft .mx_TabbedView_tabLabels {
+        display: flex;
+        flex-direction: column;
+        gap: 0;
+        margin: 0 1rem 1.5rem;
+        padding: 0;
+        width: auto;
+        overflow: hidden;
+        border-radius: 0.875rem;
+        background: var(--cpd-color-bg-canvas-default);
+        list-style: none;
+    }
+
+    .mx_UserSettingsDialog .mx_TabbedView_tabLabel {
+        position: relative;
+        display: flex;
+        align-items: center;
+        gap: 0.875rem;
+        min-height: 3.25rem;
+        padding: 0.5rem 2.25rem 0.5rem 1rem;
+        border-radius: 0;
+        font-size: 1.0625rem;
+        white-space: normal;
+
+        /* The chevron. */
+        &::after {
+            content: "›";
+            position: absolute;
+            inset-inline-end: 1rem;
+            color: var(--cpd-color-icon-secondary);
+            font-size: 1.5rem;
+        }
+
+        /* A hairline between rows, starting after the icon. */
+        & + .mx_TabbedView_tabLabel::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            inset-inline: 3.625rem 0;
+            border-top: 1px solid var(--cpd-color-border-disabled);
+        }
+
+        /* The icon in a coloured rounded square, like Telegram's settings rows. */
+        > svg {
+            flex: 0 0 auto;
+            box-sizing: border-box;
+            width: 1.875rem;
+            height: 1.875rem;
+            padding: 0.3125rem;
+            border-radius: 0.4375rem;
+            color: #fff;
+            background: hsl(var(--tab-hue, 210) 70% 50%);
+            fill: currentcolor;
+        }
+
+        &:nth-child(8n + 1) {
+            --tab-hue: 211;
+        }
+
+        &:nth-child(8n + 2) {
+            --tab-hue: 28;
+        }
+
+        &:nth-child(8n + 3) {
+            --tab-hue: 135;
+        }
+
+        &:nth-child(8n + 4) {
+            --tab-hue: 278;
+        }
+
+        &:nth-child(8n + 5) {
+            --tab-hue: 4;
+        }
+
+        &:nth-child(8n + 6) {
+            --tab-hue: 190;
+        }
+
+        &:nth-child(8n + 7) {
+            --tab-hue: 48;
+        }
+
+        &:nth-child(8n + 8) {
+            --tab-hue: 330;
+        }
+    }
+
+    /* A section's page: the content in inset cards under the bar. */
+    .mx_SettingsDialog_content[data-page="page"] .mx_TabbedView_tabPanel {
+        margin: 0;
+        padding: 0 0 1rem;
+        overflow-y: auto;
+    }
+}
