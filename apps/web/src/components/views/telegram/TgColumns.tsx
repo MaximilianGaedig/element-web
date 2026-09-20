@@ -22,6 +22,7 @@ Please see LICENSE files in the repository root for full details.
  */
 
 import { HistoryStatusChip } from "./TgHistoryChip";
+import { installSheetGestures } from "./TgSheets";
 import React, {
     type CSSProperties,
     type JSX,
@@ -122,6 +123,7 @@ export function TgColumns({
 }: TgColumnsProps): JSX.Element {
     const screen = useScreenSize();
     const handheld = screen === ScreenSize.mobile;
+    useEffect(() => (handheld ? installSheetGestures() : undefined), [handheld]);
 
     // ---- Chat-list width (desktop) -------------------------------------------------------------
     const [pref, setPref] = useState<LeftColumnPreference>(() => loadLeftPreference());

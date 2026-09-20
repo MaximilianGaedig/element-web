@@ -1,0 +1,154 @@
+/*
+Copyright 2026 New Vector Ltd.
+
+SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only OR LicenseRef-Element-Commercial
+Please see LICENSE files in the repository root for full details.
+*/
+
+/*
+ * Handhelds: every popup is a sheet, as in Telegram iOS. Dialogs are bottom sheets with a grabber and drag to
+ * dismiss (the settings are tall ones); menus are action sheets (full-width rows, at least 48px, a rounded
+ * card above the home indicator, the page dimmed behind); pickers are sheets too; the footer buttons of a
+ * dialog are stacked full-width targets; text fields are 16px so the browser doesn't zoom into them; hover
+ * tooltips, which can't be reached by touch, are gone. TgSheets.ts adds the drag gesture.
+ */
+html[data-tg-screen="mobile"] {
+    /* ---- Action sheets: context menus ------------------------------------------------------ */
+    .mx_ContextualMenu_background {
+        background: rgb(0 0 0 / 32%);
+        animation: mx_TgSheet_fade 0.2s ease both;
+    }
+
+    .mx_ContextualMenu_wrapper {
+        position: fixed !important;
+        inset: auto 0 0 0 !important;
+        transform: none !important;
+        box-sizing: border-box;
+        width: 100%;
+        padding: 0 0.5rem calc(0.5rem + var(--tg-safe-bottom, 0px));
+
+        > .mx_ContextualMenu,
+        > .mx_ContextualMenu_wrapper_inner {
+            position: static !important;
+            width: 100% !important;
+            max-width: none !important;
+            max-height: min(72dvh, 36rem);
+            overflow-y: auto;
+            overscroll-behavior: contain;
+            border: none;
+            border-radius: 0.875rem;
+            box-shadow: 0 8px 40px rgb(0 0 0 / 28%);
+            animation: mx_TgDrawer_in 0.26s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+            touch-action: pan-y;
+        }
+    }
+
+    /* Rows: 52px targets, 17px text, hairline separators. */
+    .mx_IconizedContextMenu {
+        min-width: 0 !important;
+        width: 100%;
+
+        .mx_IconizedContextMenu_option,
+        .mx_IconizedContextMenu_item,
+        [role="menuitem"] {
+            min-height: 3.25rem;
+            padding-block: 0.5rem;
+            font-size: 1.0625rem;
+            line-height: 1.375rem;
+        }
+
+        .mx_IconizedContextMenu_icon {
+            width: 1.5rem;
+            height: 1.5rem;
+        }
+
+        .mx_IconizedContextMenu_optionList + .mx_IconizedContextMenu_optionList {
+            border-top: 0.5rem solid var(--cpd-color-bg-subtle-secondary);
+        }
+    }
+
+    /* The reaction row of the message menu: bigger targets. */
+    .mx_MessageMenuReactions {
+        justify-content: space-around;
+        padding: 0.625rem 0.5rem;
+    }
+
+    .mx_MessageMenuReactions_emoji,
+    .mx_MessageMenuReactions_more {
+        width: 2.75rem;
+        height: 2.75rem;
+        font-size: 1.625rem;
+    }
+
+    /* ---- Dialogs ---------------------------------------------------------------------------- */
+    .mx_Dialog_background {
+        background: rgb(0 0 0 / 38%);
+    }
+
+    /* Footer buttons: stacked, full width, primary first. */
+    .mx_Dialog_buttons,
+    .mx_Dialog_buttons_row {
+        display: flex;
+        flex-direction: column-reverse;
+        align-items: stretch;
+        gap: 0.5rem;
+        width: 100%;
+    }
+
+    .mx_Dialog button.mx_LegacyDialogButton,
+    .mx_Dialog input.mx_LegacyDialogButton[type="submit"],
+    .mx_Dialog_buttons .mx_Dialog_primary,
+    .mx_Dialog_buttons .mx_Dialog_cancelButton,
+    .mx_Dialog_buttons button {
+        min-height: 3rem;
+        margin: 0;
+        border-radius: 0.875rem;
+        font-size: 1.0625rem;
+    }
+
+    /* Search is a full-height sheet. */
+    .mx_Dialog_wrapper:has(.mx_SpotlightDialog) .mx_Dialog_border {
+        height: calc(100dvh - var(--tg-safe-top, 0px) - 0.5rem);
+    }
+
+    /* ---- Fields ------------------------------------------------------------------------------ */
+    input:not([type="checkbox"], [type="radio"], [type="range"]),
+    textarea,
+    select,
+    [contenteditable="true"] {
+        font-size: 1rem;
+    }
+
+    /* ---- The composer's sticker/emoji panel and other panels keep clear of the home indicator -- */
+    .mx_TgEmoticonsDropdown {
+        padding-bottom: var(--tg-safe-bottom, 0px);
+    }
+}
+
+@keyframes mx_TgSheet_fade {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+/* Hover tooltips can't be reached by touch. */
+@media (hover: none) {
+    [role="tooltip"],
+    [data-radix-popper-content-wrapper]:has([role="tooltip"]) {
+        display: none !important;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    html[data-tg-screen="mobile"] {
+        .mx_ContextualMenu_background,
+        .mx_ContextualMenu_wrapper > .mx_ContextualMenu,
+        .mx_Dialog_wrapper .mx_Dialog_border {
+            animation-duration: 0.01ms;
+        }
+    }
+}

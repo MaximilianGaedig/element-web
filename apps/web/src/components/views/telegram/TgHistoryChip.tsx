@@ -74,7 +74,11 @@ export function HistoryStatusChip(): JSX.Element | null {
             type="button"
             className={`mx_TgHistoryChip mx_TgHistoryChip--${tone}`}
             onClick={(): void =>
-                dis.dispatch({ action: Action.ViewUserSettings, initialTabId: UserTab.Import })
+                dis.dispatch({
+                    action: Action.ViewUserSettings,
+                    // A bridge that needs you comes first; otherwise the import's progress.
+                    initialTabId: tone === "problem" ? UserTab.Bridges : UserTab.Import,
+                })
             }
         >
             {tone === "working" && <span className="mx_HistoryPhaseIcon mx_HistoryPhaseIcon--spin mx_TgHistoryChip_spinner" aria-hidden />}

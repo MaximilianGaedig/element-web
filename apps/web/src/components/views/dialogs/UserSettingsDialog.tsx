@@ -35,6 +35,8 @@ import SecurityUserSettingsTab from "../settings/tabs/user/SecurityUserSettingsT
 import NotificationUserSettingsTab from "../settings/tabs/user/NotificationUserSettingsTab";
 import PreferencesUserSettingsTab from "../settings/tabs/user/PreferencesUserSettingsTab";
 import VoiceUserSettingsTab from "../settings/tabs/user/VoiceUserSettingsTab";
+import BridgesUserSettingsTab from "../settings/tabs/user/BridgesUserSettingsTab";
+import BridgeIcon from "@vector-im/compound-design-tokens/assets/web/icons/link";
 import ImportUserSettingsTab from "../settings/tabs/user/ImportUserSettingsTab";
 import HistoryIcon from "@vector-im/compound-design-tokens/assets/web/icons/history";
 import StorageUserSettingsTab from "../settings/tabs/user/StorageUserSettingsTab";
@@ -100,6 +102,8 @@ function titleForTabID(tabId: UserTab): React.ReactNode {
             return _t("settings|labs|dialog_title", undefined, subs);
         case UserTab.Mjolnir:
             return _t("settings|labs_mjolnir|dialog_title", undefined, subs);
+        case UserTab.Bridges:
+            return _t("tg_layout|bridges_dialog_title", undefined, subs);
         case UserTab.Import:
             return _t("tg_layout|import_dialog_title", undefined, subs);
         case UserTab.Storage:
@@ -253,6 +257,7 @@ export default function UserSettingsDialog(props: IProps): JSX.Element {
                 ),
             );
         }
+        tabs.push(new Tab(UserTab.Bridges, _td("tg_layout|bridges_tab"), <BridgeIcon />, <BridgesUserSettingsTab />));
         tabs.push(
             new Tab(UserTab.Import, _td("tg_layout|import_tab"), <HistoryIcon />, <ImportUserSettingsTab />),
         );
