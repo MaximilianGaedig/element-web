@@ -22,6 +22,16 @@ export function TgChatChrome({ body }: Props): JSX.Element {
     useEffect(() => {
         const el = body.current;
         if (!el || typeof ResizeObserver === "undefined") return;
+        /*
+         * These pad the message list, so writing one moves every message: a sub-pixel change (a rect is
+         * fractional, and the header's own text reflows as a chat's status changes) would shift the
+         * timeline under a finger that is scrolling it. Whole pixels only, and only when the value it
+         * would write is not the one already there.
+         */
+        const set = (name: string, px: number): void => {
+            const value = `${Math.round(px)}px`;
+            if (el.style.getPropertyValue(name) !== value) el.style.setProperty(name, value);
+        };
         const update = (): void => {
             const b = el.getBoundingClientRect();
             const header = el.querySelector(":scope > .mx_RoomHeader")?.getBoundingClientRect();
@@ -34,13 +44,10 @@ export function TgChatChrome({ body }: Props): JSX.Element {
             // The import banner stacks under the pinned plate (or straight under the header).
             const importPlate = el.querySelector(":scope > .mx_TgImport")?.getBoundingClientRect();
             const importBottom = importPlate?.height ? Math.max(0, importPlate.bottom - b.top) : 0;
-            el.style.setProperty("--tg-header-bottom", `${headerBottom}px`);
-            el.style.setProperty("--tg-plates-bottom", `${Math.max(headerBottom, pinnedBottom)}px`);
-            el.style.setProperty("--tg-header-block", `${Math.max(headerBottom, pinnedBottom, importBottom)}px`);
-            el.style.setProperty(
-                "--tg-composer-block",
-                `${composer ? Math.max(0, b.bottom - composer.top) + (status?.height ?? 0) : 0}px`,
-            );
+            set("--tg-header-bottom", headerBottom);
+            set("--tg-plates-bottom", Math.max(headerBottom, pinnedBottom));
+            set("--tg-header-block", Math.max(headerBottom, pinnedBottom, importBottom));
+            set("--tg-composer-block", composer ? Math.max(0, b.bottom - composer.top) + (status?.height ?? 0) : 0);
         };
         const observer = new ResizeObserver(update);
         const observeChildren = (): void => {

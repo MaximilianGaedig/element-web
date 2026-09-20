@@ -273,6 +273,14 @@ export default class ScrollPanel extends React.Component<IProps> {
         return sn.scrollHeight - (sn.scrollTop + sn.clientHeight) <= 1;
     };
 
+    // True while the scroller is past one of its ends, which on a touch screen means a rubber-band
+    // bounce is running. Writing scrollTop then cuts the bounce short and the timeline visibly jumps,
+    // so the writes below wait: the bounce ends where it started, and the next update pins it again.
+    private isOverscrolled = (): boolean => {
+        const sn = this.getScrollNode();
+        return sn.scrollTop < 0 || sn.scrollTop > sn.scrollHeight - sn.clientHeight;
+    };
+
     // returns the vertical height in the given direction that can be removed from
     // the content box (which has a height of scrollHeight, see checkFillState) without
     // pagination occurring.
@@ -679,7 +687,7 @@ export default class ScrollPanel extends React.Component<IProps> {
 
         if (scrollState.stuckAtBottom) {
             const sn = this.getScrollNode();
-            if (sn.scrollTop !== sn.scrollHeight) {
+            if (sn.scrollTop !== sn.scrollHeight && !this.isOverscrolled()) {
                 sn.scrollTop = sn.scrollHeight;
             }
         } else if (scrollState.trackedScrollToken) {
@@ -744,7 +752,7 @@ export default class ScrollPanel extends React.Component<IProps> {
             if (itemlist && itemlist.style.height !== newHeight) {
                 itemlist.style.height = newHeight;
             }
-            if (sn.scrollTop !== sn.scrollHeight) {
+            if (sn.scrollTop !== sn.scrollHeight && !this.isOverscrolled()) {
                 sn.scrollTop = sn.scrollHeight;
             }
             debuglog("updateHeight to", newHeight);
