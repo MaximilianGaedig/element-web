@@ -270,7 +270,7 @@ export interface Settings {
     "glassEffects": IBaseSetting<boolean>;
     "telegramStyleLayout": IBaseSetting<boolean>;
     "readReceiptsStyle": IBaseSetting<"avatars" | "ticks">;
-    "bubbleTail": IBaseSetting<"none" | "telegram" | "telegram-ios" | "imessage">;
+    "bubbleTail": IBaseSetting<"none" | "telegram" | "imessage">;
     "enableSyntaxHighlightLanguageDetection": IBaseSetting<boolean>;
     "expandCodeByDefault": IBaseSetting<boolean>;
     "showCodeLineNumbers": IBaseSetting<boolean>;
@@ -913,9 +913,8 @@ export const SETTINGS: Settings = {
         supportedLevels: LEVELS_ACCOUNT_SETTINGS,
         displayName: _td("settings|bubble_tail"),
         description: _td("settings|bubble_tail_description"),
-        default: "telegram-ios",
+        default: "telegram",
         options: [
-            { value: "telegram-ios", label: _td("settings|bubble_tail_telegram_ios") },
             { value: "telegram", label: _td("settings|bubble_tail_telegram") },
             { value: "imessage", label: _td("settings|bubble_tail_imessage") },
             { value: "none", label: _td("settings|bubble_tail_none") },

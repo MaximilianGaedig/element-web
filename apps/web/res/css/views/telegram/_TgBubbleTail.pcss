@@ -6,47 +6,19 @@ Please see LICENSE files in the repository root for full details.
 */
 
 /*
- * The little point at the bottom of the last bubble in a run: each app draws its own, and each is a mask
- * over a box that inherits the bubble's background, so a tail is always exactly the colour of the bubble
- * it belongs to, in either theme, with no colours repeated here. Every shape is stated in the units its
- * source uses and sized by its box, so the numbers below can be checked against that source directly.
+ * The little point at the bottom of the last bubble in a run.
  *
- * Telegram iOS (GPL-2.0, https://github.com/TelegramMessenger/Telegram-iOS,
- * submodules/TelegramPresentationData/Sources/ChatMessageBubbleImages.swift, messageBubbleImage): the
- * bubble is a 33x33 body, and the tail comes from `bottomEllipse` (24,16, 27x17) - two quadratic curves
- * from its left edge at mid height, down through the bottom of its midpoint, to its right edge - with
- * `topEllipse` (33,14, 23x21) then *cleared* out of it, which is what leaves the thin hook. That clear is
- * a subtraction, so this is a mask rather than a fill rule. The box below is the part that sticks out past
- * the body (x 32-38, y 24-33); iOS fills that corner of the body square first, which --tg-tail-corner does.
- *
- * Telegram Web K draws a different, longer shape: `#message-tail-filled` (GPL-3.0,
+ * Telegram's is Telegram Web K's `#message-tail-filled` symbol (GPL-3.0,
  * https://github.com/morethanwords/tweb, index.html), hung off the corner by -8.4px and mirrored for
- * outgoing messages exactly as _chatBubble.scss does with `--reflect`.
+ * outgoing messages exactly as `_chatBubble.scss` does with `--reflect`. iMessage's is the rounder wing
+ * Apple draws; that path is written to look like it rather than copied from Apple.
  *
- * iMessage's is the rounder wing Apple draws; the path is written to look like it rather than copied.
+ * Each is a mask over a box that inherits the bubble's background, so a tail is always exactly the colour
+ * of the bubble it belongs to, in either theme, with no colours repeated here.
  */
 
-:root {
-    /* Telegram iOS: the crescent left when topEllipse is cleared out of bottomEllipse (see above). */
-    --tg-tail-telegram-ios: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="32 24 6 9"><mask id="t" maskUnits="userSpaceOnUse" x="32" y="24" width="6" height="9"><path fill="white" d="M24 24.5Q24 33 37.5 33Q51 33 51 24.5Z"/><ellipse cx="44.5" cy="24.5" rx="11.5" ry="10.5" fill="black"/></mask><rect x="32" y="24" width="6" height="9" mask="url(%23t)"/></svg>');
-    /* tweb index.html, #message-tail-filled */
-    --tg-tail-telegram: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 11 20"><g transform="translate(9 -14)" fill-rule="evenodd"><path d="M-6 16h6v17c-.193-2.84-.876-5.767-2.05-8.782-.904-2.325-2.446-4.485-4.625-6.48A1 1 0 01-6 16z" transform="matrix(1 0 0 -1 0 49)"/></g></svg>');
-    /* Apple's is a smaller wing that leaves the corner, swings out and curls back to a rounded tip. */
-    --tg-tail-imessage: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 11 20"><path d="M11 7c0 6.2-3.4 10.6-8.6 12.6-.9.3-.6 1 .3.9 3.4-.4 6.2-1.6 8.3-3.6z"/></svg>');
-}
-
-html[data-tg-tail="telegram-ios"] {
-    --tg-tail-shape: var(--tg-tail-telegram-ios);
-    --tg-tail-width: 6px;
-    --tg-tail-height: 9px;
-    /* 1px of the box lies on the body, so the two never part along the seam. */
-    --tg-tail-offset: -5px;
-    /* iOS fills that corner of the body square before drawing the hook on it. */
-    --tg-tail-corner: 0;
-}
-
 html[data-tg-tail="telegram"] {
-    --tg-tail-shape: var(--tg-tail-telegram);
+    --tg-tail-shape: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 11 20"><g transform="translate(9 -14)" fill-rule="evenodd"><path d="M-6 16h6v17c-.193-2.84-.876-5.767-2.05-8.782-.904-2.325-2.446-4.485-4.625-6.48A1 1 0 01-6 16z" transform="matrix(1 0 0 -1 0 49)"/></g></svg>');
     --tg-tail-width: 11px;
     --tg-tail-height: 20px;
     /* tweb _chatBubble.scss: the tail overlaps the bubble's squared corner by this much. */
@@ -56,7 +28,7 @@ html[data-tg-tail="telegram"] {
 }
 
 html[data-tg-tail="imessage"] {
-    --tg-tail-shape: var(--tg-tail-imessage);
+    --tg-tail-shape: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 11 20"><path d="M11 7c0 6.2-3.4 10.6-8.6 12.6-.9.3-.6 1 .3.9 3.4-.4 6.2-1.6 8.3-3.6z"/></svg>');
     --tg-tail-width: 11px;
     --tg-tail-height: 20px;
     /* Apple keeps the bubble's corner round and hangs the tail outside it. */
@@ -69,7 +41,7 @@ html[data-tg-tail="imessage"] {
  * That covers a group's sender runs, whose bubbles are siblings within the run, and a one-to-one chat,
  * which has no runs at all. A message that is only big emoji has no bubble to hang a tail on.
  */
-html:is([data-tg-tail="telegram"], [data-tg-tail="telegram-ios"], [data-tg-tail="imessage"]) .mx_RoomView_body[data-layout="bubble"] {
+html:is([data-tg-tail="telegram"], [data-tg-tail="imessage"]) .mx_RoomView_body[data-layout="bubble"] {
     /* The last bubble of each side's run, and only those, carry the tail. */
     :is(
             .mx_EventTile_tgBubble:not(.mx_EventTile_tgOwn, :has(.mx_EventTile_bigEmoji)):not(
