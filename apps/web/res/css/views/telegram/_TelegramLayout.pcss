@@ -105,8 +105,8 @@ Please see LICENSE files in the repository root for full details.
 
 /*
  * The chat's header and composer float over the timeline, which scrolls behind them (tweb's .bubbles
- * spans the whole chat, padded by --chat-padding-top/-bottom). Towards both edges the timeline is
- * blurred progressively like Telegram iOS: five stacked backdrop blurs (0.5-8px), each masked to its band.
+ * spans the whole chat, padded by --chat-padding-top/-bottom). Towards both edges the messages fade
+ * out into the chat background (see .mx_TgFadeEdge below).
  * TgChatChrome keeps --tg-header-block / --tg-composer-block (the space the floating parts take).
  */
 html[data-tg-screen] .mx_RoomView_body[data-telegram-layout="true"] {
@@ -167,68 +167,37 @@ html[data-tg-screen] .mx_RoomView_body[data-telegram-layout="true"] {
         top: calc(var(--tg-header-block, 0px) + 0.5rem);
     }
 
-    .mx_TgBlurEdge {
+    /*
+     * Towards both edges the messages fade out into the chat background instead of being blurred: one
+     * gradient of the background colour per edge, transparent where the messages are fully visible and
+     * opaque where the floating bar starts. A gradient composites on the GPU like any other paint, while a
+     * backdrop filter re-reads and re-blurs everything behind it on every scrolled frame.
+     */
+    .mx_TgFadeEdge {
         position: absolute;
         left: 0;
         right: 0;
         z-index: 2;
         pointer-events: none;
-
-        > i {
-            position: absolute;
-            inset: 0;
-        }
+        background-image: linear-gradient(
+            to var(--tg-fade-to),
+            var(--tg-surface-color) 45%,
+            color-mix(in srgb, var(--tg-surface-color) 55%, transparent) 70%,
+            transparent 100%
+        );
     }
 
-    .mx_TgBlurEdge_top {
+    .mx_TgFadeEdge_top {
+        --tg-fade-to: top;
+
         top: 0;
         height: var(--tg-header-block, 0px);
-
-        > i:nth-child(1) {
-            backdrop-filter: blur(0.5px);
-            mask-image: linear-gradient(to top, transparent 0%, #000 20%);
-        }
-        > i:nth-child(2) {
-            backdrop-filter: blur(1px);
-            mask-image: linear-gradient(to top, transparent 20%, #000 40%);
-        }
-        > i:nth-child(3) {
-            backdrop-filter: blur(2px);
-            mask-image: linear-gradient(to top, transparent 40%, #000 60%);
-        }
-        > i:nth-child(4) {
-            backdrop-filter: blur(4px);
-            mask-image: linear-gradient(to top, transparent 60%, #000 80%);
-        }
-        > i:nth-child(5) {
-            backdrop-filter: blur(8px);
-            mask-image: linear-gradient(to top, transparent 80%, #000 100%);
-        }
     }
 
-    .mx_TgBlurEdge_bottom {
+    .mx_TgFadeEdge_bottom {
+        --tg-fade-to: bottom;
+
         bottom: 0;
         height: var(--tg-composer-block, 0px);
-
-        > i:nth-child(1) {
-            backdrop-filter: blur(0.5px);
-            mask-image: linear-gradient(to bottom, transparent 0%, #000 20%);
-        }
-        > i:nth-child(2) {
-            backdrop-filter: blur(1px);
-            mask-image: linear-gradient(to bottom, transparent 20%, #000 40%);
-        }
-        > i:nth-child(3) {
-            backdrop-filter: blur(2px);
-            mask-image: linear-gradient(to bottom, transparent 40%, #000 60%);
-        }
-        > i:nth-child(4) {
-            backdrop-filter: blur(4px);
-            mask-image: linear-gradient(to bottom, transparent 60%, #000 80%);
-        }
-        > i:nth-child(5) {
-            backdrop-filter: blur(8px);
-            mask-image: linear-gradient(to bottom, transparent 80%, #000 100%);
-        }
     }
 }

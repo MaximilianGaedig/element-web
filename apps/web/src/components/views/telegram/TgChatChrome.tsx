@@ -12,14 +12,11 @@ interface Props {
     body: RefObject<HTMLDivElement | null>;
 }
 
-/** Five blur layers per edge, 1px to 16px, each masked to its band (see _TelegramLayout.pcss). */
-const LAYERS = 5;
-
 /**
  * The Telegram-style chat chrome: the header and composer float over the timeline (which scrolls behind
- * them), and the timeline is blurred progressively towards both edges like Telegram iOS. This keeps the
+ * them), and the messages fade out into the chat background towards both edges. This keeps the
  * space the floating header (plus pinned plate) and composer (plus status bar) take in `--tg-header-block` and
- * `--tg-composer-block` on the body, which pad the message list and size the blur edges.
+ * `--tg-composer-block` on the body, which pad the message list and size the fade edges.
  */
 export function TgChatChrome({ body }: Props): JSX.Element {
     useEffect(() => {
@@ -73,11 +70,7 @@ export function TgChatChrome({ body }: Props): JSX.Element {
     return (
         <>
             {(["top", "bottom"] as const).map((edge) => (
-                <div key={edge} className={`mx_TgBlurEdge mx_TgBlurEdge_${edge}`} aria-hidden>
-                    {Array.from({ length: LAYERS }, (_, i) => (
-                        <i key={i} />
-                    ))}
-                </div>
+                <div key={edge} className={`mx_TgFadeEdge mx_TgFadeEdge_${edge}`} aria-hidden />
             ))}
         </>
     );

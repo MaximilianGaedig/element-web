@@ -22,6 +22,17 @@ Please see LICENSE files in the repository root for full details.
  * shared EventTileView CSS module.
  */
 
+/*
+ * No tint under the cursor: Telegram never highlights the message row on hover (tweb's `.bubble` has no
+ * :hover background - the hover affordances are the actions button and the timestamp). The shared
+ * EventTileView takes its hover colour from a variable on the tile, so it is switched off there instead of
+ * re-stating that module's selectors; selection, highlight and editing keep their own colours.
+ */
+.mx_RoomView_body[data-telegram-layout="true"] .mx_EventTile {
+    --event-tile-state-hover-background: transparent;
+    --event-tile-bubble-hover-background: transparent;
+}
+
 .mx_RoomView_body .mx_EventTile[data-testid="event-tile"].mx_EventTile_tgTime {
     --TgTime-text-size: calc(var(--cpd-font-size-body-md) - 4px);
     --TgTime-status-size: calc(var(--cpd-font-size-body-md) + 3px);

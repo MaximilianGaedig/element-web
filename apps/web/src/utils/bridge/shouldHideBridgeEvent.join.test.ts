@@ -26,10 +26,10 @@ function clientWith(bridged: boolean): void {
         getUserId: () => "@me:x",
         getSafeUserId: () => "@me:x",
         getRoom: () => ({
-            currentState: {
-                getStateEvents: (type: string) =>
-                    type === "im.mxg.backfill" && bridged ? { getContent: () => ({ state: "complete" }) } : null,
-            },
+            // The bridge publishes its import status as room account data (state is only the old fallback).
+            getAccountData: (type: string) =>
+                type === "im.mxg.backfill" && bridged ? { getContent: () => ({ state: "complete" }) } : undefined,
+            currentState: { getStateEvents: () => null },
         }),
     } as never);
 }

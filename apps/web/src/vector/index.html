@@ -14,6 +14,14 @@
     <link rel="icon" type="image/png" sizes="512x512" href="<%= require('../../res/vector-icons/512.png') %>">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, shrink-to-fit=no, viewport-fit=cover">
     <meta name="apple-mobile-web-app-title" content="Element">
+    <!--
+      A home-screen app on iOS otherwise starts below the status bar, whatever viewport-fit says, and
+      env(safe-area-inset-top) stays 0: the chat would end in a hard edge under the clock instead of
+      scrolling on under it. black-translucent hands the whole screen to the page, which then keeps its
+      floating bars clear of the notch with the safe-area insets (--tg-safe-top / --tg-safe-bottom).
+    -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="application-name" content="Element">
     <meta name="theme-color" content="#ffffff">
     <meta property="og:image" content="<%= og_image_url %>" />

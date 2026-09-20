@@ -37,6 +37,8 @@
     --event-tile-bubble-other-background: var(--cpd-color-gray-300);
     --event-tile-bubble-self-background: var(--cpd-color-green-300);
     --event-tile-bubble-hover-background: var(--cpd-color-bg-subtle-secondary);
+    /* Its own variable so a theme can drop the hover tint without losing the selected one. */
+    --event-tile-bubble-selected-background: var(--event-tile-bubble-hover-background);
 
     /* Shared preview, action-bar, bubble, and interaction values. */
     --event-tile-preview-offset: 48px;
@@ -948,9 +950,12 @@
         margin-inline-end: -11px;
     }
 
-    &:hover::before,
-    &.stateSelected::before {
+    &:hover::before {
         background: var(--event-tile-bubble-hover-background);
+    }
+
+    &.stateSelected::before {
+        background: var(--event-tile-bubble-selected-background);
     }
 
     &.stateHighlighted::before {
@@ -965,9 +970,12 @@
         border-color: var(--event-tile-state-highlight-background);
     }
 
-    &:hover .slotAvatar > *,
-    &.stateSelected .slotAvatar > * {
+    &:hover .slotAvatar > * {
         box-shadow: 0 0 0 3px var(--event-tile-bubble-hover-background);
+    }
+
+    &.stateSelected .slotAvatar > * {
+        box-shadow: 0 0 0 3px var(--event-tile-bubble-selected-background);
     }
 
     &.stateHighlighted .slotAvatar > * {

@@ -72,8 +72,8 @@ html[data-tg-keyboard] {
 
 /*
  * The floating bars are translucent glass: the timeline scrolls behind them and shows through, blurred.
- * Low power mode (html[data-low-power], see ROADMAP wave 6) turns every backdrop blur off: solid bars,
- * no blur edges.
+ * Low power mode (html[data-low-power], see ROADMAP wave 6) turns every backdrop blur off: solid bars.
+ * The fade towards the timeline's edges (.mx_TgFadeEdge) is a plain gradient, so it stays on throughout.
  */
 
 /*
@@ -88,10 +88,4 @@ html[data-no-glass] [class*="cpd-theme-"],
 html[data-scrolling] [class*="cpd-theme-"] {
     --tg-glass-background: var(--tg-surface-color);
     --tg-glass-backdrop: none;
-}
-
-html[data-low-power] .mx_TgBlurEdge,
-html[data-no-glass] .mx_TgBlurEdge,
-html[data-scrolling] .mx_TgBlurEdge {
-    display: none;
 }
