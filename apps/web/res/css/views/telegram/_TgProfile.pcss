@@ -565,3 +565,27 @@ html[data-tg-screen="mobile"] .mx_HistoryCard {
     margin: 0.75rem 1rem 0;
     padding: 1.125rem 1rem;
 }
+
+/* Statuses that take turns on one line (last seen / online, import progress): stacked in one grid cell,
+   the active one opaque, the others faded out, so the line never jumps. */
+.mx_StatusCrossfade {
+    display: grid;
+}
+
+.mx_StatusCrossfade_item {
+    grid-area: 1 / 1;
+    opacity: 0;
+    transition: opacity 0.45s ease;
+    pointer-events: none;
+
+    &[data-active="true"] {
+        opacity: 1;
+        pointer-events: auto;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .mx_StatusCrossfade_item {
+        transition: none;
+    }
+}

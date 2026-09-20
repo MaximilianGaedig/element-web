@@ -5,7 +5,7 @@ SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only OR LicenseRef-Element-Com
 Please see LICENSE files in the repository root for full details.
 */
 
-import React, { type JSX, type ReactNode, useContext } from "react";
+import React, { type JSX, type ReactNode, useContext, useEffect, useState } from "react";
 import { type MatrixClient, type Room } from "matrix-js-sdk/src/matrix";
 import { Text } from "@vector-im/compound-web";
 
@@ -28,17 +28,61 @@ export function useLastSeen(client: MatrixClient | undefined, userId: string | u
  * Subtitle under a DM's name in the room header, like Telegram's "last seen …" line; replaced by
  * an animated "typing" while the other side types.
  */
-export function DmLastSeenSubtitle({ room }: { room: Room }): JSX.Element | null {
+export function DmLastSeenSubtitle({
+    room,
+    alsoShow,
+}: {
+    room: Room;
+    /** Another status for the same line (the history import): it alternates with the last-seen text. */
+    alsoShow?: JSX.Element | null;
+}): JSX.Element | null {
     const member = useDmMember(room);
     const typing = useHeaderTypingText(room, true);
     const text = useLastSeen(room.client, member?.userId);
-    // Presence is the one source (bridges keep it current from what they see on the network).
+    // Typing always wins the line, as in Telegram.
     if (typing) return <TypingIndicatorLine text={typing} />;
-    if (!text || !isPresenceEnabled(room.client)) return null;
+    const seen =
+        text && isPresenceEnabled(room.client) ? (
+            <Text as="div" size="sm" className="mx_LastSeen" data-online={text === _t("bridge|last_seen_online")}>
+                {text}
+            </Text>
+        ) : null;
+    // Presence is the one source (bridges keep it current from what they see on the network); the
+    // import status never replaces it, it takes turns with it.
+    return <StatusCrossfade items={[seen, alsoShow ?? null]} />;
+}
+
+/** How long each status stays before the next fades in. */
+const STATUS_HOLD_MS = 4000;
+
+/**
+ * One line that shows one of several statuses at a time, fading between them, so that the header
+ * never has to choose. With a single status it just shows it; with none it shows nothing.
+ */
+export function StatusCrossfade({ items }: { items: Array<JSX.Element | null> }): JSX.Element | null {
+    const present = items.filter((item): item is JSX.Element => !!item);
+    const [index, setIndex] = useState(0);
+    const count = present.length;
+    useEffect(() => {
+        if (count < 2) return;
+        const timer = window.setInterval(() => setIndex((i) => (i + 1) % count), STATUS_HOLD_MS);
+        return (): void => window.clearInterval(timer);
+    }, [count]);
+    if (count === 0) return null;
+    if (count === 1) return present[0];
     return (
-        <Text as="div" size="sm" className="mx_LastSeen" data-online={text === _t("bridge|last_seen_online")}>
-            {text}
-        </Text>
+        <div className="mx_StatusCrossfade">
+            {present.map((item, i) => (
+                <div
+                    key={i}
+                    className="mx_StatusCrossfade_item"
+                    data-active={i === index % count}
+                    aria-hidden={i !== index % count}
+                >
+                    {item}
+                </div>
+            ))}
+        </div>
     );
 }
 
