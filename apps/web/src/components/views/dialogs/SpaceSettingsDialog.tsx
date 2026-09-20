@@ -28,6 +28,7 @@ import AdvancedRoomSettingsTab from "../settings/tabs/room/AdvancedRoomSettingsT
 import RolesRoomSettingsTab from "../settings/tabs/room/RolesRoomSettingsTab";
 import { Action } from "../../../dispatcher/actions";
 import { type NonEmptyArray } from "../../../@types/common";
+import { SettingsNavBar } from "./SettingsNav";
 
 export enum SpaceSettingsTab {
     General = "SPACE_GENERAL_TAB",
@@ -90,17 +91,38 @@ const SpaceSettingsDialog: React.FC<IProps> = ({ matrixClient: cli, space, onFin
     }, [cli, space, onFinished]);
 
     const [activeTabId, setActiveTabId] = React.useState(SpaceSettingsTab.General);
+    /*
+     * Which screen a handheld shows: the list of sections, or the chosen one. A desktop shows both at once
+     * and ignores this, exactly as the room settings do (see _TgSheets.pcss).
+     */
+    const [page, setPage] = React.useState<"list" | "page">("list");
+    const spaceName = space.name || _t("common|unnamed_space");
+    const activeTab = tabs.find((tab) => tab.id === activeTabId);
 
     return (
         <BaseDialog
-            title={_t("space_settings|title", { spaceName: space.name || _t("common|unnamed_space") })}
+            title={_t("space_settings|title", { spaceName })}
             className="mx_SpaceSettingsDialog"
             contentId="mx_SpaceSettingsDialog"
             onFinished={onFinished}
             fixedWidth={false}
         >
-            <div className="mx_SpaceSettingsDialog_content" id="mx_SpaceSettingsDialog">
-                <TabbedView tabs={tabs} activeTabId={activeTabId} onChange={setActiveTabId} />
+            <div className="mx_SettingsDialog_content" id="mx_SpaceSettingsDialog" data-page={page}>
+                <SettingsNavBar
+                    page={page}
+                    title={page === "page" && activeTab ? _t(activeTab.label) : spaceName}
+                    onBack={(): void => setPage("list")}
+                    onClose={onFinished}
+                />
+                <TabbedView
+                    tabs={tabs}
+                    activeTabId={activeTabId}
+                    onChange={(tabId): void => {
+                        setActiveTabId(tabId);
+                        setPage("page");
+                    }}
+                    responsive={true}
+                />
             </div>
         </BaseDialog>
     );

@@ -211,7 +211,9 @@ html[data-tg-screen="mobile"] {
 /* The settings sheet: the profile drawer's twin. Same surface, same 28px edge, same grabber; the dialog's
    own close button is left out because the bar has one. */
 :root[data-tg-screen="mobile"] {
-    .mx_Dialog_wrapper:has(.mx_UserSettingsDialog) .mx_Dialog_cancelButton {
+    /* The bar carries the close button, so the dialog's own would be the second one. */
+    .mx_Dialog_wrapper:has(:is(.mx_UserSettingsDialog, .mx_RoomSettingsDialog, .mx_SpaceSettingsDialog))
+        .mx_Dialog_cancelButton {
         display: none;
     }
 
@@ -233,11 +235,8 @@ html[data-tg-screen="mobile"] {
             border-radius: 0.25rem;
             background: var(--cpd-color-bg-subtle-primary);
         }
-    }
 
-    /* The navigation bar replaces the dialog's own header wherever one is rendered. */
-    .mx_UserSettingsDialog,
-    .mx_RoomSettingsDialog {
+        /* The navigation bar replaces the dialog's own header wherever one is rendered. */
         .mx_Dialog_header,
         > h2,
         .mx_UserSettingsDialog_title {
