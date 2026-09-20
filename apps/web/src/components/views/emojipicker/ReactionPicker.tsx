@@ -8,7 +8,14 @@ Please see LICENSE files in the repository root for full details.
 */
 
 import React from "react";
-import { type MatrixEvent, EventType, RelationType, type Relations, RelationsEvent } from "matrix-js-sdk/src/matrix";
+import {
+    type MatrixEvent,
+    EventType,
+    RelationType,
+    type Relations,
+    RelationsEvent,
+    type Room,
+} from "matrix-js-sdk/src/matrix";
 
 import { MatrixClientPeg } from "../../../MatrixClientPeg";
 import dis from "../../../dispatcher/dispatcher";
@@ -18,6 +25,61 @@ import { type FocusComposerPayload } from "../../../dispatcher/payloads/FocusCom
 import { isReactionAllowed } from "../../../utils/bridge/roomFeatures";
 import { EmojiPickerWithRecents } from "../../../emojipicker/EmojiPickerWithRecents";
 import { haptic } from "../../../utils/haptics";
+import { type TimelineRenderingType } from "../../../contexts/RoomContext";
+
+/** The user's own reactions to an event, by emoji: the reaction event's ID. */
+export function myReactionsTo(reactions: Relations | null | undefined): Record<string, string> {
+    if (!reactions) return {};
+    const userId = MatrixClientPeg.safeGet().getSafeUserId();
+    const myAnnotations = reactions.getAnnotationsBySender()?.[userId] ?? new Set<MatrixEvent>();
+    return Object.fromEntries(
+        [...myAnnotations]
+            .filter((event) => !event.isRedacted())
+            .map((event) => [event.getRelation()?.key, event.getId()]),
+    );
+}
+
+/**
+ * Reacts to an event with `reaction`, or takes the user's own reaction back if it is already there.
+ * Returns whether a reaction was added (so the emoji picker knows whether to count it as recent).
+ */
+export function toggleReaction(
+    mxEvent: MatrixEvent,
+    reaction: string,
+    reactions: Relations | null | undefined,
+    context: { room?: Room | null; canSelfRedact: boolean; timelineRenderingType: TimelineRenderingType },
+): boolean {
+    const myReactions = myReactionsTo(reactions);
+    // Quick reactions don't honour isEmojiDisabled, so check again before sending.
+    if (!myReactions.hasOwnProperty(reaction) && !isReactionAllowed(context.room ?? null, reaction)) {
+        return false;
+    }
+    haptic("light");
+    if (myReactions.hasOwnProperty(reaction)) {
+        if (mxEvent.isRedacted() || !context.canSelfRedact) return false;
+
+        void MatrixClientPeg.safeGet().redactEvent(mxEvent.getRoomId()!, myReactions[reaction]);
+        dis.dispatch<FocusComposerPayload>({
+            action: Action.FocusAComposer,
+            context: context.timelineRenderingType,
+        });
+        // Tell the emoji picker not to bump this in the more frequently used list.
+        return false;
+    }
+    void MatrixClientPeg.safeGet().sendEvent(mxEvent.getRoomId()!, EventType.Reaction, {
+        "m.relates_to": {
+            rel_type: RelationType.Annotation,
+            event_id: mxEvent.getId()!,
+            key: reaction,
+        },
+    });
+    dis.dispatch({ action: "message_sent" });
+    dis.dispatch<FocusComposerPayload>({
+        action: Action.FocusAComposer,
+        context: context.timelineRenderingType,
+    });
+    return true;
+}
 
 interface IProps {
     mxEvent: MatrixEvent;
@@ -88,39 +150,17 @@ class ReactionPicker extends React.Component<IProps, IState> {
     };
 
     private onChoose = (reaction: string): boolean => {
-        // Quick reactions don't honour isEmojiDisabled, so check again before sending.
-        if (!this.getReactions().hasOwnProperty(reaction) && !isReactionAllowed(this.context.room ?? null, reaction)) {
-            return false;
-        }
-        haptic("light");
+        // Closing the picker first, as before: the reaction is sent from the toggle below.
+        const allowed =
+            this.getReactions().hasOwnProperty(reaction) || isReactionAllowed(this.context.room ?? null, reaction);
+        if (!allowed) return false;
         this.componentWillUnmount();
         this.props.onFinished();
-        const myReactions = this.getReactions();
-        if (myReactions.hasOwnProperty(reaction)) {
-            if (this.props.mxEvent.isRedacted() || !this.context.canSelfRedact) return false;
-
-            void MatrixClientPeg.safeGet().redactEvent(this.props.mxEvent.getRoomId()!, myReactions[reaction]);
-            dis.dispatch<FocusComposerPayload>({
-                action: Action.FocusAComposer,
-                context: this.context.timelineRenderingType,
-            });
-            // Tell the emoji picker not to bump this in the more frequently used list.
-            return false;
-        } else {
-            void MatrixClientPeg.safeGet().sendEvent(this.props.mxEvent.getRoomId()!, EventType.Reaction, {
-                "m.relates_to": {
-                    rel_type: RelationType.Annotation,
-                    event_id: this.props.mxEvent.getId()!,
-                    key: reaction,
-                },
-            });
-            dis.dispatch({ action: "message_sent" });
-            dis.dispatch<FocusComposerPayload>({
-                action: Action.FocusAComposer,
-                context: this.context.timelineRenderingType,
-            });
-            return true;
-        }
+        return toggleReaction(this.props.mxEvent, reaction, this.props.reactions, {
+            room: this.context.room,
+            canSelfRedact: this.context.canSelfRedact,
+            timelineRenderingType: this.context.timelineRenderingType,
+        });
     };
 
     private isEmojiDisabled = (unicode: string): boolean => {
