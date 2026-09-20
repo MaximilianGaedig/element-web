@@ -10,7 +10,7 @@ Please see LICENSE files in the repository root for full details.
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { beginSwipeBack, moveSwipeBack, shouldPreventScroll, swipeBlockedAt } from "./swipeBack";
-import { computeVh, installViewportHeight, keyboardClosed, VH_PROPERTY } from "./viewportHeight";
+import { computeVh, installViewportHeight, keyboardClosed, VH_PROPERTY, VIEWPORT_TOP_PROPERTY } from "./viewportHeight";
 import { attachLongPressContextMenu, cancelContextMenuOpening } from "./longPress";
 
 function touchEvent(type: string, x: number, y: number, count = 1): Event {
@@ -108,6 +108,43 @@ describe("viewport height (tweb src/index.ts setVH)", () => {
         expect(document.documentElement.style.getPropertyValue(VH_PROPERTY)).toBe("5px");
         stop();
         expect(document.documentElement.style.getPropertyValue(VH_PROPERTY)).toBe("");
+    });
+});
+
+describe("the app follows a panned visual viewport while the keyboard is up", () => {
+    it("writes where iOS panned the viewport, only while the keyboard is up", () => {
+        const listeners: Record<string, () => void> = {};
+        const visualViewport = {
+            height: 844,
+            offsetTop: 0,
+            addEventListener: (type: string, cb: () => void) => (listeners[type] = cb),
+            removeEventListener: vi.fn(),
+        };
+        const scrollTo = vi.fn();
+        const win = {
+            visualViewport,
+            document,
+            innerHeight: 844,
+            scrollY: 12,
+            scrollTo,
+            navigator: { maxTouchPoints: 5 },
+        } as unknown as Window;
+        const stop = installViewportHeight(win);
+        expect(document.documentElement.style.getPropertyValue(VIEWPORT_TOP_PROPERTY)).toBe("");
+
+        // The keyboard opens and iOS pans the viewport up by 300px.
+        visualViewport.height = 500;
+        visualViewport.offsetTop = 300;
+        listeners.scroll();
+        expect(document.documentElement.style.getPropertyValue(VIEWPORT_TOP_PROPERTY)).toBe("300px");
+        expect(scrollTo).toHaveBeenCalledWith(0, 0);
+
+        // The keyboard closes.
+        visualViewport.height = 844;
+        visualViewport.offsetTop = 0;
+        listeners.resize();
+        expect(document.documentElement.style.getPropertyValue(VIEWPORT_TOP_PROPERTY)).toBe("");
+        stop();
     });
 });
 

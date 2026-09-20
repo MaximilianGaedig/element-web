@@ -197,8 +197,16 @@ Please see LICENSE files in the repository root for full details.
      * src/index.ts: the app is sized by --vh, which follows the visual viewport (the keyboard).
      * Important: .mx_MatrixChat's child rule (height: 100%) is more specific.
      */
-    height: calc(var(--tg-vh) * 100) !important;
+    height: var(--tg-app-height) !important;
     align-self: flex-start;
+
+    /* With the keyboard up the app sits exactly on the visible part of the page, wherever iOS panned it. */
+    html[data-tg-keyboard] & {
+        position: fixed;
+        inset-block-start: 0;
+        inset-inline: 0;
+        transform: translateY(var(--tg-vv-top));
+    }
 
     .mx_TgColumns_left,
     .mx_TgColumns_center {

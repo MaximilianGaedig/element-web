@@ -14,6 +14,8 @@ Please see LICENSE files in the repository root for full details.
  */
 
 export const VH_PROPERTY = "--tg-vh";
+/** How far the visual viewport is panned down from the top of the page (iOS pans it to reveal the focused input). */
+export const VIEWPORT_TOP_PROPERTY = "--tg-vv-top";
 /** Set on <html> while the on-screen keyboard is up (it then covers the home-indicator inset). */
 export const KEYBOARD_ATTRIBUTE = "data-tg-keyboard";
 /** How much shorter than the layout viewport the visual one must be to count as the keyboard. */
@@ -42,7 +44,17 @@ export function installViewportHeight(win: Window = window): () => void {
 
     const setVh = (): void => {
         const height = win.visualViewport?.height ?? win.innerHeight;
-        root.toggleAttribute(KEYBOARD_ATTRIBUTE, isTouch && win.innerHeight - height > KEYBOARD_MIN_PX);
+        const keyboard = isTouch && win.innerHeight - height > KEYBOARD_MIN_PX;
+        root.toggleAttribute(KEYBOARD_ATTRIBUTE, keyboard);
+        // iOS pans the visual viewport up to keep the focused input in view (the page itself doesn't resize),
+        // so the app, which is as tall as the visual viewport, has to follow it or it ends up below the
+        // visible part, with the composer under the keyboard. While the keyboard is down there is no pan.
+        if (keyboard) {
+            if (win.scrollY !== 0) win.scrollTo(0, 0);
+            root.style.setProperty(VIEWPORT_TOP_PROPERTY, `${Math.max(0, win.visualViewport?.offsetTop ?? 0)}px`);
+        } else {
+            root.style.removeProperty(VIEWPORT_TOP_PROPERTY);
+        }
         const vh = computeVh(height);
         if (lastVh === vh) return;
         if (keyboardClosed(lastVh, vh, isTouch)) {
@@ -53,10 +65,14 @@ export function installViewportHeight(win: Window = window): () => void {
     };
 
     viewport.addEventListener("resize", setVh);
+    // The pan changes without the size changing.
+    if (win.visualViewport) win.visualViewport.addEventListener("scroll", setVh);
     setVh();
     return () => {
         viewport.removeEventListener("resize", setVh);
+        win.visualViewport?.removeEventListener("scroll", setVh);
         root.style.removeProperty(VH_PROPERTY);
+        root.style.removeProperty(VIEWPORT_TOP_PROPERTY);
         root.removeAttribute(KEYBOARD_ATTRIBUTE);
     };
 }
