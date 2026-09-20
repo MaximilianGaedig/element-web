@@ -33,6 +33,9 @@ export interface StorageOverview {
     account: Storage;
     /** Only present for a server admin. */
     server?: { database: number; media: number };
+    /** When all the account's messages were sent: per month, and per hour of the week in UTC. */
+    by_month?: Array<{ month: string; count: number }>;
+    by_hour_of_week?: number[];
 }
 
 const FEATURE = "im.mxg.storage";

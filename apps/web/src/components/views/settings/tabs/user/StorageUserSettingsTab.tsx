@@ -15,6 +15,7 @@ import { SettingsSubsection } from "../../shared/SettingsSubsection";
 import { formatBytes } from "../../../../../utils/FormattingUtils";
 import { fetchStorageOverview, type Storage, type StorageOverview, storedBytes } from "../../../../../utils/storage";
 import dis from "../../../../../dispatcher/dispatcher";
+import { ActivityCharts } from "../../../telegram/TgHistory";
 import { Action } from "../../../../../dispatcher/actions";
 
 /** A bar split in the shares it is made of, each with its name and size underneath. */
@@ -116,6 +117,17 @@ export default function StorageUserSettingsTab(): JSX.Element {
                                 { label: _t("settings|storage|database"), bytes: overview.server.database, tone: "messages" },
                                 { label: _t("settings|storage|media_files"), bytes: overview.server.media, tone: "media" },
                             ]}
+                        />
+                    </SettingsSubsection>
+                )}
+
+                {!!(overview.by_month?.length || overview.by_hour_of_week) && (
+                    <SettingsSubsection heading={_t("settings|storage|activity_heading")}>
+                        <ActivityCharts
+                            months={overview.by_month ?? []}
+                            week={overview.by_hour_of_week}
+                            total={overview.by_month?.reduce((sum, m) => sum + m.count, 0) ?? 0}
+                            open
                         />
                     </SettingsSubsection>
                 )}

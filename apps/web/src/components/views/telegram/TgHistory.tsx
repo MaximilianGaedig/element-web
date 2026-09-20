@@ -482,9 +482,17 @@ function BarChart({
 }
 
 /** When the messages were sent: per year and month, per weekday, per hour of the day. */
-function ActivitySection({ stats }: { stats: RoomStats }): JSX.Element | null {
-    const months = stats.by_month ?? [];
-    const week = stats.by_hour_of_week;
+export function ActivityCharts({
+    months,
+    week,
+    total,
+    open,
+}: {
+    months: Array<{ month: string; count: number }>;
+    week?: number[];
+    total: number;
+    open?: boolean;
+}): JSX.Element | null {
     if (!months.length && !week) return null;
 
     const years = perYear(months);
@@ -495,10 +503,10 @@ function ActivitySection({ stats }: { stats: RoomStats }): JSX.Element | null {
     const busiestDay = weekdays.indexOf(Math.max(...weekdays));
     const busiestHour = hoursOfDay.indexOf(Math.max(...hoursOfDay));
     return (
-        <details className="mx_ActivitySection">
+        <details className="mx_ActivitySection" open={open}>
             <summary>
                 <span className="mx_ActivitySection_title">{_t("tg_layout|activity_title")}</span>
-                {week && stats.total > 0 && (
+                {week && total > 0 && (
                     <span className="mx_ActivitySection_hint">
                         {_t("tg_layout|activity_busiest", {
                             day: weekdayNames[busiestDay],
@@ -588,7 +596,7 @@ export function TgStatsSection({ room }: { room: Room }): JSX.Element | null {
                         : _t("tg_layout|stats_counting")
                 }
             />
-            <ActivitySection stats={stats} />
+            <ActivityCharts months={stats.by_month ?? []} week={stats.by_hour_of_week} total={stats.total} />
             {stats.storage && (
                 <TgRow
                     icon={<StorageIcon />}
