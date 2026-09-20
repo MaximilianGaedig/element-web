@@ -59,6 +59,7 @@ import {
     SharedMediaLoader,
     type SharedMediaState,
     type SharedMediaTab,
+    tabCountsFromStats,
 } from "../../../utils/sharedMedia";
 
 const TAB_LABELS: Record<SharedMediaTab, () => string> = {
@@ -173,8 +174,9 @@ function tabSubtitle(
         if (filter.videos && videos) parts.push(_t("bridge|shared_media|video_count", { count: videos }));
         return parts.join(", ");
     }
-    const kind = { files: "file", music: "audio", voice: "voice", links: undefined }[tab];
-    const count = kind && byKind ? (byKind[kind] ?? 0) : state.done ? state.items.length : 0;
+    // Links are text to the server, so only a list that has run out knows how many there are.
+    const fromServer = byKind && tab !== "links" ? (tabCountsFromStats(byKind)[tab] ?? 0) : undefined;
+    const count = fromServer ?? (state.done ? state.items.length : 0);
     if (!count) return "";
     switch (tab) {
         case "files":
@@ -333,7 +335,7 @@ function SelectionBar({
     const hasMedia = events.some((ev) => MediaEventHelper.isEligible(ev));
     const mayRedact = events.every((ev) => room.currentState.maySendRedactionForEvent(ev, userId));
     const remove = async (): Promise<void> => {
-        const [{ default: QuestionDialog }] = await Promise.all([import("../dialogs/QuestionDialog")]);
+        const { default: QuestionDialog } = await import("../dialogs/QuestionDialog");
         const { finished } = Modal.createDialog(QuestionDialog, {
             title: _t("bridge|shared_media|delete_title", { count: events.length }),
             description: _t("bridge|shared_media|delete_description", { count: events.length }),
@@ -553,10 +555,12 @@ function Selectable({
  * preview is the same card Telegram shows, with who sent it underneath.
  */
 function LinkRow({ event, room }: { event: MatrixEvent; room: Room }): JSX.Element {
+    // The same decision the timeline makes, so a room whose previews are off doesn't fetch any here.
+    const showUrlPreview = useContext(RoomContext).showTimelineUrlPreview;
     return (
         <div className="mx_SharedMedia_link">
             <div className="mx_SharedMedia_linkText">
-                <MessageEvent mxEvent={event} permalinkCreator={undefined} showUrlPreview={true} />
+                <MessageEvent mxEvent={event} permalinkCreator={undefined} showUrlPreview={showUrlPreview} />
             </div>
             <RowMeta event={event} room={room} />
         </div>
@@ -564,7 +568,7 @@ function LinkRow({ event, room }: { event: MatrixEvent; room: Room }): JSX.Eleme
 }
 
 /** An audio message as the tabs read it: how long it plays, wherever the sender put that. */
-type AudioEventContent = FileContent & { info?: AudioInfo; "org.matrix.msc1767.audio"?: { duration?: number } };
+type AudioEventContent = FileContent & { "info"?: AudioInfo; "org.matrix.msc1767.audio"?: { duration?: number } };
 
 /**
  * Music and voice messages: a row that turns into Element's player when it is played. Building the
@@ -684,13 +688,11 @@ function SharedMediaTabBody({
     tab,
     filter,
     setFilter,
-    withHeader,
 }: {
     loader: SharedMediaLoader;
     tab: SharedMediaTab;
     filter: MediaFilter;
     setFilter: (f: MediaFilter) => void;
-    withHeader: boolean;
 }): JSX.Element {
     const state = useTabState(loader, tab);
     const byKind = useRoomKindCounts(loader.room);
@@ -705,12 +707,10 @@ function SharedMediaTabBody({
             {selection.ids.size > 0 ? (
                 <SelectionBar room={loader.room} events={selected} selection={selection} />
             ) : (
-                withHeader && (
-                    <div className="mx_SharedMedia_paneHeader">
-                        <div className="mx_SharedMedia_subtitle">{subtitle}</div>
-                        <TabMenu tab={tab} filter={filter} onChange={setFilter} onSelect={selection.start} />
-                    </div>
-                )
+                <div className="mx_SharedMedia_paneHeader">
+                    <div className="mx_SharedMedia_subtitle">{subtitle}</div>
+                    <TabMenu tab={tab} filter={filter} onChange={setFilter} onSelect={selection.start} />
+                </div>
             )}
             <TabContent loader={loader} tab={tab} filter={filter} selection={selection} />
         </>
@@ -771,14 +771,7 @@ export function SharedMediaPane({ loader, tab }: { loader: SharedMediaLoader; ta
     return (
         <ScopedRoomContextProvider {...roomContext} timelineRenderingType={TimelineRenderingType.File}>
             <div className="mx_SharedMedia mx_SharedMedia_pane">
-                <SharedMediaTabBody
-                    key={tab}
-                    loader={loader}
-                    tab={tab}
-                    filter={filter}
-                    setFilter={setFilter}
-                    withHeader
-                />
+                <SharedMediaTabBody key={tab} loader={loader} tab={tab} filter={filter} setFilter={setFilter} />
             </div>
         </ScopedRoomContextProvider>
     );
@@ -800,14 +793,7 @@ export default function SharedMediaPanel({ room, onClose }: Props): JSX.Element 
                 <div className="mx_SharedMedia_tabsRow">
                     <Tabs active={tab} onChange={setTab} />
                 </div>
-                <SharedMediaTabBody
-                    key={tab}
-                    loader={loader}
-                    tab={tab}
-                    filter={filter}
-                    setFilter={setFilter}
-                    withHeader
-                />
+                <SharedMediaTabBody key={tab} loader={loader} tab={tab} filter={filter} setFilter={setFilter} />
             </BaseCard>
         </ScopedRoomContextProvider>
     );

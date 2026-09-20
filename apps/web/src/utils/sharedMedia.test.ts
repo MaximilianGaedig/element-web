@@ -109,7 +109,12 @@ describe("SharedMediaLoader with the server's media index", () => {
     it("stops after a bounded number of requests when a kind's entries aren't listed here", async () => {
         // The index counts stickers as media; the tabs don't list them, so the pages look empty.
         const sticker = (i: number): any =>
-            msg({ msgtype: "m.video", body: `s${i}`, url: "mxc://x/s", info: { "fi.mau.telegram.animated_sticker": true } }).event;
+            msg({
+                msgtype: "m.video",
+                body: `s${i}`,
+                url: "mxc://x/s",
+                info: { "fi.mau.telegram.animated_sticker": true },
+            }).event;
         const pages = Array.from({ length: 50 }, (_, p) => ({
             chunk: Array.from({ length: 50 }, (_, i) => sticker(p * 50 + i)),
             end: `t${p}`,

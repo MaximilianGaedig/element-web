@@ -166,55 +166,17 @@ Please see LICENSE files in the repository root for full details.
         background-color: rgb(0 0 0 / 35%);
     }
 
+    /* The message itself, with its URL preview card, as the timeline renders it. */
     .mx_SharedMedia_link {
-        position: relative;
         display: flex;
-        min-height: 3.875rem;
-        padding-inline-start: 4.4375rem;
-    }
-
-    .mx_SharedMedia_linkMedia {
-        position: absolute;
-        inset-inline-start: 0.6875rem;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        width: 3rem;
-        height: 3rem;
-        border-radius: 0.375rem;
-        font-size: 2rem;
-        text-transform: uppercase;
-        color: #fff;
-        background-color: var(--cpd-color-bg-accent-rest);
+        flex-direction: column;
+        gap: var(--cpd-space-1x);
+        padding-inline: var(--cpd-space-2x);
     }
 
     .mx_SharedMedia_linkText {
-        display: flex;
-        flex-direction: column;
         min-width: 0;
-        flex: 1;
         font: var(--cpd-font-body-sm-regular);
-
-        a {
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-        }
-    }
-
-    .mx_SharedMedia_rowTitle {
-        display: flex;
-        justify-content: space-between;
-        margin-block-start: 0.1875rem;
-        font: var(--cpd-font-body-md-semibold);
-    }
-
-    .mx_SharedMedia_linkSubtitle {
-        display: -webkit-box;
-        -webkit-line-clamp: 3;
-        -webkit-box-orient: vertical;
-        overflow: hidden;
-        white-space: pre-wrap;
         word-break: break-word;
     }
 
@@ -225,9 +187,11 @@ Please see LICENSE files in the repository root for full details.
         color: var(--cpd-color-text-secondary);
     }
 
-    .mx_SharedMedia_sender,
     .mx_SharedMedia_rowMeta {
+        display: flex;
+        justify-content: space-between;
         align-self: flex-start;
+        width: 100%;
         padding: 0;
         border: 0;
         background: none;
@@ -242,10 +206,169 @@ Please see LICENSE files in the repository root for full details.
         gap: var(--cpd-space-1x);
     }
 
-    .mx_SharedMedia_rowMeta {
+    /* Music and voice: the row before it is played (building a player downloads the whole file). */
+    .mx_SharedMedia_audio {
         display: flex;
-        justify-content: space-between;
+        align-items: center;
+        gap: var(--cpd-space-3x);
         width: 100%;
+        padding: var(--cpd-space-1x) var(--cpd-space-2x);
+        border: 0;
+        border-radius: var(--cpd-space-2x);
+        background: none;
+        color: inherit;
+        font: inherit;
+        text-align: start;
+        cursor: pointer;
+
+        &:hover {
+            background-color: var(--cpd-color-bg-subtle-secondary);
+        }
+    }
+
+    .mx_SharedMedia_audioPlay {
+        display: flex;
+        flex: 0 0 auto;
+        align-items: center;
+        justify-content: center;
+        width: 2.5rem;
+        height: 2.5rem;
+        border-radius: 50%;
+        color: var(--cpd-color-icon-on-solid-primary);
+        background-color: var(--cpd-color-bg-accent-rest);
+
+        svg {
+            width: 20px;
+            height: 20px;
+        }
+    }
+
+    .mx_SharedMedia_audioText {
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+    }
+
+    .mx_SharedMedia_audioTitle {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        font: var(--cpd-font-body-md-medium);
+    }
+
+    .mx_SharedMedia_audioDuration {
+        font: var(--cpd-font-body-sm-regular);
+        color: var(--cpd-color-text-secondary);
+        font-variant-numeric: tabular-nums;
+    }
+
+    /* Selecting, as Telegram does it: a tick on each item and a bar of actions for what is ticked. */
+    .mx_SharedMedia_selectionBar {
+        position: sticky;
+        inset-block-start: 0;
+        z-index: 4;
+        display: flex;
+        align-items: center;
+        gap: var(--cpd-space-1x);
+        min-height: 2.5rem;
+        margin-block-end: var(--cpd-space-2x);
+        padding-inline: var(--cpd-space-1x);
+        border-radius: var(--cpd-space-2x);
+        background-color: var(--cpd-color-bg-subtle-secondary);
+    }
+
+    .mx_SharedMedia_selectionCount {
+        flex: 1 1 auto;
+        font: var(--cpd-font-body-md-semibold);
+    }
+
+    .mx_SharedMedia_selectionAction {
+        display: flex;
+        flex: 0 0 auto;
+        align-items: center;
+        justify-content: center;
+        width: 2rem;
+        height: 2rem;
+        border-radius: 50%;
+        color: var(--cpd-color-icon-secondary);
+
+        svg {
+            width: 20px;
+            height: 20px;
+        }
+
+        &:hover {
+            background-color: var(--cpd-color-bg-action-secondary-hovered);
+        }
+    }
+
+    .mx_SharedMedia_selectionAction_danger {
+        color: var(--cpd-color-icon-critical-primary);
+    }
+
+    .mx_SharedMedia_tick {
+        position: absolute;
+        inset-block-start: 4px;
+        inset-inline-end: 4px;
+        z-index: 2;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 20px;
+        height: 20px;
+        border: 2px solid var(--cpd-color-bg-canvas-default);
+        border-radius: 50%;
+        background-color: rgb(0 0 0 / 25%);
+
+        svg {
+            width: 14px;
+            height: 14px;
+            color: var(--cpd-color-icon-on-solid-primary);
+        }
+    }
+
+    .mx_SharedMedia_tick_on {
+        background-color: var(--cpd-color-bg-accent-rest);
+    }
+
+    .mx_SharedMedia_item_selected {
+        img {
+            opacity: 0.6;
+        }
+    }
+
+    .mx_SharedMedia_selectableRow {
+        position: relative;
+        display: flex;
+        align-items: flex-start;
+        gap: var(--cpd-space-2x);
+        padding-inline-start: 2rem;
+        border-radius: var(--cpd-space-2x);
+
+        &.mx_SharedMedia_item_selected {
+            background-color: var(--cpd-color-bg-subtle-secondary);
+        }
+
+        .mx_SharedMedia_tick {
+            inset-block-start: 50%;
+            inset-inline: 4px auto;
+            transform: translateY(-50%);
+        }
+    }
+
+    .mx_SharedMedia_selectableRow_body {
+        flex: 1 1 auto;
+        min-width: 0;
+    }
+
+    /* Covers the row so its own buttons don't take the click while the list is in selection mode. */
+    .mx_SharedMedia_rowOverlay {
+        position: absolute;
+        inset: 0;
+        z-index: 3;
+        border: 0;
+        background: none;
+        cursor: pointer;
     }
 
     .mx_SharedMedia_empty {

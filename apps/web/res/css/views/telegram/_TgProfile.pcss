@@ -137,6 +137,16 @@ button.mx_TgRow {
     white-space: nowrap;
 }
 
+/* A row whose numbers must all be readable (message kinds, sizes): they wrap instead of being cut. */
+.mx_TgRow--wrap {
+    .mx_TgRow_title,
+    .mx_TgRow_subtitle {
+        overflow: visible;
+        white-space: normal;
+        text-overflow: clip;
+    }
+}
+
 .mx_TgRow_right {
     grid-area: right;
     margin-inline-start: 0.5rem;
@@ -229,6 +239,39 @@ html[data-tg-screen="mobile"] .mx_TgProfile_avatar {
 
 .mx_TgStats {
     border-top: none;
+}
+
+.mx_TgStats_summary {
+    cursor: pointer;
+    list-style: none;
+
+    &::-webkit-details-marker {
+        display: none;
+    }
+
+    &:hover {
+        background-color: var(--cpd-color-bg-action-tertiary-hovered);
+        border-radius: var(--tg-border-radius-medium);
+    }
+}
+
+.mx_TgStats_chevron {
+    display: block;
+    width: 1.25rem;
+    height: 1.25rem;
+    color: var(--cpd-color-icon-tertiary);
+    transition: transform var(--tg-transition-standard-in);
+}
+
+.mx_TgStats_details[open] .mx_TgStats_chevron {
+    transform: rotate(180deg);
+}
+
+/* The kinds of message the room holds: all of them, wrapped, rather than one cut-off line. */
+.mx_TgStats_kinds {
+    margin: 0 1rem 0.5rem;
+    font: var(--cpd-font-body-sm-regular);
+    color: var(--tg-secondary-text-color);
 }
 
 .mx_TgStats_sender {

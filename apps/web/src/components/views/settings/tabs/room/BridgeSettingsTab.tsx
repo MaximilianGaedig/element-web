@@ -14,6 +14,7 @@ import BridgeTile from "../../BridgeTile";
 import SettingsTab from "../SettingsTab";
 import { SettingsSection } from "../../shared/SettingsSection";
 import MatrixClientContext from "../../../../../contexts/MatrixClientContext";
+import { TgHistoryCard } from "../../../telegram/TgHistory";
 
 const BRIDGE_EVENT_TYPES = [
     "uk.half-shot.bridge",
@@ -95,7 +96,13 @@ export default class BridgeSettingsTab extends React.Component<IProps> {
 
         return (
             <SettingsTab>
-                <SettingsSection heading={_t("room_settings|bridges|title")}>{content}</SettingsSection>
+                <SettingsSection heading={_t("room_settings|bridges|title")}>
+                    {/* How much of the chat a bridge has imported belongs with the bridges, not in the
+                        chat's profile, where a count of imported messages only invites comparing it with
+                        the network's own (which counts service messages and gaps the bridge never made). */}
+                    <TgHistoryCard room={room} />
+                    {content}
+                </SettingsSection>
             </SettingsTab>
         );
     }

@@ -115,13 +115,7 @@ export function tabCountsFromStats(byKind: Record<string, number>): Partial<Reco
 /** Who sent it, as the lists label it: a bridge's per-message profile first, then the room member. */
 export function mediaSenderName(event: MatrixEvent, room?: Room): string {
     const sender = event.getSender() ?? "";
-    return (
-        getPerMessageProfile(event)?.displayname ??
-        room?.getMember(sender)?.name ??
-        event.sender?.name ??
-        sender ??
-        ""
-    );
+    return getPerMessageProfile(event)?.displayname ?? room?.getMember(sender)?.name ?? event.sender?.name ?? sender;
 }
 
 type Listener = () => void;
