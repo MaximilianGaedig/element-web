@@ -31,7 +31,8 @@ import { useScopedRoomContext } from "../../../contexts/ScopedRoomContext.tsx";
 import { useTopic } from "../../../hooks/room/useTopic";
 import { topicToHtml } from "../../../HtmlUtils";
 import { SDKContext } from "../../../contexts/SDKContext.ts";
-import { BackfillNotice } from "../telegram/TgHistory";
+import { backfillStatusOf } from "../../../utils/chatHistory";
+import { useRoomState } from "../../../hooks/useRoomState";
 
 function hasExpectedEncryptionSettings(matrixClient: MatrixClient, room: Room): boolean {
     const isEncrypted: boolean = matrixClient.isRoomEncrypted(room.roomId);
@@ -69,9 +70,13 @@ const NewRoomIntro: React.FC = () => {
         () => (dmPartner ? undefined : <LinkedText as="span">{topicToHtml(topic?.text, topic?.html)}</LinkedText>),
         [topic, dmPartner],
     );
+    // A bridged chat's history is imported behind its creation, so "this is the start of the room" would
+    // be wrong where it appears; the chat's own history status says where the messages really start.
+    const bridged = useRoomState(room, () => !!(room && backfillStatusOf(room)));
     if (!room || !roomId) {
         throw new Error("Unable to create a NewRoomIntro without room and roomId");
     }
+    if (bridged) return <li className="mx_NewRoomIntro mx_NewRoomIntro--bridged" />;
 
     let body: JSX.Element;
     if (dmPartner) {
@@ -304,7 +309,6 @@ const NewRoomIntro: React.FC = () => {
                 />
             )}
 
-            <BackfillNotice room={room} />
             {body}
         </li>
     );

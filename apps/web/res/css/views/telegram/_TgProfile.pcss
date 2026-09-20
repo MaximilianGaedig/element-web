@@ -670,3 +670,22 @@ html[data-tg-screen="mobile"] .mx_HistoryCard {
         border-radius: 0.5rem;
     }
 }
+
+/* The import pill floats under the header, like Telegram's small status chips, instead of sitting in the
+   message list where the older messages will appear. */
+.mx_RoomView_importPill {
+    position: absolute;
+    z-index: 2;
+    top: 4.75rem;
+    inset-inline: 0;
+    display: flex;
+    justify-content: center;
+    pointer-events: none;
+
+    .mx_BackfillNotice {
+        margin: 0;
+        pointer-events: auto;
+        background: var(--cpd-color-bg-canvas-default);
+        box-shadow: 0 1px 6px rgb(0 0 0 / 12%);
+    }
+}
