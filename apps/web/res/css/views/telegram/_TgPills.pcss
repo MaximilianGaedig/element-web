@@ -49,6 +49,14 @@ html[data-tg-screen] .mx_RoomHeader {
         align-items: flex-start;
         justify-content: center;
         gap: 0;
+        /* A flex item won't shrink below its content unless told to, so without this a long room name
+           grows the header instead of ending in an ellipsis. */
+        min-width: 0;
+
+        > * {
+            max-width: 100%;
+            min-width: 0;
+        }
     }
 
     /* tweb .btn-icon: 2.5rem round buttons. */

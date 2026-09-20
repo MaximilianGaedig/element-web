@@ -490,7 +490,7 @@ index fa12145b0c8a94e4defd95c0147cd0c626853215..7f3676f260732959c44c1476c286eb00
              } = {
                  "ephemeral": { events: [] },
                  "account_data": { events: [] },
-@@ -687,8 +690,22 @@ export class SyncAccumulator {
+@@ -687,8 +690,29 @@ export class SyncAccumulator {
                  roomJson.ephemeral.events.push(receiptEvent);
              }
  
@@ -508,7 +508,14 @@ index fa12145b0c8a94e4defd95c0147cd0c626853215..7f3676f260732959c44c1476c286eb00
 +                const start = trimmedTimelineStart(entries, trim.tail);
 +                if (start > 0) {
 +                    entries = entries.slice(start);
-+                    roomJson.timeline.prev_batch = LOCAL_PAGINATION_PREFIX + entries[0].event.event_id;
++                }
++                // Wherever the replay now starts, the room must be able to reach what came before it. A
++                // room whose stored events were all left out (a quiet chat whose only recent events were
++                // a bridge's bookkeeping) would otherwise replay nothing and have nothing to paginate
++                // from, leaving it stuck showing an empty timeline.
++                const first = entries[0] ?? roomData._timeline[roomData._timeline.length - 1];
++                if (first) {
++                    roomJson.timeline.prev_batch = LOCAL_PAGINATION_PREFIX + first.event.event_id;
 +                }
 +            }
 +            entries.forEach((msgData) => {

@@ -373,7 +373,7 @@ describe("<RoomSummaryCard />", () => {
             room.name = "Fox den";
         });
 
-        it("lays the group out like tweb's profile: header, info rows, then members, shared media and actions tabs", () => {
+        it("lays the group out like tweb's profile: header, info rows, actions, then members and shared media tabs", () => {
             vi.mocked(useRoomSummaryCardViewModel).mockReturnValue({ ...vmDefaultValues, alias: "#den:domain.org" });
             getComponent();
 
@@ -385,16 +385,15 @@ describe("<RoomSummaryCard />", () => {
             expect(screen.getByRole("switch", { name: "Notifications" })).toBeInTheDocument();
 
             const tabs = screen.getAllByRole("tab").map((t) => t.textContent);
-            expect(tabs).toEqual(["Members", "Media", "Files", "Links", "Music", "Voice", "Actions"]);
+            expect(tabs).toEqual(["Members", "Media", "Files", "Links", "Music", "Voice"]);
             expect(screen.getByRole("tab", { name: "Members" })).toHaveAttribute("aria-selected", "true");
             // Element's summary layout is not rendered.
             expect(screen.queryByText("Public room")).not.toBeInTheDocument();
         });
 
-        it("keeps Element's room actions under the actions tab", () => {
+        it("keeps Element's room actions in a list of their own, not beside the media grid", () => {
             getComponent();
-            expect(screen.queryByRole("menuitem", { name: "Settings" })).not.toBeInTheDocument();
-            fireEvent.click(screen.getByRole("tab", { name: "Actions" }));
+            expect(document.querySelector(".mx_TgProfile_actions")).toBeInTheDocument();
             fireEvent.click(screen.getByRole("menuitem", { name: "Settings" }));
             expect(vmDefaultValues.onRoomSettingsClick).toHaveBeenCalled();
         });
@@ -415,7 +414,6 @@ describe("<RoomSummaryCard />", () => {
                 "Links",
                 "Music",
                 "Voice",
-                "Actions",
             ]);
             expect(screen.getByRole("tab", { name: "Media" })).toHaveAttribute("aria-selected", "true");
         });

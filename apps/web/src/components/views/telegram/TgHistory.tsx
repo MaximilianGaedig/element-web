@@ -16,7 +16,7 @@ import HistoryIcon from "@vector-im/compound-design-tokens/assets/web/icons/hist
 import CheckIcon from "@vector-im/compound-design-tokens/assets/web/icons/check";
 import ChevronIcon from "@vector-im/compound-design-tokens/assets/web/icons/chevron-down";
 import PauseIcon from "@vector-im/compound-design-tokens/assets/web/icons/pause";
-import StorageIcon from "@vector-im/compound-design-tokens/assets/web/icons/download";
+import StorageIcon from "@vector-im/compound-design-tokens/assets/web/icons/cloud";
 import ChartIcon from "@vector-im/compound-design-tokens/assets/web/icons/chart";
 
 import { _t } from "../../../languageHandler";
@@ -42,7 +42,7 @@ import {
     trackImport,
 } from "../../../utils/chatHistory";
 import { formatBytes } from "../../../utils/FormattingUtils";
-import { TgRow } from "./TgProfile";
+import { TgRow } from "./TgRow";
 
 const number = (n: number): string => n.toLocaleString();
 
@@ -617,51 +617,63 @@ export function TgStatsSection({ room }: { room: Room }): JSX.Element | null {
     const kinds = KIND_ORDER.filter((k) => stats.by_kind[k]);
     return (
         <section className="mx_TgProfile_section mx_TgStats" data-testid="tg-stats">
-            <TgRow
-                icon={<ChartIcon />}
-                title={_t("tg_layout|stats_total", { count: stats.total, formatted: number(stats.total) })}
-                subtitle={
-                    stats.complete
-                        ? kinds.map((k) => `${number(stats.by_kind[k])} ${kindLabel(k)}`).join(" · ")
-                        : _t("tg_layout|stats_counting")
-                }
-            />
-            <ActivityCharts months={stats.by_month ?? []} week={stats.by_hour_of_week} total={stats.total} />
-            {stats.storage && (
-                <TgRow
-                    icon={<StorageIcon />}
-                    title={_t("tg_layout|storage_title", {
-                        size: formatBytes(stats.storage.events + stats.storage.media_stored),
-                    })}
-                    subtitle={[
-                        _t("tg_layout|storage_messages", { size: formatBytes(stats.storage.events) }),
-                        _t("tg_layout|storage_media", { size: formatBytes(stats.storage.media_stored) }),
-                        stats.storage.media_on_demand > 0
-                            ? _t("tg_layout|storage_on_demand", { size: formatBytes(stats.storage.media_on_demand) })
-                            : undefined,
-                    ]
-                        .filter(Boolean)
-                        .join(" · ")}
-                />
-            )}
-            {stats.senders.map((sender) => {
-                const member = room.getMember(sender.user_id);
-                return (
+            {/* Counts are detail: one line says how many messages there are, the rest is behind it. */}
+            <details className="mx_TgStats_details">
+                <summary className="mx_TgStats_summary">
                     <TgRow
-                        key={sender.user_id}
-                        className="mx_TgStats_sender"
-                        title={member?.name ?? sender.user_id}
-                        subtitle={<Bar share={sender.total / top} />}
-                        right={<span className="mx_TgStats_count">{number(sender.total)}</span>}
+                        icon={<ChartIcon />}
+                        title={_t("tg_layout|stats_total", { count: stats.total, formatted: number(stats.total) })}
+                        subtitle={stats.complete ? undefined : _t("tg_layout|stats_counting")}
+                        right={<ChevronIcon className="mx_TgStats_chevron" aria-hidden />}
                     />
-                );
-            })}
-            {stats.sender_count > stats.senders.length && (
-                <TgRow
-                    className="mx_TgStats_more"
-                    title={_t("tg_layout|stats_more_senders", { count: stats.sender_count - stats.senders.length })}
-                />
-            )}
+                </summary>
+                {stats.complete && kinds.length > 0 && (
+                    <p className="mx_TgStats_kinds">
+                        {kinds.map((k) => `${number(stats.by_kind[k])} ${kindLabel(k)}`).join(" · ")}
+                    </p>
+                )}
+                {stats.storage && (
+                    <TgRow
+                        className="mx_TgRow--wrap"
+                        icon={<StorageIcon />}
+                        title={_t("tg_layout|storage_title", {
+                            size: formatBytes(stats.storage.events + stats.storage.media_stored),
+                        })}
+                        subtitle={[
+                            _t("tg_layout|storage_messages", { size: formatBytes(stats.storage.events) }),
+                            _t("tg_layout|storage_media", { size: formatBytes(stats.storage.media_stored) }),
+                            stats.storage.media_on_demand > 0
+                                ? _t("tg_layout|storage_on_demand", {
+                                      size: formatBytes(stats.storage.media_on_demand),
+                                  })
+                                : undefined,
+                        ]
+                            .filter(Boolean)
+                            .join(" · ")}
+                    />
+                )}
+                <ActivityCharts months={stats.by_month ?? []} week={stats.by_hour_of_week} total={stats.total} />
+                {stats.senders.map((sender) => {
+                    const member = room.getMember(sender.user_id);
+                    return (
+                        <TgRow
+                            key={sender.user_id}
+                            className="mx_TgStats_sender"
+                            title={member?.name ?? sender.user_id}
+                            subtitle={<Bar share={sender.total / top} />}
+                            right={<span className="mx_TgStats_count">{number(sender.total)}</span>}
+                        />
+                    );
+                })}
+                {stats.sender_count > stats.senders.length && (
+                    <TgRow
+                        className="mx_TgStats_more"
+                        title={_t("tg_layout|stats_more_senders", {
+                            count: stats.sender_count - stats.senders.length,
+                        })}
+                    />
+                )}
+            </details>
         </section>
     );
 }

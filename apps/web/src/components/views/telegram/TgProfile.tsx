@@ -36,42 +36,10 @@ import { copyPlaintext } from "../../../utils/strings";
 import dis from "../../../dispatcher/dispatcher";
 import { Action } from "../../../dispatcher/actions";
 import { SHARED_MEDIA_TAB_LABELS, SharedMediaPane, useSharedMediaLoader } from "../right_panel/SharedMediaPanel";
-import { TgHistoryCard, TgStatsSection } from "./TgHistory";
+import { TgStatsSection } from "./TgHistory";
+import { TgRow } from "./TgRow";
 
-/** tweb _row.scss .row-grid: icon, title, subtitle. */
-export function TgRow({
-    icon,
-    title,
-    subtitle,
-    onClick,
-    right,
-    className,
-}: {
-    icon?: ReactNode;
-    title: ReactNode;
-    subtitle?: ReactNode;
-    onClick?: () => void;
-    right?: ReactNode;
-    className?: string;
-}): JSX.Element {
-    const content = (
-        <>
-            {icon && <span className="mx_TgRow_icon">{icon}</span>}
-            <span className="mx_TgRow_title">{title}</span>
-            {subtitle && <span className="mx_TgRow_subtitle">{subtitle}</span>}
-            {right && <span className="mx_TgRow_right">{right}</span>}
-        </>
-    );
-    const classes = ["mx_TgRow", subtitle ? "" : "mx_TgRow--noSubtitle", className ?? ""].filter(Boolean).join(" ");
-    if (onClick) {
-        return (
-            <button type="button" className={classes} onClick={onClick}>
-                {content}
-            </button>
-        );
-    }
-    return <div className={classes}>{content}</div>;
-}
+export { TgRow };
 
 export interface TgTab {
     id: string;
@@ -245,7 +213,6 @@ export function TgProfile({
     for (const { id, label } of SHARED_MEDIA_TAB_LABELS) {
         tabs.push({ id, label: label(), content: <SharedMediaPane loader={mediaLoader} tab={id} /> });
     }
-    tabs.push({ id: "actions", label: _t("tg_layout|tab_actions"), content: actions });
 
     return (
         <div className="mx_TgProfile" data-testid="tg-profile">
@@ -297,7 +264,8 @@ export function TgProfile({
                 />
             </section>
 
-            <TgHistoryCard room={room} />
+            {/* The room's actions are their own list: Telegram never puts them beside the media grid. */}
+            <section className="mx_TgProfile_section mx_TgProfile_actions">{actions}</section>
 
             <TgStatsSection room={room} />
 

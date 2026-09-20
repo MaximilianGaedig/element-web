@@ -442,13 +442,29 @@
         "send_status_retry": "Retry",
         "send_status_retrying": "Retrying…",
         "shared_media": {
+            "delete_description": {
+                "one": "This removes the message for everyone.",
+                "other": "This removes the messages for everyone."
+            },
+            "delete_title": {
+                "one": "Remove message?",
+                "other": "Remove %(count)s messages?"
+            },
             "empty_files": "No files shared yet",
             "empty_links": "No links shared yet",
             "empty_media": "No photos or videos shared yet",
             "empty_music": "No music shared yet",
             "empty_voice": "No voice messages yet",
+            "file_count": {
+                "one": "%(count)s file",
+                "other": "%(count)s files"
+            },
             "files": "Files",
             "filter": "Filter",
+            "link_count": {
+                "one": "%(count)s link",
+                "other": "%(count)s links"
+            },
             "links": "Links",
             "media": "Media",
             "music": "Music",
@@ -457,13 +473,27 @@
                 "other": "%(count)s photos"
             },
             "photos": "Photos",
+            "select": "Select",
+            "selected_count": {
+                "one": "%(count)s selected",
+                "other": "%(count)s selected"
+            },
+            "show_in_chat": "Show in chat",
             "title": "Shared media",
+            "track_count": {
+                "one": "%(count)s track",
+                "other": "%(count)s tracks"
+            },
             "video_count": {
                 "one": "%(count)s video",
                 "other": "%(count)s videos"
             },
             "videos": "Videos",
-            "voice": "Voice"
+            "voice": "Voice",
+            "voice_count": {
+                "one": "%(count)s voice message",
+                "other": "%(count)s voice messages"
+            }
         },
         "sticker_pack_personal": "Personal",
         "sticker_picker_empty": "No stickers found",

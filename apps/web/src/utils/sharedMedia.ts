@@ -20,6 +20,7 @@ import * as utils from "matrix-js-sdk/src/utils";
 import { logger } from "matrix-js-sdk/src/logger";
 
 import { isAnimatedSticker } from "./bridge/animatedMedia";
+import { getPerMessageProfile } from "./bridge/perMessageProfile";
 import { getRoomHistoryState, mediaPage, setRoomHistoryState } from "./history/db";
 import { historyIndexer } from "./history/indexer";
 
@@ -36,13 +37,17 @@ const MEDIA_INDEX_PREFIX = "/_matrix/client/unstable/im.mxg.media_index";
 
 /** tweb appSearchSuper LOAD_COUNT. */
 export const SHARED_MEDIA_PAGE = 50;
-/** Most /messages requests one "load more" may make while it finds nothing for the tab (links scan text). */
+/** Most requests one "load more" may make while it finds nothing for the tab (links scan text). */
 const MAX_REQUESTS_PER_LOAD = 6;
 
 const URL_RE = /\bhttps?:\/\/[^\s<>"'`]+[^\s<>"'`.,;:!?)\]}]/gi;
 
-function isVoice(content: Record<string, any>): boolean {
-    return !!(content["org.matrix.msc3245.voice"] || content["org.matrix.msc2516.voice"] || content["m.voice"]);
+/**
+ * A voice message rather than a piece of music. MSC3245 marks it with an empty object, so the key
+ * being there is the flag; `m.voice` is what some bridges send instead.
+ */
+export function isVoice(content: Record<string, any>): boolean {
+    return ["org.matrix.msc3245.voice", "org.matrix.msc2516.voice", "m.voice"].some((key) => key in content);
 }
 
 /** The URLs in a text message, as tweb's inputMessagesFilterUrl matches them (links in the text). */
@@ -91,6 +96,34 @@ export interface SharedMediaState {
     done: boolean;
 }
 
+/**
+ * How many of each tab the room holds in all, from the homeserver's counts (`im.mxg.room_stats`), so a
+ * tab can say "45 photos, 6 videos" of the whole history rather than of what happens to be loaded.
+ * A tab with no count of its own (links: the server counts message kinds, not links) is left out.
+ */
+export function tabCountsFromStats(byKind: Record<string, number>): Partial<Record<SharedMediaTab, number>> {
+    const counts: Partial<Record<SharedMediaTab, number>> = {};
+    // Stickers are counted apart and the tabs don't list them, so they are left out of "media".
+    const media = (byKind.image ?? 0) + (byKind.video ?? 0);
+    if (media) counts.media = media;
+    if (byKind.file) counts.files = byKind.file;
+    if (byKind.audio) counts.music = byKind.audio;
+    if (byKind.voice) counts.voice = byKind.voice;
+    return counts;
+}
+
+/** Who sent it, as the lists label it: a bridge's per-message profile first, then the room member. */
+export function mediaSenderName(event: MatrixEvent, room?: Room): string {
+    const sender = event.getSender() ?? "";
+    return (
+        getPerMessageProfile(event)?.displayname ??
+        room?.getMember(sender)?.name ??
+        event.sender?.name ??
+        sender ??
+        ""
+    );
+}
+
 type Listener = () => void;
 
 /**
@@ -105,17 +138,24 @@ export class SharedMediaLoader {
     private readonly listeners = new Set<Listener>();
     private readonly tokens = new Map<"url" | "all", string | undefined>();
     private readonly doneFor = new Set<"url" | "all">();
-    private loadingFor: "url" | "all" | undefined;
+    /** Which tabs are waiting on a request: a tab of its own in the index, a shared scan otherwise. */
+    private readonly loadingTabs = new Set<SharedMediaTab>();
+    /** One history scan per source, however many tabs are waiting on it. */
+    private readonly scanning = new Map<"url" | "all", Promise<void>>();
+    /** Tabs whose list changed since the last {@link emit}. */
+    private readonly dirty = new Set<SharedMediaTab>();
     private destroyed = false;
     /** What earlier visits already found and how far they scanned; read before touching the network. */
     private restored?: Promise<void>;
     /** Where each tab got to in the server's media index, and which tabs it has exhausted. */
     private readonly indexTokens = new Map<SharedMediaTab, string | undefined>();
     private readonly indexDone = new Set<SharedMediaTab>();
+    /** Whether the homeserver has a media index, once asked. */
+    private indexSupported?: boolean;
 
     public constructor(
         private readonly client: MatrixClient,
-        private readonly room: Room,
+        public readonly room: Room,
     ) {
         const timeline = room.getLiveTimeline();
         const events = timeline.getEvents();
@@ -175,12 +215,21 @@ export class SharedMediaLoader {
     }
 
     public state(tab: SharedMediaTab): SharedMediaState {
-        const source = this.sourceFor(tab);
         return {
             items: this.items.get(tab)!,
-            loading: this.loadingFor === source,
-            done: this.indexDone.has(tab) || this.doneFor.has(source),
+            loading: this.loadingTabs.has(tab),
+            done: this.isDone(tab),
         };
+    }
+
+    /**
+     * Whether this tab has nothing left to fetch. The media index answers each tab on its own, so one
+     * tab running out says nothing about the others; only a history scan, which every tab of a source
+     * shares, is done for all of them at once.
+     */
+    private isDone(tab: SharedMediaTab): boolean {
+        if (this.indexDone.has(tab)) return true;
+        return this.indexSupported === false && this.doneFor.has(this.sourceFor(tab));
     }
 
     /** A live (or newly decrypted) event: newest, so it goes first. */
@@ -217,30 +266,30 @@ export class SharedMediaLoader {
 
     /** Fetches older history until `tab` gained items (or history ran out). */
     public async loadMore(tab: SharedMediaTab): Promise<void> {
-        const source = this.sourceFor(tab);
-        if (this.loadingFor || this.doneFor.has(source)) return;
-        this.loadingFor = source;
+        if (this.loadingTabs.has(tab) || this.isDone(tab)) return;
+        this.loadingTabs.add(tab);
         this.emit();
         const before = this.items.get(tab)!.length;
+        const enough = (): boolean => this.items.get(tab)!.length >= before + SHARED_MEDIA_PAGE / 2;
         try {
             await this.restored; // what earlier visits found comes first, and sets where to carry on
-            if (await this.hasServerIndex()) {
-                while (!this.destroyed && !this.indexDone.has(tab)) {
+            const index = await this.hasServerIndex();
+            // Every request is capped: a kind whose entries are all filtered out here (the index counts
+            // stickers as media, the tabs don't) would otherwise walk the whole room in one go.
+            for (let i = 0; i < MAX_REQUESTS_PER_LOAD && !this.destroyed && !this.isDone(tab); i++) {
+                if (index) {
                     await this.fetchIndexPage(tab);
-                    if (this.items.get(tab)!.length >= before + SHARED_MEDIA_PAGE / 2) break;
+                    if (enough()) break;
+                    continue;
                 }
-                if (this.indexDone.has(tab)) this.doneFor.add(source);
-                return;
-            }
-            for (let i = 0; i < MAX_REQUESTS_PER_LOAD && !this.destroyed; i++) {
-                await this.fetchPage(source);
-                if (this.doneFor.has(source) || this.items.get(tab)!.length >= before + SHARED_MEDIA_PAGE / 2) break;
+                await this.scanPage(this.sourceFor(tab));
+                if (enough()) break;
                 if (this.items.get(tab)!.length > before && i >= 1) break;
             }
         } catch (e) {
             logger.warn("Shared media: failed to load history", e);
         } finally {
-            this.loadingFor = undefined;
+            this.loadingTabs.delete(tab);
             if (!this.destroyed) this.emit();
         }
     }
@@ -250,12 +299,16 @@ export class SharedMediaLoader {
      * however old the room's history is. It cannot index encrypted rooms, which are read here instead.
      */
     private async hasServerIndex(): Promise<boolean> {
-        if (this.client.isRoomEncrypted(this.room.roomId)) return false;
-        try {
-            return await this.client.doesServerSupportUnstableFeature(MEDIA_INDEX_FEATURE);
-        } catch {
-            return false;
+        if (this.indexSupported === undefined) {
+            try {
+                this.indexSupported =
+                    !this.client.isRoomEncrypted(this.room.roomId) &&
+                    (await this.client.doesServerSupportUnstableFeature(MEDIA_INDEX_FEATURE));
+            } catch {
+                this.indexSupported = false;
+            }
         }
+        return this.indexSupported;
     }
 
     /** One page of a tab from the server's media index. */
@@ -276,11 +329,21 @@ export class SharedMediaLoader {
         historyIndexer.add(events); // keep them, so the tab fills even without the server
         this.indexTokens.set(tab, res.end);
         if (!res.end || res.chunk.length === 0) this.indexDone.add(tab);
+        this.emit(); // each page shows as it arrives, rather than only when the load stops
     }
 
     /** Server-side URL filtering doesn't work on encrypted events, and links live in plain text. */
     private sourceFor(tab: SharedMediaTab): "url" | "all" {
         return tab === "links" || this.client.isRoomEncrypted(this.room.roomId) ? "all" : "url";
+    }
+
+    /** A scan page, shared: the tabs of one source read the same history, so they fetch it once. */
+    private scanPage(source: "url" | "all"): Promise<void> {
+        const pending = this.scanning.get(source);
+        if (pending) return pending;
+        const page = this.fetchPage(source).finally(() => this.scanning.delete(source));
+        this.scanning.set(source, page);
+        return page;
     }
 
     private async fetchPage(source: "url" | "all"): Promise<void> {
@@ -310,6 +373,7 @@ export class SharedMediaLoader {
         this.tokens.set(source, res.end ?? undefined);
         if (!res.end || res.chunk.length === 0) this.doneFor.add(source);
         void this.saveProgress();
+        this.emit();
     }
 
     private add(event: MatrixEvent, newest: boolean): boolean {
@@ -328,11 +392,14 @@ export class SharedMediaLoader {
             while (i > 0 && list[i - 1].getTs() < ts) i--;
             list.splice(i, 0, event);
         }
-        this.items.set(tab, [...list]);
+        this.dirty.add(tab);
         return true;
     }
 
+    /** A page's events are added to the list in place; the copy React needs is made once, here. */
     private emit(): void {
+        for (const tab of this.dirty) this.items.set(tab, [...this.items.get(tab)!]);
+        this.dirty.clear();
         for (const l of this.listeners) l();
     }
 }
