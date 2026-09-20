@@ -5,6 +5,8 @@ SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only OR LicenseRef-Element-Com
 Please see LICENSE files in the repository root for full details.
 */
 
+// @vitest-environment happy-dom
+
 import React from "react";
 import { act, render } from "test-utils-rtl";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
