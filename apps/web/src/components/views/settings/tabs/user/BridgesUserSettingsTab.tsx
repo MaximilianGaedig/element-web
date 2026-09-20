@@ -7,7 +7,7 @@ Please see LICENSE files in the repository root for full details.
 
 import React, { type JSX, useContext, useEffect, useState } from "react";
 
-import { _t } from "../../../../../languageHandler";
+import { _t, _td } from "../../../../../languageHandler";
 import MatrixClientContext from "../../../../../contexts/MatrixClientContext";
 import BaseAvatar from "../../../avatars/BaseAvatar";
 import { mediaFromMxc } from "../../../../../customisations/Media";
@@ -34,6 +34,18 @@ import { Bar, eta, NetworkImportDetail, number as num } from "./importDetail";
 const number = (n: number): string => n.toLocaleString();
 
 /** A stable colour per network, so each bridge is recognisable at a glance. */
+/*
+ * Spelled out rather than built from the health as `tg_layout|bridge_state_${health}`: the string
+ * generator only sees keys that appear whole in the source, and deletes any it cannot find.
+ */
+const HEALTH_LABEL: Record<LoginHealth, TranslationKey> = {
+    connected: _td("tg_layout|bridge_state_connected"),
+    connecting: _td("tg_layout|bridge_state_connecting"),
+    problem: _td("tg_layout|bridge_state_problem"),
+    disconnected: _td("tg_layout|bridge_state_disconnected"),
+    unreported: _td("tg_layout|bridge_state_unreported"),
+};
+
 const HEALTH_GLYPH: Record<LoginHealth, string> = {
     connected: "✓",
     connecting: "↻",
@@ -213,7 +225,7 @@ function BridgeCard({
                 </span>
                 <span className="mx_BridgeCard_status">
                     <span aria-hidden>{HEALTH_GLYPH[login.health]}</span>
-                    {_t(`tg_layout|bridge_state_${login.health}`)}
+                    {_t(HEALTH_LABEL[login.health])}
                 </span>
                 <span className="mx_BridgeCard_chevron" aria-hidden>
                     ›

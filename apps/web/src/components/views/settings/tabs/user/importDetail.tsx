@@ -15,7 +15,7 @@ Please see LICENSE files in the repository root for full details.
 
 import React, { type JSX, useState } from "react";
 
-import { _t } from "../../../../../languageHandler";
+import { _t, _td } from "../../../../../languageHandler";
 import dis from "../../../../../dispatcher/dispatcher";
 import { Action } from "../../../../../dispatcher/actions";
 import { formatFullDateNoTime } from "../../../../../DateUtils";
@@ -48,13 +48,17 @@ export function Bar({ value, tone }: { value: number; tone?: "done" }): JSX.Elem
     );
 }
 
-const PHASE_BADGE: Record<HistoryPhase, string> = {
-    importing: "history_badge_importing",
-    queued: "history_badge_queued",
-    paused: "history_badge_paused",
-    skipped: "history_badge_skipped",
-    unavailable: "history_badge_unavailable",
-    complete: "history_badge_complete",
+/*
+ * Spelled out rather than built from the phase: the string generator only sees keys that appear whole
+ * in the source, and deletes any it cannot find.
+ */
+const PHASE_BADGE: Record<HistoryPhase, TranslationKey> = {
+    importing: _td("tg_layout|history_badge_importing"),
+    queued: _td("tg_layout|history_badge_queued"),
+    paused: _td("tg_layout|history_badge_paused"),
+    skipped: _td("tg_layout|history_badge_skipped"),
+    unavailable: _td("tg_layout|history_badge_unavailable"),
+    complete: _td("tg_layout|history_badge_complete"),
 };
 
 function Row({
@@ -93,7 +97,7 @@ function Row({
                 <span className="mx_ImportRow_meta">
                     {showPhase && (
                         <span className={`mx_ImportRow_phase mx_ImportRow_phase--${phase}`}>
-                            {_t(`tg_layout|${PHASE_BADGE[phase]}` as Parameters<typeof _t>[0])} ·{" "}
+                            {_t(PHASE_BADGE[phase])} ·{" "}
                         </span>
                     )}
                     {meta}

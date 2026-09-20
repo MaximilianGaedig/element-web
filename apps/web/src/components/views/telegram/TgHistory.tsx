@@ -19,7 +19,7 @@ import PauseIcon from "@vector-im/compound-design-tokens/assets/web/icons/pause"
 import StorageIcon from "@vector-im/compound-design-tokens/assets/web/icons/cloud";
 import ChartIcon from "@vector-im/compound-design-tokens/assets/web/icons/chart";
 
-import { _t } from "../../../languageHandler";
+import { _t, _td } from "../../../languageHandler";
 import { formatFullDateNoTime } from "../../../DateUtils";
 import { SDKContext } from "../../../contexts/SDKContext";
 import MatrixClientContext from "../../../contexts/MatrixClientContext";
@@ -110,13 +110,17 @@ function useHistory(room: Room): {
     return { status, phase, progress, queued };
 }
 
+// _td, not bare strings: the string generator only counts keys it can see whole, and deletes the rest.
 const PHASE_KEYS: Record<HistoryPhase, { title: TranslationKey; badge: TranslationKey }> = {
-    importing: { title: "tg_layout|history_importing", badge: "tg_layout|history_badge_importing" },
-    queued: { title: "tg_layout|history_queued", badge: "tg_layout|history_badge_queued" },
-    paused: { title: "tg_layout|history_paused", badge: "tg_layout|history_badge_paused" },
-    skipped: { title: "tg_layout|history_skipped", badge: "tg_layout|history_badge_skipped" },
-    complete: { title: "tg_layout|history_complete", badge: "tg_layout|history_badge_complete" },
-    unavailable: { title: "tg_layout|history_unavailable_title", badge: "tg_layout|history_badge_unavailable" },
+    importing: { title: _td("tg_layout|history_importing"), badge: _td("tg_layout|history_badge_importing") },
+    queued: { title: _td("tg_layout|history_queued"), badge: _td("tg_layout|history_badge_queued") },
+    paused: { title: _td("tg_layout|history_paused"), badge: _td("tg_layout|history_badge_paused") },
+    skipped: { title: _td("tg_layout|history_skipped"), badge: _td("tg_layout|history_badge_skipped") },
+    complete: { title: _td("tg_layout|history_complete"), badge: _td("tg_layout|history_badge_complete") },
+    unavailable: {
+        title: _td("tg_layout|history_unavailable_title"),
+        badge: _td("tg_layout|history_badge_unavailable"),
+    },
 };
 
 /** A ring that turns while the import runs, a check when it's done: one glance says which. */
