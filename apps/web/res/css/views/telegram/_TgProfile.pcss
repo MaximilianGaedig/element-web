@@ -226,3 +226,64 @@ html[data-tg-screen="mobile"] .mx_TgProfile_avatar {
     width: 100px !important;
     height: 100px !important;
 }
+
+.mx_TgHistory--complete .mx_TgRow_title {
+    color: var(--cpd-color-text-success-primary);
+}
+
+.mx_TgHistory--running .mx_TgRow_title,
+.mx_TgHistory--manual .mx_TgRow_title {
+    color: var(--tg-primary-color);
+}
+
+.mx_TgStats {
+    border-top: none;
+}
+
+.mx_TgStats_sender {
+    min-height: 2.75rem;
+}
+
+.mx_TgStats_bar {
+    display: block;
+    height: 0.25rem;
+    margin-top: 0.25rem;
+    border-radius: 0.125rem;
+    background: var(--cpd-color-bg-subtle-primary);
+    overflow: hidden;
+}
+
+.mx_TgStats_barFill {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: var(--tg-primary-color);
+}
+
+.mx_TgStats_count {
+    font: var(--cpd-font-body-md-regular);
+    color: var(--cpd-color-text-secondary);
+    font-variant-numeric: tabular-nums;
+}
+
+.mx_TgStats_more {
+    color: var(--cpd-color-text-secondary);
+}
+
+.mx_BackfillNotice {
+    margin: 0 auto 1rem;
+    padding: 0.5rem 1rem;
+    max-width: 30rem;
+    border-radius: 0.75rem;
+    background: var(--cpd-color-bg-subtle-secondary);
+    color: var(--cpd-color-text-secondary);
+    font: var(--cpd-font-body-md-regular);
+    text-align: center;
+}
+
+.mx_BackfillNotice_button {
+    all: unset;
+    cursor: pointer;
+    color: var(--tg-primary-color);
+    font-weight: 600;
+}

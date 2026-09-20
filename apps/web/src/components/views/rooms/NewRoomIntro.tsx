@@ -31,6 +31,7 @@ import { useScopedRoomContext } from "../../../contexts/ScopedRoomContext.tsx";
 import { useTopic } from "../../../hooks/room/useTopic";
 import { topicToHtml } from "../../../HtmlUtils";
 import { SDKContext } from "../../../contexts/SDKContext.ts";
+import { BackfillNotice } from "../telegram/TgHistory";
 
 function hasExpectedEncryptionSettings(matrixClient: MatrixClient, room: Room): boolean {
     const isEncrypted: boolean = matrixClient.isRoomEncrypted(room.roomId);
@@ -303,6 +304,7 @@ const NewRoomIntro: React.FC = () => {
                 />
             )}
 
+            <BackfillNotice room={room} />
             {body}
         </li>
     );

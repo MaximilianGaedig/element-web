@@ -3384,11 +3384,24 @@
         "reply_to": "Reply to %(name)s",
         "reply_video": "Video",
         "reply_voice": "Voice message",
+        "address": "Address",
+        "bio": "Bio",
         "connection_reconnecting": "Reconnecting...",
         "connection_updating": "Updating...",
         "connection_waiting": "Waiting for network...",
-        "address": "Address",
-        "bio": "Bio",
+        "history_back_to": "back to %(date)s",
+        "history_complete": "All of this chat's history is here",
+        "history_count": {
+            "one": "%(formatted)s message imported",
+            "other": "%(formatted)s messages imported"
+        },
+        "history_import": "Import the rest of the history",
+        "history_manual": "Older history is not imported yet",
+        "history_network": "the other network",
+        "history_remote": "of %(total)s on %(network)s",
+        "history_requested": "Importing… this can take a while",
+        "history_running": "Older history is still being imported",
+        "history_unavailable": "%(network)s has no older history for this chat",
         "info": "Info",
         "link": "Link",
         "n_online": {
@@ -3404,6 +3417,23 @@
         "show_all_members": {
             "one": "Show %(count)s member",
             "other": "Show all %(count)s members"
+        },
+        "stats_counting": "Still counting older messages…",
+        "stats_kind_audio": "audio",
+        "stats_kind_encrypted": "encrypted",
+        "stats_kind_file": "files",
+        "stats_kind_image": "pictures",
+        "stats_kind_sticker": "stickers",
+        "stats_kind_text": "text",
+        "stats_kind_video": "videos",
+        "stats_kind_voice": "voice",
+        "stats_more_senders": {
+            "one": "and %(count)s more person",
+            "other": "and %(count)s more people"
+        },
+        "stats_total": {
+            "one": "%(formatted)s message",
+            "other": "%(formatted)s messages"
         },
         "tab_actions": "Actions",
         "tab_members": "Members",

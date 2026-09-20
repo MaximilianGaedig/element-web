@@ -36,6 +36,7 @@ import { copyPlaintext } from "../../../utils/strings";
 import dis from "../../../dispatcher/dispatcher";
 import { Action } from "../../../dispatcher/actions";
 import { SHARED_MEDIA_TAB_LABELS, SharedMediaPane, useSharedMediaLoader } from "../right_panel/SharedMediaPanel";
+import { TgHistoryRow, TgStatsSection } from "./TgHistory";
 
 /** tweb _row.scss .row-grid: icon, title, subtitle. */
 export function TgRow({
@@ -282,6 +283,7 @@ export function TgProfile({
                         })
                     }
                 />
+                <TgHistoryRow room={room} />
                 <TgRow
                     icon={<NotificationsIcon />}
                     title={_t("tg_layout|notifications")}
@@ -295,6 +297,8 @@ export function TgProfile({
                     }
                 />
             </section>
+
+            <TgStatsSection room={room} />
 
             <TgTabs tabs={tabs} initial={isDirectMessage ? "media" : "members"} />
         </div>
