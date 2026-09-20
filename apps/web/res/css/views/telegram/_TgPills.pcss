@@ -22,8 +22,12 @@ html[data-tg-screen] .mx_RoomHeader {
     width: calc(100% - 2 * var(--tg-page-chats-padding));
     max-width: var(--tg-chat-width);
     height: var(--tg-chat-topbar-height);
-    /* Clear of the notch/status bar where the page draws under it (a PWA). */
-    margin: max(var(--tg-page-chats-padding), var(--tg-safe-top)) auto 0;
+    /*
+     * Below the status bar, not against it: where the page draws under it (a PWA), the header keeps its
+     * usual gap underneath the inset rather than taking whichever of the two is larger, which left it
+     * touching the clock. With no inset this is the plain gap it has always had.
+     */
+    margin: calc(var(--tg-safe-top) + var(--tg-page-chats-padding)) auto 0;
     padding-inline: 0.25rem 0.5rem;
     border-bottom: none;
     border-radius: var(--tg-border-radius-big);
@@ -73,7 +77,7 @@ html[data-tg-screen] .mx_RoomView_body[data-telegram-layout="true"] {
         width: calc(100% - 2 * var(--tg-page-chats-padding));
         max-width: var(--tg-chat-width);
         /* Above the home indicator where the page draws under it (a PWA), except while the keyboard is up. */
-        margin: 0 auto max(var(--tg-page-chats-padding), var(--tg-safe-bottom));
+        margin: 0 auto calc(var(--tg-safe-bottom) + var(--tg-page-chats-padding));
         /* Element pads the composer's bottom by 15px; the page padding alone matches the header's gap. */
         padding-bottom: 0;
     }
