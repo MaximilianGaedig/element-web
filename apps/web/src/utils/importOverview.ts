@@ -116,3 +116,35 @@ export function collectImports(client: MatrixClient, now = Date.now()): ImportOv
     });
     return { ...overall, entries, networks };
 }
+
+export interface QueuedEstimate {
+    /** Until this chat's turn comes, judging by what is ahead of it in the same bridge's queue. */
+    waitMs?: number;
+    /** Until it is fully imported, at the pace its bridge is currently importing. */
+    etaMs?: number;
+}
+
+/**
+ * For a chat waiting its turn: the bridge imports one chat at a time, so it starts after the chats ahead of
+ * it in the queue are done (those whose totals are known count for how long) and then needs its own time,
+ * both at the pace of what that bridge is importing now.
+ */
+export function estimateQueued(overview: ImportOverview, roomId: string): QueuedEstimate {
+    const me = overview.entries.find((e) => e.room.roomId === roomId);
+    if (!me || me.phase !== "queued") return {};
+    const network = overview.networks.find((n) => n.network === (me.status.network || "?"));
+    if (!network || !network.ratePerMinute) return {};
+
+    const left = (e: ImportEntry): number => Math.max(0, (e.status.remote_total ?? 0) - e.status.bridged_messages);
+    const active = network.entries.filter((e) => e.phase === "importing");
+    const ahead = network.entries.filter(
+        (e) => e.phase === "queued" && (e.status.queue_ahead ?? 0) < (me.status.queue_ahead ?? 0),
+    );
+    const before = [...active, ...ahead].reduce((sum, e) => sum + left(e), 0);
+    const own = left(me);
+    const perMs = network.ratePerMinute / 60_000;
+    return {
+        waitMs: before > 0 ? before / perMs : undefined,
+        etaMs: own > 0 ? (before + own) / perMs : undefined,
+    };
+}

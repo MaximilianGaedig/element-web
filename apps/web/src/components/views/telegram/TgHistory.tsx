@@ -22,6 +22,8 @@ import ChartIcon from "@vector-im/compound-design-tokens/assets/web/icons/chart"
 import { _t } from "../../../languageHandler";
 import { formatFullDateNoTime } from "../../../DateUtils";
 import { SDKContext } from "../../../contexts/SDKContext";
+import MatrixClientContext from "../../../contexts/MatrixClientContext";
+import { collectImports, estimateQueued, type QueuedEstimate } from "../../../utils/importOverview";
 import { RightPanelPhases } from "../../../stores/right-panel/RightPanelStorePhases";
 import { useRoomState } from "../../../hooks/useRoomState";
 import {
@@ -80,7 +82,13 @@ export function useImportActive(room: Room): boolean {
 }
 
 /** The chat's history state, kept fresh: a running import that goes quiet becomes "queued" on its own. */
-function useHistory(room: Room): { status?: BackfillStatus; phase?: HistoryPhase; progress: ImportProgress } {
+function useHistory(room: Room): {
+    status?: BackfillStatus;
+    phase?: HistoryPhase;
+    progress: ImportProgress;
+    queued: QueuedEstimate;
+} {
+    const client = useContext(MatrixClientContext);
     const status = useRoomState(room, () => backfillStatusOf(room));
     const [now, setNow] = useState(() => Date.now());
     useEffect(() => {
@@ -90,12 +98,18 @@ function useHistory(room: Room): { status?: BackfillStatus; phase?: HistoryPhase
     }, [status?.state]);
     const phase = status ? historyPhase(status, now) : undefined;
     const progress = useMemo(
-        () => (status && phase === "importing" ? trackImport(room.roomId, status) : {}),
+        // Exact progress is worth showing for a waiting chat too: how many of how many, and what is left.
+        () => (status && (phase === "importing" || phase === "queued") ? trackImport(room.roomId, status) : {}),
         // A new record from the bridge is what moves the numbers.
         // eslint-disable-next-line react-hooks/exhaustive-deps
         [room.roomId, phase, status?.bridged_messages, status?.updated_ts, status?.rate_per_min],
     );
-    return { status, phase, progress };
+    const queued = useMemo(
+        () => (client && phase === "queued" ? estimateQueued(collectImports(client, now), room.roomId) : {}),
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+        [client, room.roomId, phase, status?.updated_ts, now],
+    );
+    return { status, phase, progress, queued };
 }
 
 const PHASE_KEYS: Record<HistoryPhase, { title: string; badge: string }> = {
@@ -188,7 +202,7 @@ function CompactHistory({ room, status, phase }: { room: Room; status: BackfillS
 }
 
 export function TgHistoryCard({ room }: { room: Room }): JSX.Element | null {
-    const { status, phase, progress } = useHistory(room);
+    const { status, phase, progress, queued } = useHistory(room);
     const [asked, setAsked] = useState(false);
     if (!status || !phase) return null;
     if (phase === "complete" || phase === "skipped" || phase === "unavailable") {
@@ -217,7 +231,19 @@ export function TgHistoryCard({ room }: { room: Room }): JSX.Element | null {
         subtitle = _t("tg_layout|history_paused_hint");
     }
 
-    const stats: Array<[string, string]> = [[_t("tg_layout|history_stat_imported"), number(status.bridged_messages)]];
+    const etaMs = phase === "queued" ? queued.etaMs : progress.etaMs;
+    const stats: Array<[string, string]> = [
+        [
+            _t("tg_layout|history_stat_imported"),
+            status.remote_total
+                ? _t("tg_layout|history_x_of_y", { done: number(status.bridged_messages), total: number(status.remote_total) })
+                : number(status.bridged_messages),
+        ],
+    ];
+    if (phase === "queued" && queued.waitMs !== undefined) {
+        stats.push([_t("tg_layout|history_stat_starts"), _t("tg_layout|history_in_time", { time: formatEta(queued.waitMs) })]);
+    }
+    if (etaMs !== undefined) stats.push([_t("tg_layout|history_stat_eta"), formatEta(etaMs)]);
     if (phase === "importing" || phase === "queued") {
         if (progress.left !== undefined) {
             stats.push([_t("tg_layout|history_stat_left"), `~${number(progress.left)}`]);
@@ -330,7 +356,7 @@ export function ImportSubtitle({ room }: { room: Room }): JSX.Element | null {
  */
 export function ImportBanner({ room }: { room: Room }): JSX.Element | null {
     const sdkContext = useContext(SDKContext);
-    const { status, phase, progress } = useHistory(room);
+    const { status, phase, progress, queued } = useHistory(room);
     const [asked, setAsked] = useState(false);
     if (!status || !phase || phase === "complete" || phase === "unavailable" || phase === "skipped") return null;
 
@@ -354,9 +380,22 @@ export function ImportBanner({ room }: { room: Room }): JSX.Element | null {
     } else if (phase === "queued") {
         title = _t("tg_layout|history_queued");
         detail =
-            status.queue_ahead !== undefined && status.queue_size
-                ? _t("tg_layout|history_queue_position", { position: status.queue_ahead + 1, size: status.queue_size })
-                : _t("tg_layout|history_queued_hint");
+            [
+                status.remote_total
+                    ? _t("tg_layout|history_x_of_y", {
+                          done: number(status.bridged_messages),
+                          total: number(status.remote_total),
+                      })
+                    : undefined,
+                status.queue_ahead !== undefined && status.queue_size
+                    ? _t("tg_layout|history_queue_position", { position: status.queue_ahead + 1, size: status.queue_size })
+                    : undefined,
+                queued.waitMs !== undefined
+                    ? _t("tg_layout|history_stat_starts") + " " + _t("tg_layout|history_in_time", { time: formatEta(queued.waitMs) })
+                    : undefined,
+            ]
+                .filter(Boolean)
+                .join(" · ") || _t("tg_layout|history_queued_hint");
     } else {
         title = _t("tg_layout|history_paused");
         detail = _t("tg_layout|history_paused_hint");

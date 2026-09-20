@@ -21,6 +21,7 @@ Please see LICENSE files in the repository root for full details.
  *     newest messages of a freshly opened chat appear in bubbles.ts's zoom-fade ladder.
  */
 
+import { HistoryStatusChip } from "./TgHistoryChip";
 import React, {
     type CSSProperties,
     type JSX,
@@ -369,6 +370,7 @@ export function TgColumns({
                 <div className="mx_TgColumns_left" aria-hidden={(handheld && chatShown) || undefined}>
                     {spacePanel}
                     <div className="mx_TgColumns_list" ref={columnRef}>
+                        <HistoryStatusChip />
                         {leftPanel}
                     </div>
                     {screen === ScreenSize.large && (

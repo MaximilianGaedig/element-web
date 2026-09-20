@@ -52,6 +52,7 @@ import { logger } from "matrix-js-sdk/src/logger";
 import { sleep } from "matrix-js-sdk/src/utils";
 
 import { BACKFILL_EVENT_TYPE } from "./utils/chatHistory";
+import { BRIDGE_LOGIN_EVENT_TYPE } from "./utils/bridgeLogins";
 
 // how long to long poll for
 const SLIDING_SYNC_TIMEOUT_MS = 20 * 1000;
@@ -69,6 +70,7 @@ const REQUIRED_STATE_LIST = [
     [EventType.SpaceParent, MSC3575_WILDCARD], // all space parents
     [EventType.RoomMember, MSC3575_STATE_KEY_ME], // lets the client calculate that we are in fact in the room
     [BACKFILL_EVENT_TYPE, ""], // how much of a bridged chat's history is imported (chat details, header, dashboard)
+    [BRIDGE_LOGIN_EVENT_TYPE, MSC3575_WILDCARD], // whether each bridge is connected as your account
 ];
 
 // the things to fetch when a user clicks on a room
@@ -87,6 +89,7 @@ const UNENCRYPTED_SUBSCRIPTION = {
         [EventType.RoomMember, MSC3575_STATE_KEY_ME], // except for m.room.members, get our own membership
         [EventType.RoomMember, MSC3575_STATE_KEY_LAZY], // ...and lazy load the rest.
         [BACKFILL_EVENT_TYPE, ""],
+        [BRIDGE_LOGIN_EVENT_TYPE, MSC3575_WILDCARD],
     ],
     ...DEFAULT_ROOM_SUBSCRIPTION_INFO,
 };
