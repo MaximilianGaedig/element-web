@@ -55,10 +55,18 @@ Please see LICENSE files in the repository root for full details.
     --tg-safe-bottom: env(safe-area-inset-bottom, 0px);
 }
 
-html[data-tg-keyboard] {
+/*
+ * The keyboard covers the home indicator, so its inset must not hold the composer up off the visible
+ * edge. The variables above sit on the theme element inside <html>, which would shadow this if it named
+ * <html> alone - the same trap the glass overrides below carry a note about.
+ */
+html[data-tg-keyboard],
+html[data-tg-keyboard] [class*="cpd-theme-"] {
     --tg-safe-bottom: 0px;
+}
 
-    /* Nothing scrolls the page while the keyboard is up: the app is pinned to the visual viewport instead. */
+/* Nothing scrolls the page while the keyboard is up: the app is pinned to the visual viewport instead. */
+html[data-tg-keyboard] {
     &,
     body {
         overflow: hidden;
