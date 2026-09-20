@@ -1,0 +1,238 @@
+/*
+Copyright 2026 New Vector Ltd.
+
+SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only OR LicenseRef-Element-Commercial
+Please see LICENSE files in the repository root for full details.
+*/
+
+.mx_ImportSummary {
+    padding: 1rem;
+    border-radius: 1rem;
+    background: var(--cpd-color-bg-subtle-secondary);
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.mx_ImportSummary--done {
+    padding: 0;
+    gap: 0;
+
+    > summary {
+        display: flex;
+        align-items: center;
+        gap: 0.625rem;
+        min-height: 2.75rem;
+        padding: 0.5rem 1rem;
+        list-style: none;
+        cursor: pointer;
+        font: var(--cpd-font-body-md-semibold);
+
+        &::-webkit-details-marker {
+            display: none;
+        }
+    }
+
+    > .mx_ImportNetworks,
+    > .mx_ImportSummary_note {
+        padding: 0 1rem 0.75rem;
+    }
+}
+
+.mx_ImportSummary_check {
+    display: grid;
+    place-items: center;
+    width: 1.5rem;
+    height: 1.5rem;
+    border-radius: 50%;
+    background: color-mix(in srgb, var(--cpd-color-text-success-primary) 16%, transparent);
+    color: var(--cpd-color-text-success-primary);
+    font-weight: 700;
+}
+
+.mx_ImportSummary_title {
+    font: var(--cpd-font-body-lg-semibold);
+}
+
+.mx_ImportSummary_metric {
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+    font: var(--cpd-font-body-md-regular);
+    font-variant-numeric: tabular-nums;
+}
+
+.mx_ImportSummary_line,
+.mx_ImportSummary_note {
+    margin: 0;
+    font: var(--cpd-font-body-sm-regular);
+    color: var(--cpd-color-text-secondary);
+}
+
+.mx_ImportBar {
+    display: block;
+    height: 0.5rem;
+    overflow: hidden;
+    border-radius: 0.25rem;
+    background: color-mix(in srgb, var(--cpd-color-text-secondary) 20%, transparent);
+
+    > span {
+        display: block;
+        height: 100%;
+        border-radius: inherit;
+        background: var(--tg-primary-color);
+        transition: width 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
+    }
+}
+
+.mx_ImportChips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.375rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.mx_ImportChips_chip {
+    padding: 0.125rem 0.625rem;
+    border-radius: 1rem;
+    background: var(--cpd-color-bg-canvas-default);
+    font: var(--cpd-font-body-sm-semibold);
+    color: var(--cpd-color-text-secondary);
+}
+
+.mx_ImportChips_chip--importing {
+    color: var(--tg-primary-color);
+}
+
+.mx_ImportChips_chip--paused {
+    color: var(--cpd-color-text-critical-primary);
+}
+
+.mx_ImportList {
+    display: flex;
+    flex-direction: column;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.mx_ImportRow {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    border-bottom: 1px solid var(--cpd-color-border-disabled);
+}
+
+.mx_ImportRow_main {
+    all: unset;
+    box-sizing: border-box;
+    flex: 1 1 auto;
+    min-width: 0;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    grid-template-areas:
+        "name count"
+        "meta count"
+        "bar bar";
+    gap: 0.125rem 0.75rem;
+    min-height: 2.75rem;
+    padding: 0.5rem 0.25rem;
+    cursor: pointer;
+
+    &:hover {
+        background: var(--cpd-color-bg-subtle-secondary);
+    }
+
+    &:focus-visible {
+        outline: 2px solid var(--cpd-color-border-focused);
+    }
+
+    .mx_ImportBar {
+        grid-area: bar;
+        height: 0.25rem;
+        margin-top: 0.25rem;
+    }
+}
+
+.mx_ImportRow_name {
+    grid-area: name;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font: var(--cpd-font-body-md-semibold);
+}
+
+.mx_ImportRow_meta {
+    grid-area: meta;
+    font: var(--cpd-font-body-sm-regular);
+    color: var(--cpd-color-text-secondary);
+}
+
+.mx_ImportRow_count {
+    grid-area: count;
+    align-self: center;
+    font: var(--cpd-font-body-sm-semibold);
+    font-variant-numeric: tabular-nums;
+    color: var(--cpd-color-text-secondary);
+}
+
+.mx_ImportRow_action {
+    all: unset;
+    flex: 0 0 auto;
+    display: grid;
+    place-items: center;
+    min-width: 3rem;
+    min-height: 2.75rem;
+    padding: 0 0.5rem;
+    font: var(--cpd-font-body-md-semibold);
+    color: var(--tg-primary-color);
+    cursor: pointer;
+
+    &:disabled {
+        opacity: 0.45;
+        cursor: default;
+    }
+
+    &:focus-visible {
+        outline: 2px solid var(--cpd-color-border-focused);
+        border-radius: 0.5rem;
+    }
+}
+
+.mx_ImportNetwork {
+    border-bottom: 1px solid var(--cpd-color-border-disabled);
+
+    > summary {
+        display: grid;
+        grid-template-columns: 1fr auto auto auto;
+        align-items: center;
+        gap: 0.75rem;
+        min-height: 2.75rem;
+        cursor: pointer;
+        list-style: none;
+        font: var(--cpd-font-body-md-regular);
+        font-variant-numeric: tabular-nums;
+
+        &::-webkit-details-marker {
+            display: none;
+        }
+    }
+}
+
+.mx_ImportNetwork_name {
+    font-weight: 600;
+}
+
+.mx_ImportNetwork_stat,
+.mx_ImportNetwork_state {
+    color: var(--cpd-color-text-secondary);
+    font: var(--cpd-font-body-sm-regular);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .mx_ImportBar > span {
+        transition: none;
+    }
+}

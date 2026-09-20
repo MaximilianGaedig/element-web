@@ -14,6 +14,7 @@ import React, { type JSX, useEffect, useMemo, useState } from "react";
 import { type Room } from "matrix-js-sdk/src/matrix";
 import HistoryIcon from "@vector-im/compound-design-tokens/assets/web/icons/history";
 import CheckIcon from "@vector-im/compound-design-tokens/assets/web/icons/check";
+import ChevronIcon from "@vector-im/compound-design-tokens/assets/web/icons/chevron-down";
 import PauseIcon from "@vector-im/compound-design-tokens/assets/web/icons/pause";
 import StorageIcon from "@vector-im/compound-design-tokens/assets/web/icons/download";
 import ChartIcon from "@vector-im/compound-design-tokens/assets/web/icons/chart";
@@ -29,6 +30,7 @@ import {
     historyPhase,
     type ImportProgress,
     requestFullBackfill,
+    requestSkipBackfill,
     type RoomStats,
     trackImport,
 } from "../../../utils/chatHistory";
@@ -98,6 +100,7 @@ const PHASE_KEYS: Record<HistoryPhase, { title: string; badge: string }> = {
     importing: { title: "tg_layout|history_importing", badge: "tg_layout|history_badge_importing" },
     queued: { title: "tg_layout|history_queued", badge: "tg_layout|history_badge_queued" },
     paused: { title: "tg_layout|history_paused", badge: "tg_layout|history_badge_paused" },
+    skipped: { title: "tg_layout|history_skipped", badge: "tg_layout|history_badge_skipped" },
     complete: { title: "tg_layout|history_complete", badge: "tg_layout|history_badge_complete" },
     unavailable: { title: "tg_layout|history_unavailable_title", badge: "tg_layout|history_badge_unavailable" },
 };
@@ -106,7 +109,7 @@ const PHASE_KEYS: Record<HistoryPhase, { title: string; badge: string }> = {
 function PhaseIcon({ phase }: { phase: HistoryPhase }): JSX.Element {
     if (phase === "importing") return <span className="mx_HistoryPhaseIcon mx_HistoryPhaseIcon--spin" aria-hidden />;
     if (phase === "complete") return <CheckIcon className="mx_HistoryPhaseIcon" aria-hidden />;
-    if (phase === "paused") return <PauseIcon className="mx_HistoryPhaseIcon" aria-hidden />;
+    if (phase === "paused" || phase === "skipped") return <PauseIcon className="mx_HistoryPhaseIcon" aria-hidden />;
     return <HistoryIcon className="mx_HistoryPhaseIcon" aria-hidden />;
 }
 
@@ -125,14 +128,73 @@ function Stat({ label, value }: { label: string; value: string }): JSX.Element {
  * carries on. Grouped-card layout as in Telegram iOS's settings; the same on a phone, where the
  * button is a full-width 48px target.
  */
+/**
+ * Once a chat's history is settled (all imported, skipped, or nothing to import) it takes one line, a
+ * verification: a check and the number. Tapping it opens the few details that back the claim up.
+ */
+function CompactHistory({ room, status, phase }: { room: Room; status: BackfillStatus; phase: HistoryPhase }): JSX.Element {
+    const [asked, setAsked] = useState(false);
+    const network = status.network || _t("tg_layout|history_network");
+    const summary =
+        phase === "complete"
+            ? _t("tg_layout|history_done_count", {
+                  count: status.bridged_messages,
+                  formatted: number(status.bridged_messages),
+              })
+            : phase === "skipped"
+              ? _t("tg_layout|history_skipped")
+              : _t("tg_layout|history_unavailable_title");
+    const canAsk = phase === "skipped" && !!status.command_prefix;
+    return (
+        <section className={`mx_HistoryCompact mx_HistoryCompact--${phase}`} data-testid="tg-history-compact">
+            <details>
+                <summary className="mx_HistoryCompact_summary">
+                    <PhaseIcon phase={phase} />
+                    <span className="mx_HistoryCompact_text">{summary}</span>
+                    <ChevronIcon className="mx_HistoryCompact_chevron" aria-hidden />
+                </summary>
+                <dl className="mx_HistoryCard_stats mx_HistoryCompact_details">
+                    {status.oldest_ts ? (
+                        <Stat label={_t("tg_layout|history_stat_oldest")} value={formatFullDateNoTime(new Date(status.oldest_ts))} />
+                    ) : null}
+                    {status.remote_total !== undefined && (
+                        <Stat
+                            label={_t("tg_layout|history_stat_on_network", { network })}
+                            value={number(status.remote_total)}
+                        />
+                    )}
+                    {phase === "unavailable" && (
+                        <Stat label={network} value={_t("tg_layout|history_unavailable_hint", { network })} />
+                    )}
+                </dl>
+                {canAsk && (
+                    <button
+                        type="button"
+                        className="mx_HistoryCard_action"
+                        disabled={asked}
+                        onClick={(): void => {
+                            setAsked(true);
+                            void requestFullBackfill(room, status);
+                        }}
+                    >
+                        {asked ? _t("tg_layout|history_requested") : _t("tg_layout|history_import")}
+                    </button>
+                )}
+            </details>
+        </section>
+    );
+}
+
 export function TgHistoryCard({ room }: { room: Room }): JSX.Element | null {
     const { status, phase, progress } = useHistory(room);
     const [asked, setAsked] = useState(false);
     if (!status || !phase) return null;
+    if (phase === "complete" || phase === "skipped" || phase === "unavailable") {
+        return <CompactHistory room={room} status={status} phase={phase} />;
+    }
 
-    const percent =
-        phase === "complete" ? 100 : progress.fraction !== undefined ? Math.min(99, Math.floor(progress.fraction * 100)) : undefined;
-    const showBar = phase === "importing" || phase === "queued" || phase === "complete";
+    const percent = progress.fraction !== undefined ? Math.min(99, Math.floor(progress.fraction * 100)) : undefined;
+    const showBar = phase === "importing" || phase === "queued";
     const network = status.network || _t("tg_layout|history_network");
 
     let subtitle: string | undefined;
@@ -142,19 +204,18 @@ export function TgHistoryCard({ room }: { room: Room }): JSX.Element | null {
                 ? _t("tg_layout|history_eta", { time: formatEta(progress.etaMs) })
                 : _t("tg_layout|history_working", { network });
     } else if (phase === "queued") {
-        subtitle = _t("tg_layout|history_queued_hint");
-    } else if (phase === "paused") {
+        subtitle =
+            status.queue_ahead !== undefined && status.queue_size
+                ? _t("tg_layout|history_queue_position", {
+                      position: status.queue_ahead + 1,
+                      size: status.queue_size,
+                  })
+                : _t("tg_layout|history_queued_hint");
+    } else {
         subtitle = _t("tg_layout|history_paused_hint");
-    } else if (phase === "complete" && status.oldest_ts) {
-        subtitle = _t("tg_layout|history_back_to", { date: formatFullDateNoTime(new Date(status.oldest_ts)) });
-    } else if (phase === "unavailable") {
-        subtitle = _t("tg_layout|history_unavailable_hint", { network });
     }
 
-    const stats: Array<[string, string]> = [];
-    if (phase !== "unavailable") {
-        stats.push([_t("tg_layout|history_stat_imported"), number(status.bridged_messages)]);
-    }
+    const stats: Array<[string, string]> = [[_t("tg_layout|history_stat_imported"), number(status.bridged_messages)]];
     if (phase === "importing" || phase === "queued") {
         if (progress.left !== undefined) {
             stats.push([_t("tg_layout|history_stat_left"), `~${number(progress.left)}`]);
@@ -166,7 +227,7 @@ export function TgHistoryCard({ room }: { room: Room }): JSX.Element | null {
             ]);
         }
     }
-    if (phase !== "complete" && phase !== "unavailable" && status.oldest_ts) {
+    if (status.oldest_ts) {
         stats.push([_t("tg_layout|history_stat_oldest"), formatFullDateNoTime(new Date(status.oldest_ts))]);
     }
 
@@ -207,6 +268,20 @@ export function TgHistoryCard({ room }: { room: Room }): JSX.Element | null {
                         <Stat key={label} label={label} value={value} />
                     ))}
                 </dl>
+            )}
+
+            {(phase === "importing" || phase === "queued") && status.command_prefix && (
+                <button
+                    type="button"
+                    className="mx_HistoryCard_secondary"
+                    disabled={asked}
+                    onClick={(): void => {
+                        setAsked(true);
+                        void requestSkipBackfill(room, status);
+                    }}
+                >
+                    {_t("tg_layout|history_skip")}
+                </button>
             )}
 
             {canAsk && (
@@ -254,7 +329,7 @@ export function ImportSubtitle({ room }: { room: Room }): JSX.Element | null {
 export function BackfillNotice({ room }: { room: Room }): JSX.Element | null {
     const { status, phase, progress } = useHistory(room);
     const [asked, setAsked] = useState(false);
-    if (!status || !phase || phase === "complete" || phase === "unavailable") return null;
+    if (!status || !phase || phase === "complete" || phase === "unavailable" || phase === "skipped") return null;
     const percent = progress.fraction !== undefined ? Math.min(99, Math.floor(progress.fraction * 100)) : undefined;
     return (
         <div className={`mx_BackfillNotice mx_BackfillNotice--${phase}`} role="status">

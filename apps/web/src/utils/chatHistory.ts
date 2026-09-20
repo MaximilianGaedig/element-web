@@ -20,7 +20,7 @@ export const BACKFILL_EVENT_TYPE = "im.mxg.backfill";
  * complete: the network said there is nothing older; running: older history is being imported;
  * manual: importing more needs a request; unavailable: the network offers no older history.
  */
-export type BackfillState = "complete" | "running" | "manual" | "unavailable";
+export type BackfillState = "complete" | "running" | "manual" | "unavailable" | "skipped";
 
 export interface BackfillStatus {
     state: BackfillState;
@@ -36,13 +36,16 @@ export interface BackfillStatus {
     active?: boolean;
     /** Messages imported per minute, as the bridge measured it. */
     rate_per_min?: number;
+    /** For a chat waiting its turn: chats in front of it, and chats waiting in all. */
+    queue_ahead?: number;
+    queue_size?: number;
     /** What to send in the room to ask for the rest: "<prefix> backfill". */
     command_prefix: string;
     network: string;
     updated_ts: number;
 }
 
-const STATES: BackfillState[] = ["complete", "running", "manual", "unavailable"];
+const STATES: BackfillState[] = ["complete", "running", "manual", "unavailable", "skipped"];
 
 /** The bridge's record of how much of the room's history it has imported, if the room has one. */
 export function backfillStatusOf(room: Room): BackfillStatus | undefined {
@@ -57,10 +60,18 @@ export function backfillStatusOf(room: Room): BackfillStatus | undefined {
         batches: Number(content.batches) || 0,
         active: !!content.active,
         rate_per_min: content.rate_per_min,
+        queue_ahead: content.queue_ahead,
+        queue_size: content.queue_size,
         command_prefix: content.command_prefix ?? "",
         network: content.network ?? "",
         updated_ts: Number(content.updated_ts) || 0,
     };
+}
+
+/** Asks the bridge not to import this chat's older history (it can be asked for again). */
+export async function requestSkipBackfill(room: Room, status: BackfillStatus): Promise<void> {
+    if (!status.command_prefix) return;
+    await room.client.sendTextMessage(room.roomId, `${status.command_prefix} backfill skip`);
 }
 
 /** Asks the bridge to import the rest of the chat's history. */
@@ -116,7 +127,7 @@ export function fetchRoomStats(client: MatrixClient, roomId: string): Promise<Ro
  * What to show for a chat's history: importing (a batch came in lately), queued (waiting its turn, or
  * the bridge went quiet), paused (needs a request), complete, or unavailable from the network.
  */
-export type HistoryPhase = "importing" | "queued" | "paused" | "complete" | "unavailable";
+export type HistoryPhase = "importing" | "queued" | "paused" | "complete" | "unavailable" | "skipped";
 
 /** A running import that hasn't reported for this long is not being worked on right now. */
 export const IMPORT_STALE_MS = 3 * 60_000;
@@ -127,6 +138,8 @@ export function historyPhase(status: BackfillStatus, now = Date.now()): HistoryP
             return "complete";
         case "unavailable":
             return "unavailable";
+        case "skipped":
+            return "skipped";
         case "manual":
             return "paused";
         default:
