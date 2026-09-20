@@ -101,6 +101,22 @@ function isRuntimeEntry(url: string, scope: string): boolean {
     );
 }
 
+/**
+ * The cached response for one of our URLs, or undefined.
+ *
+ * Cache Storage answers an exact URL from its index in well under a millisecond, but `ignoreSearch` makes it
+ * enumerate every entry instead — about 15 ms with a build's worth of files in the cache, paid on every
+ * request of every load, which added a quarter of a second to opening the app. Nothing needs the scan: build
+ * files are stored under their own URL, and the files that are requested with a cachebuster (config,
+ * translations, `version`) are stored under the URL without one, so two exact lookups cover both.
+ */
+async function matchApp(cache: Cache, url: string): Promise<Response | undefined> {
+    const cached = await cache.match(url);
+    if (cached) return cached;
+    const stripped = stripSearch(url);
+    return stripped === url ? undefined : cache.match(stripped);
+}
+
 /** Whether a production build's files have been cached, i.e. whether the app is served offline-first. */
 async function appCacheReady(cache: Cache): Promise<boolean> {
     return !!(await cache.match(SHELL_KEY));
@@ -121,14 +137,14 @@ export async function respondApp(event: FetchEventLike, kind: AppRequestKind): P
             return cached ?? fetch(event.request);
         }
         case "immutable": {
-            const cached = await cache.match(event.request, { ignoreSearch: true });
+            const cached = await matchApp(cache, event.request.url);
             if (cached) return cached;
             const res = await fetch(event.request);
             if (res.ok) event.waitUntil(cache.put(event.request, res.clone()));
             return res;
         }
         case "revalidate": {
-            const cached = await cache.match(event.request, { ignoreSearch: true });
+            const cached = await matchApp(cache, event.request.url);
             const refresh = fetch(event.request).then(async (res) => {
                 if (res.ok) await cache.put(stripSearch(event.request.url), res.clone());
                 return res;
@@ -140,7 +156,7 @@ export async function respondApp(event: FetchEventLike, kind: AppRequestKind): P
             return refresh;
         }
         case "build": {
-            return (await cache.match(event.request, { ignoreSearch: true })) ?? fetch(event.request);
+            return (await matchApp(cache, event.request.url)) ?? fetch(event.request);
         }
         case "network-first": {
             try {
@@ -154,7 +170,7 @@ export async function respondApp(event: FetchEventLike, kind: AppRequestKind): P
                 }
                 return res;
             } catch (e) {
-                const cached = await cache.match(event.request, { ignoreSearch: true });
+                const cached = await matchApp(cache, event.request.url);
                 if (cached) return cached;
                 throw e;
             }
