@@ -27,6 +27,7 @@ import postcssNested from "postcss-nested";
 
 import pkgJson from "./package.json" with { type: "json" };
 import { I18nWebpackPlugin } from "./I18nWebpackPlugin.ts";
+import { OfflineManifestPlugin } from "./OfflineManifestPlugin.ts";
 import type { sentryWebpackPlugin as sentryWebpackPluginType } from "@sentry/webpack-plugin/webpack5";
 
 // Environment variables
@@ -697,6 +698,9 @@ export default (env: string, argv: Record<string, any>): webpack.Configuration =
                 retryDelay: 500,
                 maxRetries: 3,
             }),
+
+            // The files the service worker keeps so the app starts offline (dev builds aren't cached)
+            nodeEnv === "production" && new OfflineManifestPlugin(VERSION),
         ],
 
         output: {
