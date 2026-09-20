@@ -18,7 +18,6 @@
     color: var(--cpd-color-text-secondary);
     padding: var(--cpd-space-1x) 0;
 
-    &:hover,
     /* keyboardActive is toggled in JS for keyboard focus only (see RoomListSectionHeaderView), and
        kept while focus is on the menu button so it stays reachable by Tab — without revealing the
        menu on a mouse-focused header the way :focus-within would */
@@ -38,10 +37,34 @@
             display: initial;
         }
 
-        /* When a menu is present and revealed on hover, hide the decoration to avoid clutter.
-           Default sections have no menu, so their decoration stays visible on hover. */
+        /* When a menu is present and revealed, hide the decoration to avoid clutter.
+           Default sections have no menu, so their decoration stays visible. */
         .notificationDecoration {
             display: none;
+        }
+    }
+
+    /* The same on hover, but only where a pointer really hovers: on a touch screen the browser emulates
+       hover on a tap, and a tap that reveals something is spent on the reveal (a second tap is needed). */
+    @media (hover: hover) {
+        &:hover {
+            color: var(--cpd-color-text-primary);
+
+            svg {
+                fill: var(--cpd-color-icon-primary);
+            }
+
+            .container {
+                background-color: var(--cpd-color-bg-action-tertiary-hovered);
+            }
+
+            .menu {
+                display: initial;
+            }
+
+            .notificationDecoration {
+                display: none;
+            }
         }
     }
 

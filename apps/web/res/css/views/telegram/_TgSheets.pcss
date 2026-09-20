@@ -186,10 +186,29 @@ html[data-tg-screen="mobile"] {
     display: none;
 }
 
-html[data-tg-screen="mobile"] {
+/* The settings sheet: the profile drawer's twin. Same surface, same 28px edge, same grabber; the dialog's
+   own close button is left out because the bar has one. */
+:root[data-tg-screen="mobile"] {
+    .mx_Dialog_wrapper:has(.mx_UserSettingsDialog) .mx_Dialog_cancelButton {
+        display: none;
+    }
+
     .mx_UserSettingsDialog {
+        position: relative;
         height: calc(100dvh - var(--tg-safe-top, 0px) - 1.5rem);
         background: var(--cpd-color-bg-canvas-default);
+
+        &::before {
+            content: "";
+            position: absolute;
+            top: 0.5rem;
+            inset-inline: 0;
+            margin-inline: auto;
+            width: 2.25rem;
+            height: 0.3125rem;
+            border-radius: 0.25rem;
+            background: var(--cpd-color-bg-subtle-primary);
+        }
 
         /* The dialog's own header is replaced by the navigation bar. */
         .mx_Dialog_header,
@@ -212,13 +231,18 @@ html[data-tg-screen="mobile"] {
         align-items: center;
         flex: 0 0 auto;
         min-height: 3.5rem;
-        padding: 0.5rem 0.5rem 0;
+        padding: 1rem 0.5rem 0;
     }
 
+    /* Just the section's name: "Settings:" is the dialog title's lead-in. */
     .mx_SettingsNavBar_title {
         text-align: center;
-        font: var(--cpd-font-body-lg-semibold);
+        font-size: 0;
         color: var(--cpd-color-text-primary);
+
+        .mx_UserSettingsDialog_title_strong {
+            font: var(--cpd-font-body-lg-semibold);
+        }
     }
 
     .mx_SettingsNavBar_back,
@@ -341,6 +365,41 @@ html[data-tg-screen="mobile"] {
             top: 0;
             inset-inline: 3.75rem 0;
             border-top: 1px solid var(--cpd-color-border-disabled);
+        }
+    }
+
+    /* Settings written for a wide pane: on a phone their fixed widths must give way to the screen's. */
+    .mx_SettingsDialog_content .mx_TabbedView_tabPanelContent {
+        .mx_SettingsSection_newUi {
+            align-items: stretch;
+        }
+
+        .mx_SettingsSection,
+        .mx_SettingsSubsection,
+        .mx_SettingsSubsection_dropdown,
+        .mx_Dropdown,
+        .mx_CopyableText,
+        form {
+            min-width: 0;
+            max-width: 100%;
+        }
+
+        /* Its padding and border were added to its 100%. */
+        .mx_CopyableText {
+            box-sizing: border-box;
+        }
+
+        .mx_ImageSizePanel_radios {
+            flex-wrap: wrap;
+
+            > label {
+                margin-right: 0;
+            }
+        }
+
+        .mx_SettingsDropdown .mx_Dropdown_input,
+        .mx_SettingsSubsection_dropdown .mx_Dropdown_input {
+            width: 100%;
         }
     }
 

@@ -34,11 +34,7 @@
     }
 }
 
-/* Show hover menu and background on hover/focus/menu-open states */
-.roomListItem:hover,
-/* keyboardActive is toggled in JS for keyboard focus only (see RoomListItemView), and kept while
-   focus is on the hover-menu buttons so they stay reachable by Tab — without revealing the menu on
-   mouse-focused or selected rows the way :focus-within would */
+/* Show hover menu and background on focus/menu-open states */
 .roomListItem.keyboardActive,
 /* When the context menu is opened */
 .roomListItem[data-state="open"],
@@ -50,7 +46,7 @@
         background-color: var(--cpd-color-bg-action-tertiary-hovered);
     }
 
-    /* Preserve selected background on hover/focus/menu-open states */
+    /* Preserve selected background on focus/menu-open states */
     &.selected .container {
         background-color: var(--cpd-color-bg-action-tertiary-selected);
     }
@@ -62,6 +58,30 @@
     /* When the menu is visible, hide the notification decoration to avoid clutter */
     .notificationDecoration {
         display: none;
+    }
+}
+
+/* The same on hover, but only where a pointer really hovers. On a touch screen the browser emulates hover on
+   a tap, and if that reveals something the tap is spent on the reveal: the room only opens on a second tap. */
+@media (hover: hover) {
+    .roomListItem:hover {
+        color: var(--cpd-color-text-primary);
+
+        .container {
+            background-color: var(--cpd-color-bg-action-tertiary-hovered);
+        }
+
+        &.selected .container {
+            background-color: var(--cpd-color-bg-action-tertiary-selected);
+        }
+
+        .hoverMenu {
+            display: flex;
+        }
+
+        .notificationDecoration {
+            display: none;
+        }
     }
 }
 
