@@ -28,34 +28,17 @@ export function useLastSeen(client: MatrixClient | undefined, userId: string | u
  * Subtitle under a DM's name in the room header, like Telegram's "last seen …" line; replaced by
  * an animated "typing" while the other side types.
  */
-export function DmLastSeenSubtitle({
-    room,
-    alsoShow,
-}: {
-    room: Room;
-    /** Another status for the same line (the history import): shown beside the last-seen text, never instead of it. */
-    alsoShow?: JSX.Element | null;
-}): JSX.Element | null {
+export function DmLastSeenSubtitle({ room }: { room: Room }): JSX.Element | null {
     const member = useDmMember(room);
     const typing = useHeaderTypingText(room, true);
     const text = useLastSeen(room.client, member?.userId);
-    // Typing always wins the line, as in Telegram.
+    // Presence is the one source (bridges keep it current from what they see on the network).
     if (typing) return <TypingIndicatorLine text={typing} />;
-    const seen =
-        text && isPresenceEnabled(room.client) ? (
-            <Text as="div" size="sm" className="mx_LastSeen" data-online={text === _t("bridge|last_seen_online")}>
-                {text}
-            </Text>
-        ) : null;
-    // Presence is the one source (bridges keep it current from what they see on the network). The import
-    // status never replaces or swaps with it: it sits beside it on the same line.
-    if (!seen && !alsoShow) return null;
-    if (!alsoShow) return seen;
+    if (!text || !isPresenceEnabled(room.client)) return null;
     return (
-        <div className="mx_HeaderStatusRow">
-            {seen}
-            {alsoShow}
-        </div>
+        <Text as="div" size="sm" className="mx_LastSeen" data-online={text === _t("bridge|last_seen_online")}>
+            {text}
+        </Text>
     );
 }
 

@@ -79,11 +79,6 @@ function formatEta(ms: number): string {
     return _t("tg_layout|history_eta_days", { count: Math.round(hours / 24) });
 }
 
-/** Whether the chat's history is being imported this minute (the header says so instead of "last seen"). */
-export function useImportActive(room: Room): boolean {
-    return useHistory(room).phase === "importing";
-}
-
 /** The chat's history state, kept fresh: a running import that goes quiet becomes "queued" on its own. */
 function useHistory(room: Room): {
     status?: BackfillStatus;
@@ -329,29 +324,6 @@ export function TgHistoryCard({ room }: { room: Room }): JSX.Element | null {
                 </button>
             )}
         </section>
-    );
-}
-
-/**
- * Under the chat's name while its history is being imported, where Telegram puts "updating…": the same
- * small line, with animated dots, and the percentage when it is known.
- */
-export function ImportSubtitle({ room, inline }: { room: Room; inline?: boolean }): JSX.Element | null {
-    const { status, phase, progress } = useHistory(room);
-    if (!status || phase !== "importing") return null;
-    const percent = progress.fraction !== undefined ? Math.min(99, Math.floor(progress.fraction * 100)) : undefined;
-    return (
-        <div className={`mx_ImportSubtitle${inline ? " mx_ImportSubtitle--inline" : ""}`} role="status" data-testid="import-subtitle">
-            {inline && <span className="mx_HistoryPhaseIcon mx_HistoryPhaseIcon--spin mx_ImportSubtitle_spinner" aria-hidden />}
-            <span>{percent === undefined ? _t("tg_layout|history_subtitle") : _t("tg_layout|history_subtitle_percent", { percent })}</span>
-            {!inline && (
-                <span className="mx_ImportSubtitle_dots" aria-hidden>
-                    <i />
-                    <i />
-                    <i />
-                </span>
-            )}
-        </div>
     );
 }
 

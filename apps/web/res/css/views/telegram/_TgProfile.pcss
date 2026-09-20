@@ -227,8 +227,6 @@ html[data-tg-screen="mobile"] .mx_TgProfile_avatar {
     height: 100px !important;
 }
 
-
-
 .mx_TgStats {
     border-top: none;
 }
@@ -263,9 +261,6 @@ html[data-tg-screen="mobile"] .mx_TgProfile_avatar {
     color: var(--cpd-color-text-secondary);
 }
 
-
-
-
 /* ---- Chat history: card, header line, pill ---------------------------------------------------- */
 
 @keyframes mx_History_spin {
@@ -281,18 +276,6 @@ html[data-tg-screen="mobile"] .mx_TgProfile_avatar {
 
     100% {
         transform: translateX(250%);
-    }
-}
-
-@keyframes mx_History_dot {
-    0%,
-    80%,
-    100% {
-        opacity: 0.25;
-    }
-
-    40% {
-        opacity: 1;
     }
 }
 
@@ -475,43 +458,9 @@ html[data-tg-screen="mobile"] .mx_TgProfile_avatar {
     }
 }
 
-/* The line under the chat's name, where Telegram puts "updating…". */
-.mx_ImportSubtitle {
-    display: flex;
-    align-items: center;
-    gap: 0.125rem;
-    font: var(--cpd-font-body-sm-regular);
-    color: var(--tg-primary-color);
-    white-space: nowrap;
-}
-
-.mx_ImportSubtitle_dots {
-    display: inline-flex;
-    gap: 2px;
-    margin-inline-start: 2px;
-
-    i {
-        width: 3px;
-        height: 3px;
-        border-radius: 50%;
-        background: currentcolor;
-        animation: mx_History_dot 1.2s infinite;
-
-        &:nth-child(2) {
-            animation-delay: 0.2s;
-        }
-
-        &:nth-child(3) {
-            animation-delay: 0.4s;
-        }
-    }
-}
-
-
 @media (prefers-reduced-motion: reduce) {
     .mx_HistoryPhaseIcon--spin,
-    .mx_HistoryBar--indeterminate .mx_HistoryBar_fill,
-    .mx_ImportSubtitle_dots i {
+    .mx_HistoryBar--indeterminate .mx_HistoryBar_fill {
         animation-duration: 3s;
     }
 
@@ -524,31 +473,6 @@ html[data-tg-screen="mobile"] .mx_TgProfile_avatar {
 html[data-tg-screen="mobile"] .mx_HistoryCard {
     margin: 0.75rem 1rem 0;
     padding: 1.125rem 1rem;
-}
-
-/* Online / last seen keeps its place; the import status sits beside it on the same line. */
-.mx_HeaderStatusRow {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    min-width: 0;
-}
-
-.mx_ImportSubtitle--inline {
-    flex: 0 0 auto;
-    gap: 0.25rem;
-
-    &::before {
-        content: "·";
-        margin-inline-end: 0.25rem;
-        color: var(--cpd-color-text-secondary);
-    }
-}
-
-.mx_ImportSubtitle_spinner {
-    width: 0.625rem;
-    height: 0.625rem;
-    border-width: 1.5px;
 }
 
 /* A settled history (all imported, skipped, nothing to import) is one line, a verification. */
@@ -631,7 +555,6 @@ html[data-tg-screen="mobile"] .mx_HistoryCard {
         border-radius: 0.5rem;
     }
 }
-
 
 /* ---- The import banner: a plate like the pinned messages, under them --------------------------- */
 

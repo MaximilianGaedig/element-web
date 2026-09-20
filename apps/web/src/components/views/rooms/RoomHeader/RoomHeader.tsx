@@ -38,8 +38,6 @@ import { useRoomState } from "../../../../hooks/useRoomState.ts";
 import RoomAvatar from "../../avatars/RoomAvatar";
 import BridgeHeaderBadges from "../../bridge/BridgeHeaderBadges";
 import { DmLastSeenSubtitle } from "../../bridge/LastSeen";
-import { ImportSubtitle, useImportActive } from "../../telegram/TgHistory";
-import { useHeaderTypingText } from "../../bridge/TypingSubtitle";
 import { TypingSubtitle } from "../../bridge/TypingSubtitle";
 import { TgBackButton } from "../../telegram/TgNavigation";
 import { formatCount } from "../../../../utils/FormattingUtils.ts";
@@ -430,8 +428,6 @@ export default function RoomHeader({
     const isRoomEncrypted = useIsEncrypted(sdkContext.client!, room);
     const e2eStatus = useEncryptionStatus(sdkContext.client!, room);
     const askToJoinEnabled = useFeatureEnabled("feature_ask_to_join");
-    const importing = useImportActive(room);
-    const groupTyping = useHeaderTypingText(room, false);
     const onAvatarClick = (): void => {
         defaultDispatcher.dispatch({
             action: "open_room_settings",
@@ -522,15 +518,8 @@ export default function RoomHeader({
 
                             {room instanceof Room && <BridgeHeaderBadges room={room} />}
                         </Text>
-                        {isDirectMessage && room instanceof Room && (
-                            <DmLastSeenSubtitle room={room} alsoShow={importing ? <ImportSubtitle room={room} inline /> : null} />
-                        )}
-                        {!isDirectMessage && room instanceof Room && (
-                            <>
-                                <TypingSubtitle room={room} isDm={false} />
-                                {importing && !groupTyping && <ImportSubtitle room={room} />}
-                            </>
-                        )}
+                        {isDirectMessage && room instanceof Room && <DmLastSeenSubtitle room={room} />}
+                        {!isDirectMessage && room instanceof Room && <TypingSubtitle room={room} isDm={false} />}
                     </button>
                     {room instanceof Room && <RoomHeaderPath room={room} />}
                 </Box>

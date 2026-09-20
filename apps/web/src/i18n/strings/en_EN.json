@@ -3498,8 +3498,6 @@
         "history_stat_on_network": "On %(network)s",
         "history_stat_speed": "Speed",
         "history_stat_starts": "Starts",
-        "history_subtitle": "importing history",
-        "history_subtitle_percent": "importing history · %(percent)s%",
         "history_unavailable_hint": "%(network)s doesn't provide any",
         "history_unavailable_title": "No older messages available",
         "history_working": "Fetching from %(network)s",
