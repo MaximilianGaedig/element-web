@@ -161,3 +161,147 @@ html[data-tg-screen="mobile"] {
         transform: translateZ(0);
     }
 }
+
+/*
+ * Handhelds: dialogs, the settings and the emoji/sticker pickers are bottom drawers (Telegram iOS's
+ * sheets) rather than centred windows or popups: full width, rounded at the top, sliding up from the
+ * bottom edge, with a grabber, clearing the home indicator.
+ */
+@keyframes mx_TgDrawer_in {
+    from {
+        transform: translateY(100%);
+    }
+
+    to {
+        transform: translateY(0);
+    }
+}
+
+html[data-tg-screen="mobile"] {
+    .mx_Dialog_wrapper:not(.mx_Dialog_lightbox, .mx_Dialog_staticWrapper) {
+        align-items: flex-end;
+
+        .mx_Dialog_border {
+            width: 100%;
+            max-width: 100%;
+            max-height: calc(100dvh - var(--tg-safe-top, 0px) - 1.5rem);
+            border-radius: 1.25rem 1.25rem 0 0;
+            overflow: hidden;
+            animation: mx_TgDrawer_in 0.28s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+
+            /* The grabber. */
+            &::before {
+                content: "";
+                position: absolute;
+                z-index: 2;
+                top: 0.375rem;
+                left: 50%;
+                width: 2.25rem;
+                height: 0.25rem;
+                border-radius: 0.125rem;
+                background: var(--cpd-color-border-interactive-secondary);
+                transform: translateX(-50%);
+                pointer-events: none;
+            }
+        }
+
+        .mx_Dialog {
+            width: 100%;
+            max-width: 100%;
+            box-sizing: border-box;
+            border-radius: inherit;
+            padding: var(--cpd-space-6x) var(--cpd-space-4x) calc(var(--cpd-space-4x) + var(--tg-safe-bottom, 0px));
+        }
+
+        .mx_CompoundDialog_header {
+            padding: var(--cpd-space-5x) var(--cpd-space-4x) var(--cpd-space-2x);
+        }
+    }
+
+    /* Settings: a tall drawer whose section list is a strip of tabs above the section. */
+    .mx_UserSettingsDialog,
+    .mx_RoomSettingsDialog,
+    .mx_SpaceSettingsDialog,
+    .mx_SpacePreferencesDialog {
+        width: 100%;
+        max-width: 100%;
+        height: calc(100dvh - var(--tg-safe-top, 0px) - 1.5rem);
+        padding: 0;
+
+        .mx_TabbedView {
+            position: relative;
+            top: 0;
+            inset: auto;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+        }
+
+        .mx_TabbedView_tabsOnLeft {
+            position: relative;
+            flex-direction: column;
+
+            .mx_TabbedView_tabLabels {
+                position: static;
+                display: flex;
+                flex: 0 0 auto;
+                flex-direction: row;
+                width: 100%;
+                max-width: none;
+                gap: var(--cpd-space-1x);
+                padding: var(--cpd-space-4x) var(--cpd-space-3x) var(--cpd-space-2x);
+                overflow-x: auto;
+                scrollbar-width: none;
+
+                .mx_TabbedView_tabLabel {
+                    flex: 0 0 auto;
+                    white-space: nowrap;
+                    border-radius: 1rem;
+                }
+            }
+
+            .mx_TabbedView_tabPanel {
+                flex: 1 1 auto;
+                min-height: 0;
+                margin-left: 0;
+                overflow-y: auto;
+            }
+        }
+
+        .mx_TabbedView .mx_SettingsTab {
+            min-width: 0;
+            padding: 0 var(--cpd-space-4x) calc(var(--cpd-space-8x) + var(--tg-safe-bottom, 0px));
+        }
+    }
+
+    /* The emoji and sticker picker slides up from the bottom instead of floating above the input. */
+    .mx_TgEmoticonsDropdown {
+        right: 0 !important;
+        bottom: 0 !important;
+        left: 0 !important;
+        width: 100%;
+        max-width: 100%;
+        height: min(52dvh, 26.25rem);
+        max-height: none;
+        padding-bottom: var(--tg-safe-bottom, 0px);
+        border-radius: 1.25rem 1.25rem 0 0;
+        transform-origin: 50% 100%;
+        animation: mx_TgDrawer_in 0.26s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+    }
+
+    /* The reaction picker (an emoji picker in a popup menu) likewise. */
+    .mx_ContextualMenu_wrapper:has([data-testid="mx_EmojiPicker"], .mx_EmojiPicker) {
+        inset: auto 0 0 0 !important;
+        transform: none !important;
+        width: 100%;
+
+        .mx_ContextualMenu {
+            position: static;
+            width: 100%;
+            max-height: 55dvh;
+            border-radius: 1.25rem 1.25rem 0 0;
+            padding-bottom: var(--tg-safe-bottom, 0px);
+            animation: mx_TgDrawer_in 0.26s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+        }
+    }
+}

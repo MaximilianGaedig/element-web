@@ -103,3 +103,43 @@ export function fetchRoomStats(client: MatrixClient, roomId: string): Promise<Ro
     cache.set(roomId, { at: Date.now(), stats });
     return stats;
 }
+
+export interface ImportProgress {
+    /** Messages imported per minute, from how the count moved while this page was watching. */
+    perMinute?: number;
+    /** 0..1 when the network says how many messages the chat has. */
+    fraction?: number;
+    /** Milliseconds left at the current pace, when both are known. */
+    etaMs?: number;
+}
+
+/** What the watcher saw of each room's import: when, and how many messages were imported by then. */
+const samples = new Map<string, Array<{ at: number; count: number }>>();
+const SAMPLE_WINDOW_MS = 15 * 60_000;
+/** Below this the pace is noise, not a rate. */
+const MIN_SPAN_MS = 20_000;
+
+/** Records the bridge's latest count for a room and works out pace, progress and time left. */
+export function trackImport(roomId: string, status: BackfillStatus, now = Date.now()): ImportProgress {
+    const list = (samples.get(roomId) ?? []).filter((s) => now - s.at <= SAMPLE_WINDOW_MS);
+    const last = list[list.length - 1];
+    if (!last || last.count !== status.bridged_messages) list.push({ at: now, count: status.bridged_messages });
+    samples.set(roomId, list);
+
+    const first = list[0];
+    const newest = list[list.length - 1];
+    const span = newest.at - first.at;
+    let perMinute: number | undefined;
+    if (span >= MIN_SPAN_MS && newest.count > first.count) {
+        perMinute = ((newest.count - first.count) / span) * 60_000;
+    }
+
+    let fraction: number | undefined;
+    let etaMs: number | undefined;
+    if (status.remote_total && status.remote_total > 0) {
+        fraction = Math.min(1, status.bridged_messages / status.remote_total);
+        const left = Math.max(0, status.remote_total - status.bridged_messages);
+        if (perMinute) etaMs = (left / perMinute) * 60_000;
+    }
+    return { perMinute, fraction, etaMs };
+}
