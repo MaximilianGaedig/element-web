@@ -276,3 +276,58 @@ Please see LICENSE files in the repository root for full details.
         opacity: 1;
     }
 }
+
+/*
+ * Media in a bubble, the way Telegram draws it: the picture fills its bubble rather than floating loose,
+ * and the corners follow the message's place in its sender's run - the outside corners keep the full
+ * radius, the sides facing the messages above and below are tucked in, and the last one squares off the
+ * corner its tail grows from (_TgBubbleTail.pcss).
+ *
+ * Element's own bubble layout leaves a media line transparent and rounds only its top, because it hangs
+ * the timestamp underneath; the Telegram layout puts the time over the picture instead.
+ */
+html[data-tg-screen] .mx_RoomView_body[data-layout="bubble"] {
+    --tg-bubble-radius: var(--event-tile-bubble-corner-radius, 12px);
+    /* tweb's small radius, for the corners where a bubble meets the next one of the same sender. */
+    --tg-bubble-radius-join: 0.375rem;
+
+    .mx_EventTile_tgBubble > [data-testid="event-tile-line"] {
+        border-radius: var(--tg-bubble-radius);
+    }
+
+    /* The picture is the bubble: give the line the bubble's surface back and clip the media to it. */
+    .mx_EventTile_tgBubble > .mx_EventTile_tgMediaLine {
+        overflow: hidden;
+        background: var(--event-tile-bubble-other-background);
+
+        :is(.mx_MediaBody, .mx_MImageBody, .mx_MVideoBody) {
+            border-radius: inherit;
+        }
+    }
+
+    .mx_EventTile_tgOwn.mx_EventTile_tgBubble > .mx_EventTile_tgMediaLine {
+        background: var(--event-tile-bubble-self-background);
+    }
+
+    /* Not the first of its sender's run: tuck in the corner facing the message above. */
+    .mx_EventTile_tgBubble:not(.mx_EventTile_tgOwn) + .mx_EventTile_tgBubble:not(.mx_EventTile_tgOwn) {
+        > [data-testid="event-tile-line"] {
+            border-start-start-radius: var(--tg-bubble-radius-join);
+        }
+    }
+
+    .mx_EventTile_tgOwn + .mx_EventTile_tgOwn > [data-testid="event-tile-line"] {
+        border-start-end-radius: var(--tg-bubble-radius-join);
+    }
+
+    /* Not the last of its run: tuck in the corner facing the message below. */
+    .mx_EventTile_tgBubble:not(.mx_EventTile_tgOwn):has(+ .mx_EventTile_tgBubble:not(.mx_EventTile_tgOwn)) {
+        > [data-testid="event-tile-line"] {
+            border-end-start-radius: var(--tg-bubble-radius-join);
+        }
+    }
+
+    .mx_EventTile_tgOwn:has(+ .mx_EventTile_tgOwn) > [data-testid="event-tile-line"] {
+        border-end-end-radius: var(--tg-bubble-radius-join);
+    }
+}
