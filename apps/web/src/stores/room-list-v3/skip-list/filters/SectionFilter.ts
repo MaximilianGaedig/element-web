@@ -8,7 +8,7 @@
 import { type Room, KnownMembership } from "matrix-js-sdk/src/matrix";
 
 import { type FilterKey, type MultiKeyFilter } from ".";
-import DMRoomMap from "../../../../utils/DMRoomMap";
+import { isDirectMessage } from "../../../../utils/dm/isDirectMessage";
 import { CHATS_TAG } from "../../section";
 import { DefaultTagID } from "../tag";
 
@@ -45,7 +45,7 @@ export class SectionFilter implements MultiKeyFilter {
         const tag = this.sectionTags.find((sectionTag) => room.tags[sectionTag]);
         if (tag) return tag === DefaultTagID.Invite ? undefined : tag;
 
-        const isDm = this.hasPeopleSection && !!DMRoomMap.shared().getUserIdForRoomId(room.roomId);
+        const isDm = this.hasPeopleSection && isDirectMessage(room);
         return isDm ? DefaultTagID.DM : CHATS_TAG;
     }
 }

@@ -21,7 +21,6 @@ export enum UserTab {
     Help = "USER_HELP_TAB",
     SessionManager = "USER_SESSION_MANAGER_TAB",
     Storage = "USER_STORAGE_TAB",
-    Import = "USER_IMPORT_TAB",
     Activity = "USER_ACTIVITY_TAB",
     Bridges = "USER_BRIDGES_TAB",
 }

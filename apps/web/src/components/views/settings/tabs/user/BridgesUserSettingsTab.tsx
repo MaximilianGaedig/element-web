@@ -17,7 +17,6 @@ import { SettingsSection } from "../../shared/SettingsSection";
 import dis from "../../../../../dispatcher/dispatcher";
 import { Action } from "../../../../../dispatcher/actions";
 import { TimelineRenderingType } from "../../../../../contexts/RoomContext";
-import { UserTab } from "../../../dialogs/UserTab";
 import { BACKFILL_EVENT_TYPE } from "../../../../../utils/chatHistory";
 import {
     BRIDGE_LOGIN_EVENT_TYPE,
@@ -27,6 +26,7 @@ import {
     type LoginHealth,
 } from "../../../../../utils/bridgeLogins";
 import { collectImports, type ImportOverview, type NetworkSummary } from "../../../../../utils/importOverview";
+import { Bar, eta, NetworkImportDetail, number as num } from "./importDetail";
 
 const number = (n: number): string => n.toLocaleString();
 
@@ -92,31 +92,6 @@ function openLogin(login: BridgeLogin): void {
     }, 500);
 }
 
-function ImportLine({ network }: { network: NetworkSummary }): JSX.Element {
-    const open = network.byPhase.importing + network.byPhase.queued + network.byPhase.paused;
-    const share = network.chats ? (network.chats - open) / network.chats : 0;
-    return (
-        <div className="mx_BridgeCard_import">
-            <div className="mx_BridgeCard_importText">
-                {open === 0
-                    ? _t("tg_layout|bridge_all_imported", {
-                          chats: number(network.chats),
-                          messages: number(network.messages),
-                      })
-                    : _t("tg_layout|import_chats", {
-                          done: number(network.chats - open),
-                          total: number(network.chats),
-                      })}
-            </div>
-            {open > 0 && (
-                <span className="mx_ImportBar" aria-hidden>
-                    <span style={{ width: `${Math.max(2, Math.round(share * 100))}%` }} />
-                </span>
-            )}
-        </div>
-    );
-}
-
 /** The bridge's own picture: its bot's avatar, from what the client already knows, else from the bot's profile. */
 function useBotAvatar(login: BridgeLogin): string | undefined {
     const client = useContext(MatrixClientContext);
@@ -144,7 +119,56 @@ function useBotAvatar(login: BridgeLogin): string | undefined {
     return mxc ? (mediaFromMxc(mxc, client).getSquareThumbnailHttp(80) ?? undefined) : undefined;
 }
 
-function BridgeCard({ login, network }: { login: BridgeLogin; network?: NetworkSummary }): JSX.Element {
+/** Everything being imported, across all the bridges: the line that used to be its own page. */
+function OverallImport({ overview }: { overview?: ImportOverview }): JSX.Element | null {
+    if (!overview || overview.chats === 0) return null;
+    const open = overview.byPhase.importing + overview.byPhase.queued + overview.byPhase.paused;
+    if (open === 0) {
+        return (
+            <div className="mx_ImportSummary mx_ImportSummary--done">
+                <span className="mx_ImportSummary_check" aria-hidden>
+                    ✓
+                </span>
+                <span>
+                    {_t("tg_layout|import_all_done", {
+                        chats: num(overview.chats),
+                        messages: num(overview.messages),
+                    })}
+                </span>
+            </div>
+        );
+    }
+    const share = overview.countedTotal ? overview.countedImported / overview.countedTotal : undefined;
+    return (
+        <div className="mx_ImportSummary">
+            <div className="mx_ImportSummary_title">{_t("tg_layout|import_running_title")}</div>
+            <div className="mx_ImportSummary_metric">
+                <span>
+                    {share === undefined
+                        ? _t("tg_layout|import_messages_only", { done: num(overview.messages) })
+                        : _t("tg_layout|import_messages", {
+                              done: num(overview.countedImported),
+                              total: num(overview.countedTotal),
+                          })}
+                </span>
+                {share !== undefined && <Bar value={share} />}
+            </div>
+            {overview.etaMs !== undefined && (
+                <p className="mx_ImportSummary_line">{_t("tg_layout|history_eta", { time: eta(overview.etaMs) })}</p>
+            )}
+        </div>
+    );
+}
+
+function BridgeCard({
+    login,
+    network,
+    overview,
+}: {
+    login: BridgeLogin;
+    network?: NetworkSummary;
+    overview?: ImportOverview;
+}): JSX.Element {
     const avatar = useBotAvatar(login);
     const needsAction = login.health === "disconnected" || login.health === "problem";
     return (
@@ -195,7 +219,13 @@ function BridgeCard({ login, network }: { login: BridgeLogin; network?: NetworkS
                     </div>
                 )}
 
-                {network && <ImportLine network={network} />}
+                {network && overview ? (
+                    <NetworkImportDetail network={network} overview={overview} blocked={needsAction} />
+                ) : (
+                    <p className="mx_ImportSummary_note">
+                        {_t("tg_layout|import_no_report", { network: login.network })}
+                    </p>
+                )}
 
                 {login.health === "unreported" && (
                     <p className="mx_BridgeCard_note">
@@ -219,17 +249,6 @@ function BridgeCard({ login, network }: { login: BridgeLogin; network?: NetworkS
                 </dl>
 
                 <div className="mx_BridgeCard_actions">
-                    {network && network.chats > 0 && (
-                        <button
-                            type="button"
-                            className="mx_BridgeCard_secondary"
-                            onClick={(): void =>
-                                dis.dispatch({ action: Action.ViewUserSettings, initialTabId: UserTab.Import })
-                            }
-                        >
-                            {_t("tg_layout|bridge_see_import")}
-                        </button>
-                    )}
                     <button
                         type="button"
                         className="mx_BridgeCard_secondary"
@@ -272,6 +291,7 @@ export default function BridgesUserSettingsTab(): JSX.Element {
                 )}
                 {logins && logins.length > 0 && (
                     <>
+                        <OverallImport overview={overview} />
                         <p className="mx_BridgesTab_summary">
                             {_t("tg_layout|bridges_summary", {
                                 connected: logins.filter((l) => l.health === "connected").length,
@@ -287,6 +307,7 @@ export default function BridgesUserSettingsTab(): JSX.Element {
                                 <BridgeCard
                                     key={`${login.room.roomId}${login.accountId}`}
                                     login={login}
+                                    overview={overview}
                                     network={overview?.networks.find((n) => n.network === login.network)}
                                 />
                             ))}

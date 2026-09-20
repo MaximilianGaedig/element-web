@@ -494,7 +494,9 @@ export class UnwrappedEventTile extends React.Component<EventTileProps, IState> 
                     !this.props.isSelecting &&
                     !!this.context.canSendMessages &&
                     isContentActionable(this.props.mxEvent) &&
-                    !target?.closest("a, input, textarea, [contenteditable], .mx_EventTile_pillMessage, pre, code"),
+                    // Anything that takes a drag of its own keeps it; attachSwipeReply also leaves
+                    // sideways scrollers (wide code blocks, tables) alone.
+                    !target?.closest("a, input, textarea, [contenteditable], .mx_EventTile_pillMessage"),
             ),
         );
         this.unbindTelegramGestureListeners = (): void => detachers.forEach((detach) => detach());

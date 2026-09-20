@@ -79,7 +79,7 @@ export function HistoryStatusChip(): JSX.Element | null {
                 dis.dispatch({
                     action: Action.ViewUserSettings,
                     // A bridge that needs you comes first; otherwise the import's progress.
-                    initialTabId: tone === "problem" ? UserTab.Bridges : UserTab.Import,
+                    initialTabId: UserTab.Bridges,
                 })
             }
         >

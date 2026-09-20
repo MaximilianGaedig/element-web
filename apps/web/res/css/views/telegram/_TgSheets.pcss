@@ -234,7 +234,11 @@ html[data-tg-screen="mobile"] {
             background: var(--cpd-color-bg-subtle-primary);
         }
 
-        /* The dialog's own header is replaced by the navigation bar. */
+    }
+
+    /* Only the user settings replace their header with the navigation bar; the room and space settings
+       keep theirs, or they would open with no heading and no accessible name at all. */
+    .mx_UserSettingsDialog {
         .mx_Dialog_header,
         > h2,
         .mx_UserSettingsDialog_title {

@@ -96,6 +96,18 @@ export function getBridgeBots(room: Room): Set<string> {
 }
 
 /**
+ * Whether the room is one person's chat on another network: the bridge says so (`com.beeper.room_type`
+ * dm), whatever the member count. A bridged DM holds the bridge's bot as well as the other person, and
+ * that person can even be there as more than one account, so counting members can't tell.
+ *
+ * Bridged DMs are not in `m.direct` (the bridge can't write another user's account data without double
+ * puppeting), so without this Element files them under Rooms rather than People.
+ */
+export function isBridgedDm(room: Room): boolean {
+    return getBridgeInfo(room)?.roomType === "dm";
+}
+
+/**
  * The remote user of a bridged DM portal (com.beeper.room_type "dm"): the only joined member that
  * is neither us nor the bridge bot. Bridged DMs aren't always in m.direct (e.g. without double
  * puppeting), so Element wouldn't otherwise treat them as DMs for presence.

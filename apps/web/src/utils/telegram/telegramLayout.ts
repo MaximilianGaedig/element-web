@@ -48,12 +48,13 @@ export function humanMemberCount(room: Room): number {
 }
 
 /**
- * Whether `room` is a one-to-one chat: at most two members, or a bridged DM (`com.beeper.room_type` dm).
- * Until a bridged room's bridge info is known, its bridge bot (which joins to publish the room's state) is
- * not counted as a member, so a DM is not taken for a group in the meantime.
+ * Whether `room` is a chat with one other person. A bridge that says what its portal is (`com.beeper
+ * .room_type`) is believed: its DM is one even though the bridge's bot is in the room as well, and its
+ * group is not one even when only two people are in it. Otherwise the members are counted, without the
+ * bots.
  */
 export function isOneToOneRoom(room: Room): boolean {
     const info = getBridgeInfo(room);
-    if (!info) return humanMemberCount(room) <= 2;
-    return room.getInvitedAndJoinedMemberCount() <= 2 || info.roomType === "dm";
+    if (info) return info.roomType === "dm";
+    return humanMemberCount(room) <= 2;
 }

@@ -29,7 +29,6 @@ import {
     ChartIcon,
     ComputerIcon,
     HelpIcon,
-    HistoryIcon,
     KeyIcon,
     LinkIcon,
     LabsIcon,
@@ -74,7 +73,6 @@ const SECTIONS: Array<{
             SettingsStore.getFeatureSettingNames().some((k) => !!SettingsStore.getBetaInfo(k)),
     },
     { id: UserTab.Bridges, label: "tg_layout|bridges_tab", Icon: LinkIcon },
-    { id: UserTab.Import, label: "tg_layout|import_tab", Icon: HistoryIcon },
     { id: UserTab.Activity, label: "tg_layout|activity_tab", Icon: CalendarIcon },
     { id: UserTab.Storage, label: "settings|storage|title", Icon: ChartIcon },
     { id: UserTab.Help, label: "setting|help_about|title", Icon: HelpIcon },
@@ -130,6 +128,9 @@ export class UserMenuViewModel
         };
     }
 
+    /** What the menu offers on a desktop, kept so a handheld open can be undone. */
+    private readonly baseActions: UserMenuSnapshot["actions"];
+
     public constructor(
         props: UserMenuViewModelProps,
         private readonly dispatcher: MatrixDispatcher,
@@ -137,6 +138,7 @@ export class UserMenuViewModel
         isPanelCollapsed: boolean,
     ) {
         super(props, UserMenuViewModel.computeSnapshot(client, props.ownProfileStore, isPanelCollapsed));
+        this.baseActions = this.snapshot.current.actions;
         this.setStatusVm = new UserMenuSetStatusViewModel({ client, ownProfileStore: props.ownProfileStore });
         props.ownProfileStore.on(UPDATE_EVENT, this.recalculateProfile);
     }
@@ -159,21 +161,25 @@ export class UserMenuViewModel
         // have changed since the menu was built).
         this.snapshot.merge({
             open: isOpen,
-            ...(isOpen ? UserMenuViewModel.handheldParts(this.snapshot.current) : {}),
+            ...(isOpen ? this.handheldParts() : {}),
         });
     };
 
-    /** Settings sections shown in the menu on a handheld, and the entries they replace. */
-    private static handheldParts(current: UserMenuSnapshot): Partial<UserMenuSnapshot> {
-        const handheld = document.documentElement.dataset.tgScreen === "mobile" && current.showAvatar;
-        if (!handheld) return { sections: undefined };
+    /**
+     * Settings sections shown in the menu on a handheld, and the entries they replace. The window can be
+     * resized across the handheld width while the menu lives, so the desktop case restores the entries
+     * rather than only dropping the sections - otherwise Settings would stay missing until a reload.
+     */
+    private handheldParts(): Partial<UserMenuSnapshot> {
+        const handheld = document.documentElement.dataset.tgScreen === "mobile" && this.snapshot.current.showAvatar;
+        if (!handheld) return { sections: undefined, actions: this.baseActions };
         return {
             sections: SECTIONS.filter(({ when }) => !when || when()).map(({ id, label, Icon }) => ({
                 id,
                 label: _t(label),
                 Icon,
             })),
-            actions: { ...current.actions, openSecurity: false, openSettings: false },
+            actions: { ...this.baseActions, openSecurity: false, openSettings: false },
         };
     }
 

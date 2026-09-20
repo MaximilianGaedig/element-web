@@ -3412,6 +3412,16 @@
             "one": "%(count)s not reporting",
             "other": "%(count)s not reporting"
         },
+        "import_idle": "Nothing from this network is importing at the moment.",
+        "import_no_report": "%(network)s doesn't report history importing. Its chats are bridged, but older messages can't be counted or fetched from here.",
+        "import_show_all": {
+            "one": "Show %(count)s more chat",
+            "other": "Show %(count)s more chats"
+        },
+        "import_waiting_for_login": {
+            "one": "%(count)s chat is waiting until you log in to %(network)s again",
+            "other": "%(count)s chats are waiting until you log in to %(network)s again"
+        },
         "reply_gif": "GIF",
         "reply_photo": "Photo",
         "reply_sticker": "Sticker",
@@ -3427,14 +3437,12 @@
         "address": "Address",
         "banner_left": "~%(formatted)s left",
         "bio": "Bio",
-        "bridge_all_imported": "All %(chats)s chats imported · %(messages)s messages",
         "bridge_fact_messages": "Messages imported",
         "bridge_fact_updated": "Last update",
         "bridge_logged_out_title": "You're logged out of %(network)s",
         "bridge_login_again": "Log in again",
         "bridge_open_chat": "Open bridge chat",
         "bridge_problem_title": "%(network)s isn't connecting",
-        "bridge_see_import": "Import details",
         "bridge_state_connected": "Connected",
         "bridge_state_connecting": "Connecting…",
         "bridge_state_disconnected": "Logged out",
@@ -3455,7 +3463,6 @@
         "connection_reconnecting": "Reconnecting...",
         "connection_updating": "Updating...",
         "connection_waiting": "Waiting for network...",
-        "history_back_to": "back to %(date)s",
         "history_badge_complete": "Complete",
         "history_badge_importing": "In progress",
         "history_badge_paused": "Not started",
@@ -3527,18 +3534,9 @@
             "one": "%(count)s skipped",
             "other": "%(count)s skipped"
         },
-        "import_dialog_title": "<strong>Chat history</strong>",
-        "import_done_notes": "%(skipped)s skipped on purpose, %(unavailable)s with nothing older to import.",
         "import_messages": "%(done)s of about %(total)s messages",
         "import_messages_only": "%(done)s messages so far",
-        "import_more": {
-            "one": "and %(count)s more",
-            "other": "and %(count)s more"
-        },
-        "import_network_counted": "%(done)s of %(total)s messages counted on the network, in the %(chats)s chats it can count.",
         "import_network_uncounted": "This network can't say how many messages a chat has, so progress is by chats.",
-        "import_networks": "By network",
-        "import_none": "No bridged chats are importing history.",
         "import_now": "Importing now",
         "import_paused": "Not started",
         "import_queue": "Waiting",
@@ -3547,7 +3545,6 @@
         "import_skip_short": "Skip",
         "import_skipped": "Skipped",
         "import_start_short": "Import",
-        "import_tab": "Chat history",
         "info": "Info",
         "link": "Link",
         "n_online": {

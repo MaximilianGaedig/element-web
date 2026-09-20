@@ -6,12 +6,12 @@ Please see LICENSE files in the repository root for full details.
 
 import type { Room } from "matrix-js-sdk/src/matrix";
 import { type Filter, FilterEnum } from ".";
-import DMRoomMap from "../../../../utils/DMRoomMap";
+import { isDirectMessage } from "../../../../utils/dm/isDirectMessage";
 
 export class RoomsFilter implements Filter {
     public matches(room: Room): boolean {
-        // This should filter rooms that are not DMs
-        return !DMRoomMap.shared().getUserIdForRoomId(room.roomId);
+        // This should filter rooms that are not DMs, bridged DMs included
+        return !isDirectMessage(room);
     }
 
     public get key(): FilterEnum.RoomsFilter {

@@ -8,27 +8,19 @@ Please see LICENSE files in the repository root for full details.
 /*
  * Swipe a message to the left to reply to it (see swipeReply.ts): the message follows the finger and a
  * round reply glyph grows out of the edge behind it.
+ *
+ * The message's own movement is an inline transform written by the gesture, not a class here, because
+ * React rewrites the tile's class list whenever it re-renders. Nothing here sets `touch-action` either:
+ * the gesture cancels the browser's scrolling itself once it has turned horizontal, so a wide code block
+ * or table inside a message keeps its sideways drag, and pinching the timeline still zooms.
  */
-:root {
-    --tg-swipe-x: 0px;
-}
-
-html[data-tg-screen="mobile"] .mx_EventTile[data-testid="event-tile"] {
-    position: relative;
-    touch-action: pan-y;
-}
-
-.mx_EventTile_swiping {
-    transform: translateX(var(--tg-swipe-x, 0));
-    will-change: transform;
-}
 
 .mx_TgSwipeReply {
     --tg-swipe-progress: 0;
 
     position: absolute;
     top: 50%;
-    inset-inline-start: calc(100% + (var(--tg-swipe-x, 0px) * -0.5) - 0.9375rem);
+    inset-inline-start: calc(100% + 0.25rem);
     display: grid;
     place-items: center;
     width: 1.875rem;
