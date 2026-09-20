@@ -15,7 +15,8 @@ function room(id: string, content?: Record<string, unknown>): Room {
         roomId: id,
         name: id,
         currentState: {
-            getStateEvents: (type: string) => (type === "im.mxg.backfill" && content ? { getContent: () => content } : null),
+            getStateEvents: (type: string) =>
+                type === "im.mxg.backfill" && content ? { getContent: () => content } : null,
         },
     } as unknown as Room;
 }
@@ -26,9 +27,32 @@ describe("collectImports", () => {
     const now = 1_000 + 1000;
     const client = {
         getRooms: () => [
-            room("!done", { ...base, state: "complete", network: "Telegram", bridged_messages: 500, remote_total: 500 }),
-            room("!now", { ...base, state: "running", active: true, rate_per_min: 100, network: "Telegram", bridged_messages: 200, remote_total: 1200 }),
-            room("!next", { ...base, state: "running", active: false, queue_ahead: 0, queue_size: 2, network: "Telegram", bridged_messages: 0, remote_total: 300 }),
+            room("!done", {
+                ...base,
+                state: "complete",
+                network: "Telegram",
+                bridged_messages: 500,
+                remote_total: 500,
+            }),
+            room("!now", {
+                ...base,
+                state: "running",
+                active: true,
+                rate_per_min: 100,
+                network: "Telegram",
+                bridged_messages: 200,
+                remote_total: 1200,
+            }),
+            room("!next", {
+                ...base,
+                state: "running",
+                active: false,
+                queue_ahead: 0,
+                queue_size: 2,
+                network: "Telegram",
+                bridged_messages: 0,
+                remote_total: 300,
+            }),
             room("!wa", { ...base, state: "manual", network: "WhatsApp", bridged_messages: 40 }),
             room("!skip", { ...base, state: "skipped", network: "WhatsApp", bridged_messages: 5 }),
             room("!plain"),

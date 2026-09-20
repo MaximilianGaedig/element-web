@@ -104,7 +104,9 @@ function makeDraggable(sheet: HTMLElement, canGrab: (y: number, rect: DOMRect) =
 }
 
 function scan(root: ParentNode): void {
-    for (const sheet of root.querySelectorAll<HTMLElement>(".mx_Dialog_wrapper:not(.mx_Dialog_lightbox) .mx_Dialog_border")) {
+    for (const sheet of root.querySelectorAll<HTMLElement>(
+        ".mx_Dialog_wrapper:not(.mx_Dialog_lightbox) .mx_Dialog_border",
+    )) {
         makeDraggable(
             sheet,
             (y, rect) => y - rect.top <= GRAB_HEIGHT,

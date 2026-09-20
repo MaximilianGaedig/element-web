@@ -34,7 +34,12 @@ export function SettingsNavBar({
     return (
         <div className="mx_SettingsNavBar" data-page={page}>
             {page === "page" ? (
-                <button type="button" className="mx_SettingsNavBar_back" onClick={onBack} aria-label={_t("action|back")}>
+                <button
+                    type="button"
+                    className="mx_SettingsNavBar_back"
+                    onClick={onBack}
+                    aria-label={_t("action|back")}
+                >
                     <ChevronLeftIcon />
                 </button>
             ) : (

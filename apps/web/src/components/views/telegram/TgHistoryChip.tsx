@@ -53,7 +53,9 @@ export function HistoryStatusChip(): JSX.Element | null {
     if (broken.length === 0 && open === 0) return null;
 
     const done = overview.chats - open;
-    const percent = overview.countedTotal ? Math.min(99, Math.floor((overview.countedImported / overview.countedTotal) * 100)) : undefined;
+    const percent = overview.countedTotal
+        ? Math.min(99, Math.floor((overview.countedImported / overview.countedTotal) * 100))
+        : undefined;
     let text: string;
     let tone: "problem" | "working";
     if (broken.length) {
@@ -81,7 +83,9 @@ export function HistoryStatusChip(): JSX.Element | null {
                 })
             }
         >
-            {tone === "working" && <span className="mx_HistoryPhaseIcon mx_HistoryPhaseIcon--spin mx_TgHistoryChip_spinner" aria-hidden />}
+            {tone === "working" && (
+                <span className="mx_HistoryPhaseIcon mx_HistoryPhaseIcon--spin mx_TgHistoryChip_spinner" aria-hidden />
+            )}
             {tone === "problem" && <span className="mx_TgHistoryChip_dot" aria-hidden />}
             <span className="mx_TgHistoryChip_text">{text}</span>
         </button>

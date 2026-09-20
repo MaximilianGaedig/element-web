@@ -50,13 +50,9 @@ export function storedBytes(storage: Storage): number {
 export async function fetchStorageOverview(client: MatrixClient, rooms = 100): Promise<StorageOverview | undefined> {
     try {
         if (!(await client.doesServerSupportUnstableFeature(FEATURE))) return undefined;
-        return await client.http.authedRequest<StorageOverview>(
-            Method.Get,
-            PATH,
-            { rooms: String(rooms) },
-            undefined,
-            { prefix: "" },
-        );
+        return await client.http.authedRequest<StorageOverview>(Method.Get, PATH, { rooms: String(rooms) }, undefined, {
+            prefix: "",
+        });
     } catch (e) {
         logger.warn("Could not load storage use", e);
         return undefined;

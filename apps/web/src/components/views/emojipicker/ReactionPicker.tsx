@@ -27,14 +27,15 @@ import { EmojiPickerWithRecents } from "../../../emojipicker/EmojiPickerWithRece
 import { haptic } from "../../../utils/haptics";
 import { type TimelineRenderingType } from "../../../contexts/RoomContext";
 
-
 /** The user's own reactions to an event, by emoji: the reaction event's ID. */
 export function myReactionsTo(reactions: Relations | null | undefined): Record<string, string> {
     if (!reactions) return {};
     const userId = MatrixClientPeg.safeGet().getSafeUserId();
     const myAnnotations = reactions.getAnnotationsBySender()?.[userId] ?? new Set<MatrixEvent>();
     return Object.fromEntries(
-        [...myAnnotations].filter((event) => !event.isRedacted()).map((event) => [event.getRelation()?.key, event.getId()]),
+        [...myAnnotations]
+            .filter((event) => !event.isRedacted())
+            .map((event) => [event.getRelation()?.key, event.getId()]),
     );
 }
 
@@ -150,7 +151,8 @@ class ReactionPicker extends React.Component<IProps, IState> {
 
     private onChoose = (reaction: string): boolean => {
         // Closing the picker first, as before: the reaction is sent from the toggle below.
-        const allowed = this.getReactions().hasOwnProperty(reaction) || isReactionAllowed(this.context.room ?? null, reaction);
+        const allowed =
+            this.getReactions().hasOwnProperty(reaction) || isReactionAllowed(this.context.room ?? null, reaction);
         if (!allowed) return false;
         this.componentWillUnmount();
         this.props.onFinished();

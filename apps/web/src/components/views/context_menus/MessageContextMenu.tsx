@@ -757,10 +757,18 @@ export default class MessageContextMenu extends React.Component<IProps, IState> 
         let cancelSendButton: JSX.Element | undefined;
         if (mxEvent.status === EventStatus.NOT_SENT) {
             resendButton = (
-                <IconizedContextMenuOption icon={<RestartIcon />} label={_t("action|resend")} onClick={this.onResendClick} />
+                <IconizedContextMenuOption
+                    icon={<RestartIcon />}
+                    label={_t("action|resend")}
+                    onClick={this.onResendClick}
+                />
             );
             cancelSendButton = (
-                <IconizedContextMenuOption icon={<DeleteIcon />} label={_t("action|delete")} onClick={this.onCancelSendClick} />
+                <IconizedContextMenuOption
+                    icon={<DeleteIcon />}
+                    label={_t("action|delete")}
+                    onClick={this.onCancelSendClick}
+                />
             );
         }
 

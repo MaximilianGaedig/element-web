@@ -8,7 +8,14 @@ Please see LICENSE files in the repository root for full details.
 import { describe, expect, it } from "vitest";
 import { type Room } from "matrix-js-sdk/src/matrix";
 
-import { BACKFILL_EVENT_TYPE, backfillStatusOf, type BackfillStatus, historyPhase, IMPORT_STALE_MS, trackImport } from "./chatHistory";
+import {
+    BACKFILL_EVENT_TYPE,
+    backfillStatusOf,
+    type BackfillStatus,
+    historyPhase,
+    IMPORT_STALE_MS,
+    trackImport,
+} from "./chatHistory";
 
 function roomWith(content: unknown): Room {
     return {
@@ -110,7 +117,13 @@ describe("activity helpers", () => {
         const { weekdays, hoursOfDay } = weekdayAndHour(week);
         expect(weekdays).toEqual(new Array(7).fill(24));
         expect(hoursOfDay).toEqual(new Array(24).fill(7));
-        expect(perYear([{ month: "2023-11", count: 2 }, { month: "2023-12", count: 3 }, { month: "2024-01", count: 4 }])).toEqual([
+        expect(
+            perYear([
+                { month: "2023-11", count: 2 },
+                { month: "2023-12", count: 3 },
+                { month: "2024-01", count: 4 },
+            ]),
+        ).toEqual([
             { year: "2023", count: 5 },
             { year: "2024", count: 4 },
         ]);
