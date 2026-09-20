@@ -227,14 +227,7 @@ html[data-tg-screen="mobile"] .mx_TgProfile_avatar {
     height: 100px !important;
 }
 
-.mx_TgHistory--complete .mx_TgRow_title {
-    color: var(--cpd-color-text-success-primary);
-}
 
-.mx_TgHistory--running .mx_TgRow_title,
-.mx_TgHistory--manual .mx_TgRow_title {
-    color: var(--tg-primary-color);
-}
 
 .mx_TgStats {
     border-top: none;
@@ -270,24 +263,305 @@ html[data-tg-screen="mobile"] .mx_TgProfile_avatar {
     color: var(--cpd-color-text-secondary);
 }
 
+
+
+
+/* ---- Chat history: card, header line, pill ---------------------------------------------------- */
+
+@keyframes mx_History_spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+@keyframes mx_History_indeterminate {
+    0% {
+        transform: translateX(-100%);
+    }
+
+    100% {
+        transform: translateX(250%);
+    }
+}
+
+@keyframes mx_History_dot {
+    0%,
+    80%,
+    100% {
+        opacity: 0.25;
+    }
+
+    40% {
+        opacity: 1;
+    }
+}
+
+/* A ring that turns while the import runs; other phases use an icon in the same slot. */
+.mx_HistoryPhaseIcon {
+    flex: 0 0 auto;
+    width: 1.5rem;
+    height: 1.5rem;
+    color: var(--cpd-color-icon-secondary);
+}
+
+.mx_HistoryPhaseIcon--spin {
+    box-sizing: border-box;
+    border: 2.5px solid color-mix(in srgb, var(--tg-primary-color) 25%, transparent);
+    border-top-color: var(--tg-primary-color);
+    border-radius: 50%;
+    animation: mx_History_spin 0.9s linear infinite;
+}
+
+.mx_HistoryCard {
+    margin: 0.75rem 0.75rem 0;
+    padding: 1rem;
+    border-radius: 1rem;
+    background: var(--cpd-color-bg-subtle-secondary);
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.mx_HistoryCard_header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.mx_HistoryCard_text {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.mx_HistoryCard_title {
+    margin: 0;
+    font: var(--cpd-font-body-lg-semibold);
+    color: var(--cpd-color-text-primary);
+}
+
+.mx_HistoryCard_subtitle {
+    margin: 0.125rem 0 0;
+    font: var(--cpd-font-body-md-regular);
+    color: var(--cpd-color-text-secondary);
+}
+
+.mx_HistoryCard_badge {
+    flex: 0 0 auto;
+    padding: 0.125rem 0.625rem;
+    border-radius: 1rem;
+    font: var(--cpd-font-body-sm-semibold);
+    color: var(--cpd-color-text-secondary);
+    background: var(--cpd-color-bg-canvas-default);
+}
+
+.mx_HistoryCard--importing .mx_HistoryCard_badge {
+    color: var(--tg-primary-color);
+    background: color-mix(in srgb, var(--tg-primary-color) 14%, transparent);
+}
+
+.mx_HistoryCard--complete {
+    .mx_HistoryCard_badge,
+    .mx_HistoryPhaseIcon {
+        color: var(--cpd-color-text-success-primary);
+    }
+
+    .mx_HistoryCard_badge {
+        background: color-mix(in srgb, var(--cpd-color-text-success-primary) 14%, transparent);
+    }
+}
+
+.mx_HistoryCard--paused {
+    .mx_HistoryCard_badge,
+    .mx_HistoryPhaseIcon {
+        color: var(--cpd-color-text-critical-primary);
+    }
+
+    .mx_HistoryCard_badge {
+        background: color-mix(in srgb, var(--cpd-color-text-critical-primary) 12%, transparent);
+    }
+}
+
+.mx_HistoryCard_progress {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.mx_HistoryBar {
+    position: relative;
+    flex: 1 1 auto;
+    height: 0.5rem;
+    overflow: hidden;
+    border-radius: 0.25rem;
+    background: color-mix(in srgb, var(--cpd-color-text-secondary) 20%, transparent);
+}
+
+.mx_HistoryBar_fill {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: var(--tg-primary-color);
+    transition: width 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.mx_HistoryCard--complete .mx_HistoryBar_fill {
+    background: var(--cpd-color-text-success-primary);
+}
+
+.mx_HistoryCard--queued .mx_HistoryBar_fill {
+    background: var(--cpd-color-text-secondary);
+}
+
+.mx_HistoryBar--indeterminate .mx_HistoryBar_fill {
+    width: 40%;
+    animation: mx_History_indeterminate 1.4s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+.mx_HistoryCard_percent {
+    flex: 0 0 auto;
+    min-width: 2.5rem;
+    text-align: end;
+    font: var(--cpd-font-body-md-semibold);
+    font-variant-numeric: tabular-nums;
+    color: var(--cpd-color-text-primary);
+}
+
+.mx_HistoryCard_stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(7.5rem, 1fr));
+    gap: 0.75rem 1rem;
+    margin: 0;
+}
+
+.mx_HistoryCard_stat {
+    dt {
+        font: var(--cpd-font-body-sm-regular);
+        color: var(--cpd-color-text-secondary);
+    }
+
+    dd {
+        margin: 0.125rem 0 0;
+        font: var(--cpd-font-body-md-semibold);
+        font-variant-numeric: tabular-nums;
+        color: var(--cpd-color-text-primary);
+    }
+}
+
+/* A filled, full-width button: the one action, and a 48px target on a phone. */
+.mx_HistoryCard_action {
+    all: unset;
+    box-sizing: border-box;
+    display: grid;
+    place-items: center;
+    min-height: 3rem;
+    border-radius: 0.875rem;
+    background: var(--tg-primary-color);
+    color: var(--cpd-color-text-on-solid-primary, #fff);
+    font: var(--cpd-font-body-md-semibold);
+    cursor: pointer;
+
+    &:hover:not(:disabled) {
+        filter: brightness(1.08);
+    }
+
+    &:focus-visible {
+        outline: 2px solid var(--cpd-color-border-focused);
+        outline-offset: 2px;
+    }
+
+    &:disabled {
+        opacity: 0.6;
+        cursor: default;
+    }
+}
+
+/* The line under the chat's name, where Telegram puts "updating…". */
+.mx_ImportSubtitle {
+    display: flex;
+    align-items: center;
+    gap: 0.125rem;
+    font: var(--cpd-font-body-sm-regular);
+    color: var(--tg-primary-color);
+    white-space: nowrap;
+}
+
+.mx_ImportSubtitle_dots {
+    display: inline-flex;
+    gap: 2px;
+    margin-inline-start: 2px;
+
+    i {
+        width: 3px;
+        height: 3px;
+        border-radius: 50%;
+        background: currentcolor;
+        animation: mx_History_dot 1.2s infinite;
+
+        &:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+
+        &:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+    }
+}
+
+/* A pill where the older messages will appear, like the date pills. */
 .mx_BackfillNotice {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    width: fit-content;
+    max-width: calc(100% - 2rem);
     margin: 0 auto 1rem;
-    padding: 0.5rem 1rem;
-    max-width: 30rem;
-    border-radius: 0.75rem;
+    padding: 0.375rem 0.875rem;
+    border-radius: 1rem;
     background: var(--cpd-color-bg-subtle-secondary);
     color: var(--cpd-color-text-secondary);
-    font: var(--cpd-font-body-md-regular);
-    text-align: center;
+    font: var(--cpd-font-body-sm-regular);
+}
+
+.mx_BackfillNotice_spinner {
+    width: 0.875rem;
+    height: 0.875rem;
+    border-width: 2px;
 }
 
 .mx_BackfillNotice_button {
     all: unset;
-    cursor: pointer;
+    min-height: 1.75rem;
+    padding: 0 0.25rem;
     color: var(--tg-primary-color);
     font-weight: 600;
+    cursor: pointer;
+
+    &:disabled {
+        opacity: 0.6;
+        cursor: default;
+    }
+
+    &:focus-visible {
+        outline: 2px solid var(--cpd-color-border-focused);
+        border-radius: 0.5rem;
+    }
 }
 
-.mx_TgHistory_progress {
-    padding: 0 1rem 0.5rem 3.5rem;
+@media (prefers-reduced-motion: reduce) {
+    .mx_HistoryPhaseIcon--spin,
+    .mx_HistoryBar--indeterminate .mx_HistoryBar_fill,
+    .mx_ImportSubtitle_dots i {
+        animation-duration: 3s;
+    }
+
+    .mx_HistoryBar_fill {
+        transition: none;
+    }
+}
+
+/* Handhelds: the card runs edge to edge inside the sheet with a little more air. */
+html[data-tg-screen="mobile"] .mx_HistoryCard {
+    margin: 0.75rem 1rem 0;
+    padding: 1.125rem 1rem;
 }

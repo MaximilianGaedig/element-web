@@ -13,6 +13,8 @@ Please see LICENSE files in the repository root for full details.
 import React, { type JSX, useEffect, useMemo, useState } from "react";
 import { type Room } from "matrix-js-sdk/src/matrix";
 import HistoryIcon from "@vector-im/compound-design-tokens/assets/web/icons/history";
+import CheckIcon from "@vector-im/compound-design-tokens/assets/web/icons/check";
+import PauseIcon from "@vector-im/compound-design-tokens/assets/web/icons/pause";
 import ChartIcon from "@vector-im/compound-design-tokens/assets/web/icons/chart";
 
 import { _t } from "../../../languageHandler";
@@ -22,6 +24,8 @@ import {
     type BackfillStatus,
     backfillStatusOf,
     fetchRoomStats,
+    type HistoryPhase,
+    historyPhase,
     type ImportProgress,
     requestFullBackfill,
     type RoomStats,
@@ -56,19 +60,6 @@ function kindLabel(kind: string): string {
     }
 }
 
-function historyTitle(status: BackfillStatus): string {
-    switch (status.state) {
-        case "complete":
-            return _t("tg_layout|history_complete");
-        case "running":
-            return _t("tg_layout|history_running");
-        case "manual":
-            return _t("tg_layout|history_manual");
-        default:
-            return _t("tg_layout|history_unavailable", { network: status.network || _t("tg_layout|history_network") });
-    }
-}
-
 function formatEta(ms: number): string {
     const minutes = Math.max(1, Math.round(ms / 60_000));
     if (minutes < 60) return _t("tg_layout|history_eta_minutes", { count: minutes });
@@ -77,77 +68,218 @@ function formatEta(ms: number): string {
     return _t("tg_layout|history_eta_days", { count: Math.round(hours / 24) });
 }
 
-/** Pace, progress and time left, as far as they are known. */
-function progressLine(progress: ImportProgress): string | undefined {
-    const parts: string[] = [];
-    if (progress.left !== undefined && progress.left > 0) {
-        parts.push(_t("tg_layout|history_left", { count: progress.left, formatted: number(progress.left) }));
-    }
-    if (progress.etaMs !== undefined) parts.push(_t("tg_layout|history_eta", { time: formatEta(progress.etaMs) }));
-    if (progress.perMinute) {
-        parts.push(_t("tg_layout|history_pace", { rate: number(Math.round(progress.perMinute)) }));
-    }
-    return parts.length ? parts.join(" · ") : undefined;
+/** Whether the chat's history is being imported this minute (the header says so instead of "last seen"). */
+export function useImportActive(room: Room): boolean {
+    return useHistory(room).phase === "importing";
 }
 
-/** Follows a room's import while the bridge is running it. */
-function useImportProgress(room: Room, status: BackfillStatus | undefined): ImportProgress {
-    return useMemo(
-        () => (status?.state === "running" ? trackImport(room.roomId, status) : {}),
+/** The chat's history state, kept fresh: a running import that goes quiet becomes "queued" on its own. */
+function useHistory(room: Room): { status?: BackfillStatus; phase?: HistoryPhase; progress: ImportProgress } {
+    const status = useRoomState(room, () => backfillStatusOf(room));
+    const [now, setNow] = useState(() => Date.now());
+    useEffect(() => {
+        if (status?.state !== "running") return;
+        const timer = window.setInterval(() => setNow(Date.now()), 30_000);
+        return (): void => window.clearInterval(timer);
+    }, [status?.state]);
+    const phase = status ? historyPhase(status, now) : undefined;
+    const progress = useMemo(
+        () => (status && phase === "importing" ? trackImport(room.roomId, status) : {}),
         // A new record from the bridge is what moves the numbers.
         // eslint-disable-next-line react-hooks/exhaustive-deps
-        [room.roomId, status?.state, status?.bridged_messages, status?.updated_ts],
+        [room.roomId, phase, status?.bridged_messages, status?.updated_ts, status?.rate_per_min],
+    );
+    return { status, phase, progress };
+}
+
+const PHASE_KEYS: Record<HistoryPhase, { title: string; badge: string }> = {
+    importing: { title: "tg_layout|history_importing", badge: "tg_layout|history_badge_importing" },
+    queued: { title: "tg_layout|history_queued", badge: "tg_layout|history_badge_queued" },
+    paused: { title: "tg_layout|history_paused", badge: "tg_layout|history_badge_paused" },
+    complete: { title: "tg_layout|history_complete", badge: "tg_layout|history_badge_complete" },
+    unavailable: { title: "tg_layout|history_unavailable_title", badge: "tg_layout|history_badge_unavailable" },
+};
+
+/** A ring that turns while the import runs, a check when it's done: one glance says which. */
+function PhaseIcon({ phase }: { phase: HistoryPhase }): JSX.Element {
+    if (phase === "importing") return <span className="mx_HistoryPhaseIcon mx_HistoryPhaseIcon--spin" aria-hidden />;
+    if (phase === "complete") return <CheckIcon className="mx_HistoryPhaseIcon" aria-hidden />;
+    if (phase === "paused") return <PauseIcon className="mx_HistoryPhaseIcon" aria-hidden />;
+    return <HistoryIcon className="mx_HistoryPhaseIcon" aria-hidden />;
+}
+
+function Stat({ label, value }: { label: string; value: string }): JSX.Element {
+    return (
+        <div className="mx_HistoryCard_stat">
+            <dt>{label}</dt>
+            <dd>{value}</dd>
+        </div>
     );
 }
 
-function historySubtitle(status: BackfillStatus): string {
-    const parts = [_t("tg_layout|history_count", { count: status.bridged_messages, formatted: number(status.bridged_messages) })];
-    if (status.remote_total !== undefined) {
-        parts.push(_t("tg_layout|history_remote", { total: number(status.remote_total), network: status.network }));
-    }
-    if (status.oldest_ts) {
-        parts.push(_t("tg_layout|history_back_to", { date: formatFullDateNoTime(new Date(status.oldest_ts)) }));
-    }
-    return parts.join(" · ");
-}
-
-/** Whether all of the chat is here, how far the import is while it runs, and a way to fetch the rest. */
-export function TgHistoryRow({ room }: { room: Room }): JSX.Element | null {
-    const status = useRoomState(room, () => backfillStatusOf(room));
-    const progress = useImportProgress(room, status);
+/**
+ * How much of the chat's history is here: what state it is in (a badge and an icon that moves while it
+ * imports), a bar with the percentage, the numbers, and, only when it is stopped, the one button that
+ * carries on. Grouped-card layout as in Telegram iOS's settings; the same on a phone, where the
+ * button is a full-width 48px target.
+ */
+export function TgHistoryCard({ room }: { room: Room }): JSX.Element | null {
+    const { status, phase, progress } = useHistory(room);
     const [asked, setAsked] = useState(false);
-    if (!status) return null;
+    if (!status || !phase) return null;
 
-    // Only a chat that isn't being imported can be asked to be: while it runs, the button would be a lie.
-    const canAsk = status.state === "manual" && !!status.command_prefix;
-    const line = status.state === "running" ? progressLine(progress) : undefined;
+    const percent =
+        phase === "complete" ? 100 : progress.fraction !== undefined ? Math.min(99, Math.floor(progress.fraction * 100)) : undefined;
+    const showBar = phase === "importing" || phase === "queued" || phase === "complete";
+    const network = status.network || _t("tg_layout|history_network");
+
+    let subtitle: string | undefined;
+    if (phase === "importing") {
+        subtitle =
+            progress.etaMs !== undefined
+                ? _t("tg_layout|history_eta", { time: formatEta(progress.etaMs) })
+                : _t("tg_layout|history_working", { network });
+    } else if (phase === "queued") {
+        subtitle = _t("tg_layout|history_queued_hint");
+    } else if (phase === "paused") {
+        subtitle = _t("tg_layout|history_paused_hint");
+    } else if (phase === "complete" && status.oldest_ts) {
+        subtitle = _t("tg_layout|history_back_to", { date: formatFullDateNoTime(new Date(status.oldest_ts)) });
+    } else if (phase === "unavailable") {
+        subtitle = _t("tg_layout|history_unavailable_hint", { network });
+    }
+
+    const stats: Array<[string, string]> = [];
+    if (phase !== "unavailable") {
+        stats.push([_t("tg_layout|history_stat_imported"), number(status.bridged_messages)]);
+    }
+    if (phase === "importing" || phase === "queued") {
+        if (progress.left !== undefined) {
+            stats.push([_t("tg_layout|history_stat_left"), `~${number(progress.left)}`]);
+        }
+        if (progress.perMinute) {
+            stats.push([
+                _t("tg_layout|history_stat_speed"),
+                _t("tg_layout|history_pace", { rate: number(Math.round(progress.perMinute)) }),
+            ]);
+        }
+    }
+    if (phase !== "complete" && phase !== "unavailable" && status.oldest_ts) {
+        stats.push([_t("tg_layout|history_stat_oldest"), formatFullDateNoTime(new Date(status.oldest_ts))]);
+    }
+
+    const canAsk = phase === "paused" && !!status.command_prefix;
     return (
-        <>
-            <TgRow
-                icon={<HistoryIcon />}
-                title={historyTitle(status)}
-                subtitle={[historySubtitle(status), line].filter(Boolean).join(" · ")}
-                className={`mx_TgHistory mx_TgHistory--${status.state}`}
-            />
-            {status.state === "running" && progress.fraction !== undefined && (
-                <div className="mx_TgHistory_progress" role="progressbar" aria-valuenow={Math.round(progress.fraction * 100)}>
-                    <Bar share={progress.fraction} />
+        <section className={`mx_HistoryCard mx_HistoryCard--${phase}`} data-testid="tg-history-card">
+            <header className="mx_HistoryCard_header">
+                <PhaseIcon phase={phase} />
+                <div className="mx_HistoryCard_text">
+                    <h3 className="mx_HistoryCard_title">{_t(PHASE_KEYS[phase].title as never)}</h3>
+                    {subtitle && <p className="mx_HistoryCard_subtitle">{subtitle}</p>}
+                </div>
+                <span className="mx_HistoryCard_badge" role="status">
+                    {_t(PHASE_KEYS[phase].badge as never)}
+                </span>
+            </header>
+
+            {showBar && (
+                <div className="mx_HistoryCard_progress">
+                    <div
+                        className={`mx_HistoryBar${percent === undefined && phase === "importing" ? " mx_HistoryBar--indeterminate" : ""}`}
+                        role="progressbar"
+                        aria-label={_t(PHASE_KEYS[phase].title as never)}
+                        aria-valuemin={0}
+                        aria-valuemax={100}
+                        aria-valuenow={percent}
+                        aria-valuetext={percent === undefined ? undefined : `${percent}%`}
+                    >
+                        <span className="mx_HistoryBar_fill" style={percent === undefined ? undefined : { width: `${Math.max(2, percent)}%` }} />
+                    </div>
+                    {percent !== undefined && <span className="mx_HistoryCard_percent">{percent}%</span>}
                 </div>
             )}
-            {canAsk && (
-                <TgRow
-                    title={asked ? _t("tg_layout|history_requested") : _t("tg_layout|history_import")}
-                    onClick={
-                        asked
-                            ? undefined
-                            : (): void => {
-                                  setAsked(true);
-                                  void requestFullBackfill(room, status);
-                              }
-                    }
-                />
+
+            {stats.length > 0 && (
+                <dl className="mx_HistoryCard_stats">
+                    {stats.map(([label, value]) => (
+                        <Stat key={label} label={label} value={value} />
+                    ))}
+                </dl>
             )}
-        </>
+
+            {canAsk && (
+                <button
+                    type="button"
+                    className="mx_HistoryCard_action"
+                    disabled={asked}
+                    onClick={(): void => {
+                        setAsked(true);
+                        void requestFullBackfill(room, status);
+                    }}
+                >
+                    {asked ? _t("tg_layout|history_requested") : _t("tg_layout|history_import")}
+                </button>
+            )}
+        </section>
+    );
+}
+
+/**
+ * Under the chat's name while its history is being imported, where Telegram puts "updating…": the same
+ * small line, with animated dots, and the percentage when it is known.
+ */
+export function ImportSubtitle({ room }: { room: Room }): JSX.Element | null {
+    const { status, phase, progress } = useHistory(room);
+    if (!status || phase !== "importing") return null;
+    const percent = progress.fraction !== undefined ? Math.min(99, Math.floor(progress.fraction * 100)) : undefined;
+    return (
+        <div className="mx_ImportSubtitle" role="status" data-testid="import-subtitle">
+            <span>{percent === undefined ? _t("tg_layout|history_subtitle") : _t("tg_layout|history_subtitle_percent", { percent })}</span>
+            <span className="mx_ImportSubtitle_dots" aria-hidden>
+                <i />
+                <i />
+                <i />
+            </span>
+        </div>
+    );
+}
+
+/**
+ * At the top of the conversation, where the older messages will appear: a small pill (like the date
+ * pills) saying they are still coming, and tapping it opens the details. Nothing here for a chat whose
+ * history is complete.
+ */
+export function BackfillNotice({ room }: { room: Room }): JSX.Element | null {
+    const { status, phase, progress } = useHistory(room);
+    const [asked, setAsked] = useState(false);
+    if (!status || !phase || phase === "complete" || phase === "unavailable") return null;
+    const percent = progress.fraction !== undefined ? Math.min(99, Math.floor(progress.fraction * 100)) : undefined;
+    return (
+        <div className={`mx_BackfillNotice mx_BackfillNotice--${phase}`} role="status">
+            {phase === "importing" && <span className="mx_HistoryPhaseIcon mx_HistoryPhaseIcon--spin mx_BackfillNotice_spinner" aria-hidden />}
+            <span className="mx_BackfillNotice_text">
+                {phase === "importing"
+                    ? percent === undefined
+                        ? _t("tg_layout|history_pill_importing")
+                        : _t("tg_layout|history_pill_importing_percent", { percent })
+                    : phase === "queued"
+                      ? _t("tg_layout|history_pill_queued")
+                      : _t("tg_layout|history_pill_paused")}
+            </span>
+            {phase === "paused" && status.command_prefix && (
+                <button
+                    type="button"
+                    className="mx_BackfillNotice_button"
+                    disabled={asked}
+                    onClick={(): void => {
+                        setAsked(true);
+                        void requestFullBackfill(room, status);
+                    }}
+                >
+                    {asked ? _t("tg_layout|history_requested") : _t("tg_layout|history_pill_import")}
+                </button>
+            )}
+        </div>
     );
 }
 
@@ -208,33 +340,3 @@ export function TgStatsSection({ room }: { room: Room }): JSX.Element | null {
     );
 }
 
-/**
- * Shown where the timeline ends: if the bridge is still importing this chat's older history (or has
- * more it hasn't been asked for), this is not the start of the chat.
- */
-export function BackfillNotice({ room }: { room: Room }): JSX.Element | null {
-    const status = useRoomState(room, () => backfillStatusOf(room));
-    const progress = useImportProgress(room, status);
-    const [asked, setAsked] = useState(false);
-    if (!status || (status.state !== "running" && status.state !== "manual")) return null;
-    const line = status.state === "running" ? progressLine(progress) : undefined;
-    return (
-        <div className="mx_BackfillNotice" role="status">
-            <span>{historyTitle(status)}. </span>
-            {line && <span>{line}. </span>}
-            {status.state === "manual" && status.command_prefix && !asked && (
-                <button
-                    type="button"
-                    className="mx_BackfillNotice_button"
-                    onClick={(): void => {
-                        setAsked(true);
-                        void requestFullBackfill(room, status);
-                    }}
-                >
-                    {_t("tg_layout|history_import")}
-                </button>
-            )}
-            {asked && <span>{_t("tg_layout|history_requested")}</span>}
-        </div>
-    );
-}

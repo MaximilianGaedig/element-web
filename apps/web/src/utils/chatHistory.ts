@@ -32,6 +32,10 @@ export interface BackfillStatus {
     /** How many the network says the chat has, when it can say. */
     remote_total?: number;
     batches: number;
+    /** The chat was being imported when this was written (not just waiting its turn). */
+    active?: boolean;
+    /** Messages imported per minute, as the bridge measured it. */
+    rate_per_min?: number;
     /** What to send in the room to ask for the rest: "<prefix> backfill". */
     command_prefix: string;
     network: string;
@@ -51,6 +55,8 @@ export function backfillStatusOf(room: Room): BackfillStatus | undefined {
         newest_ts: content.newest_ts,
         remote_total: content.remote_total,
         batches: Number(content.batches) || 0,
+        active: !!content.active,
+        rate_per_min: content.rate_per_min,
         command_prefix: content.command_prefix ?? "",
         network: content.network ?? "",
         updated_ts: Number(content.updated_ts) || 0,
@@ -104,6 +110,28 @@ export function fetchRoomStats(client: MatrixClient, roomId: string): Promise<Ro
     return stats;
 }
 
+/**
+ * What to show for a chat's history: importing (a batch came in lately), queued (waiting its turn, or
+ * the bridge went quiet), paused (needs a request), complete, or unavailable from the network.
+ */
+export type HistoryPhase = "importing" | "queued" | "paused" | "complete" | "unavailable";
+
+/** A running import that hasn't reported for this long is not being worked on right now. */
+export const IMPORT_STALE_MS = 3 * 60_000;
+
+export function historyPhase(status: BackfillStatus, now = Date.now()): HistoryPhase {
+    switch (status.state) {
+        case "complete":
+            return "complete";
+        case "unavailable":
+            return "unavailable";
+        case "manual":
+            return "paused";
+        default:
+            return status.active && now - status.updated_ts < IMPORT_STALE_MS ? "importing" : "queued";
+    }
+}
+
 export interface ImportProgress {
     /** Messages imported per minute, from how the count moved while this page was watching. */
     perMinute?: number;
@@ -131,8 +159,8 @@ export function trackImport(roomId: string, status: BackfillStatus, now = Date.n
     const first = list[0];
     const newest = list[list.length - 1];
     const span = newest.at - first.at;
-    let perMinute: number | undefined;
-    if (span >= MIN_SPAN_MS && newest.count > first.count) {
+    let perMinute: number | undefined = status.rate_per_min || undefined;
+    if (!perMinute && span >= MIN_SPAN_MS && newest.count > first.count) {
         perMinute = ((newest.count - first.count) / span) * 60_000;
     }
 
