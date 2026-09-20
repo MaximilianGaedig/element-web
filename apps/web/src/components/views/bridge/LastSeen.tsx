@@ -5,7 +5,7 @@ SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only OR LicenseRef-Element-Com
 Please see LICENSE files in the repository root for full details.
 */
 
-import React, { type JSX, type ReactNode, useContext, useEffect, useState } from "react";
+import React, { type JSX, type ReactNode, useContext } from "react";
 import { type MatrixClient, type Room } from "matrix-js-sdk/src/matrix";
 import { Text } from "@vector-im/compound-web";
 
@@ -33,7 +33,7 @@ export function DmLastSeenSubtitle({
     alsoShow,
 }: {
     room: Room;
-    /** Another status for the same line (the history import): it alternates with the last-seen text. */
+    /** Another status for the same line (the history import): shown beside the last-seen text, never instead of it. */
     alsoShow?: JSX.Element | null;
 }): JSX.Element | null {
     const member = useDmMember(room);
@@ -47,41 +47,14 @@ export function DmLastSeenSubtitle({
                 {text}
             </Text>
         ) : null;
-    // Presence is the one source (bridges keep it current from what they see on the network); the
-    // import status never replaces it, it takes turns with it.
-    return <StatusCrossfade items={[seen, alsoShow ?? null]} />;
-}
-
-/** How long each status stays before the next fades in. */
-const STATUS_HOLD_MS = 4000;
-
-/**
- * One line that shows one of several statuses at a time, fading between them, so that the header
- * never has to choose. With a single status it just shows it; with none it shows nothing.
- */
-export function StatusCrossfade({ items }: { items: Array<JSX.Element | null> }): JSX.Element | null {
-    const present = items.filter((item): item is JSX.Element => !!item);
-    const [index, setIndex] = useState(0);
-    const count = present.length;
-    useEffect(() => {
-        if (count < 2) return;
-        const timer = window.setInterval(() => setIndex((i) => (i + 1) % count), STATUS_HOLD_MS);
-        return (): void => window.clearInterval(timer);
-    }, [count]);
-    if (count === 0) return null;
-    if (count === 1) return present[0];
+    // Presence is the one source (bridges keep it current from what they see on the network). The import
+    // status never replaces or swaps with it: it sits beside it on the same line.
+    if (!seen && !alsoShow) return null;
+    if (!alsoShow) return seen;
     return (
-        <div className="mx_StatusCrossfade">
-            {present.map((item, i) => (
-                <div
-                    key={i}
-                    className="mx_StatusCrossfade_item"
-                    data-active={i === index % count}
-                    aria-hidden={i !== index % count}
-                >
-                    {item}
-                </div>
-            ))}
+        <div className="mx_HeaderStatusRow">
+            {seen}
+            {alsoShow}
         </div>
     );
 }

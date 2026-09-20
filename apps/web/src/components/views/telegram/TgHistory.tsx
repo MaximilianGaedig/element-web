@@ -336,18 +336,21 @@ export function TgHistoryCard({ room }: { room: Room }): JSX.Element | null {
  * Under the chat's name while its history is being imported, where Telegram puts "updating…": the same
  * small line, with animated dots, and the percentage when it is known.
  */
-export function ImportSubtitle({ room }: { room: Room }): JSX.Element | null {
+export function ImportSubtitle({ room, inline }: { room: Room; inline?: boolean }): JSX.Element | null {
     const { status, phase, progress } = useHistory(room);
     if (!status || phase !== "importing") return null;
     const percent = progress.fraction !== undefined ? Math.min(99, Math.floor(progress.fraction * 100)) : undefined;
     return (
-        <div className="mx_ImportSubtitle" role="status" data-testid="import-subtitle">
+        <div className={`mx_ImportSubtitle${inline ? " mx_ImportSubtitle--inline" : ""}`} role="status" data-testid="import-subtitle">
+            {inline && <span className="mx_HistoryPhaseIcon mx_HistoryPhaseIcon--spin mx_ImportSubtitle_spinner" aria-hidden />}
             <span>{percent === undefined ? _t("tg_layout|history_subtitle") : _t("tg_layout|history_subtitle_percent", { percent })}</span>
-            <span className="mx_ImportSubtitle_dots" aria-hidden>
-                <i />
-                <i />
-                <i />
-            </span>
+            {!inline && (
+                <span className="mx_ImportSubtitle_dots" aria-hidden>
+                    <i />
+                    <i />
+                    <i />
+                </span>
+            )}
         </div>
     );
 }

@@ -526,28 +526,29 @@ html[data-tg-screen="mobile"] .mx_HistoryCard {
     padding: 1.125rem 1rem;
 }
 
-/* Statuses that take turns on one line (last seen / online, import progress): stacked in one grid cell,
-   the active one opaque, the others faded out, so the line never jumps. */
-.mx_StatusCrossfade {
-    display: grid;
+/* Online / last seen keeps its place; the import status sits beside it on the same line. */
+.mx_HeaderStatusRow {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-width: 0;
 }
 
-.mx_StatusCrossfade_item {
-    grid-area: 1 / 1;
-    opacity: 0;
-    transition: opacity 0.45s ease;
-    pointer-events: none;
+.mx_ImportSubtitle--inline {
+    flex: 0 0 auto;
+    gap: 0.25rem;
 
-    &[data-active="true"] {
-        opacity: 1;
-        pointer-events: auto;
+    &::before {
+        content: "·";
+        margin-inline-end: 0.25rem;
+        color: var(--cpd-color-text-secondary);
     }
 }
 
-@media (prefers-reduced-motion: reduce) {
-    .mx_StatusCrossfade_item {
-        transition: none;
-    }
+.mx_ImportSubtitle_spinner {
+    width: 0.625rem;
+    height: 0.625rem;
+    border-width: 1.5px;
 }
 
 /* A settled history (all imported, skipped, nothing to import) is one line, a verification. */

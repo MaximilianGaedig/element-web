@@ -523,7 +523,7 @@ export default function RoomHeader({
                             {room instanceof Room && <BridgeHeaderBadges room={room} />}
                         </Text>
                         {isDirectMessage && room instanceof Room && (
-                            <DmLastSeenSubtitle room={room} alsoShow={importing ? <ImportSubtitle room={room} /> : null} />
+                            <DmLastSeenSubtitle room={room} alsoShow={importing ? <ImportSubtitle room={room} inline /> : null} />
                         )}
                         {!isDirectMessage && room instanceof Room && (
                             <>
