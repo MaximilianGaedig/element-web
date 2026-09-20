@@ -109,6 +109,8 @@ export interface ImportProgress {
     perMinute?: number;
     /** 0..1 when the network says how many messages the chat has. */
     fraction?: number;
+    /** Messages still to import, when the network says how many the chat has. */
+    left?: number;
     /** Milliseconds left at the current pace, when both are known. */
     etaMs?: number;
 }
@@ -136,10 +138,12 @@ export function trackImport(roomId: string, status: BackfillStatus, now = Date.n
 
     let fraction: number | undefined;
     let etaMs: number | undefined;
+    let leftCount: number | undefined;
     if (status.remote_total && status.remote_total > 0) {
         fraction = Math.min(1, status.bridged_messages / status.remote_total);
         const left = Math.max(0, status.remote_total - status.bridged_messages);
+        leftCount = left;
         if (perMinute) etaMs = (left / perMinute) * 60_000;
     }
-    return { perMinute, fraction, etaMs };
+    return { perMinute, fraction, etaMs, left: leftCount };
 }

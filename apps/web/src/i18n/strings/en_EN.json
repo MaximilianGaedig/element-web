@@ -3395,7 +3395,7 @@
             "one": "%(formatted)s message imported",
             "other": "%(formatted)s messages imported"
         },
-        "history_eta": "about %(time)s left",
+        "history_eta": "about %(time)s to go",
         "history_eta_days": {
             "one": "%(count)s day",
             "other": "%(count)s days"
@@ -3409,6 +3409,10 @@
             "other": "%(count)s minutes"
         },
         "history_import": "Import the rest of the history",
+        "history_left": {
+            "one": "about %(formatted)s message left",
+            "other": "about %(formatted)s messages left"
+        },
         "history_manual": "Older history is not imported yet",
         "history_network": "the other network",
         "history_pace": "%(rate)s messages/min",

@@ -80,6 +80,9 @@ function formatEta(ms: number): string {
 /** Pace, progress and time left, as far as they are known. */
 function progressLine(progress: ImportProgress): string | undefined {
     const parts: string[] = [];
+    if (progress.left !== undefined && progress.left > 0) {
+        parts.push(_t("tg_layout|history_left", { count: progress.left, formatted: number(progress.left) }));
+    }
     if (progress.etaMs !== undefined) parts.push(_t("tg_layout|history_eta", { time: formatEta(progress.etaMs) }));
     if (progress.perMinute) {
         parts.push(_t("tg_layout|history_pace", { rate: number(Math.round(progress.perMinute)) }));
