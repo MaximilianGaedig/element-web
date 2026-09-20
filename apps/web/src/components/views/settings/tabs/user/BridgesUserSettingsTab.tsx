@@ -6,7 +6,6 @@ Please see LICENSE files in the repository root for full details.
 */
 
 import React, { type JSX, useContext, useEffect, useState } from "react";
-import { RoomStateEvent } from "matrix-js-sdk/src/matrix";
 
 import { _t } from "../../../../../languageHandler";
 import MatrixClientContext from "../../../../../contexts/MatrixClientContext";
@@ -17,9 +16,8 @@ import { SettingsSection } from "../../shared/SettingsSection";
 import dis from "../../../../../dispatcher/dispatcher";
 import { Action } from "../../../../../dispatcher/actions";
 import { TimelineRenderingType } from "../../../../../contexts/RoomContext";
-import { BACKFILL_EVENT_TYPE } from "../../../../../utils/chatHistory";
+import { onBridgeStatusChange } from "../../../../../utils/chatHistory";
 import {
-    BRIDGE_LOGIN_EVENT_TYPE,
     bridgeLoginsIn,
     bridgesWithoutLoginState,
     type BridgeLogin,
@@ -68,16 +66,16 @@ function useBridges(): { logins?: BridgeLogin[]; overview?: ImportOverview } {
                 overview: collectImports(client),
             });
         };
-        const onState = (event: { getType(): string }): void => {
-            if (event.getType() !== BACKFILL_EVENT_TYPE && event.getType() !== BRIDGE_LOGIN_EVENT_TYPE) return;
+        // Many chats update at once: gather them into one pass.
+        const later = (): void => {
             window.clearTimeout(timer);
             timer = window.setTimeout(refresh, 1000);
         };
         refresh();
-        client.on(RoomStateEvent.Events, onState);
+        const stop = onBridgeStatusChange(client, later);
         const tick = window.setInterval(refresh, 30_000);
         return (): void => {
-            client.off(RoomStateEvent.Events, onState);
+            stop();
             window.clearInterval(tick);
             window.clearTimeout(timer);
         };

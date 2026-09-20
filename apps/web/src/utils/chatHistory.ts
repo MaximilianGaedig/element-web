@@ -11,10 +11,12 @@ Please see LICENSE files in the repository root for full details.
  * counts (the homeserver's `im.mxg.room_stats`).
  */
 
-import { Method, type MatrixClient, type Room } from "matrix-js-sdk/src/matrix";
+import { Method, type MatrixClient, type Room, RoomEvent, RoomStateEvent } from "matrix-js-sdk/src/matrix";
 import { logger } from "matrix-js-sdk/src/logger";
 
 export const BACKFILL_EVENT_TYPE = "im.mxg.backfill";
+/** Kept here too so the watcher below needs no import from the bridge-login module. */
+const BRIDGE_LOGIN_EVENT_TYPE = "im.mxg.bridge_login";
 
 /**
  * complete: the network said there is nothing older; running: older history is being imported;
@@ -48,8 +50,18 @@ export interface BackfillStatus {
 const STATES: BackfillState[] = ["complete", "running", "manual", "unavailable", "skipped"];
 
 /** The bridge's record of how much of the room's history it has imported, if the room has one. */
+/**
+ * How much of a chat's history the bridge has imported.
+ *
+ * The bridge writes this as our own account data for the room: it concerns us and nobody else in the
+ * chat, and keeping it out of the room's timeline keeps a status that is rewritten as an import runs
+ * from piling up in every client's copy of the room. Bridges without a double puppet cannot write our
+ * account data, so a room state event is still read as a fallback.
+ */
 export function backfillStatusOf(room: Room): BackfillStatus | undefined {
-    const content = room.currentState.getStateEvents(BACKFILL_EVENT_TYPE, "")?.getContent<Partial<BackfillStatus>>();
+    const content =
+        room.getAccountData(BACKFILL_EVENT_TYPE)?.getContent<Partial<BackfillStatus>>() ??
+        room.currentState.getStateEvents(BACKFILL_EVENT_TYPE, "")?.getContent<Partial<BackfillStatus>>();
     if (!content || !STATES.includes(content.state as BackfillState)) return undefined;
     return {
         state: content.state as BackfillState,
@@ -219,4 +231,24 @@ export function trackImport(roomId: string, status: BackfillStatus, now = Date.n
         if (perMinute) etaMs = (left / perMinute) * 60_000;
     }
     return { perMinute, fraction, etaMs, left: leftCount };
+}
+
+/**
+ * Calls `onChange` whenever a bridge says something new about a chat's import or its own connection.
+ * The import status arrives as room account data and the login state as room state, so both are
+ * watched here rather than in every place that shows them.
+ */
+export function onBridgeStatusChange(client: MatrixClient, onChange: () => void): () => void {
+    const onAccountData = (event: { getType(): string }): void => {
+        if (event.getType() === BACKFILL_EVENT_TYPE) onChange();
+    };
+    const onState = (event: { getType(): string }): void => {
+        if (event.getType() === BACKFILL_EVENT_TYPE || event.getType() === BRIDGE_LOGIN_EVENT_TYPE) onChange();
+    };
+    client.on(RoomEvent.AccountData, onAccountData);
+    client.on(RoomStateEvent.Events, onState);
+    return (): void => {
+        client.off(RoomEvent.AccountData, onAccountData);
+        client.off(RoomStateEvent.Events, onState);
+    };
 }

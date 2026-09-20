@@ -6,20 +6,14 @@ Please see LICENSE files in the repository root for full details.
 */
 
 import React, { type JSX, useContext, useEffect, useState } from "react";
-import { RoomStateEvent } from "matrix-js-sdk/src/matrix";
 
 import { _t } from "../../../languageHandler";
 import MatrixClientContext from "../../../contexts/MatrixClientContext";
 import dis from "../../../dispatcher/dispatcher";
 import { Action } from "../../../dispatcher/actions";
 import { UserTab } from "../dialogs/UserTab";
-import { BACKFILL_EVENT_TYPE } from "../../../utils/chatHistory";
-import {
-    BRIDGE_LOGIN_EVENT_TYPE,
-    bridgeLoginsIn,
-    type BridgeLogin,
-    bridgesWithoutLoginState,
-} from "../../../utils/bridgeLogins";
+import { onBridgeStatusChange } from "../../../utils/chatHistory";
+import { bridgeLoginsIn, type BridgeLogin, bridgesWithoutLoginState } from "../../../utils/bridgeLogins";
 import { collectImports, importHeadline, type ImportOverview } from "../../../utils/importOverview";
 
 /**
@@ -44,14 +38,11 @@ export function HistoryStatusChip(): JSX.Element | null {
             window.clearTimeout(timer);
             timer = window.setTimeout(refresh, 1500);
         };
-        const onState = (event: { getType(): string }): void => {
-            if (event.getType() === BACKFILL_EVENT_TYPE || event.getType() === BRIDGE_LOGIN_EVENT_TYPE) later();
-        };
         refresh();
-        client.on(RoomStateEvent.Events, onState);
+        const stop = onBridgeStatusChange(client, later);
         const tick = window.setInterval(refresh, 30_000);
         return (): void => {
-            client.off(RoomStateEvent.Events, onState);
+            stop();
             window.clearInterval(tick);
             window.clearTimeout(timer);
         };

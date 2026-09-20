@@ -19,6 +19,10 @@ import {
 
 function roomWith(content: unknown): Room {
     return {
+        // The bridge writes the status as our own account data for the room; the state event is the
+        // fallback for a bridge that has no double puppet.
+        getAccountData: (type: string) =>
+            type === BACKFILL_EVENT_TYPE && content ? { getContent: () => content } : undefined,
         currentState: {
             getStateEvents: (type: string, key: string) =>
                 type === BACKFILL_EVENT_TYPE && key === "" && content ? { getContent: () => content } : null,

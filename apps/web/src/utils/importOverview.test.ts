@@ -15,6 +15,7 @@ function room(id: string, content?: Record<string, unknown>): Room {
     return {
         roomId: id,
         name: id,
+        getAccountData: () => undefined,
         currentState: {
             getStateEvents: (type: string) =>
                 type === "im.mxg.backfill" && content ? { getContent: () => content } : null,
