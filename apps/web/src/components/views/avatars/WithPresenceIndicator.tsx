@@ -120,4 +120,5 @@ const WithPresenceIndicator: React.FC<Props> = ({ room, children }) => {
     );
 };
 
+/** @knipignore Only the tests render the wrapper itself; the app imports the Presence enum above. */
 export default WithPresenceIndicator;

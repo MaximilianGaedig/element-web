@@ -102,6 +102,7 @@ const strip = (s: string): string => s.replace(/️/g, "");
  * allows some reactions offers exactly those (in its order); otherwise the user's frequent and
  * recent emoji, then Telegram's defaults (tweb: top reactions, recent reactions after them).
  */
+/** @knipignore Telegram Web's menu logic, ported with tests; the menu itself is Element's again. */
 export function getMenuReactions(recent: string[], allowed?: string[]): string[] {
     if (allowed) return allowed.slice();
     const seen = new Set<string>();
@@ -116,6 +117,7 @@ export function getMenuReactions(recent: string[], allowed?: string[]): string[]
 }
 
 /** The bar shows REACTIONS_MAX_LENGTH reactions and a "more" button if there are more (reactionsMenu.ts renderReactions). */
+/** @knipignore Telegram Web's menu logic, ported with tests; the menu itself is Element's again. */
 export function splitMenuReactions(reactions: string[]): { shown: string[]; hasMore: boolean } {
     return { shown: reactions.slice(0, REACTIONS_MAX_LENGTH), hasMore: reactions.length > REACTIONS_MAX_LENGTH };
 }
@@ -142,6 +144,7 @@ export interface MenuPosition {
  * inline start on mobile (where the finger is), falling back to the window edge when it doesn't
  * fit; below the pointer, or bottom-aligned to the window when it doesn't fit below.
  */
+/** @knipignore Telegram Web's menu logic, ported with tests; the menu itself is Element's again. */
 export function positionMenu(
     point: { x: number; y: number },
     menu: { width: number; height: number },

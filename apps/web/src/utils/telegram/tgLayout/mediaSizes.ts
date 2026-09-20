@@ -40,6 +40,7 @@ export function getScreenSize(innerWidth: number): ScreenSize {
 }
 
 /** tweb MediaSizes.isLessThanFloatingLeftSidebar. */
+/** @knipignore Kept beside the other breakpoint helpers and covered by tests; the layout may need it again. */
 export function isLessThanFloatingLeftSidebar(innerWidth: number): boolean {
     return innerWidth <= FLOATING_LEFT_SIDEBAR_SIZE;
 }

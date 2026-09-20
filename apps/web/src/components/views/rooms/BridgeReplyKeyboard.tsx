@@ -24,6 +24,7 @@ import AccessibleButton from "../elements/AccessibleButton";
 const usedSingleUseKeyboards = new Set<string>();
 
 /** Test helper. */
+/** @knipignore Only its own tests call this; it exists so a test can start from a clean slate. */
 export function resetUsedBridgeKeyboards(): void {
     usedSingleUseKeyboards.clear();
 }

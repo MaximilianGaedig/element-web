@@ -145,6 +145,7 @@ export function stickerContent(image: PackImage): PackStickerContent {
 const REMOTE_TTL_MS = 10 * 60_000;
 const remoteCache = new Map<string, { at: number; events: Promise<Array<{ stateKey: string; content: RawPack }>> }>();
 
+/** @knipignore Only its own tests call this; it exists so a test can start from a clean slate. */
 export function clearImagePackCache(): void {
     remoteCache.clear();
 }

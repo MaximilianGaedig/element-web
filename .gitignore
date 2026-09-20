@@ -43,3 +43,8 @@ storybook-static
 # vitepress
 /docs/.vitepress/dist
 /docs/.vitepress/cache
+
+# Build and test output that was committed by accident (the formatter and dead-code checks trip over it)
+/webapp
+/playwright/html-report
+/playwright/test-results

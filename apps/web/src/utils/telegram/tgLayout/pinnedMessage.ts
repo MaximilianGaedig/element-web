@@ -139,6 +139,7 @@ export function superSides(index: number, previousIndex: number): { enter: Super
 }
 
 /** pinnedMessage.tsx followPinnedMessage: after jumping, show the next older pin, wrapping to the newest. */
+/** @knipignore Kept beside the other pinned-message helpers and covered by tests. */
 export function nextPinnedIndexAfterFollow(pinnedIndex: number, count: number): number {
     return pinnedIndex >= count - 1 ? 0 : pinnedIndex + 1;
 }
