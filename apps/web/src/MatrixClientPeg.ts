@@ -9,6 +9,8 @@ SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only OR LicenseRef-Element-Com
 Please see LICENSE files in the repository root for full details.
 */
 
+import { BACKFILL_EVENT_TYPE } from "./utils/chatHistory";
+import { BRIDGE_LOGIN_EVENT_TYPE } from "./utils/bridgeLogins";
 import {
     EventType,
     type IStartClientOpts,
@@ -395,6 +397,10 @@ const ROOM_LIST_STATE_TYPES: string[] = [
     // Bridge info: the room list's network badges and bridged-DM detection
     "m.bridge",
     "uk.half-shot.bridge",
+    // Bridge status: history import per chat, and whether each bridge is connected. These are written
+    // once and not repeated, so a sync that omits them would leave the chat list and dashboard blind.
+    BACKFILL_EVENT_TYPE,
+    BRIDGE_LOGIN_EVENT_TYPE,
 ];
 
 /** How many of each room's latest stored events are replayed at startup. */
