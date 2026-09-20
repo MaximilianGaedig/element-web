@@ -15,6 +15,7 @@ import { type Room } from "matrix-js-sdk/src/matrix";
 import HistoryIcon from "@vector-im/compound-design-tokens/assets/web/icons/history";
 import CheckIcon from "@vector-im/compound-design-tokens/assets/web/icons/check";
 import PauseIcon from "@vector-im/compound-design-tokens/assets/web/icons/pause";
+import StorageIcon from "@vector-im/compound-design-tokens/assets/web/icons/download";
 import ChartIcon from "@vector-im/compound-design-tokens/assets/web/icons/chart";
 
 import { _t } from "../../../languageHandler";
@@ -31,6 +32,7 @@ import {
     type RoomStats,
     trackImport,
 } from "../../../utils/chatHistory";
+import { formatBytes } from "../../../utils/FormattingUtils";
 import { TgRow } from "./TgProfile";
 
 const number = (n: number): string => n.toLocaleString();
@@ -318,6 +320,23 @@ export function TgStatsSection({ room }: { room: Room }): JSX.Element | null {
                         : _t("tg_layout|stats_counting")
                 }
             />
+            {stats.storage && (
+                <TgRow
+                    icon={<StorageIcon />}
+                    title={_t("tg_layout|storage_title", {
+                        size: formatBytes(stats.storage.events + stats.storage.media_stored),
+                    })}
+                    subtitle={[
+                        _t("tg_layout|storage_messages", { size: formatBytes(stats.storage.events) }),
+                        _t("tg_layout|storage_media", { size: formatBytes(stats.storage.media_stored) }),
+                        stats.storage.media_on_demand > 0
+                            ? _t("tg_layout|storage_on_demand", { size: formatBytes(stats.storage.media_on_demand) })
+                            : undefined,
+                    ]
+                        .filter(Boolean)
+                        .join(" · ")}
+                />
+            )}
             {stats.senders.map((sender) => {
                 const member = room.getMember(sender.user_id);
                 return (

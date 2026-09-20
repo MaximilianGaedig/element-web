@@ -1,0 +1,136 @@
+/*
+Copyright 2026 New Vector Ltd.
+
+SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only OR LicenseRef-Element-Commercial
+Please see LICENSE files in the repository root for full details.
+*/
+
+.mx_StorageTab_total {
+    font: var(--cpd-font-heading-xl-semibold);
+    font-variant-numeric: tabular-nums;
+    color: var(--cpd-color-text-primary);
+}
+
+.mx_StorageTab_hint,
+.mx_StorageTab_status {
+    margin: 0.25rem 0 0.75rem;
+    font: var(--cpd-font-body-md-regular);
+    color: var(--cpd-color-text-secondary);
+}
+
+.mx_StorageBreakdown_bar {
+    display: flex;
+    height: 0.75rem;
+    overflow: hidden;
+    border-radius: 0.375rem;
+    background: var(--cpd-color-bg-subtle-secondary);
+}
+
+.mx_StorageBreakdown_part--messages {
+    background: var(--tg-primary-color);
+}
+
+.mx_StorageBreakdown_part--media {
+    background: var(--cpd-color-text-success-primary);
+}
+
+.mx_StorageBreakdown_legend {
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+    margin: 0.75rem 0 0;
+    padding: 0;
+    list-style: none;
+
+    li {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font: var(--cpd-font-body-md-regular);
+    }
+}
+
+.mx_StorageBreakdown_dot {
+    flex: 0 0 auto;
+    width: 0.625rem;
+    height: 0.625rem;
+    border-radius: 50%;
+}
+
+.mx_StorageBreakdown_label {
+    flex: 1 1 auto;
+    color: var(--cpd-color-text-secondary);
+}
+
+.mx_StorageBreakdown_value {
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+    color: var(--cpd-color-text-primary);
+}
+
+.mx_StorageChats {
+    display: flex;
+    flex-direction: column;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.mx_StorageChats_row {
+    all: unset;
+    box-sizing: border-box;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    grid-template-areas:
+        "name size"
+        "bar bar"
+        "detail detail";
+    gap: 0.25rem 0.75rem;
+    width: 100%;
+    min-height: 3rem;
+    padding: 0.625rem 0.25rem;
+    border-bottom: 1px solid var(--cpd-color-border-disabled);
+    cursor: pointer;
+
+    &:hover {
+        background: var(--cpd-color-bg-subtle-secondary);
+    }
+
+    &:focus-visible {
+        outline: 2px solid var(--cpd-color-border-focused);
+    }
+}
+
+.mx_StorageChats_name {
+    grid-area: name;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font: var(--cpd-font-body-md-semibold);
+}
+
+.mx_StorageChats_size {
+    grid-area: size;
+    font: var(--cpd-font-body-md-semibold);
+    font-variant-numeric: tabular-nums;
+}
+
+.mx_StorageChats_bar {
+    grid-area: bar;
+    height: 0.25rem;
+    border-radius: 0.125rem;
+    background: var(--cpd-color-bg-subtle-secondary);
+    overflow: hidden;
+
+    span {
+        display: block;
+        height: 100%;
+        background: var(--tg-primary-color);
+    }
+}
+
+.mx_StorageChats_detail {
+    grid-area: detail;
+    font: var(--cpd-font-body-sm-regular);
+    color: var(--cpd-color-text-secondary);
+}

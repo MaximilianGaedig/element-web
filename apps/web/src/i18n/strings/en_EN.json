@@ -3136,7 +3136,31 @@
         "warn_quit": "Warn before quitting",
         "warning": "<w>WARNING:</w> <description/>",
         "glass_effects": "Frosted glass panels",
-        "glass_effects_description": "Blurs what is behind the header, the composer and menus. It costs a lot of graphics work while scrolling, so it is off by default and the panels are drawn plain instead."
+        "glass_effects_description": "Blurs what is behind the header, the composer and menus. It costs a lot of graphics work while scrolling, so it is off by default and the panels are drawn plain instead.",
+        "storage": {
+            "account_heading": "Your chats",
+            "account_hint": {
+                "one": "Kept on the server for %(count)s chat",
+                "other": "Kept on the server for %(count)s chats"
+            },
+            "chat_detail": "%(messages)s messages · %(media)s of media",
+            "chat_on_demand": "%(size)s fetched when opened",
+            "chats_heading": "Chats using the most space",
+            "database": "Messages and indexes",
+            "dialog_title": "<strong>Storage</strong>",
+            "loading": "Measuring…",
+            "media": "Pictures, videos and files",
+            "media_files": "Media files",
+            "messages": "Messages",
+            "more_chats": {
+                "one": "and %(count)s smaller chat",
+                "other": "and %(count)s smaller chats"
+            },
+            "on_demand": "%(size)s more is not stored: bridges fetch it from the network when you open it.",
+            "server_heading": "Whole server",
+            "title": "Storage",
+            "unsupported": "This server doesn't report storage use."
+        }
     },
     "share": {
         "link_copied": "Link copied",
@@ -3465,6 +3489,10 @@
             "one": "%(formatted)s message",
             "other": "%(formatted)s messages"
         },
+        "storage_media": "media %(size)s",
+        "storage_messages": "messages %(size)s",
+        "storage_on_demand": "%(size)s fetched when opened",
+        "storage_title": "%(size)s on the server",
         "tab_actions": "Actions",
         "tab_members": "Members",
         "username": "Username"

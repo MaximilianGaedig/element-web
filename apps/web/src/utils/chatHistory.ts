@@ -70,6 +70,8 @@ export async function requestFullBackfill(room: Room, status: BackfillStatus): P
 }
 
 export interface RoomStats {
+    /** What the chat takes up on the server, in bytes. */
+    storage?: { events: number; media_stored: number; media_on_demand: number };
     total: number;
     by_kind: Record<string, number>;
     senders: Array<{ user_id: string; total: number; by_kind: Record<string, number> }>;
