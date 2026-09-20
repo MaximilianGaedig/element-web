@@ -73,7 +73,6 @@ export function HistoryStatusChip(): JSX.Element | null {
             : _t("tg_layout|chip_importing", {
                   done: headline.done.toLocaleString(),
                   total: headline.total.toLocaleString(),
-                  percent: headline.percent === undefined ? "" : ` · ${headline.percent}%`,
               });
 
     return (
@@ -93,6 +92,9 @@ export function HistoryStatusChip(): JSX.Element | null {
             )}
             {tone === "problem" && <span className="mx_TgHistoryChip_dot" aria-hidden />}
             <span className="mx_TgHistoryChip_text">{text}</span>
+            {tone === "working" && headline.percent !== undefined && (
+                <span className="mx_TgHistoryChip_percent">{`${headline.percent}%`}</span>
+            )}
         </button>
     );
 }

@@ -2577,6 +2577,11 @@
         "autoplay_gifs": "Autoplay GIFs",
         "autoplay_videos": "Autoplay videos",
         "big_emoji": "Enable big emoji in chat",
+        "bubble_tail": "Bubble tail",
+        "bubble_tail_description": "The little point at the bottom of the last bubble in a run, the way each app draws it.",
+        "bubble_tail_imessage": "iMessage",
+        "bubble_tail_none": "None",
+        "bubble_tail_telegram": "Telegram",
         "code_block_expand_default": "Expand code blocks by default",
         "code_block_line_numbers": "Show line numbers in code blocks",
         "disable_historical_profile": "Show current profile picture and name for users in message history",
@@ -3455,7 +3460,7 @@
         "bridges_empty_title": "No bridges yet",
         "bridges_summary": "%(connected)s of %(total)s connected",
         "bridges_tab": "Bridges",
-        "chip_importing": "Importing history · %(done)s of %(total)s chats%(percent)s",
+        "chip_importing": "Importing history · %(done)s of %(total)s chats",
         "chip_login_problem": {
             "one": "%(names)s is not connected",
             "other": "%(names)s are not connected"

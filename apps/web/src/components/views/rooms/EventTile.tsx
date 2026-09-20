@@ -1441,6 +1441,8 @@ export class UnwrappedEventTile extends React.Component<EventTileProps, IState> 
                         mx_EventTile_tgTimeFloating:
                             telegramTime && getTelegramTimePlacement(this.props.mxEvent) === "floating",
                         mx_EventTile_tgOwn: telegramTime && rootState.isOwnEvent,
+                        // Has a bubble drawn behind it, so a tail can hang off it (_TgBubbleTail.pcss).
+                        mx_EventTile_tgBubble: telegramTime,
                     }),
                     line: classNames(eventTileRenderState.classNames.line, {
                         mx_EventTile_tgMediaLine: telegramTime && eventTileRenderState.line.media,

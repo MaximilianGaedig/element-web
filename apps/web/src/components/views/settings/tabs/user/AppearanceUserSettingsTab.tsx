@@ -114,6 +114,11 @@ export default class AppearanceUserSettingsTab extends React.Component<EmptyObje
                             <SettingsFlag name="telegramStyleLayout" level={SettingLevel.ACCOUNT} />
                             <SettingsFlag name="glassEffects" level={SettingLevel.ACCOUNT} />
                             <SettingsDropdown
+                                settingKey="bubbleTail"
+                                label={_t("settings|bubble_tail")}
+                                level={SettingLevel.ACCOUNT}
+                            />
+                            <SettingsDropdown
                                 settingKey="readReceiptsStyle"
                                 label={_t("settings|read_receipts_style")}
                                 level={SettingLevel.ACCOUNT}

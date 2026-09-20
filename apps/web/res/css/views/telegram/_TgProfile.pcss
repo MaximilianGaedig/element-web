@@ -723,6 +723,12 @@ html[data-tg-screen] .mx_RoomView_body[data-telegram-layout="true"] > .mx_TgImpo
     white-space: nowrap;
 }
 
+/* The share is the part worth keeping when the chip is narrow, so the counts give way to it first. */
+.mx_TgHistoryChip_percent {
+    flex: 0 0 auto;
+    font-variant-numeric: tabular-nums;
+}
+
 .mx_TgHistoryChip_spinner {
     width: 0.875rem;
     height: 0.875rem;

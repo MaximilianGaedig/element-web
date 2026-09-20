@@ -1,0 +1,90 @@
+/*
+Copyright 2026 New Vector Ltd.
+
+SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only OR LicenseRef-Element-Commercial
+Please see LICENSE files in the repository root for full details.
+*/
+
+/*
+ * The little point at the bottom of the last bubble in a run.
+ *
+ * Telegram's is its own shape, taken from Telegram Web K's `#message-tail-filled` symbol (GPL-3.0,
+ * https://github.com/morethanwords/tweb, index.html). iMessage's is the rounder hook Apple draws; the
+ * path here is written to look like it rather than copied from Apple.
+ *
+ * Each is a mask over a box that inherits the bubble's own background, so a tail is always exactly the
+ * colour of the bubble it belongs to, in either theme, with no colours repeated here.
+ */
+
+:root {
+    --tg-tail-width: 11px;
+    --tg-tail-height: 20px;
+    /* tweb index.html, #message-tail-filled */
+    --tg-tail-telegram: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 11 20"><g transform="translate(9 -14)" fill-rule="evenodd"><path d="M-6 16h6v17c-.193-2.84-.876-5.767-2.05-8.782-.904-2.325-2.446-4.485-4.625-6.48A1 1 0 01-6 16z" transform="matrix(1 0 0 -1 0 49)"/></g></svg>');
+    --tg-tail-imessage: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 11 20"><path d="M11 20V6c0 5.5-1.2 9.1-3.6 11.2C5.6 18.9 3 19.8 0 20c3.2.3 6-.1 8.3-1.2.9-.4 1.8-1 2.7-1.8z"/></svg>');
+}
+
+html[data-tg-tail="telegram"] {
+    --tg-tail-shape: var(--tg-tail-telegram);
+}
+
+html[data-tg-tail="imessage"] {
+    --tg-tail-shape: var(--tg-tail-imessage);
+}
+
+/*
+ * The last bubble of a run carries the tail: one with no bubble from the same side straight after it.
+ * That covers a group's sender runs, whose bubbles are siblings within the run, and a one-to-one chat,
+ * which has no runs at all. A message that is only big emoji has no bubble to hang a tail on.
+ */
+html:is([data-tg-tail="telegram"], [data-tg-tail="imessage"]) .mx_RoomView_body[data-layout="bubble"] {
+    /* The last bubble of each side's run, and only those, carry the tail. */
+    :is(
+            .mx_EventTile_tgBubble:not(.mx_EventTile_tgOwn, :has(.mx_EventTile_bigEmoji)):not(
+                    :has(+ .mx_EventTile_tgBubble:not(.mx_EventTile_tgOwn))
+                ),
+            .mx_EventTile_tgBubble.mx_EventTile_tgOwn:not(:has(.mx_EventTile_bigEmoji)):not(
+                    :has(+ .mx_EventTile_tgBubble.mx_EventTile_tgOwn)
+                )
+        )
+        > [data-testid="event-tile-line"] {
+        position: relative;
+
+        &::after {
+            content: "";
+            position: absolute;
+            bottom: 0;
+            width: var(--tg-tail-width);
+            height: var(--tg-tail-height);
+            background: inherit;
+            mask-image: var(--tg-tail-shape);
+            mask-repeat: no-repeat;
+            mask-size: 100% 100%;
+            pointer-events: none;
+        }
+    }
+
+    /* Incoming hangs off the start edge, mirrored; our own off the end. */
+    .mx_EventTile_tgBubble:not(.mx_EventTile_tgOwn, :has(.mx_EventTile_bigEmoji)):not(
+            :has(+ .mx_EventTile_tgBubble:not(.mx_EventTile_tgOwn))
+        )
+        > [data-testid="event-tile-line"] {
+        border-end-start-radius: 0;
+
+        &::after {
+            inset-inline-start: calc(var(--tg-tail-width) * -1 + 1px);
+            transform: scaleX(-1);
+        }
+    }
+
+    .mx_EventTile_tgBubble.mx_EventTile_tgOwn:not(:has(.mx_EventTile_bigEmoji)):not(
+            :has(+ .mx_EventTile_tgBubble.mx_EventTile_tgOwn)
+        )
+        > [data-testid="event-tile-line"] {
+        border-end-end-radius: 0;
+
+        &::after {
+            inset-inline-end: calc(var(--tg-tail-width) * -1 + 1px);
+        }
+    }
+}

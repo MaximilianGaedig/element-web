@@ -105,6 +105,8 @@ export const SCREEN_ATTRIBUTE = "data-tg-screen";
 
 /** The attribute on <html> that turns the frosted-glass panels into plain ones. */
 export const NO_GLASS_ATTRIBUTE = "data-no-glass";
+/** Which app's bubble tail the timeline draws (see _TgBubbleTail.pcss). */
+export const TAIL_ATTRIBUTE = "data-tg-tail";
 
 /** The attribute on <html> while something is being scrolled; the glass drops its blur meanwhile. */
 export const SCROLLING_ATTRIBUTE = "data-scrolling";
@@ -271,6 +273,14 @@ export function TgColumns({
         root.setAttribute(SCREEN_ATTRIBUTE, screen);
         return () => root.removeAttribute(SCREEN_ATTRIBUTE);
     }, [screen]);
+
+    // The bubble tail is drawn in CSS, so the choice just has to reach the document.
+    const tail = useSettingValue("bubbleTail");
+    useEffect(() => {
+        const root = document.documentElement;
+        root.setAttribute(TAIL_ATTRIBUTE, tail);
+        return () => root.removeAttribute(TAIL_ATTRIBUTE);
+    }, [tail]);
 
     // The frosted panels are drawn by the GPU on every frame behind them, which is most of the
     // graphics work while scrolling; turning them off leaves plain panels (see _TgBase.pcss).

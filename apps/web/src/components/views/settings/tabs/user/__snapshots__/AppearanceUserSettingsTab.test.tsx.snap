@@ -598,11 +598,97 @@ exports[`AppearanceUserSettingsTab > should render 1`] = `
                   </div>
                 </div>
                 <div
+                  class="_inline-field_1o4d9_33"
+                >
+                  <div
+                    class="_inline-field-control_1o4d9_45"
+                  >
+                    <div
+                      class="_container_udcm8_10"
+                    >
+                      <input
+                        class="_input_udcm8_24"
+                        id="mx_SettingsFlag_QgU2PomxwKpa"
+                        role="switch"
+                        type="checkbox"
+                      />
+                      <div
+                        class="_ui_udcm8_34"
+                      />
+                    </div>
+                  </div>
+                  <div
+                    class="_inline-field-body_1o4d9_39"
+                  >
+                    <label
+                      class="_label_1o4d9_60"
+                      for="mx_SettingsFlag_QgU2PomxwKpa"
+                    >
+                      Frosted glass panels
+                    </label>
+                    <span
+                      class="_message_1o4d9_86 _help-message_1o4d9_92"
+                      id="radix-react-use-id-10"
+                    >
+                      Blurs what is behind the header, the composer and menus. It costs a lot of graphics work while scrolling, so it is off by default and the panels are drawn plain instead.
+                    </span>
+                  </div>
+                </div>
+                <div
                   class="mx_SettingsDropdown"
                 >
                   <label
                     class="mx_SettingsDropdown_label"
-                    for="react-use-id-10"
+                    for="react-use-id-11"
+                  >
+                    <span
+                      class="mx_SettingsDropdown_labelText"
+                    >
+                      Bubble tail
+                    </span>
+                  </label>
+                  <div
+                    class="mx_Dropdown"
+                  >
+                    <div
+                      aria-describedby="react-use-id-11_value"
+                      aria-expanded="false"
+                      aria-haspopup="listbox"
+                      aria-label="Bubble tail"
+                      aria-owns="react-use-id-11_input"
+                      class="mx_AccessibleButton mx_Dropdown_input mx_no_textinput"
+                      role="button"
+                      tabindex="0"
+                    >
+                      <div
+                        class="mx_Dropdown_option"
+                        id="react-use-id-11_value"
+                      >
+                        <div>
+                          Telegram
+                        </div>
+                      </div>
+                      <svg
+                        class="mx_Dropdown_arrow"
+                        fill="currentColor"
+                        height="1em"
+                        viewBox="0 0 24 24"
+                        width="1em"
+                        xmlns="http://www.w3.org/2000/svg"
+                      >
+                        <path
+                          d="M12 14.95q-.2 0-.375-.062a.9.9 0 0 1-.325-.213l-4.6-4.6a.95.95 0 0 1-.275-.7q0-.425.275-.7a.95.95 0 0 1 .7-.275q.425 0 .7.275l3.9 3.9 3.9-3.9a.95.95 0 0 1 .7-.275q.425 0 .7.275a.95.95 0 0 1 .275.7.95.95 0 0 1-.275.7l-4.6 4.6q-.15.15-.325.212a1.1 1.1 0 0 1-.375.063"
+                        />
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+                <div
+                  class="mx_SettingsDropdown"
+                >
+                  <label
+                    class="mx_SettingsDropdown_label"
+                    for="react-use-id-12"
                   >
                     <span
                       class="mx_SettingsDropdown_labelText"
@@ -614,18 +700,18 @@ exports[`AppearanceUserSettingsTab > should render 1`] = `
                     class="mx_Dropdown"
                   >
                     <div
-                      aria-describedby="react-use-id-10_value"
+                      aria-describedby="react-use-id-12_value"
                       aria-expanded="false"
                       aria-haspopup="listbox"
                       aria-label="Read receipts style"
-                      aria-owns="react-use-id-10_input"
+                      aria-owns="react-use-id-12_input"
                       class="mx_AccessibleButton mx_Dropdown_input mx_no_textinput"
                       role="button"
                       tabindex="0"
                     >
                       <div
                         class="mx_Dropdown_option"
-                        id="react-use-id-10_value"
+                        id="react-use-id-12_value"
                       >
                         <div>
                           Avatars
