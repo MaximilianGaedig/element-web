@@ -9,6 +9,7 @@ import { type MatrixEvent } from "matrix-js-sdk/src/matrix";
 
 import { MatrixClientPeg } from "../../MatrixClientPeg";
 import { hasDisappeared } from "./disappearingMessages";
+import { backfillStatusOf } from "../chatHistory";
 
 /** Set by bridges on state changes that are bookkeeping, e.g. syncing members or implicit names. */
 export const EXCLUDE_FROM_TIMELINE_KEY = "com.beeper.exclude_from_timeline";
@@ -23,10 +24,25 @@ export function isDisappeared(ev: MatrixEvent): boolean {
 }
 
 /**
+ * In a bridged chat, other people joining and leaving is the bridge tracking who is in the chat on the
+ * other network, not something anyone did here, and an import of old history brings a "joined" for every
+ * person who ever wrote in it. Those are hidden (your own, and invites, kicks and bans, still show).
+ */
+function isBridgedSelfJoinOrLeave(ev: MatrixEvent): boolean {
+    if (ev.getType() !== "m.room.member" || ev.getStateKey() !== ev.getSender()) return false;
+    const membership = ev.getContent().membership;
+    if (membership !== "join" && membership !== "leave") return false;
+    const client = MatrixClientPeg.get();
+    const room = client?.getRoom(ev.getRoomId());
+    return !!room && ev.getStateKey() !== client?.getUserId() && !!backfillStatusOf(room);
+}
+
+/**
  * Timeline hiding rules for mautrix bridge extensions, consulted by shouldHideEvent.
  */
 export function shouldHideBridgeEvent(ev: MatrixEvent): boolean {
     if (ev.isState() && ev.getContent()[EXCLUDE_FROM_TIMELINE_KEY] === true) return true;
+    if (isBridgedSelfJoinOrLeave(ev)) return true;
     // Thread roots stay visible so the thread remains reachable, as in shouldHideEvent.
     if (ev.isRedacted() && !ev.getThread()) {
         const redaction = ev.getRedactionEvent();

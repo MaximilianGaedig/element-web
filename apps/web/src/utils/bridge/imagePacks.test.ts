@@ -69,6 +69,7 @@ function fakeClient(
     getStateEvent: Mock;
 } {
     return {
+        loadStoredRoomState: vi.fn().mockResolvedValue(undefined),
         getRoom: (id: string) => rooms.find((r) => r.roomId === id) ?? null,
         getVisibleRooms: () => rooms,
         getAccountData: (type: string) =>
