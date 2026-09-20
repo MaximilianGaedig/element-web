@@ -74,6 +74,9 @@ allowBuilds:
     # Needed to make the git dependency in layered.sh happy
     "matrix-js-sdk@git+https://github.com/matrix-org/matrix-js-sdk.git": true
     "matrix-js-sdk@file:matrix-js-sdk/matrix-js-sdk.tgz": true
+    # Same again for the patched copy (patches/matrix-js-sdk@42.3.0.patch): patching gives the package a
+    # new id, which this list is keyed by. The hash changes whenever that patch does.
+    "matrix-js-sdk@file:matrix-js-sdk/matrix-js-sdk.tgz(patch_hash=afab48f125dd40f70fefa0ccfdc18bf43b4a505f1d0ff66d1b20cf60b9a2d14e)": true
     # Installs the CLI, which we do not need
     "@sentry/cli": false
     # Installs nx cloud client, which we do not need
