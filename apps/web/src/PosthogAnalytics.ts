@@ -6,7 +6,7 @@ SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only OR LicenseRef-Element-Com
 Please see LICENSE files in the repository root for full details.
 */
 
-import posthog, { type CaptureOptions, type PostHog, type Properties } from "posthog-js";
+import type { CaptureOptions, PostHog, Properties } from "posthog-js";
 import { type MatrixClient } from "matrix-js-sdk/src/matrix";
 import { logger } from "matrix-js-sdk/src/logger";
 import { type UserProperties } from "@matrix-org/analytics-events/types/typescript/UserProperties";
@@ -133,34 +133,23 @@ export class PosthogAnalytics {
 
     public static get instance(): PosthogAnalytics {
         if (!this._instance) {
-            this._instance = new PosthogAnalytics(posthog);
+            this._instance = new PosthogAnalytics();
         }
         return this._instance;
     }
 
-    public constructor(private readonly posthog: PostHog) {
-        const posthogConfig = SdkConfig.get("posthog");
-        if (posthogConfig?.project_api_key && posthogConfig?.api_host) {
-            this.posthog.init(posthogConfig.project_api_key, {
-                api_host: posthogConfig.api_host,
-                autocapture: false,
-                mask_all_text: true,
-                mask_all_element_attributes: true,
-                // This only triggers on page load, which for our SPA isn't particularly useful.
-                // Plus, the .capture call originating from somewhere in posthog makes it hard
-                // to redact URLs, which requires async code.
-                //
-                // To raise this manually, just call .capture("$pageview") or posthog.capture_pageview.
-                capture_pageview: false,
-                sanitize_properties: this.sanitizeProperties,
-                respect_dnt: true,
-                advanced_disable_decide: true,
-            });
-            this.enabled = true;
-        } else {
-            this.enabled = false;
-        }
+    /**
+     * The SDK once it has been loaded. A deployment with no `posthog` config never loads it at all; one
+     * that has it loads it the first time something is tracked, rather than while the app is starting.
+     */
+    private posthog?: PostHog;
+    private loading?: Promise<PostHog | undefined>;
 
+    /** `posthog` is only passed by tests, which then get the synchronous behaviour they assert on. */
+    public constructor(posthog?: PostHog) {
+        const posthogConfig = SdkConfig.get("posthog");
+        this.enabled = !!(posthogConfig?.project_api_key && posthogConfig?.api_host);
+        if (posthog) this.init(posthog);
         dis.register(this.onAction);
         SettingsStore.monitorSetting("layout", null);
         SettingsStore.monitorSetting("useCompactLayout", null);
@@ -168,6 +157,50 @@ export class PosthogAnalytics {
         this.onLayoutUpdated();
         this.onUrlPreviewSettingUpdated(SettingsStore.getValue("urlPreviewsEnabled"));
         this.updateCryptoSuperProperty();
+    }
+
+    /** Configures the SDK. Posthog is a singleton, so this runs once per client. */
+    private init(posthog: PostHog): void {
+        if (!this.enabled) return;
+        const posthogConfig = SdkConfig.get("posthog")!;
+        posthog.init(posthogConfig.project_api_key!, {
+            api_host: posthogConfig.api_host!,
+            autocapture: false,
+            mask_all_text: true,
+            mask_all_element_attributes: true,
+            // This only triggers on page load, which for our SPA isn't particularly useful.
+            // Plus, the .capture call originating from somewhere in posthog makes it hard
+            // to redact URLs, which requires async code.
+            //
+            // To raise this manually, just call .capture("$pageview") or posthog.capture_pageview.
+            capture_pageview: false,
+            sanitize_properties: this.sanitizeProperties,
+            respect_dnt: true,
+            advanced_disable_decide: true,
+        });
+        this.posthog = posthog;
+    }
+
+    /**
+     * The SDK, loading and configuring it if this is the first use. Undefined when there is no config,
+     * which is when nothing is tracked at all.
+     */
+    private async client(): Promise<PostHog | undefined> {
+        if (this.posthog || !this.enabled) return this.posthog;
+        this.loading ??= import("posthog-js").then(({ default: posthog }) => {
+            this.init(posthog);
+            return this.posthog;
+        });
+        return this.loading;
+    }
+
+    /**
+     * Runs something against the SDK, at once when it is already here (which is what a test that passes
+     * one in expects) and after it loads otherwise. Tracking is fire-and-forget, so nothing waits.
+     */
+    private withClient(track: (posthog: PostHog) => void): void {
+        if (this.posthog) track(this.posthog);
+        else if (this.enabled) void this.client().then((posthog) => posthog && track(posthog));
     }
 
     private onLayoutUpdated = (): void => {
@@ -234,9 +267,7 @@ export class PosthogAnalytics {
     };
 
     private registerSuperProperties(properties: Properties): void {
-        if (this.enabled) {
-            this.posthog.register(properties);
-        }
+        this.withClient((posthog) => posthog.register(properties));
     }
 
     private static async getPlatformProperties(): Promise<Partial<PlatformProperties>> {
@@ -262,7 +293,8 @@ export class PosthogAnalytics {
         }
         const { origin, hash, pathname } = window.location;
         properties["redactedCurrentUrl"] = getRedactedCurrentLocation(origin, hash, pathname);
-        this.posthog.capture(eventName, { ...this.propertiesForNextEvent, ...properties }, options);
+        const captured = { ...this.propertiesForNextEvent, ...properties };
+        this.withClient((posthog) => posthog.capture(eventName, captured, options));
         this.propertiesForNextEvent = {};
     }
 
@@ -277,7 +309,7 @@ export class PosthogAnalytics {
         if (this.enabled && (anonymity == Anonymity.Disabled || anonymity == Anonymity.Anonymous)) {
             // when transitioning to Disabled or Anonymous ensure we clear out any prior state
             // set in posthog e.g. distinct ID
-            this.posthog.reset();
+            this.withClient((posthog) => posthog.reset());
             // Restore any previously set platform super properties
             this.registerSuperProperties(this.platformSuperProperties);
         }
@@ -309,15 +341,16 @@ export class PosthogAnalytics {
                         ...accountData,
                     });
                 }
-                if (this.posthog.get_distinct_id() === analyticsID) {
+                const posthog = await this.client();
+                if (!posthog || posthog.get_distinct_id() === analyticsID) {
                     // No point identifying again
                     return;
                 }
-                if (this.posthog.persistence?.get_property("$user_state") === "identified") {
+                if (posthog.persistence?.get_property("$user_state") === "identified") {
                     // Analytics ID has changed, reset as Posthog will refuse to merge in this case
-                    this.posthog.reset();
+                    posthog.reset();
                 }
-                this.posthog.identify(analyticsID);
+                posthog.identify(analyticsID);
             } catch (e) {
                 // The above could fail due to network requests, but not essential to starting the application,
                 // so swallow it.
@@ -331,9 +364,7 @@ export class PosthogAnalytics {
     }
 
     public logout(): void {
-        if (this.enabled) {
-            this.posthog.reset();
-        }
+        this.withClient((posthog) => posthog.reset());
         SettingsStore.unwatchSetting(this.watchSettingRef);
         this.setAnonymity(Anonymity.Disabled);
     }

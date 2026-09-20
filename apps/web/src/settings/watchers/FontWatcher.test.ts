@@ -46,7 +46,7 @@ describe("FontWatcher", function () {
         await setSystemFont("Font Name");
         expect(getFontFamily()).toMatchInlineSnapshot(`""`);
         await watcher.start();
-        expect(getFontFamily()).toMatchInlineSnapshot(`""Font Name", Twemoji"`);
+        expect(getFontFamily()).toMatchInlineSnapshot(`""Font Name""`);
     });
 
     it("should load font on Action.OnLoggedIn", async () => {
@@ -54,14 +54,14 @@ describe("FontWatcher", function () {
         await new FontWatcher().start();
         document.body.style.removeProperty(FontWatcher.FONT_FAMILY_CUSTOM_PROPERTY); // clear the fontFamily which was  by start which we tested already
         defaultDispatcher.fire(Action.OnLoggedIn, true);
-        expect(getFontFamily()).toMatchInlineSnapshot(`""Font Name", Twemoji"`);
+        expect(getFontFamily()).toMatchInlineSnapshot(`""Font Name""`);
     });
 
     it("should reset font on Action.OnLoggedOut", async () => {
         await setSystemFont("Font Name");
         const watcher = new FontWatcher();
         await watcher.start();
-        expect(getFontFamily()).toMatchInlineSnapshot(`""Font Name", Twemoji"`);
+        expect(getFontFamily()).toMatchInlineSnapshot(`""Font Name""`);
         defaultDispatcher.fire(Action.OnLoggedOut, true);
         expect(getFontFamily()).toMatchInlineSnapshot(`""`);
     });
@@ -78,15 +78,15 @@ describe("FontWatcher", function () {
 
         it("encloses the fonts by double quotes and sets them as the system font", async () => {
             await setSystemFont("Fira Sans Thin, Commodore 64");
-            expect(getFontFamily()).toMatchInlineSnapshot(`""Fira Sans Thin","Commodore 64", Twemoji"`);
+            expect(getFontFamily()).toMatchInlineSnapshot(`""Fira Sans Thin","Commodore 64""`);
         });
         it("does not add double quotes if already present and sets the font as the system font", async () => {
             await setSystemFont(`"Commodore 64"`);
-            expect(getFontFamily()).toMatchInlineSnapshot(`""Commodore 64", Twemoji"`);
+            expect(getFontFamily()).toMatchInlineSnapshot(`""Commodore 64""`);
         });
         it("trims whitespace, encloses the fonts by double quotes, and sets them as the system font", async () => {
             await setSystemFont(`  Fira Code  ,  "Commodore 64" `);
-            expect(getFontFamily()).toMatchInlineSnapshot(`""Fira Code","Commodore 64", Twemoji"`);
+            expect(getFontFamily()).toMatchInlineSnapshot(`""Fira Code","Commodore 64""`);
         });
     });
 
@@ -101,12 +101,12 @@ describe("FontWatcher", function () {
             fontWatcher.stop();
         });
 
-        it("by default adds Twemoji font", async () => {
-            expect(getEmojiFontFamily()).toMatchInlineSnapshot(`"Twemoji"`);
-        });
-        it("does not add Twemoji font when disabled", async () => {
-            await setUseBundledEmojiFont(false);
+        it("by default leaves emoji to the platform", async () => {
             expect(getEmojiFontFamily()).toMatchInlineSnapshot(`""`);
+        });
+        it("adds the Twemoji font when enabled", async () => {
+            await setUseBundledEmojiFont(true);
+            expect(getEmojiFontFamily()).toMatchInlineSnapshot(`"Twemoji"`);
         });
         it("works in conjunction with useSystemFont", async () => {
             await setSystemFont(`"Commodore 64"`);

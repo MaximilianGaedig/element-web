@@ -1022,9 +1022,14 @@ export const SETTINGS: Settings = {
         default: true,
         displayName: _td("settings|appearance|match_system_theme"),
     },
+    /*
+     * Off by default: the platform's own emoji are what every other app on the device shows, and the
+     * bundled font is half a megabyte fetched and rasterised the first time a message carries an emoji.
+     * Switching it on restores Twemoji for people who want the same emoji everywhere.
+     */
     "useBundledEmojiFont": {
         supportedLevels: LEVELS_DEVICE_ONLY_SETTINGS,
-        default: true,
+        default: false,
         displayName: _td("settings|appearance|bundled_emoji_font"),
         controller: new SystemFontController(),
     },
