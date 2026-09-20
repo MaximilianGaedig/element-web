@@ -178,31 +178,15 @@ html[data-tg-screen="mobile"] {
 }
 
 html[data-tg-screen="mobile"] {
-    .mx_Dialog_wrapper:not(.mx_Dialog_lightbox, .mx_Dialog_staticWrapper) {
+    .mx_Dialog_wrapper:not(.mx_Dialog_lightbox, .mx_Dialog_spinner) {
         align-items: flex-end;
 
         .mx_Dialog_border {
             width: 100%;
             max-width: 100%;
             max-height: calc(100dvh - var(--tg-safe-top, 0px) - 1.5rem);
-            border-radius: 1.25rem 1.25rem 0 0;
             overflow: hidden;
             animation: mx_TgDrawer_in 0.28s cubic-bezier(0.2, 0.8, 0.2, 1) both;
-
-            /* The grabber. */
-            &::before {
-                content: "";
-                position: absolute;
-                z-index: 2;
-                top: 0.375rem;
-                left: 50%;
-                width: 2.25rem;
-                height: 0.25rem;
-                border-radius: 0.125rem;
-                background: var(--cpd-color-border-interactive-secondary);
-                transform: translateX(-50%);
-                pointer-events: none;
-            }
         }
 
         .mx_Dialog {

@@ -85,6 +85,29 @@ html[data-tg-screen="mobile"] {
         background: rgb(0 0 0 / 38%);
     }
 
+    /* A drawer, like the user menu's: one plain surface with a 28px top edge. Element's glass frame
+       (a tinted 12px border with an outline) is for floating desktop dialogs and looks wrong on a sheet. */
+    .mx_Dialog_wrapper:not(.mx_Dialog_lightbox, .mx_Dialog_spinner) {
+        .mx_Dialog_border {
+            padding: 0 !important;
+            background: none !important;
+            outline: none !important;
+            border: none !important;
+            box-shadow: none !important;
+            border-radius: 1.75rem 1.75rem 0 0 !important;
+        }
+
+        .mx_Dialog {
+            background-color: var(--cpd-color-bg-canvas-default);
+            border-radius: 1.75rem 1.75rem 0 0;
+        }
+
+        /* No grabber: Element's own drawers don't draw one either. */
+        .mx_Dialog_border::before {
+            display: none !important;
+        }
+    }
+
     /* Footer buttons: stacked, full width, primary first. */
     .mx_Dialog_buttons,
     .mx_Dialog_buttons_row {
@@ -154,9 +177,9 @@ html[data-tg-screen="mobile"] {
 }
 
 /*
- * Settings on a handheld, as Telegram iOS's Settings: a full-height sheet whose first screen is your
- * profile and a grouped list of sections (a coloured rounded-square icon, the name, a chevron), and whose
- * second screen is the chosen section under a "‹ Settings" bar. The desktop layout is untouched.
+ * Settings on a handheld: a full-height drawer whose first screen is your profile and the list of sections
+ * (Element's own menu look: plain rows, secondary-colour icons, hairlines), and whose second screen is the
+ * chosen section under a bar with a back arrow. The desktop layout is untouched.
  */
 .mx_SettingsNavBar,
 .mx_SettingsNavProfile {
@@ -166,7 +189,7 @@ html[data-tg-screen="mobile"] {
 html[data-tg-screen="mobile"] {
     .mx_UserSettingsDialog {
         height: calc(100dvh - var(--tg-safe-top, 0px) - 1.5rem);
-        background: var(--cpd-color-bg-subtle-secondary);
+        background: var(--cpd-color-bg-canvas-default);
 
         /* The dialog's own header is replaced by the navigation bar. */
         .mx_Dialog_header,
@@ -185,45 +208,46 @@ html[data-tg-screen="mobile"] {
 
     .mx_SettingsNavBar {
         display: grid;
-        grid-template-columns: 1fr auto 1fr;
+        grid-template-columns: 3rem 1fr 3rem;
         align-items: center;
         flex: 0 0 auto;
-        min-height: 3.25rem;
-        padding: 0.75rem 0.5rem 0.25rem;
-        background: var(--cpd-color-bg-subtle-secondary);
+        min-height: 3.5rem;
+        padding: 0.5rem 0.5rem 0;
     }
 
     .mx_SettingsNavBar_title {
-        font: var(--cpd-font-body-lg-semibold);
         text-align: center;
+        font: var(--cpd-font-body-lg-semibold);
+        color: var(--cpd-color-text-primary);
     }
 
     .mx_SettingsNavBar_back,
     .mx_SettingsNavBar_done {
         all: unset;
-        display: inline-flex;
-        align-items: center;
-        min-height: 2.75rem;
-        padding: 0 0.5rem;
-        color: var(--tg-primary-color);
-        font-size: 1.0625rem;
+        display: grid;
+        place-items: center;
+        width: 2.75rem;
+        height: 2.75rem;
+        border-radius: 50%;
+        color: var(--cpd-color-icon-primary);
         cursor: pointer;
+
+        svg {
+            width: 1.5rem;
+            height: 1.5rem;
+        }
+
+        &:hover {
+            background: var(--cpd-color-bg-action-tertiary-hovered);
+        }
 
         &:focus-visible {
             outline: 2px solid var(--cpd-color-border-focused);
-            border-radius: 0.5rem;
         }
     }
 
     .mx_SettingsNavBar_done {
         justify-self: end;
-        font-weight: 600;
-    }
-
-    .mx_SettingsNavBar_chevron {
-        margin-inline-end: 0.125rem;
-        font-size: 2rem;
-        line-height: 1;
     }
 
     .mx_SettingsNavProfile {
@@ -231,7 +255,7 @@ html[data-tg-screen="mobile"] {
         flex-direction: column;
         align-items: center;
         gap: 0.25rem;
-        padding: 0.75rem 1rem 1.25rem;
+        padding: 0.5rem 1rem 1rem;
     }
 
     .mx_SettingsNavProfile_name {
@@ -244,28 +268,12 @@ html[data-tg-screen="mobile"] {
         color: var(--cpd-color-text-secondary);
     }
 
-    /* The responsive strip hides the words on narrow screens; the list here has room and needs them. */
-    .mx_UserSettingsDialog .mx_TabbedView_tabsOnLeft.mx_TabbedView_responsive {
-        .mx_TabbedView_tabLabel_text {
-            display: inline;
-        }
-
-        .mx_TabbedView_tabPanel {
-            margin-left: 0;
-        }
-
-        .mx_TabbedView_tabLabel {
-            justify-content: flex-start;
-            padding-inline: 1rem 2.25rem;
-        }
-    }
-
     /* One screen at a time. */
-    .mx_SettingsDialog_content[data-page="list"] .mx_TabbedView_tabPanel {
+    .mx_UserSettingsDialog .mx_SettingsDialog_content[data-page="list"] .mx_TabbedView_tabPanel {
         display: none;
     }
 
-    .mx_SettingsDialog_content[data-page="page"] .mx_TabbedView_tabLabels {
+    .mx_UserSettingsDialog .mx_SettingsDialog_content[data-page="page"] .mx_TabbedView_tabsOnLeft .mx_TabbedView_tabLabels {
         display: none;
     }
 
@@ -276,17 +284,25 @@ html[data-tg-screen="mobile"] {
         padding: 0;
     }
 
-    /* The list: one inset card of rows. */
+    /* The responsive strip hides the words on narrow screens; the list here has room and needs them. */
+    .mx_UserSettingsDialog .mx_TabbedView_tabsOnLeft.mx_TabbedView_responsive {
+        .mx_TabbedView_tabLabel_text {
+            display: inline;
+        }
+
+        .mx_TabbedView_tabPanel {
+            margin-left: 0;
+        }
+    }
+
+    /* The list: plain rows like the user menu's. */
     .mx_UserSettingsDialog .mx_TabbedView_tabsOnLeft .mx_TabbedView_tabLabels {
         display: flex;
         flex-direction: column;
         gap: 0;
-        margin: 0 1rem 1.5rem;
-        padding: 0;
+        margin: 0;
+        padding: 0 0 1rem;
         width: auto;
-        overflow: hidden;
-        border-radius: 0.875rem;
-        background: var(--cpd-color-bg-canvas-default);
         list-style: none;
     }
 
@@ -294,78 +310,41 @@ html[data-tg-screen="mobile"] {
         position: relative;
         display: flex;
         align-items: center;
-        gap: 0.875rem;
+        justify-content: flex-start;
+        gap: 1rem;
         min-height: 3.25rem;
-        padding: 0.5rem 2.25rem 0.5rem 1rem;
+        padding: 0.5rem 2.5rem 0.5rem 1.25rem;
         border-radius: 0;
-        font-size: 1.0625rem;
+        font: var(--cpd-font-body-lg-regular);
+        color: var(--cpd-color-text-primary);
         white-space: normal;
 
-        /* The chevron. */
+        > svg {
+            flex: 0 0 auto;
+            width: 1.5rem;
+            height: 1.5rem;
+            color: var(--cpd-color-icon-secondary);
+            fill: currentcolor;
+        }
+
         &::after {
             content: "›";
             position: absolute;
-            inset-inline-end: 1rem;
+            inset-inline-end: 1.25rem;
             color: var(--cpd-color-icon-secondary);
             font-size: 1.5rem;
         }
 
-        /* A hairline between rows, starting after the icon. */
         & + .mx_TabbedView_tabLabel::before {
             content: "";
             position: absolute;
             top: 0;
-            inset-inline: 3.625rem 0;
+            inset-inline: 3.75rem 0;
             border-top: 1px solid var(--cpd-color-border-disabled);
-        }
-
-        /* The icon in a coloured rounded square, like Telegram's settings rows. */
-        > svg {
-            flex: 0 0 auto;
-            box-sizing: border-box;
-            width: 1.875rem;
-            height: 1.875rem;
-            padding: 0.3125rem;
-            border-radius: 0.4375rem;
-            color: #fff;
-            background: hsl(var(--tab-hue, 210) 70% 50%);
-            fill: currentcolor;
-        }
-
-        &:nth-child(8n + 1) {
-            --tab-hue: 211;
-        }
-
-        &:nth-child(8n + 2) {
-            --tab-hue: 28;
-        }
-
-        &:nth-child(8n + 3) {
-            --tab-hue: 135;
-        }
-
-        &:nth-child(8n + 4) {
-            --tab-hue: 278;
-        }
-
-        &:nth-child(8n + 5) {
-            --tab-hue: 4;
-        }
-
-        &:nth-child(8n + 6) {
-            --tab-hue: 190;
-        }
-
-        &:nth-child(8n + 7) {
-            --tab-hue: 48;
-        }
-
-        &:nth-child(8n + 8) {
-            --tab-hue: 330;
         }
     }
 
-    /* A section's page: the content in inset cards under the bar. */
+    /* A section's page. */
     .mx_SettingsDialog_content[data-page="page"] .mx_TabbedView_tabPanel {
         margin: 0;
         padding: 0 0 1rem;

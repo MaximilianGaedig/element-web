@@ -13,6 +13,8 @@ Please see LICENSE files in the repository root for full details.
 
 import React, { type JSX } from "react";
 import { type MatrixClient } from "matrix-js-sdk/src/matrix";
+import ChevronLeftIcon from "@vector-im/compound-design-tokens/assets/web/icons/chevron-left";
+import CloseIcon from "@vector-im/compound-design-tokens/assets/web/icons/close";
 
 import { _t } from "../../../languageHandler";
 import BaseAvatar from "../avatars/BaseAvatar";
@@ -32,23 +34,16 @@ export function SettingsNavBar({
     return (
         <div className="mx_SettingsNavBar" data-page={page}>
             {page === "page" ? (
-                <button type="button" className="mx_SettingsNavBar_back" onClick={onBack}>
-                    <span aria-hidden className="mx_SettingsNavBar_chevron">
-                        ‹
-                    </span>
-                    {_t("common|settings")}
+                <button type="button" className="mx_SettingsNavBar_back" onClick={onBack} aria-label={_t("action|back")}>
+                    <ChevronLeftIcon />
                 </button>
             ) : (
-                <span className="mx_SettingsNavBar_spacer" />
+                <span />
             )}
             <span className="mx_SettingsNavBar_title">{page === "page" ? title : _t("common|settings")}</span>
-            {page === "list" ? (
-                <button type="button" className="mx_SettingsNavBar_done" onClick={onClose}>
-                    {_t("action|done")}
-                </button>
-            ) : (
-                <span className="mx_SettingsNavBar_spacer" />
-            )}
+            <button type="button" className="mx_SettingsNavBar_done" onClick={onClose} aria-label={_t("action|close")}>
+                <CloseIcon />
+            </button>
         </div>
     );
 }

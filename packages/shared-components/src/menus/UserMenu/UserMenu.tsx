@@ -5,7 +5,7 @@
  * Please see LICENSE files in the repository root for full details.
  */
 
-import React, { type JSX } from "react";
+import React, { type ComponentType, type JSX, type SVGAttributes } from "react";
 import { Avatar, Button, Link, Menu, MenuItem, Separator, Text } from "@vector-im/compound-web";
 import {
     ChatProblemIcon,
@@ -62,6 +62,11 @@ export interface UserMenuViewSnapshot {
      */
     setStatusViewModel: SetStatusViewModel;
     /**
+     * The settings sections, listed in the menu itself (on a phone, where the menu is a drawer, it is the
+     * settings' front page). Empty or absent: the menu just has "Settings".
+     */
+    sections?: Array<{ id: string; label: string; Icon: ComponentType<SVGAttributes<SVGElement>> }>;
+    /**
      * A set of actions that the user can perform from the menu.
      */
     actions: Partial<{
@@ -109,6 +114,10 @@ export declare interface UserMenuViewActions {
      */
     openSettings: () => void;
     /**
+     * Called when the user picks one of the settings sections listed in the menu.
+     */
+    openSection?: (id: string) => void;
+    /**
      * Called when the user clicks the button to clear their status.
      */
     clearStatus: () => void;
@@ -134,6 +143,7 @@ export function UserMenuView({ vm, className }: UserMenuViewProps): JSX.Element 
         userStatus,
         setStatusViewModel,
         showUserStatus = true,
+        sections,
     } = useViewModel(vm);
     const { translate: _t } = useI18n();
     const trigger = (
@@ -236,6 +246,16 @@ export function UserMenuView({ vm, className }: UserMenuViewProps): JSX.Element 
                         />
                     )}
                 </section>
+                {!!sections?.length && (
+                    <>
+                        <Separator />
+                        <section className={styles.actions}>
+                            {sections.map(({ id, label, Icon }) => (
+                                <MenuItem key={id} Icon={Icon} label={label} onSelect={() => vm.openSection?.(id)} />
+                            ))}
+                        </section>
+                    </>
+                )}
             </Menu>
             {expanded && (
                 <Text type="heading" size="sm" as="span" weight="semibold" className={styles.displayName}>

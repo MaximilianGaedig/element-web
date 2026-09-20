@@ -22,6 +22,36 @@ import type { MatrixClient } from "matrix-js-sdk/src/matrix";
 import { clearAllUserStatus } from "../../utils/userStatus";
 import { type SetStatusViewModel, UserMenuSetStatusViewModel } from "../status/SetStatusViewModel";
 import SettingsStore from "../../settings/SettingsStore";
+import { _t } from "../../languageHandler";
+import {
+    ChartIcon,
+    DevicesIcon,
+    HelpIcon,
+    HistoryIcon,
+    KeyIcon,
+    LinkIcon,
+    LockIcon,
+    NotificationsIcon,
+    PreferencesIcon,
+    UserProfileIcon,
+    VisibilityOnIcon,
+} from "@vector-im/compound-design-tokens/assets/web/icons";
+import type React from "react";
+
+/** The settings sections the menu lists on a handheld, in Element's usual order. */
+const SECTIONS: Array<{ id: UserTab; label: Parameters<typeof _t>[0]; Icon: React.ComponentType<React.SVGAttributes<SVGElement>> }> = [
+    { id: UserTab.Account, label: "settings|account|title", Icon: UserProfileIcon },
+    { id: UserTab.SessionManager, label: "settings|sessions|title", Icon: DevicesIcon },
+    { id: UserTab.Appearance, label: "common|appearance", Icon: VisibilityOnIcon },
+    { id: UserTab.Notifications, label: "notifications|enable_prompt_toast_title", Icon: NotificationsIcon },
+    { id: UserTab.Preferences, label: "common|preferences", Icon: PreferencesIcon },
+    { id: UserTab.Security, label: "room_settings|security|title", Icon: LockIcon },
+    { id: UserTab.Encryption, label: "settings|encryption|title", Icon: KeyIcon },
+    { id: UserTab.Bridges, label: "tg_layout|bridges_tab", Icon: LinkIcon },
+    { id: UserTab.Import, label: "tg_layout|import_tab", Icon: HistoryIcon },
+    { id: UserTab.Storage, label: "settings|storage|title", Icon: ChartIcon },
+    { id: UserTab.Help, label: "setting|help_about|title", Icon: HelpIcon },
+];
 
 // Matches maximum size of an avatar in the UserMenu
 const AVATAR_PX = 88;
@@ -98,7 +128,24 @@ export class UserMenuViewModel
     };
 
     public readonly setOpen = (isOpen: boolean): void => {
-        this.snapshot.merge({ open: isOpen });
+        // On a phone the menu is the settings' front page: list the sections (fresh, as the screen size may
+        // have changed since the menu was built).
+        this.snapshot.merge({ open: isOpen, ...(isOpen ? UserMenuViewModel.handheldParts(this.snapshot.current) : {}) });
+    };
+
+    /** Settings sections shown in the menu on a handheld, and the entries they replace. */
+    private static handheldParts(current: UserMenuSnapshot): Partial<UserMenuSnapshot> {
+        const handheld = document.documentElement.dataset.tgScreen === "mobile" && current.showAvatar;
+        if (!handheld) return { sections: undefined };
+        return {
+            sections: SECTIONS.map(({ id, label, Icon }) => ({ id, label: _t(label), Icon })),
+            actions: { ...current.actions, openSecurity: false, openSettings: false },
+        };
+    }
+
+    public readonly openSection = (id: string): void => {
+        this.setOpen(false);
+        this.dispatcher.dispatch({ action: Action.ViewUserSettings, initialTabId: id });
     };
 
     public readonly setExpanded = (expanded: boolean): void => {
