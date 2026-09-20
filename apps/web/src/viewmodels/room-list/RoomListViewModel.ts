@@ -226,6 +226,7 @@ export class RoomListViewModel
 
         this.roomsResult = roomsResult;
         this.sections = sections;
+        this.notifyingEntries = undefined;
 
         // Build initial roomsMap from roomsResult
         this.updateRoomsMap(roomsResult);
@@ -251,7 +252,7 @@ export class RoomListViewModel
         this.disposables.trackListener(
             RoomNotificationStateStore.instance,
             UPDATE_STATUS_INDICATOR,
-            this.updateUnreadActivityBelow,
+            this.onNotificationStateChanged,
         );
 
         // Subscribe to active room changes to update selected room
@@ -447,6 +448,9 @@ export class RoomListViewModel
      * appears as soon as an unread room scrolls just out of view rather than only once
      * it leaves the overscan buffer.
      */
+    /** Cached {@link computeNotifyingEntries}; cleared when the list or notifications change. */
+    private notifyingEntries?: Array<{ room: Room; index: number }>;
+
     public updateVisibleFold = (visibleEndIndex: number): void => {
         if (this.foldIndex === visibleEndIndex) return;
         this.foldIndex = visibleEndIndex;
@@ -475,18 +479,32 @@ export class RoomListViewModel
     private firstUnreadRoomBelowFold(): { room: Room; index: number } | undefined {
         if (this.foldIndex < 0) return undefined;
 
-        // Only surface rooms showing a notification badge (a count/symbol — the green or red
-        // decoration), not rooms with just the unread-activity dot.
+        // Scrolling reports a new fold for every item that passes, so this must not walk the
+        // rooms each time: the notifying ones are collected once and reused until the list or a
+        // notification changes.
+        this.notifyingEntries ??= this.computeNotifyingEntries();
+        return this.notifyingEntries.find(({ index }) => index > this.foldIndex);
+    }
+
+    /**
+     * Every entry showing a notification badge (a count/symbol — the green or red decoration,
+     * not just the unread-activity dot), in the index space the virtualized list renders.
+     */
+    private computeNotifyingEntries(): Array<{ room: Room; index: number }> {
         const hasNotification = (room: Room): boolean =>
             RoomNotificationStateStore.instance.getRoomState(room).hasUnreadCount;
 
+        const entries: Array<{ room: Room; index: number }> = [];
         if (this.snapshot.current.isFlatList) {
             // Flat list: virtualized indices map 1:1 to rooms.
-            const rooms = this.sections.flatMap((section) => section.rooms);
-            for (let i = this.foldIndex + 1; i < rooms.length; i++) {
-                if (hasNotification(rooms[i])) return { room: rooms[i], index: i };
+            let index = -1;
+            for (const section of this.sections) {
+                for (const room of section.rooms) {
+                    index++;
+                    if (hasNotification(room)) entries.push({ room, index });
+                }
             }
-            return undefined;
+            return entries;
         }
 
         // Full (pre-collapse) rooms per section tag, so we can detect unreads hidden inside
@@ -494,34 +512,39 @@ export class RoomListViewModel
         const fullRoomsByTag = new Map(this.roomsResult.sections.map((section) => [section.tag, section.rooms]));
 
         // Grouped list: each section contributes a header entry followed by its rooms, so the
-        // index we return is in the virtualized list's entry space (matching scrollIntoView).
+        // index recorded is in the virtualized list's entry space (matching scrollIntoView).
         let entryIndex = -1;
         for (const section of this.sections) {
             entryIndex++; // section header entry
 
             const isExpanded = this.roomSectionHeaderViewModels.get(section.tag)?.isExpanded ?? true;
             if (!isExpanded) {
-                // Collapsed: rooms aren't rendered, so the header is the only entry. If it is
-                // below the fold and hides an unread room, target the header itself.
-                if (entryIndex > this.foldIndex) {
-                    const notifyingRoom = (fullRoomsByTag.get(section.tag) ?? []).find(hasNotification);
-                    if (notifyingRoom) return { room: notifyingRoom, index: entryIndex };
-                }
+                // Collapsed: rooms aren't rendered, so the header is the only entry. If it hides
+                // an unread room, the header itself is the target (clicking the toast scrolls to
+                // it, revealing the aggregated badge).
+                const notifyingRoom = (fullRoomsByTag.get(section.tag) ?? []).find(hasNotification);
+                if (notifyingRoom) entries.push({ room: notifyingRoom, index: entryIndex });
                 continue;
             }
 
             for (const room of section.rooms) {
                 entryIndex++; // this room's entry
-                if (entryIndex > this.foldIndex && hasNotification(room)) return { room, index: entryIndex };
+                if (hasNotification(room)) entries.push({ room, index: entryIndex });
             }
         }
-        return undefined;
+        return entries;
     }
 
     /**
      * Recompute whether there is unread activity below the visible area, reconciling the
      * displayed toast if it changed.
      */
+    /** A badge appeared or cleared somewhere: the collected entries no longer hold. */
+    private onNotificationStateChanged = (): void => {
+        this.notifyingEntries = undefined;
+        this.updateUnreadActivityBelow();
+    };
+
     private updateUnreadActivityBelow = (): void => {
         const hasUnreadActivityBelow = this.firstUnreadRoomBelowFold() !== undefined;
         if (this.hasUnreadActivityBelow === hasUnreadActivityBelow) return;
@@ -882,6 +905,7 @@ export class RoomListViewModel
             (tag) => this.roomSectionHeaderViewModels.get(tag)?.isExpanded ?? true,
         );
         this.sections = sections;
+        this.notifyingEntries = undefined;
 
         // Calculate the active room index from the computed sections (which exclude collapsed sections' rooms)
         const activeRoomIndex = this.getActiveRoomIndex(roomId);
