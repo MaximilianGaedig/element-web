@@ -29,6 +29,7 @@ import {
     LinkIcon,
     PinIcon,
     QuoteIcon,
+    ReactionAddIcon,
     ReplyIcon,
     RestartIcon,
     ThreadsIcon,
@@ -78,7 +79,7 @@ import { CardContext } from "../right_panel/context";
 import PinningUtils from "../../../utils/PinningUtils";
 import PosthogTrackers from "../../../PosthogTrackers.ts";
 import { MessageSelectionStore } from "../../../stores/MessageSelectionStore";
-import { MessageMenuReactions } from "./MessageMenuReactions";
+import TelegramMessageContextMenu from "../telegram/TelegramMessageContextMenu";
 
 interface IReplyInThreadButton {
     mxEvent: MatrixEvent;
@@ -136,6 +137,12 @@ interface IProps extends MenuProps {
     link?: string;
 
     getRelationsForEvent?: GetRelationsForEvent;
+
+    /**
+     * Telegram-style layout: render Telegram Web K's menu instead, opened at this point (the pointer
+     * or the long-press point, in client coordinates).
+     */
+    telegramPoint?: { x: number; y: number };
 }
 
 interface IState {
@@ -301,6 +308,8 @@ export default class MessageContextMenu extends React.Component<IProps, IState> 
     };
 
     private closeMenu = (): void => {
+        // Telegram Web's menu closes itself after an item, with its transition.
+        if (this.props.telegramPoint) return;
         this.props.onFinished();
     };
 
@@ -428,6 +437,45 @@ export default class MessageContextMenu extends React.Component<IProps, IState> 
     };
 
     public render(): React.ReactNode {
+        if (this.props.telegramPoint) {
+            return (
+                <TelegramMessageContextMenu
+                    point={this.props.telegramPoint}
+                    mxEvent={this.props.mxEvent}
+                    link={this.props.link}
+                    permalinkCreator={this.props.permalinkCreator}
+                    reactions={this.props.reactions}
+                    eventTileOps={this.props.eventTileOps}
+                    collapseReplyChain={this.props.collapseReplyChain}
+                    canRedact={this.state.canRedact}
+                    canPin={this.state.canPin}
+                    canEndPoll={this.canEndPoll(this.props.mxEvent)}
+                    unsentReactions={this.getUnsentReactions()}
+                    quotable={this.isSelectionWithinSingleTextBody()}
+                    onFinished={this.props.onFinished}
+                    handlers={{
+                        reply: this.onReplyClick,
+                        edit: this.onEditClick,
+                        quote: this.onQuoteClick,
+                        pin: this.onPinClick,
+                        forward: this.onForwardClick,
+                        report: this.onReportEventClick,
+                        select: this.onSelectMessagesClick,
+                        viewSource: this.onViewSourceClick,
+                        redact: this.onRedactClick,
+                        endPoll: this.onEndPollClick,
+                        resendReactions: this.onResendReactionsClick,
+                        resend: this.onResendClick,
+                        cancelSend: this.onCancelSendClick,
+                        unhidePreview: this.onUnhidePreviewClick,
+                        collapseReplyChain: this.onCollapseReplyChainClick,
+                        viewInRoom: this.viewInRoom,
+                        jumpToRelated: this.onJumpToRelatedEventClick,
+                    }}
+                />
+            );
+        }
+
         const cli = MatrixClientPeg.safeGet();
         const me = cli.getUserId();
         const { mxEvent, rightClick, link, eventTileOps, reactions, collapseReplyChain, ...other } = this.props;
@@ -691,16 +739,14 @@ export default class MessageContextMenu extends React.Component<IProps, IState> 
             replyInThreadButton = <ReplyInThreadButton mxEvent={mxEvent} closeMenu={this.closeMenu} />;
         }
 
-        // One click to react, at the top of the menu; its last button opens the full picker.
-        let reactionRow: JSX.Element | undefined;
+        let reactButton: JSX.Element | undefined;
         if (rightClick && contentActionable && canReact) {
-            reactionRow = (
-                <MessageMenuReactions
-                    mxEvent={mxEvent}
-                    reactions={reactions}
-                    onFinished={this.closeMenu}
-                    onMore={this.onReactClick}
-                    moreRef={this.reactButtonRef}
+            reactButton = (
+                <IconizedContextMenuOption
+                    icon={<ReactionAddIcon />}
+                    label={_t("action|react")}
+                    onClick={this.onReactClick}
+                    inputRef={this.reactButtonRef}
                 />
             );
         }
@@ -740,9 +786,10 @@ export default class MessageContextMenu extends React.Component<IProps, IState> 
         }
 
         let quickItemsList: JSX.Element | undefined;
-        if (editButton || replyButton || pinButton) {
+        if (editButton || replyButton || reactButton || pinButton) {
             quickItemsList = (
                 <IconizedContextMenuOptionList>
+                    {reactButton}
                     {replyButton}
                     {replyInThreadButton}
                     {editButton}
@@ -752,30 +799,8 @@ export default class MessageContextMenu extends React.Component<IProps, IState> 
             );
         }
 
-        // A message that failed to send can be sent again or dropped.
-        let resendButton: JSX.Element | undefined;
-        let cancelSendButton: JSX.Element | undefined;
-        if (mxEvent.status === EventStatus.NOT_SENT) {
-            resendButton = (
-                <IconizedContextMenuOption
-                    icon={<RestartIcon />}
-                    label={_t("action|resend")}
-                    onClick={this.onResendClick}
-                />
-            );
-            cancelSendButton = (
-                <IconizedContextMenuOption
-                    icon={<DeleteIcon />}
-                    label={_t("action|delete")}
-                    onClick={this.onCancelSendClick}
-                />
-            );
-        }
-
         const commonItemsList = (
             <IconizedContextMenuOptionList>
-                {resendButton}
-                {cancelSendButton}
                 {viewInRoomButton}
                 {openInMapSiteButton}
                 {endPollButton}
@@ -815,7 +840,6 @@ export default class MessageContextMenu extends React.Component<IProps, IState> 
                     compact={true}
                     data-testid="mx_MessageContextMenu"
                 >
-                    {reactionRow}
                     {nativeItemsList}
                     {quickItemsList}
                     {commonItemsList}

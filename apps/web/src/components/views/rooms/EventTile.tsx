@@ -1119,6 +1119,14 @@ export class UnwrappedEventTile extends React.Component<EventTileProps, IState> 
         return (
             <MessageContextMenu
                 {...aboveRightOf(this.state.interaction.contextMenu.position)}
+                telegramPoint={
+                    this.props.telegramBubbles
+                        ? {
+                              x: this.state.interaction.contextMenu.position.left,
+                              y: this.state.interaction.contextMenu.position.top,
+                          }
+                        : undefined
+                }
                 mxEvent={this.props.mxEvent}
                 permalinkCreator={this.props.permalinkCreator}
                 eventTileOps={eventTileOps}

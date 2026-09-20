@@ -215,6 +215,247 @@ Please see LICENSE files in the repository root for full details.
 }
 
 /*
+ * Message context menu, from tweb src/scss/partials/_button.scss (.btn-menu, .btn-menu-item,
+ * .btn-menu-reactions*) and src/scss/base.scss (--btn-menu-transition .2s cubic-bezier(.4, 0, .2, 1),
+ * --menu-box-shadow 0 0 10px rgba(0, 0, 0, .15), menu background at .85 opacity with a 50px blur).
+ */
+.mx_TgMenu_wrapper {
+    position: fixed;
+    inset: 0;
+    z-index: 5000;
+}
+
+.mx_TgMenu_background {
+    position: absolute;
+    inset: 0;
+}
+
+.mx_TgMenu {
+    --TgMenu-transform-origin-x: center;
+    --TgMenu-transform-origin-y: center;
+    --TgMenu-background: color-mix(in srgb, var(--cpd-color-bg-canvas-default) 85%, transparent);
+    --TgMenu-padding: 0.25rem;
+
+    position: fixed;
+    min-width: 11.25rem;
+    width: max-content;
+    padding: var(--TgMenu-padding) 0;
+    border-radius: 16px;
+    background-color: var(--TgMenu-background);
+    backdrop-filter: blur(50px);
+    box-shadow: 0 0 10px rgb(0 0 0 / 15%);
+    font: var(--cpd-font-body-md-regular);
+    color: var(--cpd-color-text-primary);
+    -webkit-touch-callout: none;
+    visibility: hidden;
+    opacity: 0;
+    transform: scale(0.8);
+    transform-origin: var(--TgMenu-transform-origin-x) var(--TgMenu-transform-origin-y);
+    transition:
+        opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+        transform 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+        visibility 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+
+    &.mx_TgMenu_active {
+        visibility: visible;
+        opacity: 1;
+        transform: scale3d(1, 1, 1);
+    }
+
+    /* positionMenu's classes: the corner at the pointer is the transform origin. */
+    &.bottom-right {
+        --TgMenu-transform-origin-x: left;
+        --TgMenu-transform-origin-y: top;
+    }
+
+    &.bottom-left {
+        --TgMenu-transform-origin-x: right;
+        --TgMenu-transform-origin-y: top;
+    }
+
+    &.bottom-center {
+        --TgMenu-transform-origin-y: top;
+    }
+
+    &.center-right {
+        --TgMenu-transform-origin-x: left;
+    }
+
+    &.center-left {
+        --TgMenu-transform-origin-x: right;
+    }
+
+    /* .has-items-wrapper: with the reactions bar the items carry the menu surface themselves. */
+    &.mx_TgMenu_hasReactions {
+        padding: 0;
+        background: none;
+        backdrop-filter: none;
+        box-shadow: none;
+
+        .mx_TgMenu_items {
+            padding: var(--TgMenu-padding) 0;
+            border-radius: 16px;
+            background-color: var(--TgMenu-background);
+            backdrop-filter: blur(50px);
+            box-shadow: 0 0 10px rgb(0 0 0 / 15%);
+        }
+    }
+
+    &.mx_TgMenu_expanded {
+        padding: 0;
+        overflow: hidden;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        transition: none;
+    }
+}
+
+.mx_TgMenu_item {
+    display: flex;
+    align-items: center;
+    position: relative;
+    height: 2rem;
+    padding: 0.25rem 0.75rem;
+    margin-inline: var(--TgMenu-padding);
+    border-radius: 12px;
+    font-size: 14px;
+    line-height: 18px;
+    font-weight: 500;
+    text-align: start;
+    text-decoration: none;
+    color: var(--cpd-color-text-primary);
+    cursor: pointer;
+    transform: scale(1);
+    transition: transform 0.1s cubic-bezier(0.4, 0, 0.2, 1);
+
+    &:hover,
+    &:focus-visible {
+        background-color: rgb(112 117 121 / 8%);
+        outline: none;
+    }
+
+    &:active {
+        transform: scale(0.96);
+    }
+
+    &.mx_TgMenu_item_danger {
+        color: var(--cpd-color-text-critical-primary);
+
+        &:hover,
+        &:focus-visible {
+            background-color: rgb(223 63 64 / 8%);
+        }
+    }
+}
+
+.mx_TgMenu_itemIcon {
+    flex: 0 0 auto;
+    width: 1.25rem;
+    height: 1.25rem;
+    margin-inline-end: 1.25rem;
+}
+
+/* .btn-menu-reactions-container: 2.5rem high, above the items, sticking out 2.5rem at the end. */
+.mx_TgMenu_reactionsContainer {
+    --TgMenu-reactions-height: 2.5rem;
+
+    position: absolute;
+    z-index: 4;
+    inset-inline-end: -2.5rem;
+    margin-top: calc((var(--TgMenu-reactions-height) + 0.5rem) * -1);
+    display: flex;
+    justify-content: center;
+    min-width: 3.5rem;
+    height: var(--TgMenu-reactions-height);
+    border-radius: var(--TgMenu-reactions-height);
+    background-color: var(--TgMenu-background);
+    backdrop-filter: blur(50px);
+    filter: drop-shadow(0 0.125rem 0.5rem rgb(0 0 0 / 24%));
+}
+
+.mx_TgMenu_reactions {
+    display: flex;
+    align-items: center;
+    padding: 0 0.0625rem;
+    border-radius: inherit;
+}
+
+.mx_TgMenu_reaction {
+    width: calc(1.75rem + 0.25rem * 2);
+    height: 1.75rem;
+    flex: 0 0 auto;
+    padding: 0 0.25rem;
+    border: 0;
+    background: none;
+    cursor: pointer;
+    font-size: 1.5rem;
+    line-height: 1.75rem;
+    transform: scale(1);
+    transition: transform 0.1s linear;
+
+    &:hover {
+        transform: scale(1.25);
+    }
+
+    &.mx_TgMenu_reaction_chosen .mx_TgMenu_reactionEmoji {
+        border-radius: 50%;
+        background-color: color-mix(in srgb, var(--cpd-color-bg-accent-rest) 20%, transparent);
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        transition: none;
+    }
+}
+
+.mx_TgMenu_reactionEmoji {
+    display: inline-block;
+    width: 100%;
+    height: 100%;
+    text-align: center;
+}
+
+.mx_TgMenu_reactionsMore {
+    flex: 0 0 auto;
+    width: 2rem;
+    height: 2rem;
+    padding: 0 0.125rem;
+    margin-inline-end: 0.25rem;
+    border: 0;
+    border-radius: 50%;
+    background: transparent;
+    color: var(--cpd-color-icon-secondary);
+    cursor: pointer;
+
+    svg {
+        width: 1.5rem;
+        height: 1.5rem;
+    }
+
+    &:hover {
+        background-color: rgb(112 117 121 / 8%);
+    }
+}
+
+/* .btn-menu-reactions-bubble-big: the little tail under the bar's end. */
+.mx_TgMenu_reactionsBubble {
+    position: absolute;
+    z-index: -1;
+    inset-inline-end: calc(var(--TgMenu-reactions-height) / 2);
+    bottom: -0.5rem;
+    width: 1rem;
+    height: 0.5rem;
+    border-radius: 0 0 1rem 1rem;
+    background-color: inherit;
+}
+
+.mx_TgMenu_picker {
+    border-radius: 16px;
+    background-color: var(--cpd-color-bg-canvas-default);
+    box-shadow: 0 0 10px rgb(0 0 0 / 15%);
+}
+
+/*
  * tweb bubble groups (src/scss/partials/_chatBubble.scss .bubbles-group, _chat.scss .is-chat): a
  * sender's run of incoming messages with a 40px avatar in a column spanning the group. The avatar is
  * sticky at the bottom, so it rides along while the group scrolls and rests next to the last bubble;

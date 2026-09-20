@@ -652,11 +652,8 @@ describe("MessageContextMenu", () => {
             };
 
             createRightClickMenuWithContent(eventContent, context);
-            // A row of emoji at the top of the menu (one click to react), ending in the full picker.
-            const row = document.querySelector('[role="group"][aria-label="React"]');
-            expect(row).toBeTruthy();
-            expect(row!.querySelectorAll("button").length).toBeGreaterThan(1);
-            expect(row!.querySelector('button[title="React"]')).toBeTruthy();
+            const reactButton = document.querySelector('li[aria-label="React"]');
+            expect(reactButton).toBeTruthy();
         });
 
         it("does not show react button when we cannot react", () => {
@@ -666,7 +663,8 @@ describe("MessageContextMenu", () => {
             };
 
             createRightClickMenuWithContent(eventContent, context);
-            expect(document.querySelector('[role="group"][aria-label="React"]')).toBeFalsy();
+            const reactButton = document.querySelector('li[aria-label="React"]');
+            expect(reactButton).toBeFalsy();
         });
 
         it("shows view in room button when the event is a thread root", () => {
