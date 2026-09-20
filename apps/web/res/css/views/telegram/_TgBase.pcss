@@ -40,10 +40,13 @@ Please see LICENSE files in the repository root for full details.
     /* src/index.ts setVH: 1% of the visual viewport height, written by JS (viewportHeight.ts). */
     --tg-vh: 1vh;
     /*
-     * The app's height: the visual viewport's (so the keyboard is excluded), but never more than the dynamic
-     * viewport, so a height read too early or too large can't push the composer under the screen's edge.
+     * The app's height. The dynamic viewport is the screen the app actually has, and already accounts for
+     * a browser's own toolbars coming and going. The visual viewport is not the same thing: drawing under
+     * the system bars makes iOS report it as the *safe* area, short by the status bar and the home
+     * indicator, which left that much of the screen unused at the bottom of every screen. Only the
+     * keyboard makes the two differ in a way we must follow, and the rule that does so is below.
      */
-    --tg-app-height: min(calc(var(--tg-vh) * 100), 100dvh);
+    --tg-app-height: 100dvh;
     /* Floating bars are translucent glass (see below; low power mode makes them solid). */
     --tg-glass-background: color-mix(in srgb, var(--tg-surface-color) 50%, transparent);
     --tg-glass-backdrop: blur(24px) saturate(180%);
@@ -63,6 +66,8 @@ Please see LICENSE files in the repository root for full details.
 html[data-tg-keyboard],
 html[data-tg-keyboard] [class*="cpd-theme-"] {
     --tg-safe-bottom: 0px;
+    /* The keyboard is the one thing the dynamic viewport does not shrink for, so follow the visual one. */
+    --tg-app-height: min(calc(var(--tg-vh) * 100), 100dvh);
 }
 
 /* Nothing scrolls the page while the keyboard is up: the app is pinned to the visual viewport instead. */
