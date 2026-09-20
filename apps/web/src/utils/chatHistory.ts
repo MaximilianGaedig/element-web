@@ -58,13 +58,17 @@ const STATES: BackfillState[] = ["complete", "running", "manual", "unavailable",
  * from piling up in every client's copy of the room. Bridges without a double puppet cannot write our
  * account data, so a room state event is still read as a fallback.
  */
+function isBackfillState(value: unknown): value is BackfillState {
+    return typeof value === "string" && (STATES as readonly string[]).includes(value);
+}
+
 export function backfillStatusOf(room: Room): BackfillStatus | undefined {
     const content =
         room.getAccountData(BACKFILL_EVENT_TYPE)?.getContent<Partial<BackfillStatus>>() ??
         room.currentState.getStateEvents(BACKFILL_EVENT_TYPE, "")?.getContent<Partial<BackfillStatus>>();
-    if (!content || !STATES.includes(content.state as BackfillState)) return undefined;
+    if (!content || !isBackfillState(content.state)) return undefined;
     return {
-        state: content.state as BackfillState,
+        state: content.state,
         bridged_messages: Number(content.bridged_messages) || 0,
         oldest_ts: content.oldest_ts,
         newest_ts: content.newest_ts,
