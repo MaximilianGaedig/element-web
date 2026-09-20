@@ -3406,7 +3406,7 @@
         "activity_none": "No messages have been counted yet. Counting runs in the background and this fills in as it goes.",
         "activity_tab": "Activity",
         "bridge_state_unreported": "Status unknown",
-        "bridge_unreported_body": "%(network)s doesn't tell Element whether it is logged in. If its chats stop updating, open its chat and log in again.",
+        "bridge_unreported_body": "%(network)s doesn't say whether it is logged in. If its chats stop updating, open its chat and log in again.",
         "bridge_unreported_hint": "Doesn't report its status",
         "bridges_not_reporting": {
             "one": "%(count)s not reporting",

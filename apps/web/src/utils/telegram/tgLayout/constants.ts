@@ -31,8 +31,6 @@ export const SIDEBAR_COLLAPSED_WIDTH = 80;
 export const STORAGE_KEY_LEFT = "sidebar-left-width";
 /** tweb src/helpers/updateColumnWidths.ts persistLeftPreference throttle (ms). */
 export const PERSIST_THROTTLE_MS = 200;
-/** tweb src/helpers/updateColumnWidths.ts CHAT_WIDTH_MAX. */
-export const CHAT_WIDTH_MAX = 696;
 
 /** tweb src/helpers/dom/handleHorizontalSwipe.ts: vertical travel that cancels a not-yet-horizontal swipe. */
 export const SWIPE_VERTICAL_CANCEL = 20;

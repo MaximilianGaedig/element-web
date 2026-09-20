@@ -141,33 +141,6 @@ export async function mediaPage(
     }
 }
 
-/** The room's stored messages just before `ts`, oldest first: scrollback without the server. */
-export async function eventsBefore(roomId: string, ts: number, limit: number): Promise<StoredEvent[]> {
-    try {
-        const database = await open();
-        const index = database.transaction(EVENTS, "readonly").objectStore(EVENTS).index("room_ts");
-        const range = IDBKeyRange.bound([roomId, -Infinity], [roomId, ts], false, true);
-        const events = await collect(index.openCursor(range, "prev"), limit);
-        return events.reverse();
-    } catch (e) {
-        logger.warn("History: could not read stored messages", e);
-        return [];
-    }
-}
-
-/** The stored message closest to `ts` (jump to date), or undefined when that time isn't stored yet. */
-export async function eventAt(roomId: string, ts: number): Promise<StoredEvent | undefined> {
-    try {
-        const database = await open();
-        const index = database.transaction(EVENTS, "readonly").objectStore(EVENTS).index("room_ts");
-        const after = await collect(index.openCursor(IDBKeyRange.bound([roomId, ts], [roomId, Infinity]), "next"), 1);
-        return after[0];
-    } catch (e) {
-        logger.warn("History: could not look up a time", e);
-        return undefined;
-    }
-}
-
 async function collect(request: IDBRequest<IDBCursorWithValue | null>, limit: number): Promise<StoredEvent[]> {
     const out: StoredEvent[] = [];
     return new Promise((resolve, reject) => {

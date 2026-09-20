@@ -14,10 +14,6 @@ Please see LICENSE files in the repository root for full details.
 
 /** reactionsMenu.ts REACTIONS_MAX_LENGTH: reactions shown in the bar before the "more" button. */
 export const REACTIONS_MAX_LENGTH = 7;
-/** reactionsMenu.ts REACTION_SIZE and PADDING. */
-export const REACTION_SIZE = 28;
-export const REACTION_PADDING = 6;
-export const REACTION_CONTAINER_SIZE = REACTION_SIZE + REACTION_PADDING * 2;
 
 /**
  * Telegram's default reactions, in the order the server lists them (messages.getAvailableReactions),
@@ -129,16 +125,6 @@ export interface MenuPositionPadding {
     right?: number;
     bottom?: number;
     left?: number;
-}
-
-/**
- * Room around the menu for the horizontal reactions bar (ChatContextMenu.getReactionsMenuPadding):
- * the bar sits above the menu and sticks out at both ends.
- */
-export function getReactionsMenuPadding(isTouch: boolean): MenuPositionPadding {
-    const size = 36;
-    const margin = 8;
-    return { top: size + margin, right: 40, left: 56 + (isTouch ? 32 : 0) };
 }
 
 /** positionMenu.ts PADDING_TOP / PADDING_LEFT (and their bottom/right twins). */

@@ -62,8 +62,3 @@ export function presenceNow(): number {
 export function usePresenceNow(): number {
     return useSyncExternalStore(subscribe, presenceNow);
 }
-
-/** Whole minutes since `ts` (what both the tag and the "last seen" text show). */
-export function minutesSince(ts: number, at: number): number {
-    return Math.floor(Math.max(0, at - ts) / 60_000);
-}

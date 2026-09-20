@@ -11,9 +11,6 @@ Please see LICENSE files in the repository root for full details.
  */
 
 import React, { type JSX, type SVGProps } from "react";
-import classNames from "classnames";
-
-import { TG_ICON_PATHS, type TgIconName, type TgIconPath } from "./tgIconPaths";
 
 type IconProps = SVGProps<SVGSVGElement>;
 
@@ -63,22 +60,5 @@ export function TgSendingErrorIcon(props: IconProps): JSX.Element {
             {...props}
             d="M10,0.4 C13.6450793,0.4 16.6,3.35492065 16.6,7 C16.6,10.6450793 13.6450793,13.6 10,13.6 C6.35492065,13.6 3.4,10.6450793 3.4,7 C3.4,3.35492065 6.35492065,0.4 10,0.4 Z M10,9.25 C9.58578644,9.25 9.25,9.58578644 9.25,10 C9.25,10.4142136 9.58578644,10.75 10,10.75 C10.4142136,10.75 10.75,10.4142136 10.75,10 C10.75,9.58578644 10.4142136,9.25 10,9.25 Z M10,2.85 C9.64101491,2.85 9.35,3.14101491 9.35,3.5 L9.35,7.5 C9.35,7.85898509 9.64101491,8.15 10,8.15 C10.3589851,8.15 10.65,7.85898509 10.65,7.5 L10.65,3.5 C10.65,3.14101491 10.3589851,2.85 10,2.85 Z"
         />
-    );
-}
-
-/** A glyph of tweb's icon font by its tweb name (src/icons.ts), sized by the font size like tgico. */
-export function TgIcon({ name, className, ...props }: IconProps & { name: TgIconName }): JSX.Element {
-    const { viewBox, d, evenOdd } = TG_ICON_PATHS[name] as TgIconPath;
-    return (
-        <svg
-            viewBox={viewBox}
-            fill="currentColor"
-            aria-hidden="true"
-            focusable="false"
-            className={classNames("mx_TgIcon", className)}
-            {...props}
-        >
-            <path d={d} fillRule={evenOdd ? "evenodd" : undefined} clipRule={evenOdd ? "evenodd" : undefined} />
-        </svg>
     );
 }
