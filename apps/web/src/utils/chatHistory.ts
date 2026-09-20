@@ -91,6 +91,36 @@ export interface RoomStats {
     last_ts?: number;
     /** False until the server's counters have covered the whole history. */
     complete: boolean;
+    /** Messages per calendar month (`2024-03`), oldest first. */
+    by_month?: Array<{ month: string; count: number }>;
+    /** Messages per hour of the week in UTC, Monday 00:00 first (168 entries). */
+    by_hour_of_week?: number[];
+}
+
+/** The 168 hours of the week shifted from UTC to the reader's time zone (whole hours), Monday 00:00 first. */
+export function hourOfWeekLocal(utc: number[], offsetMinutes = -new Date().getTimezoneOffset()): number[] {
+    const shift = Math.round(offsetMinutes / 60);
+    const local = new Array<number>(168).fill(0);
+    for (let i = 0; i < 168; i++) local[(((i + shift) % 168) + 168) % 168] = utc[i] ?? 0;
+    return local;
+}
+
+/** Messages per weekday (Monday first) and per hour of the day, from the week's 168 hours. */
+export function weekdayAndHour(hours: number[]): { weekdays: number[]; hoursOfDay: number[] } {
+    const weekdays = new Array<number>(7).fill(0);
+    const hoursOfDay = new Array<number>(24).fill(0);
+    hours.forEach((count, i) => {
+        weekdays[Math.floor(i / 24)] += count;
+        hoursOfDay[i % 24] += count;
+    });
+    return { weekdays, hoursOfDay };
+}
+
+/** Months as calendar years: how many messages each year had. */
+export function perYear(months: Array<{ month: string; count: number }>): Array<{ year: string; count: number }> {
+    const years = new Map<string, number>();
+    for (const { month, count } of months) years.set(month.slice(0, 4), (years.get(month.slice(0, 4)) ?? 0) + count);
+    return [...years.entries()].map(([year, count]) => ({ year, count }));
 }
 
 const STATS_FEATURE = "im.mxg.room_stats";

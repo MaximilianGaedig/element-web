@@ -30,6 +30,9 @@ import {
     type BackfillStatus,
     backfillStatusOf,
     fetchRoomStats,
+    hourOfWeekLocal,
+    perYear,
+    weekdayAndHour,
     type HistoryPhase,
     historyPhase,
     type ImportProgress,
@@ -452,6 +455,112 @@ function Bar({ share }: { share: number }): JSX.Element {
     );
 }
 
+function BarChart({
+    values,
+    labels,
+    height = 56,
+    label,
+}: {
+    values: number[];
+    labels: string[];
+    height?: number;
+    label: string;
+}): JSX.Element {
+    const max = Math.max(1, ...values);
+    return (
+        <div className="mx_ActivityChart" role="img" aria-label={label} style={{ height }}>
+            {values.map((value, i) => (
+                <span
+                    key={i}
+                    className="mx_ActivityChart_bar"
+                    style={{ height: `${Math.max(value ? 3 : 0, (value / max) * 100)}%` }}
+                    title={`${labels[i]}: ${number(value)}`}
+                />
+            ))}
+        </div>
+    );
+}
+
+/** When the messages were sent: per year and month, per weekday, per hour of the day. */
+function ActivitySection({ stats }: { stats: RoomStats }): JSX.Element | null {
+    const months = stats.by_month ?? [];
+    const week = stats.by_hour_of_week;
+    if (!months.length && !week) return null;
+
+    const years = perYear(months);
+    const weekdayNames = Array.from({ length: 7 }, (_, i) =>
+        new Intl.DateTimeFormat(undefined, { weekday: "short" }).format(new Date(2024, 0, 1 + i)),
+    );
+    const { weekdays, hoursOfDay } = weekdayAndHour(week ? hourOfWeekLocal(week) : new Array(168).fill(0));
+    const busiestDay = weekdays.indexOf(Math.max(...weekdays));
+    const busiestHour = hoursOfDay.indexOf(Math.max(...hoursOfDay));
+    return (
+        <details className="mx_ActivitySection">
+            <summary>
+                <span className="mx_ActivitySection_title">{_t("tg_layout|activity_title")}</span>
+                {week && stats.total > 0 && (
+                    <span className="mx_ActivitySection_hint">
+                        {_t("tg_layout|activity_busiest", {
+                            day: weekdayNames[busiestDay],
+                            hour: `${String(busiestHour).padStart(2, "0")}:00`,
+                        })}
+                    </span>
+                )}
+            </summary>
+            {years.length > 1 && (
+                <div className="mx_ActivitySection_block">
+                    <div className="mx_ActivitySection_label">{_t("tg_layout|activity_years")}</div>
+                    <BarChart values={years.map((y) => y.count)} labels={years.map((y) => y.year)} label={_t("tg_layout|activity_years")} />
+                    <div className="mx_ActivityChart_axis">
+                        <span>{years[0].year}</span>
+                        <span>{years[years.length - 1].year}</span>
+                    </div>
+                </div>
+            )}
+            {months.length > 1 && (
+                <div className="mx_ActivitySection_block">
+                    <div className="mx_ActivitySection_label">{_t("tg_layout|activity_months")}</div>
+                    <BarChart
+                        values={months.slice(-60).map((m) => m.count)}
+                        labels={months.slice(-60).map((m) => m.month)}
+                        label={_t("tg_layout|activity_months")}
+                    />
+                    <div className="mx_ActivityChart_axis">
+                        <span>{months.slice(-60)[0].month}</span>
+                        <span>{months[months.length - 1].month}</span>
+                    </div>
+                </div>
+            )}
+            {week && (
+                <>
+                    <div className="mx_ActivitySection_block">
+                        <div className="mx_ActivitySection_label">{_t("tg_layout|activity_weekdays")}</div>
+                        <BarChart values={weekdays} labels={weekdayNames} label={_t("tg_layout|activity_weekdays")} />
+                        <div className="mx_ActivityChart_axis mx_ActivityChart_axis--spread">
+                            {weekdayNames.map((n) => (
+                                <span key={n}>{n.slice(0, 2)}</span>
+                            ))}
+                        </div>
+                    </div>
+                    <div className="mx_ActivitySection_block">
+                        <div className="mx_ActivitySection_label">{_t("tg_layout|activity_hours")}</div>
+                        <BarChart
+                            values={hoursOfDay}
+                            labels={hoursOfDay.map((_, h) => `${String(h).padStart(2, "0")}:00`)}
+                            label={_t("tg_layout|activity_hours")}
+                        />
+                        <div className="mx_ActivityChart_axis">
+                            <span>00</span>
+                            <span>12</span>
+                            <span>23</span>
+                        </div>
+                    </div>
+                </>
+            )}
+        </details>
+    );
+}
+
 /** The room's message counts: the total, its kinds, and who wrote how much. */
 export function TgStatsSection({ room }: { room: Room }): JSX.Element | null {
     const [stats, setStats] = useState<RoomStats | undefined>();
@@ -479,6 +588,7 @@ export function TgStatsSection({ room }: { room: Room }): JSX.Element | null {
                         : _t("tg_layout|stats_counting")
                 }
             />
+            <ActivitySection stats={stats} />
             {stats.storage && (
                 <TgRow
                     icon={<StorageIcon />}

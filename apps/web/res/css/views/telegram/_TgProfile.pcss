@@ -816,3 +816,63 @@ html[data-tg-screen] .mx_RoomView_body[data-telegram-layout="true"] > .mx_TgImpo
 [data-collapsed] .mx_TgHistoryChip_text {
     display: none;
 }
+
+/* Activity charts: when the messages were sent. */
+.mx_ActivitySection {
+    padding: 0.25rem 1rem 0.5rem 3.5rem;
+
+    > summary {
+        display: flex;
+        flex-direction: column;
+        min-height: 2.75rem;
+        justify-content: center;
+        cursor: pointer;
+        list-style: none;
+
+        &::-webkit-details-marker {
+            display: none;
+        }
+    }
+}
+
+.mx_ActivitySection_title {
+    font: var(--cpd-font-body-md-regular);
+}
+
+.mx_ActivitySection_hint,
+.mx_ActivitySection_label {
+    font: var(--cpd-font-body-sm-regular);
+    color: var(--cpd-color-text-secondary);
+}
+
+.mx_ActivitySection_block {
+    margin: 0.5rem 0 0.75rem;
+}
+
+.mx_ActivityChart {
+    display: flex;
+    align-items: flex-end;
+    gap: 2px;
+    margin-top: 0.25rem;
+}
+
+.mx_ActivityChart_bar {
+    flex: 1 1 0;
+    min-width: 2px;
+    border-radius: 2px 2px 0 0;
+    background: var(--tg-primary-color);
+    opacity: 0.85;
+
+    &:hover {
+        opacity: 1;
+    }
+}
+
+.mx_ActivityChart_axis {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 0.125rem;
+    font: var(--cpd-font-body-xs-regular);
+    color: var(--cpd-color-text-secondary);
+    font-variant-numeric: tabular-nums;
+}

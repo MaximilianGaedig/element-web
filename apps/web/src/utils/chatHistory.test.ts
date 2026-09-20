@@ -94,3 +94,25 @@ describe("trackImport", () => {
         expect(later.perMinute).toBeCloseTo(60);
     });
 });
+
+describe("activity helpers", () => {
+    it("shifts the week's hours into the reader's time zone", async () => {
+        const { hourOfWeekLocal } = await import("./chatHistory");
+        const utc = new Array<number>(168).fill(0);
+        utc[0] = 5; // Monday 00:00 UTC
+        expect(hourOfWeekLocal(utc, 120)[2]).toBe(5); // UTC+2: Monday 02:00 local
+        expect(hourOfWeekLocal(utc, -60)[167]).toBe(5); // UTC-1: Sunday 23:00 local
+    });
+
+    it("sums the week into weekdays and hours of the day, and months into years", async () => {
+        const { weekdayAndHour, perYear } = await import("./chatHistory");
+        const week = new Array<number>(168).fill(1);
+        const { weekdays, hoursOfDay } = weekdayAndHour(week);
+        expect(weekdays).toEqual(new Array(7).fill(24));
+        expect(hoursOfDay).toEqual(new Array(24).fill(7));
+        expect(perYear([{ month: "2023-11", count: 2 }, { month: "2023-12", count: 3 }, { month: "2024-01", count: 4 }])).toEqual([
+            { year: "2023", count: 5 },
+            { year: "2024", count: 4 },
+        ]);
+    });
+});
