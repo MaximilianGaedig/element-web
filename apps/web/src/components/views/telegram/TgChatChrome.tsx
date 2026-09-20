@@ -34,8 +34,12 @@ export function TgChatChrome({ body }: Props): JSX.Element {
             const headerBottom = header ? Math.max(0, header.bottom - b.top) : 0;
             // The pinned plate floats under the header; the top block (padding, blur) covers both.
             const pinnedBottom = pinned?.height ? Math.max(0, pinned.bottom - b.top) : 0;
+            // The import banner stacks under the pinned plate (or straight under the header).
+            const importPlate = el.querySelector(":scope > .mx_TgImport")?.getBoundingClientRect();
+            const importBottom = importPlate?.height ? Math.max(0, importPlate.bottom - b.top) : 0;
             el.style.setProperty("--tg-header-bottom", `${headerBottom}px`);
-            el.style.setProperty("--tg-header-block", `${Math.max(headerBottom, pinnedBottom)}px`);
+            el.style.setProperty("--tg-plates-bottom", `${Math.max(headerBottom, pinnedBottom)}px`);
+            el.style.setProperty("--tg-header-block", `${Math.max(headerBottom, pinnedBottom, importBottom)}px`);
             el.style.setProperty(
                 "--tg-composer-block",
                 `${composer ? Math.max(0, b.bottom - composer.top) + (status?.height ?? 0) : 0}px`,
@@ -46,7 +50,7 @@ export function TgChatChrome({ body }: Props): JSX.Element {
             observer.disconnect();
             observer.observe(el);
             for (const child of el.querySelectorAll(
-                ":scope > .mx_RoomHeader, :scope > .mx_TgPinned, :scope > .mx_MessageComposer, :scope > .mx_RoomView_statusArea",
+                ":scope > .mx_RoomHeader, :scope > .mx_TgPinned, :scope > .mx_TgImport, :scope > .mx_MessageComposer, :scope > .mx_RoomView_statusArea",
             )) {
                 observer.observe(child);
             }
@@ -60,6 +64,7 @@ export function TgChatChrome({ body }: Props): JSX.Element {
             observer.disconnect();
             mutations.disconnect();
             el.style.removeProperty("--tg-header-bottom");
+            el.style.removeProperty("--tg-plates-bottom");
             el.style.removeProperty("--tg-header-block");
             el.style.removeProperty("--tg-composer-block");
         };

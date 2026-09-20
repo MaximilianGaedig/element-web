@@ -3409,6 +3409,7 @@
         "reply_video": "Video",
         "reply_voice": "Voice message",
         "address": "Address",
+        "banner_left": "~%(formatted)s left",
         "bio": "Bio",
         "connection_reconnecting": "Reconnecting...",
         "connection_updating": "Updating...",

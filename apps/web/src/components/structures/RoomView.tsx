@@ -122,7 +122,7 @@ import { type FocusComposerPayload } from "../../dispatcher/payloads/FocusCompos
 import { LocalRoom, LocalRoomState } from "../../models/LocalRoom";
 import { createRoomFromLocalRoom } from "../../utils/direct-messages";
 import NewRoomIntro from "../views/rooms/NewRoomIntro";
-import { BackfillNotice } from "../views/telegram/TgHistory";
+import { ImportBanner } from "../views/telegram/TgHistory";
 import { isLocalRoom } from "../../utils/localRoom/isLocalRoom";
 import { type ShowThreadPayload } from "../../dispatcher/payloads/ShowThreadPayload";
 import { LargeLoader } from "./LargeLoader";
@@ -2707,6 +2707,7 @@ export class RoomView extends React.Component<IRoomProps, IRoomState> {
                         <Measured sensor={this.roomViewBody} onMeasurement={this.onMeasurement} />
                         {auxPanel}
                         {pinnedMessageBanner}
+                        {this.state.room && <ImportBanner room={this.state.room} />}
                         <main className={timelineClasses} data-testid="timeline">
                             <FileDropTarget parent={this.roomView.current} />
                             {topUnreadMessagesBar}
@@ -2795,11 +2796,6 @@ export class RoomView extends React.Component<IRoomProps, IRoomState> {
                             >
                                 {!this.props.hideHeader && (
                                     <RoomHeader room={this.state.room} extraButtons={<>{extraButtons}</>} />
-                                )}
-                                {this.state.room && (
-                                    <div className="mx_RoomView_importPill">
-                                        <BackfillNotice room={this.state.room} />
-                                    </div>
                                 )}
                                 {mainSplitBody}
                                 {this.state.telegramLayout && <TgChatChrome body={this.roomViewBody} />}

@@ -507,46 +507,6 @@ html[data-tg-screen="mobile"] .mx_TgProfile_avatar {
     }
 }
 
-/* A pill where the older messages will appear, like the date pills. */
-.mx_BackfillNotice {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.5rem;
-    width: fit-content;
-    max-width: calc(100% - 2rem);
-    margin: 0 auto 1rem;
-    padding: 0.375rem 0.875rem;
-    border-radius: 1rem;
-    background: var(--cpd-color-bg-subtle-secondary);
-    color: var(--cpd-color-text-secondary);
-    font: var(--cpd-font-body-sm-regular);
-}
-
-.mx_BackfillNotice_spinner {
-    width: 0.875rem;
-    height: 0.875rem;
-    border-width: 2px;
-}
-
-.mx_BackfillNotice_button {
-    all: unset;
-    min-height: 1.75rem;
-    padding: 0 0.25rem;
-    color: var(--tg-primary-color);
-    font-weight: 600;
-    cursor: pointer;
-
-    &:disabled {
-        opacity: 0.6;
-        cursor: default;
-    }
-
-    &:focus-visible {
-        outline: 2px solid var(--cpd-color-border-focused);
-        border-radius: 0.5rem;
-    }
-}
 
 @media (prefers-reduced-motion: reduce) {
     .mx_HistoryPhaseIcon--spin,
@@ -671,21 +631,132 @@ html[data-tg-screen="mobile"] .mx_HistoryCard {
     }
 }
 
-/* The import pill floats under the header, like Telegram's small status chips, instead of sitting in the
-   message list where the older messages will appear. */
-.mx_RoomView_importPill {
-    position: absolute;
-    z-index: 2;
-    top: 4.75rem;
-    inset-inline: 0;
-    display: flex;
-    justify-content: center;
-    pointer-events: none;
 
-    .mx_BackfillNotice {
-        margin: 0;
-        pointer-events: auto;
-        background: var(--cpd-color-bg-canvas-default);
-        box-shadow: 0 1px 6px rgb(0 0 0 / 12%);
+/* ---- The import banner: a plate like the pinned messages, under them --------------------------- */
+
+.mx_TgImport {
+    position: relative;
+    display: flex;
+    align-items: center;
+    box-sizing: border-box;
+    min-height: 3rem;
+    width: 100%;
+    overflow: hidden;
+    background: var(--cpd-color-bg-canvas-default);
+    border-bottom: 1px solid var(--cpd-color-border-disabled);
+    flex: 0 0 auto;
+}
+
+.mx_TgImport_main {
+    all: unset;
+    box-sizing: border-box;
+    display: flex;
+    flex: 1 1 auto;
+    align-items: center;
+    gap: 0.75rem;
+    min-width: 0;
+    min-height: 3rem;
+    padding: 0.375rem 1rem;
+    cursor: pointer;
+
+    &:hover {
+        background: var(--cpd-color-bg-action-tertiary-hovered);
     }
+
+    &:focus-visible {
+        outline: 2px solid var(--cpd-color-border-focused);
+        outline-offset: -2px;
+    }
+}
+
+.mx_TgImport_text {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.mx_TgImport_title {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font: var(--cpd-font-body-md-semibold);
+    color: var(--tg-primary-color);
+}
+
+.mx_TgImport--queued .mx_TgImport_title,
+.mx_TgImport--paused .mx_TgImport_title {
+    color: var(--cpd-color-text-primary);
+}
+
+.mx_TgImport_detail {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font: var(--cpd-font-body-sm-regular);
+    font-variant-numeric: tabular-nums;
+    color: var(--cpd-color-text-secondary);
+}
+
+.mx_TgImport_action {
+    all: unset;
+    flex: 0 0 auto;
+    display: grid;
+    place-items: center;
+    min-width: 3.5rem;
+    min-height: 2.75rem;
+    padding: 0 1rem;
+    font: var(--cpd-font-body-md-semibold);
+    color: var(--tg-primary-color);
+    cursor: pointer;
+
+    &:disabled {
+        opacity: 0.5;
+        cursor: default;
+    }
+
+    &:focus-visible {
+        outline: 2px solid var(--cpd-color-border-focused);
+        border-radius: 0.5rem;
+    }
+}
+
+.mx_TgImport_bar {
+    position: absolute;
+    inset-inline: 0;
+    bottom: 0;
+    height: 0.1875rem;
+    background: color-mix(in srgb, var(--cpd-color-text-secondary) 18%, transparent);
+
+    > span {
+        display: block;
+        height: 100%;
+        background: var(--tg-primary-color);
+        transition: width 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
+    }
+}
+
+.mx_TgImport--queued .mx_TgImport_bar > span {
+    background: var(--cpd-color-text-secondary);
+}
+
+.mx_TgImport_bar--indeterminate > span {
+    width: 40%;
+    animation: mx_History_indeterminate 1.4s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+/* Telegram layout: a floating glass plate under the pinned one, like tweb's topbar plates. */
+html[data-tg-screen] .mx_RoomView_body[data-telegram-layout="true"] > .mx_TgImport {
+    position: absolute;
+    top: calc(var(--tg-plates-bottom, var(--tg-header-bottom, 64px)) + var(--tg-plates-gap));
+    left: 0;
+    right: 0;
+    z-index: 3;
+    width: calc(100% - 2 * var(--tg-page-chats-padding));
+    max-width: 696px;
+    margin: 0 auto;
+    border: none;
+    border-radius: var(--tg-border-radius-big);
+    background-color: var(--tg-glass-background);
+    backdrop-filter: var(--tg-glass-backdrop);
+    box-shadow: var(--tg-topbar-box-shadow);
 }

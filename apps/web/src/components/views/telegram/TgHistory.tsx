@@ -10,7 +10,7 @@ Please see LICENSE files in the repository root for full details.
  * messages it has, in total, by kind, and per person.
  */
 
-import React, { type JSX, useEffect, useMemo, useState } from "react";
+import React, { type JSX, useContext, useEffect, useMemo, useState } from "react";
 import { type Room } from "matrix-js-sdk/src/matrix";
 import HistoryIcon from "@vector-im/compound-design-tokens/assets/web/icons/history";
 import CheckIcon from "@vector-im/compound-design-tokens/assets/web/icons/check";
@@ -21,6 +21,8 @@ import ChartIcon from "@vector-im/compound-design-tokens/assets/web/icons/chart"
 
 import { _t } from "../../../languageHandler";
 import { formatFullDateNoTime } from "../../../DateUtils";
+import { SDKContext } from "../../../contexts/SDKContext";
+import { RightPanelPhases } from "../../../stores/right-panel/RightPanelStorePhases";
 import { useRoomState } from "../../../hooks/useRoomState";
 import {
     type BackfillStatus,
@@ -322,31 +324,62 @@ export function ImportSubtitle({ room }: { room: Room }): JSX.Element | null {
 }
 
 /**
- * At the top of the conversation, where the older messages will appear: a small pill (like the date
- * pills) saying they are still coming, and tapping it opens the details. Nothing here for a chat whose
- * history is complete.
+ * A banner under the header (and under the pinned messages, when there are some) while the chat's older
+ * history is still coming: what is happening, how far along, how long it should take, in a line or two and
+ * a thin progress bar. Tapping it opens the chat's details. Nothing once the history is settled.
  */
-export function BackfillNotice({ room }: { room: Room }): JSX.Element | null {
+export function ImportBanner({ room }: { room: Room }): JSX.Element | null {
+    const sdkContext = useContext(SDKContext);
     const { status, phase, progress } = useHistory(room);
     const [asked, setAsked] = useState(false);
     if (!status || !phase || phase === "complete" || phase === "unavailable" || phase === "skipped") return null;
+
     const percent = progress.fraction !== undefined ? Math.min(99, Math.floor(progress.fraction * 100)) : undefined;
+    const network = status.network || _t("tg_layout|history_network");
+    let title: string;
+    let detail: string | undefined;
+    if (phase === "importing") {
+        title = _t("tg_layout|history_importing");
+        detail =
+            [
+                percent === undefined ? undefined : `${percent}%`,
+                progress.left !== undefined && progress.left > 0
+                    ? _t("tg_layout|banner_left", { formatted: number(progress.left) })
+                    : undefined,
+                progress.etaMs !== undefined ? _t("tg_layout|history_eta", { time: formatEta(progress.etaMs) }) : undefined,
+                progress.perMinute ? _t("tg_layout|history_pace", { rate: number(Math.round(progress.perMinute)) }) : undefined,
+            ]
+                .filter(Boolean)
+                .join(" · ") || _t("tg_layout|history_working", { network });
+    } else if (phase === "queued") {
+        title = _t("tg_layout|history_queued");
+        detail =
+            status.queue_ahead !== undefined && status.queue_size
+                ? _t("tg_layout|history_queue_position", { position: status.queue_ahead + 1, size: status.queue_size })
+                : _t("tg_layout|history_queued_hint");
+    } else {
+        title = _t("tg_layout|history_paused");
+        detail = _t("tg_layout|history_paused_hint");
+    }
+
+    const open = (): void => sdkContext.rightPanelStore.setCard({ phase: RightPanelPhases.RoomSummary }, false, room.roomId);
     return (
-        <div className={`mx_BackfillNotice mx_BackfillNotice--${phase}`} role="status">
-            {phase === "importing" && <span className="mx_HistoryPhaseIcon mx_HistoryPhaseIcon--spin mx_BackfillNotice_spinner" aria-hidden />}
-            <span className="mx_BackfillNotice_text">
-                {phase === "importing"
-                    ? percent === undefined
-                        ? _t("tg_layout|history_pill_importing")
-                        : _t("tg_layout|history_pill_importing_percent", { percent })
-                    : phase === "queued"
-                      ? _t("tg_layout|history_pill_queued")
-                      : _t("tg_layout|history_pill_paused")}
-            </span>
+        <div className={`mx_TgImport mx_TgImport--${phase}`} role="status" data-testid="import-banner">
+            <button type="button" className="mx_TgImport_main" onClick={open}>
+                {phase === "importing" ? (
+                    <span className="mx_HistoryPhaseIcon mx_HistoryPhaseIcon--spin" aria-hidden />
+                ) : (
+                    <PhaseIcon phase={phase} />
+                )}
+                <span className="mx_TgImport_text">
+                    <span className="mx_TgImport_title">{title}</span>
+                    <span className="mx_TgImport_detail">{detail}</span>
+                </span>
+            </button>
             {phase === "paused" && status.command_prefix && (
                 <button
                     type="button"
-                    className="mx_BackfillNotice_button"
+                    className="mx_TgImport_action"
                     disabled={asked}
                     onClick={(): void => {
                         setAsked(true);
@@ -355,6 +388,18 @@ export function BackfillNotice({ room }: { room: Room }): JSX.Element | null {
                 >
                     {asked ? _t("tg_layout|history_requested") : _t("tg_layout|history_pill_import")}
                 </button>
+            )}
+            {(phase === "importing" || phase === "queued") && (
+                <span
+                    className={`mx_TgImport_bar${percent === undefined && phase === "importing" ? " mx_TgImport_bar--indeterminate" : ""}`}
+                    role="progressbar"
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                    aria-valuenow={percent}
+                    aria-label={title}
+                >
+                    <span style={percent === undefined ? undefined : { width: `${Math.max(2, percent)}%` }} />
+                </span>
             )}
         </div>
     );
