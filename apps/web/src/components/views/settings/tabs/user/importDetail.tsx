@@ -239,9 +239,6 @@ export function NetworkImportDetail({
                     <ChatList entries={importing} action={skipAction} />
                 </div>
             )}
-            {!blocked && importing.length === 0 && open > 0 && (
-                <p className="mx_ImportSummary_note">{_t("tg_layout|import_idle")}</p>
-            )}
             {queued.length > 0 && (
                 <div className="mx_ImportDetail_group">
                     <h4>{`${_t("tg_layout|import_queue")} · ${number(queued.length)}`}</h4>

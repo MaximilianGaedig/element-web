@@ -3447,7 +3447,6 @@
             "one": "%(count)s not reporting",
             "other": "%(count)s not reporting"
         },
-        "import_idle": "Nothing from this network is importing at the moment.",
         "import_no_report": "%(network)s doesn't report history importing. Its chats are bridged, but older messages can't be counted or fetched from here.",
         "import_show_all": {
             "one": "Show %(count)s more chat",
@@ -3617,7 +3616,6 @@
         "storage_messages": "messages %(size)s",
         "storage_on_demand": "%(size)s fetched when opened",
         "storage_title": "%(size)s on the server",
-        "tab_actions": "Actions",
         "tab_members": "Members",
         "username": "Username"
     },
