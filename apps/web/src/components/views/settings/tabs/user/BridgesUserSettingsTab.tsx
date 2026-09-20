@@ -25,7 +25,12 @@ import {
     type BridgeLogin,
     type LoginHealth,
 } from "../../../../../utils/bridgeLogins";
-import { collectImports, type ImportOverview, type NetworkSummary } from "../../../../../utils/importOverview";
+import {
+    collectImports,
+    importHeadline,
+    type ImportOverview,
+    type NetworkSummary,
+} from "../../../../../utils/importOverview";
 import { Bar, eta, NetworkImportDetail, number as num } from "./importDetail";
 
 const number = (n: number): string => n.toLocaleString();
@@ -120,9 +125,10 @@ function useBotAvatar(login: BridgeLogin): string | undefined {
 }
 
 /** Everything being imported, across all the bridges: the line that used to be its own page. */
-function OverallImport({ overview }: { overview?: ImportOverview }): JSX.Element | null {
+function OverallImport({ overview, logins }: { overview?: ImportOverview; logins: BridgeLogin[] }): JSX.Element | null {
     if (!overview || overview.chats === 0) return null;
-    const open = overview.byPhase.importing + overview.byPhase.queued + overview.byPhase.paused;
+    const headline = importHeadline(overview, logins);
+    const open = headline.open + headline.blocked;
     if (open === 0) {
         return (
             <div className="mx_ImportSummary mx_ImportSummary--done">
@@ -142,6 +148,23 @@ function OverallImport({ overview }: { overview?: ImportOverview }): JSX.Element
     return (
         <div className="mx_ImportSummary">
             <div className="mx_ImportSummary_title">{_t("tg_layout|import_running_title")}</div>
+            <div className="mx_ImportSummary_metric">
+                <span>
+                    {_t("tg_layout|import_chats", {
+                        done: num(headline.done),
+                        total: num(headline.total),
+                    })}
+                </span>
+                <Bar value={headline.total ? headline.done / headline.total : 0} />
+            </div>
+            {headline.blocked > 0 && (
+                <p className="mx_ImportSummary_note">
+                    {_t("tg_layout|import_waiting_for_login", {
+                        count: headline.blocked,
+                        network: headline.blockedNetworks.join(", "),
+                    })}
+                </p>
+            )}
             <div className="mx_ImportSummary_metric">
                 <span>
                     {share === undefined
@@ -291,7 +314,7 @@ export default function BridgesUserSettingsTab(): JSX.Element {
                 )}
                 {logins && logins.length > 0 && (
                     <>
-                        <OverallImport overview={overview} />
+                        <OverallImport overview={overview} logins={logins} />
                         <p className="mx_BridgesTab_summary">
                             {_t("tg_layout|bridges_summary", {
                                 connected: logins.filter((l) => l.health === "connected").length,

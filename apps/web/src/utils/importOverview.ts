@@ -14,6 +14,7 @@ Please see LICENSE files in the repository root for full details.
 import { type MatrixClient, type Room } from "matrix-js-sdk/src/matrix";
 
 import { type BackfillStatus, backfillStatusOf, type HistoryPhase, historyPhase } from "./chatHistory";
+import { type BridgeLogin } from "./bridgeLogins";
 
 export interface ImportEntry {
     room: Room;
@@ -146,5 +147,52 @@ export function estimateQueued(overview: ImportOverview, roomId: string): Queued
     return {
         waitMs: before > 0 ? before / perMs : undefined,
         etaMs: own > 0 ? (before + own) / perMs : undefined,
+    };
+}
+
+/** What the room list's chip and the Bridges page both say about the import as a whole. */
+export interface ImportHeadline {
+    /** Chats no bridge has anything left to do for. */
+    done: number;
+    total: number;
+    /** Chats a bridge is importing or has queued. */
+    open: number;
+    /** Chats that cannot move until a bridge is logged in again, and which networks they belong to. */
+    blocked: number;
+    blockedNetworks: string[];
+    /** 0-99, by messages, across the networks that can count them. */
+    percent?: number;
+}
+
+/**
+ * Splits what is left to import into what a bridge is working through and what is waiting on the user.
+ * A logged-out bridge's chats sit at "queued" forever, and counting them as progress in hand makes the
+ * import look far further from done than it is.
+ */
+export function importHeadline(overview: ImportOverview, logins: BridgeLogin[]): ImportHeadline {
+    const working = (network: string): boolean =>
+        logins.some((l) => l.network === network && (l.health === "connected" || l.health === "connecting"));
+    let open = 0;
+    let blocked = 0;
+    const blockedNetworks: string[] = [];
+    for (const network of overview.networks) {
+        const left = network.byPhase.importing + network.byPhase.queued + network.byPhase.paused;
+        if (!left) continue;
+        if (working(network.network)) {
+            open += left;
+        } else {
+            blocked += left;
+            blockedNetworks.push(network.network);
+        }
+    }
+    return {
+        done: overview.chats - open - blocked,
+        total: overview.chats,
+        open,
+        blocked,
+        blockedNetworks,
+        percent: overview.countedTotal
+            ? Math.min(99, Math.floor((overview.countedImported / overview.countedTotal) * 100))
+            : undefined,
     };
 }

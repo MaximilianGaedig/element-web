@@ -14,8 +14,13 @@ import dis from "../../../dispatcher/dispatcher";
 import { Action } from "../../../dispatcher/actions";
 import { UserTab } from "../dialogs/UserTab";
 import { BACKFILL_EVENT_TYPE } from "../../../utils/chatHistory";
-import { BRIDGE_LOGIN_EVENT_TYPE, bridgeLoginsIn, type BridgeLogin } from "../../../utils/bridgeLogins";
-import { collectImports, type ImportOverview } from "../../../utils/importOverview";
+import {
+    BRIDGE_LOGIN_EVENT_TYPE,
+    bridgeLoginsIn,
+    type BridgeLogin,
+    bridgesWithoutLoginState,
+} from "../../../utils/bridgeLogins";
+import { collectImports, importHeadline, type ImportOverview } from "../../../utils/importOverview";
 
 /**
  * The one place, above the chat list, that says whether the bridges are working: a bridge that isn't
@@ -28,7 +33,13 @@ export function HistoryStatusChip(): JSX.Element | null {
     useEffect(() => {
         if (!client) return;
         let timer: number | undefined;
-        const refresh = (): void => setState({ overview: collectImports(client), logins: bridgeLoginsIn(client) });
+        const refresh = (): void => {
+            const reporting = bridgeLoginsIn(client);
+            setState({
+                overview: collectImports(client),
+                logins: [...reporting, ...bridgesWithoutLoginState(client, reporting)],
+            });
+        };
         const later = (): void => {
             window.clearTimeout(timer);
             timer = window.setTimeout(refresh, 1500);
@@ -48,28 +59,22 @@ export function HistoryStatusChip(): JSX.Element | null {
     if (!state) return null;
 
     const { overview, logins } = state;
-    const broken = logins.filter((l) => l.health === "disconnected" || l.health === "problem");
-    const open = overview.byPhase.importing + overview.byPhase.queued + overview.byPhase.paused;
-    if (broken.length === 0 && open === 0) return null;
+    const headline = importHeadline(overview, logins);
+    if (headline.blocked === 0 && headline.open === 0) return null;
 
-    const done = overview.chats - open;
-    const percent = overview.countedTotal
-        ? Math.min(99, Math.floor((overview.countedImported / overview.countedTotal) * 100))
-        : undefined;
-    let text: string;
-    let tone: "problem" | "working";
-    if (broken.length) {
-        tone = "problem";
-        const names = broken.map((l) => l.network + (l.remoteName ? ` (${l.remoteName})` : "")).join(", ");
-        text = _t("tg_layout|chip_login_problem", { count: broken.length, names });
-    } else {
-        tone = "working";
-        text = _t("tg_layout|chip_importing", {
-            done: done.toLocaleString(),
-            total: overview.chats.toLocaleString(),
-            percent: percent === undefined ? "" : ` · ${percent}%`,
-        });
-    }
+    // A bridge that needs you comes first: those chats are not moving at all until it is logged in.
+    const tone: "problem" | "working" = headline.blocked > 0 ? "problem" : "working";
+    const text =
+        tone === "problem"
+            ? _t("tg_layout|chip_login_problem", {
+                  count: headline.blockedNetworks.length,
+                  names: headline.blockedNetworks.join(", "),
+              })
+            : _t("tg_layout|chip_importing", {
+                  done: headline.done.toLocaleString(),
+                  total: headline.total.toLocaleString(),
+                  percent: headline.percent === undefined ? "" : ` · ${headline.percent}%`,
+              });
 
     return (
         <button

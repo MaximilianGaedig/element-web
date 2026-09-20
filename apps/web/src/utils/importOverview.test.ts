@@ -8,7 +8,8 @@ Please see LICENSE files in the repository root for full details.
 import { describe, expect, it } from "vitest";
 import { type MatrixClient, type Room } from "matrix-js-sdk/src/matrix";
 
-import { collectImports } from "./importOverview";
+import { collectImports, importHeadline } from "./importOverview";
+import { type BridgeLogin } from "./bridgeLogins";
 
 function room(id: string, content?: Record<string, unknown>): Room {
     return {
@@ -83,5 +84,30 @@ describe("collectImports", () => {
         const o = collectImports(client, now);
         expect(o.networks.map((n) => n.network)).toEqual(["Telegram", "WhatsApp"]);
         expect(o.entries.slice(0, 2).map((e) => e.room.roomId)).toEqual(["!now", "!next"]);
+    });
+});
+
+describe("importHeadline", () => {
+    const login = (network: string, health: BridgeLogin["health"]): BridgeLogin => ({ network, health }) as BridgeLogin;
+    const client = {
+        getRooms: () => [
+            room("!tg-done", { ...base, state: "complete", network: "Telegram", bridged_messages: 10 }),
+            room("!tg-now", { ...base, state: "running", active: true, network: "Telegram" }),
+            room("!wa-1", { ...base, state: "running", network: "WhatsApp" }),
+            room("!wa-2", { ...base, state: "running", network: "WhatsApp" }),
+        ],
+    } as unknown as MatrixClient;
+
+    it("separates what a bridge is working on from what waits for a login", () => {
+        const overview = collectImports(client, 1_000 + 1000);
+        const headline = importHeadline(overview, [login("Telegram", "connected"), login("WhatsApp", "disconnected")]);
+        expect(headline).toMatchObject({ total: 4, open: 1, blocked: 2, done: 1, blockedNetworks: ["WhatsApp"] });
+    });
+
+    it("counts a network that reports no login at all as waiting for one", () => {
+        const overview = collectImports(client, 1_000 + 1000);
+        // WhatsApp is logged out, so it publishes no login state and isn't in the list.
+        const headline = importHeadline(overview, [login("Telegram", "connected")]);
+        expect(headline).toMatchObject({ open: 1, blocked: 2, blockedNetworks: ["WhatsApp"] });
     });
 });
