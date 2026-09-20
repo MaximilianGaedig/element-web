@@ -113,7 +113,7 @@ html[data-tg-screen="mobile"] {
     }
 
     /* A long press opens the message menu; keep iOS from also offering its text callout. */
-    .mx_RoomView_MessageList {
+    :is(.mx_RoomView_MessageList, .mx_TimelineView_list) {
         -webkit-touch-callout: none;
     }
 

@@ -20,7 +20,12 @@ Please see LICENSE files in the repository root for full details.
         max-width: none;
     }
 
-    .mx_RoomView_MessageList {
+    /*
+     * Both lists: the labs "improved timeline" replaces TimelinePanel with its own component, whose list
+     * is .mx_TimelineView_list. Without it that timeline keeps neither the chat's width nor the room the
+     * floating header and composer need, and the composer sits on the last message.
+     */
+    :is(.mx_RoomView_MessageList, .mx_TimelineView_list) {
         width: 100%;
         max-width: calc(var(--TelegramLayout-chat-width) + 2 * var(--RoomView_MessageList-padding));
         margin-inline: auto;
@@ -49,7 +54,7 @@ Please see LICENSE files in the repository root for full details.
 /* One-to-one chats: no avatars (and no names), so the bubbles start at the edge like Telegram. */
 .mx_RoomView_body[data-telegram-layout="true"]
     .mx_MessagePanel_noAvatars
-    .mx_RoomView_MessageList
+    :is(.mx_RoomView_MessageList, .mx_TimelineView_list)
     > [data-testid="event-tile"] {
     --event-tile-bubble-margin-inline-start: 8px;
 }
@@ -153,7 +158,7 @@ html[data-tg-screen] .mx_RoomView_body[data-telegram-layout="true"] {
         min-height: 0;
     }
 
-    .mx_RoomView_MessageList {
+    :is(.mx_RoomView_MessageList, .mx_TimelineView_list) {
         padding-top: calc(var(--tg-header-block, 0px) + 8px);
         padding-bottom: calc(var(--tg-composer-block, 0px) + 8px);
     }
