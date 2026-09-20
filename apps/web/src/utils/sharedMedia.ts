@@ -12,9 +12,11 @@ import {
     type IRoomEvent,
     type MatrixClient,
     type MatrixEvent,
+    Method,
     MsgType,
     type Room,
 } from "matrix-js-sdk/src/matrix";
+import * as utils from "matrix-js-sdk/src/utils";
 import { logger } from "matrix-js-sdk/src/logger";
 
 import { isAnimatedSticker } from "./bridge/animatedMedia";
@@ -27,6 +29,10 @@ import { historyIndexer } from "./history/indexer";
  */
 export type SharedMediaTab = "media" | "files" | "links" | "music" | "voice";
 export const SHARED_MEDIA_TABS: SharedMediaTab[] = ["media", "files", "links", "music", "voice"];
+
+/** The homeserver's media index (tuwunel: rooms::media_index), which makes a tab one request. */
+const MEDIA_INDEX_FEATURE = "im.mxg.media_index";
+const MEDIA_INDEX_PREFIX = "/_matrix/client/unstable/im.mxg.media_index";
 
 /** tweb appSearchSuper LOAD_COUNT. */
 export const SHARED_MEDIA_PAGE = 50;
@@ -103,6 +109,9 @@ export class SharedMediaLoader {
     private destroyed = false;
     /** What earlier visits already found and how far they scanned; read before touching the network. */
     private restored?: Promise<void>;
+    /** Where each tab got to in the server's media index, and which tabs it has exhausted. */
+    private readonly indexTokens = new Map<SharedMediaTab, string | undefined>();
+    private readonly indexDone = new Set<SharedMediaTab>();
 
     public constructor(
         private readonly client: MatrixClient,
@@ -170,7 +179,7 @@ export class SharedMediaLoader {
         return {
             items: this.items.get(tab)!,
             loading: this.loadingFor === source,
-            done: this.doneFor.has(source),
+            done: this.indexDone.has(tab) || this.doneFor.has(source),
         };
     }
 
@@ -215,6 +224,14 @@ export class SharedMediaLoader {
         const before = this.items.get(tab)!.length;
         try {
             await this.restored; // what earlier visits found comes first, and sets where to carry on
+            if (await this.hasServerIndex()) {
+                while (!this.destroyed && !this.indexDone.has(tab)) {
+                    await this.fetchIndexPage(tab);
+                    if (this.items.get(tab)!.length >= before + SHARED_MEDIA_PAGE / 2) break;
+                }
+                if (this.indexDone.has(tab)) this.doneFor.add(source);
+                return;
+            }
             for (let i = 0; i < MAX_REQUESTS_PER_LOAD && !this.destroyed; i++) {
                 await this.fetchPage(source);
                 if (this.doneFor.has(source) || this.items.get(tab)!.length >= before + SHARED_MEDIA_PAGE / 2) break;
@@ -226,6 +243,39 @@ export class SharedMediaLoader {
             this.loadingFor = undefined;
             if (!this.destroyed) this.emit();
         }
+    }
+
+    /**
+     * Whether the homeserver keeps a media index (MEDIA_INDEX_FEATURE): then a tab is one request,
+     * however old the room's history is. It cannot index encrypted rooms, which are read here instead.
+     */
+    private async hasServerIndex(): Promise<boolean> {
+        if (this.client.isRoomEncrypted(this.room.roomId)) return false;
+        try {
+            return await this.client.doesServerSupportUnstableFeature(MEDIA_INDEX_FEATURE);
+        } catch {
+            return false;
+        }
+    }
+
+    /** One page of a tab from the server's media index. */
+    private async fetchIndexPage(tab: SharedMediaTab): Promise<void> {
+        const from = this.indexTokens.get(tab);
+        const path = utils.encodeUri("/rooms/$roomId/media", { $roomId: this.room.roomId });
+        const res = await this.client.http.authedRequest<{ chunk: IRoomEvent[]; end?: string }>(
+            Method.Get,
+            path,
+            { kind: tab, limit: String(SHARED_MEDIA_PAGE), ...(from ? { from } : {}) },
+            undefined,
+            { prefix: MEDIA_INDEX_PREFIX },
+        );
+        if (this.destroyed) return;
+        const mapper = this.client.getEventMapper();
+        const events = res.chunk.map((raw) => mapper(raw));
+        for (const ev of events) this.add(ev, false);
+        historyIndexer.add(events); // keep them, so the tab fills even without the server
+        this.indexTokens.set(tab, res.end);
+        if (!res.end || res.chunk.length === 0) this.indexDone.add(tab);
     }
 
     /** Server-side URL filtering doesn't work on encrypted events, and links live in plain text. */
