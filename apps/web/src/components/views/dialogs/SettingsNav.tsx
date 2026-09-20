@@ -6,68 +6,35 @@ Please see LICENSE files in the repository root for full details.
 */
 
 /*
- * The handheld chrome of the settings, laid out like Telegram iOS's Settings: the list of sections opens
- * with your profile, and a section's page has a bar with a back button ("‹ Settings") and its title. Both
- * are hidden on a desktop, where the settings keep their side-by-side layout (see _TgSheets.pcss).
+ * The handheld bar of a settings page: a back button (to the user menu's drawer, which lists the sections),
+ * the section's name and a close button. Hidden on a desktop, where the settings keep their side-by-side
+ * layout (see _TgSheets.pcss).
  */
 
 import React, { type JSX } from "react";
-import { type MatrixClient } from "matrix-js-sdk/src/matrix";
 import ChevronLeftIcon from "@vector-im/compound-design-tokens/assets/web/icons/chevron-left";
 import CloseIcon from "@vector-im/compound-design-tokens/assets/web/icons/close";
 
 import { _t } from "../../../languageHandler";
-import BaseAvatar from "../avatars/BaseAvatar";
-import { OwnProfileStore } from "../../../stores/OwnProfileStore";
 
 export function SettingsNavBar({
-    page,
     title,
     onBack,
     onClose,
 }: {
-    page: "list" | "page";
     title: React.ReactNode;
     onBack: () => void;
     onClose: () => void;
 }): JSX.Element {
     return (
-        <div className="mx_SettingsNavBar" data-page={page}>
-            {page === "page" ? (
-                <button
-                    type="button"
-                    className="mx_SettingsNavBar_back"
-                    onClick={onBack}
-                    aria-label={_t("action|back")}
-                >
-                    <ChevronLeftIcon />
-                </button>
-            ) : (
-                <span />
-            )}
-            <span className="mx_SettingsNavBar_title">{page === "page" ? title : _t("common|settings")}</span>
+        <div className="mx_SettingsNavBar">
+            <button type="button" className="mx_SettingsNavBar_back" onClick={onBack} aria-label={_t("action|back")}>
+                <ChevronLeftIcon />
+            </button>
+            <span className="mx_SettingsNavBar_title">{title}</span>
             <button type="button" className="mx_SettingsNavBar_done" onClick={onClose} aria-label={_t("action|close")}>
                 <CloseIcon />
             </button>
-        </div>
-    );
-}
-
-export function SettingsNavProfile({ client }: { client?: MatrixClient }): JSX.Element | null {
-    if (!client) return null;
-    const userId = client.getSafeUserId();
-    const name = OwnProfileStore.instance.displayName || userId;
-    return (
-        <div className="mx_SettingsNavProfile">
-            <BaseAvatar
-                name={name}
-                idName={userId}
-                url={OwnProfileStore.instance.getHttpAvatarUrl(180)}
-                size="90px"
-                type="round"
-            />
-            <div className="mx_SettingsNavProfile_name">{name}</div>
-            <div className="mx_SettingsNavProfile_id">{userId}</div>
         </div>
     );
 }

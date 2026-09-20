@@ -49,7 +49,7 @@ import { type IReadReceiptPosition } from "../views/rooms/ReadReceiptMarker";
 import { haveRendererForEvent } from "../../events/EventTileFactory";
 import { editorRoomKey } from "../../Editing";
 import { hasThreadSummary } from "../../utils/EventUtils";
-import { isOneToOneRoom, isTelegramLayout } from "../../utils/telegram/telegramLayout";
+import { humanMemberCount, isOneToOneRoom, isTelegramLayout } from "../../utils/telegram/telegramLayout";
 import { getEventIdsReadByOthers, type ReadReceiptsStyle } from "../../utils/telegram/telegramTime";
 import { getBridgeBots } from "../../utils/bridge/bridgeInfo";
 import { type BaseGrouper } from "./grouper/BaseGrouper";
@@ -380,9 +380,7 @@ export default class MessagePanel extends React.Component<IProps, IState> {
 
     private shouldHideSender(): boolean {
         return (
-            (!!this.props.room &&
-                this.props.room.getInvitedAndJoinedMemberCount() <= 2 &&
-                this.props.layout === Layout.Bubble) ||
+            (!!this.props.room && humanMemberCount(this.props.room) <= 2 && this.props.layout === Layout.Bubble) ||
             this.isTelegramOneToOne()
         );
     }

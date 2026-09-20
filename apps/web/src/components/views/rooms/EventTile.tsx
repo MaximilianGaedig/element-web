@@ -41,11 +41,13 @@ import {
 import ReplyChain from "../elements/ReplyChain";
 import { _t } from "../../../languageHandler";
 import dis from "../../../dispatcher/dispatcher";
+import { isContentActionable } from "../../../utils/EventUtils";
 import { Layout } from "../../../settings/enums/Layout";
 import SettingsStore from "../../../settings/SettingsStore";
 import { MatrixClientPeg } from "../../../MatrixClientPeg";
 import RoomAvatar from "../avatars/RoomAvatar";
 import MessageContextMenu from "../context_menus/MessageContextMenu";
+import { attachSwipeReply } from "../../../utils/telegram/tgLayout/swipeReply";
 import { aboveRightOf } from "../../structures/ContextMenu";
 import { objectHasDiff } from "../../../utils/objects";
 import type EditorStateTransfer from "../../../utils/EditorStateTransfer";
@@ -459,17 +461,43 @@ export class UnwrappedEventTile extends React.Component<EventTileProps, IState> 
         const el = this.props.telegramBubbles ? (this.ref.current ?? undefined) : undefined;
         if (el === this.telegramGesturesTarget) return;
         this.unbindTelegramGestures();
-        if (!el || !isAppleTouch()) return;
+        const touch = "ontouchstart" in window || navigator.maxTouchPoints > 0;
+        if (!el || !touch) return;
         this.telegramGesturesTarget = el;
-        this.unbindTelegramGestureListeners = attachLongPress(el, ({ x, y }) => {
-            if (this.props.editState || this.props.isSelecting) return;
-            this.setState((prevState) => ({
-                interaction: eventTileOpenContextMenu(prevState.interaction, {
-                    position: { left: x, top: y, bottom: y },
-                    link: this.props.permalinkCreator?.forEvent(this.props.mxEvent.getId()!),
+        const detachers: Array<() => void> = [];
+        // Apple touch devices never fire `contextmenu` on a hold; the others do and reach onContextMenu.
+        if (isAppleTouch()) {
+            detachers.push(
+                attachLongPress(el, ({ x, y }) => {
+                    if (this.props.editState || this.props.isSelecting) return;
+                    this.setState((prevState) => ({
+                        interaction: eventTileOpenContextMenu(prevState.interaction, {
+                            position: { left: x, top: y, bottom: y },
+                            link: this.props.permalinkCreator?.forEvent(this.props.mxEvent.getId()!),
+                        }),
+                    }));
                 }),
-            }));
-        });
+            );
+        }
+        // Swipe left to reply.
+        detachers.push(
+            attachSwipeReply(
+                el,
+                () =>
+                    dis.dispatch({
+                        action: "reply_to_event",
+                        event: this.props.mxEvent,
+                        context: this.context.timelineRenderingType,
+                    }),
+                (target) =>
+                    !this.props.editState &&
+                    !this.props.isSelecting &&
+                    !!this.context.canSendMessages &&
+                    isContentActionable(this.props.mxEvent) &&
+                    !target?.closest("a, input, textarea, [contenteditable], .mx_EventTile_pillMessage, pre, code"),
+            ),
+        );
+        this.unbindTelegramGestureListeners = (): void => detachers.forEach((detach) => detach());
     }
 
     private unbindTelegramGestures(): void {
@@ -1116,7 +1144,7 @@ export class UnwrappedEventTile extends React.Component<EventTileProps, IState> 
         const eventTileOps = tile?.getEventTileOps ? tile.getEventTileOps() : undefined;
         const collapseReplyChain = replyChain?.canCollapse() ? replyChain.collapse : undefined;
 
-        return (
+        const menu = (
             <MessageContextMenu
                 {...aboveRightOf(this.state.interaction.contextMenu.position)}
                 mxEvent={this.props.mxEvent}
@@ -1130,6 +1158,7 @@ export class UnwrappedEventTile extends React.Component<EventTileProps, IState> 
                 getRelationsForEvent={this.props.getRelationsForEvent}
             />
         );
+        return menu;
     }
 
     public render(): ReactNode {

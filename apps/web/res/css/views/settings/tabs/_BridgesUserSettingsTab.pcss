@@ -110,6 +110,10 @@ Please see LICENSE files in the repository root for full details.
     color: var(--tg-primary-color);
 }
 
+.mx_BridgeCard--unreported .mx_BridgeCard_status {
+    color: var(--cpd-color-text-secondary);
+}
+
 .mx_BridgeCard--problem .mx_BridgeCard_status,
 .mx_BridgeCard--disconnected .mx_BridgeCard_status {
     color: var(--cpd-color-text-critical-primary);
@@ -223,4 +227,10 @@ Please see LICENSE files in the repository root for full details.
     .mx_BridgeCard_chevron {
         transition: none;
     }
+}
+
+.mx_BridgeCard_note {
+    margin: 0;
+    color: var(--cpd-color-text-secondary);
+    font: var(--cpd-font-body-md-regular);
 }

@@ -19,32 +19,55 @@ html[data-tg-screen="mobile"] {
         animation: mx_TgSheet_fade 0.2s ease both;
     }
 
-    .mx_ContextualMenu_wrapper {
+    /* The quick settings menu stays Element's own popover: it is a panel of controls, not a list of actions. */
+    &:has(.mx_QuickSettingsButton_ContextMenuWrapper) .mx_ContextualMenu_background {
+        background: transparent;
+        animation: none;
+    }
+
+    /* Menus are drawers, the profile drawer's twins: a plain surface with a 28px top edge and a grabber, full
+       width at the bottom of the screen, the page dimmed behind. */
+    .mx_ContextualMenu_wrapper:not(.mx_QuickSettingsButton_ContextMenuWrapper) {
         position: fixed !important;
         inset: auto 0 0 0 !important;
         transform: none !important;
         box-sizing: border-box;
         width: 100%;
-        padding: 0 0.5rem calc(0.5rem + var(--tg-safe-bottom, 0px));
+        padding: 0;
 
         > .mx_ContextualMenu,
         > .mx_ContextualMenu_wrapper_inner {
-            position: static !important;
+            position: relative !important;
             width: 100% !important;
             max-width: none !important;
-            max-height: min(72dvh, 36rem);
+            max-height: min(78dvh, 40rem);
             overflow-y: auto;
             overscroll-behavior: contain;
+            padding-top: 1.25rem;
+            padding-bottom: var(--tg-safe-bottom, 0px);
             border: none;
-            border-radius: 0.875rem;
-            box-shadow: 0 8px 40px rgb(0 0 0 / 28%);
+            border-radius: 1.75rem 1.75rem 0 0;
+            background: var(--cpd-color-bg-canvas-default);
+            box-shadow: none;
             animation: mx_TgDrawer_in 0.26s cubic-bezier(0.2, 0.8, 0.2, 1) both;
             touch-action: pan-y;
+
+            &::before {
+                content: "";
+                position: absolute;
+                top: 0.5rem;
+                inset-inline: 0;
+                width: 2.25rem;
+                height: 0.3125rem;
+                margin-inline: auto;
+                border-radius: 0.25rem;
+                background: var(--cpd-color-bg-subtle-primary);
+            }
         }
     }
 
     /* Rows: 52px targets, 17px text, hairline separators. */
-    .mx_IconizedContextMenu {
+    .mx_ContextualMenu_wrapper:not(.mx_QuickSettingsButton_ContextMenuWrapper) .mx_IconizedContextMenu {
         min-width: 0 !important;
         width: 100%;
 
@@ -181,8 +204,7 @@ html[data-tg-screen="mobile"] {
  * (Element's own menu look: plain rows, secondary-colour icons, hairlines), and whose second screen is the
  * chosen section under a bar with a back arrow. The desktop layout is untouched.
  */
-.mx_SettingsNavBar,
-.mx_SettingsNavProfile {
+.mx_SettingsNavBar {
     display: none;
 }
 
@@ -271,30 +293,8 @@ html[data-tg-screen="mobile"] {
         justify-self: end;
     }
 
-    .mx_SettingsNavProfile {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 0.25rem;
-        padding: 0.5rem 1rem 1rem;
-    }
-
-    .mx_SettingsNavProfile_name {
-        margin-top: 0.5rem;
-        font: var(--cpd-font-heading-md-semibold);
-    }
-
-    .mx_SettingsNavProfile_id {
-        font: var(--cpd-font-body-md-regular);
-        color: var(--cpd-color-text-secondary);
-    }
-
-    /* One screen at a time. */
-    .mx_UserSettingsDialog .mx_SettingsDialog_content[data-page="list"] .mx_TabbedView_tabPanel {
-        display: none;
-    }
-
-    .mx_UserSettingsDialog .mx_SettingsDialog_content[data-page="page"] .mx_TabbedView_tabsOnLeft .mx_TabbedView_tabLabels {
+    /* The sections are listed in the user menu's drawer, not here: this is one section's page. */
+    .mx_UserSettingsDialog .mx_TabbedView_tabsOnLeft .mx_TabbedView_tabLabels {
         display: none;
     }
 
@@ -305,64 +305,10 @@ html[data-tg-screen="mobile"] {
         padding: 0;
     }
 
-    /* The responsive strip hides the words on narrow screens; the list here has room and needs them. */
-    .mx_UserSettingsDialog .mx_TabbedView_tabsOnLeft.mx_TabbedView_responsive {
-        .mx_TabbedView_tabLabel_text {
-            display: inline;
-        }
-
-        .mx_TabbedView_tabPanel {
-            margin-left: 0;
-        }
-    }
-
-    /* The list: plain rows like the user menu's. */
-    .mx_UserSettingsDialog .mx_TabbedView_tabsOnLeft .mx_TabbedView_tabLabels {
-        display: flex;
-        flex-direction: column;
-        gap: 0;
+    .mx_UserSettingsDialog .mx_TabbedView_tabsOnLeft.mx_TabbedView_responsive .mx_TabbedView_tabPanel {
         margin: 0;
         padding: 0 0 1rem;
-        width: auto;
-        list-style: none;
-    }
-
-    .mx_UserSettingsDialog .mx_TabbedView_tabLabel {
-        position: relative;
-        display: flex;
-        align-items: center;
-        justify-content: flex-start;
-        gap: 1rem;
-        min-height: 3.25rem;
-        padding: 0.5rem 2.5rem 0.5rem 1.25rem;
-        border-radius: 0;
-        font: var(--cpd-font-body-lg-regular);
-        color: var(--cpd-color-text-primary);
-        white-space: normal;
-
-        > svg {
-            flex: 0 0 auto;
-            width: 1.5rem;
-            height: 1.5rem;
-            color: var(--cpd-color-icon-secondary);
-            fill: currentcolor;
-        }
-
-        &::after {
-            content: "›";
-            position: absolute;
-            inset-inline-end: 1.25rem;
-            color: var(--cpd-color-icon-secondary);
-            font-size: 1.5rem;
-        }
-
-        & + .mx_TabbedView_tabLabel::before {
-            content: "";
-            position: absolute;
-            top: 0;
-            inset-inline: 3.75rem 0;
-            border-top: 1px solid var(--cpd-color-border-disabled);
-        }
+        overflow-y: auto;
     }
 
     /* Settings written for a wide pane: on a phone their fixed widths must give way to the screen's. */
@@ -400,12 +346,5 @@ html[data-tg-screen="mobile"] {
         .mx_SettingsSubsection_dropdown .mx_Dropdown_input {
             width: 100%;
         }
-    }
-
-    /* A section's page. */
-    .mx_SettingsDialog_content[data-page="page"] .mx_TabbedView_tabPanel {
-        margin: 0;
-        padding: 0 0 1rem;
-        overflow-y: auto;
     }
 }

@@ -115,6 +115,7 @@ function scan(root: ParentNode): void {
     }
     for (const menu of root.querySelectorAll<HTMLElement>(".mx_ContextualMenu_wrapper > .mx_ContextualMenu")) {
         const wrapper = menu.parentElement!;
+        if (wrapper.classList.contains("mx_QuickSettingsButton_ContextMenuWrapper")) continue; // stays a popover
         makeDraggable(
             menu,
             () => menu.scrollTop <= 0,

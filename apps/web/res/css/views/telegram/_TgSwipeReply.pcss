@@ -1,0 +1,50 @@
+/*
+Copyright 2026 New Vector Ltd.
+
+SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only OR LicenseRef-Element-Commercial
+Please see LICENSE files in the repository root for full details.
+*/
+
+/*
+ * Swipe a message to the left to reply to it (see swipeReply.ts): the message follows the finger and a
+ * round reply glyph grows out of the edge behind it.
+ */
+:root {
+    --tg-swipe-x: 0px;
+}
+
+html[data-tg-screen="mobile"] .mx_EventTile[data-testid="event-tile"] {
+    position: relative;
+    touch-action: pan-y;
+}
+
+.mx_EventTile_swiping {
+    transform: translateX(var(--tg-swipe-x, 0));
+    will-change: transform;
+}
+
+.mx_TgSwipeReply {
+    --tg-swipe-progress: 0;
+
+    position: absolute;
+    top: 50%;
+    inset-inline-start: calc(100% + (var(--tg-swipe-x, 0px) * -0.5) - 0.9375rem);
+    display: grid;
+    place-items: center;
+    width: 1.875rem;
+    height: 1.875rem;
+    margin-top: -0.9375rem;
+    border-radius: 50%;
+    background: color-mix(in srgb, var(--cpd-color-bg-canvas-default) 55%, rgb(127 127 127 / 60%));
+    color: var(--cpd-color-icon-primary);
+    opacity: var(--tg-swipe-progress);
+    transform: scale(calc(0.4 + 0.6 * var(--tg-swipe-progress)));
+    pointer-events: none;
+
+    svg {
+        width: 1.125rem;
+        height: 1.125rem;
+        fill: currentcolor;
+    }
+}
+

@@ -10,7 +10,8 @@ import { type Room } from "matrix-js-sdk/src/matrix";
 import SettingsStore from "../../settings/SettingsStore";
 import { ImageSize } from "../../settings/enums/ImageSize";
 import UIStore from "../../stores/UIStore";
-import { getBridgeInfo } from "../bridge/bridgeInfo";
+import { getBridgeBots, getBridgeInfo } from "../bridge/bridgeInfo";
+import { BACKFILL_EVENT_TYPE } from "../chatHistory";
 
 /** Whether the Telegram-style layout (narrow timeline, Telegram media sizes, compact bubbles) is on. */
 export function isTelegramLayout(): boolean {
@@ -29,9 +30,30 @@ export function effectiveImageSize(sticker = false): ImageSize {
 }
 
 /**
- * Whether `room` is a one-to-one chat: at most two members, or a bridged DM (`com.beeper.room_type`
- * dm), whose portal also contains the bridge bot.
+ * How many people are in the room, not counting the bridge's bot: it joins portals (a bridged DM has it as
+ * a third member) to publish their state, and is no more a participant than the bridge itself.
+ */
+export function humanMemberCount(room: Room): number {
+    const bots = getBridgeBots(room);
+    for (const event of room.currentState.getStateEvents(BACKFILL_EVENT_TYPE)) {
+        const sender = event.getSender();
+        if (sender) bots.add(sender);
+    }
+    let count = room.getInvitedAndJoinedMemberCount();
+    for (const bot of bots) {
+        const membership = room.getMember(bot)?.membership;
+        if (membership === "join" || membership === "invite") count--;
+    }
+    return count;
+}
+
+/**
+ * Whether `room` is a one-to-one chat: at most two members, or a bridged DM (`com.beeper.room_type` dm).
+ * Until a bridged room's bridge info is known, its bridge bot (which joins to publish the room's state) is
+ * not counted as a member, so a DM is not taken for a group in the meantime.
  */
 export function isOneToOneRoom(room: Room): boolean {
-    return room.getInvitedAndJoinedMemberCount() <= 2 || getBridgeInfo(room)?.roomType === "dm";
+    const info = getBridgeInfo(room);
+    if (!info) return humanMemberCount(room) <= 2;
+    return room.getInvitedAndJoinedMemberCount() <= 2 || info.roomType === "dm";
 }

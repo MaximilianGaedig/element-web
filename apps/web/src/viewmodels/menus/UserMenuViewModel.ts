@@ -22,6 +22,7 @@ import type { MatrixClient } from "matrix-js-sdk/src/matrix";
 import { clearAllUserStatus } from "../../utils/userStatus";
 import { type SetStatusViewModel, UserMenuSetStatusViewModel } from "../status/SetStatusViewModel";
 import SettingsStore from "../../settings/SettingsStore";
+import { UIFeature } from "../../settings/UIFeature";
 import { _t } from "../../languageHandler";
 import {
     CalendarIcon,
@@ -31,9 +32,12 @@ import {
     HistoryIcon,
     KeyIcon,
     LinkIcon,
+    LabsIcon,
     LockIcon,
+    MicOnIcon,
     NotificationsIcon,
     PreferencesIcon,
+    SidebarIcon,
     UserProfileIcon,
     VisibilityOnIcon,
 } from "@vector-im/compound-design-tokens/assets/web/icons";
@@ -44,14 +48,31 @@ const SECTIONS: Array<{
     id: UserTab;
     label: Parameters<typeof _t>[0];
     Icon: React.ComponentType<React.SVGAttributes<SVGElement>>;
+    /** The section is only there when this holds (the same conditions as the settings dialog's tabs). */
+    when?: () => boolean;
 }> = [
     { id: UserTab.Account, label: "settings|account|title", Icon: UserProfileIcon },
     { id: UserTab.SessionManager, label: "settings|sessions|title", Icon: ComputerIcon },
     { id: UserTab.Appearance, label: "common|appearance", Icon: VisibilityOnIcon },
     { id: UserTab.Notifications, label: "notifications|enable_prompt_toast_title", Icon: NotificationsIcon },
     { id: UserTab.Preferences, label: "common|preferences", Icon: PreferencesIcon },
+    { id: UserTab.Sidebar, label: "settings|sidebar|title", Icon: SidebarIcon },
+    {
+        id: UserTab.Voice,
+        label: "settings|voip|title",
+        Icon: MicOnIcon,
+        when: () => !!SettingsStore.getValue(UIFeature.Voip),
+    },
     { id: UserTab.Security, label: "room_settings|security|title", Icon: LockIcon },
     { id: UserTab.Encryption, label: "settings|encryption|title", Icon: KeyIcon },
+    {
+        id: UserTab.Labs,
+        label: "common|labs",
+        Icon: LabsIcon,
+        when: () =>
+            !!(SdkConfig.get("show_labs_settings") || SettingsStore.getValue("developerMode")) ||
+            SettingsStore.getFeatureSettingNames().some((k) => !!SettingsStore.getBetaInfo(k)),
+    },
     { id: UserTab.Bridges, label: "tg_layout|bridges_tab", Icon: LinkIcon },
     { id: UserTab.Import, label: "tg_layout|import_tab", Icon: HistoryIcon },
     { id: UserTab.Activity, label: "tg_layout|activity_tab", Icon: CalendarIcon },
@@ -147,7 +168,11 @@ export class UserMenuViewModel
         const handheld = document.documentElement.dataset.tgScreen === "mobile" && current.showAvatar;
         if (!handheld) return { sections: undefined };
         return {
-            sections: SECTIONS.map(({ id, label, Icon }) => ({ id, label: _t(label), Icon })),
+            sections: SECTIONS.filter(({ when }) => !when || when()).map(({ id, label, Icon }) => ({
+                id,
+                label: _t(label),
+                Icon,
+            })),
             actions: { ...current.actions, openSecurity: false, openSettings: false },
         };
     }

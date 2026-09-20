@@ -37,7 +37,9 @@ import PreferencesUserSettingsTab from "../settings/tabs/user/PreferencesUserSet
 import VoiceUserSettingsTab from "../settings/tabs/user/VoiceUserSettingsTab";
 import BridgesUserSettingsTab from "../settings/tabs/user/BridgesUserSettingsTab";
 import BridgeIcon from "@vector-im/compound-design-tokens/assets/web/icons/link";
-import { SettingsNavBar, SettingsNavProfile } from "./SettingsNav";
+import { SettingsNavBar } from "./SettingsNav";
+import defaultDispatcher from "../../../dispatcher/dispatcher";
+import { Action } from "../../../dispatcher/actions";
 import ImportUserSettingsTab from "../settings/tabs/user/ImportUserSettingsTab";
 import HistoryIcon from "@vector-im/compound-design-tokens/assets/web/icons/history";
 import StorageUserSettingsTab from "../settings/tabs/user/StorageUserSettingsTab";
@@ -292,14 +294,16 @@ export default function UserSettingsDialog(props: IProps): JSX.Element {
 
     const [activeToast, toastRack] = useActiveToast();
 
-    // On a handheld the settings are a navigation stack, as in Telegram iOS: a list of sections (with your
-    // profile on top), and picking one pushes its page with a back button. CSS shows one or the other by
-    // data-page; on a desktop both are always there.
-    const [page, setPage] = useState<"list" | "page">(props.initialTabId ? "page" : "list");
+    // On a handheld the list of sections is the user menu's drawer (there is only one such list); this
+    // dialog is a section's page, and its back button returns to the drawer. On a desktop the sections
+    // stay beside the page.
     const activeTab = getTabs().find((tab) => tab.id === activeTabId);
     const openTab = (tabId: UserTab): void => {
         setActiveTabId(tabId);
-        setPage("page");
+    };
+    const backToMenu = (): void => {
+        props.onFinished();
+        defaultDispatcher.fire(Action.ToggleUserMenu);
     };
 
     return (
@@ -315,14 +319,12 @@ export default function UserSettingsDialog(props: IProps): JSX.Element {
                     title={titleForTabID(activeTabId)}
                     titleClass="mx_UserSettingsDialog_title"
                 >
-                    <div className="mx_SettingsDialog_content" data-page={page}>
+                    <div className="mx_SettingsDialog_content">
                         <SettingsNavBar
-                            page={page}
                             title={activeTab ? _t(activeTab.label) : null}
-                            onBack={(): void => setPage("list")}
+                            onBack={backToMenu}
                             onClose={props.onFinished}
                         />
-                        {page === "list" && <SettingsNavProfile client={props.sdkContext.client} />}
                         <TabbedView
                             tabs={getTabs()}
                             activeTabId={activeTabId}

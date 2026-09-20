@@ -90,5 +90,21 @@ describe("Telegram-style layout", () => {
             expect(isOneToOneRoom(makeRoom(["@me:example.org", BOT, "@telegram_1:example.org"], "group"))).toBe(false);
             expect(isOneToOneRoom(makeRoom(["@me:example.org", "@a:example.org", "@b:example.org"]))).toBe(false);
         });
+
+        it("does not count the bridge bot while the room's bridge info is not known", () => {
+            const room = makeRoom(["@me:example.org", BOT, "@telegram_1:example.org"]);
+            expect(isOneToOneRoom(room)).toBe(false); // nothing says the third member is a bot
+            room.currentState.setStateEvents([
+                mkEvent({
+                    event: true,
+                    type: "im.mxg.backfill",
+                    skey: "",
+                    room: ROOM_ID,
+                    user: BOT,
+                    content: { state: "complete" },
+                }),
+            ]);
+            expect(isOneToOneRoom(room)).toBe(true);
+        });
     });
 });

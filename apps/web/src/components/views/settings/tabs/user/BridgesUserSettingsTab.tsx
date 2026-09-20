@@ -22,6 +22,7 @@ import { BACKFILL_EVENT_TYPE } from "../../../../../utils/chatHistory";
 import {
     BRIDGE_LOGIN_EVENT_TYPE,
     bridgeLoginsIn,
+    bridgesWithoutLoginState,
     type BridgeLogin,
     type LoginHealth,
 } from "../../../../../utils/bridgeLogins";
@@ -30,7 +31,13 @@ import { collectImports, type ImportOverview, type NetworkSummary } from "../../
 const number = (n: number): string => n.toLocaleString();
 
 /** A stable colour per network, so each bridge is recognisable at a glance. */
-const HEALTH_GLYPH: Record<LoginHealth, string> = { connected: "✓", connecting: "↻", problem: "!", disconnected: "⏻" };
+const HEALTH_GLYPH: Record<LoginHealth, string> = {
+    connected: "✓",
+    connecting: "↻",
+    problem: "!",
+    disconnected: "⏻",
+    unreported: "?",
+};
 
 function ago(ts: number): string {
     if (!ts) return "";
@@ -49,7 +56,13 @@ function useBridges(): { logins?: BridgeLogin[]; overview?: ImportOverview } {
     useEffect(() => {
         if (!client) return;
         let timer: number | undefined;
-        const refresh = (): void => setData({ logins: bridgeLoginsIn(client), overview: collectImports(client) });
+        const refresh = (): void => {
+            const reporting = bridgeLoginsIn(client);
+            setData({
+                logins: [...reporting, ...bridgesWithoutLoginState(client, reporting)],
+                overview: collectImports(client),
+            });
+        };
         const onState = (event: { getType(): string }): void => {
             if (event.getType() !== BACKFILL_EVENT_TYPE && event.getType() !== BRIDGE_LOGIN_EVENT_TYPE) return;
             window.clearTimeout(timer);
@@ -147,7 +160,11 @@ function BridgeCard({ login, network }: { login: BridgeLogin; network?: NetworkS
                 />
                 <span className="mx_BridgeCard_titles">
                     <span className="mx_BridgeCard_title">{login.network}</span>
-                    <span className="mx_BridgeCard_subtitle">{login.remoteName || login.accountId}</span>
+                    <span className="mx_BridgeCard_subtitle">
+                        {login.health === "unreported"
+                            ? _t("tg_layout|bridge_unreported_hint")
+                            : login.remoteName || login.accountId}
+                    </span>
                 </span>
                 <span className="mx_BridgeCard_status">
                     <span aria-hidden>{HEALTH_GLYPH[login.health]}</span>
@@ -180,11 +197,19 @@ function BridgeCard({ login, network }: { login: BridgeLogin; network?: NetworkS
 
                 {network && <ImportLine network={network} />}
 
+                {login.health === "unreported" && (
+                    <p className="mx_BridgeCard_note">
+                        {_t("tg_layout|bridge_unreported_body", { network: login.network })}
+                    </p>
+                )}
+
                 <dl className="mx_BridgeCard_facts">
-                    <div>
-                        <dt>{_t("tg_layout|bridge_fact_updated")}</dt>
-                        <dd>{ago(login.updatedTs)}</dd>
-                    </div>
+                    {login.updatedTs > 0 && (
+                        <div>
+                            <dt>{_t("tg_layout|bridge_fact_updated")}</dt>
+                            <dd>{ago(login.updatedTs)}</dd>
+                        </div>
+                    )}
                     {network && (
                         <div>
                             <dt>{_t("tg_layout|bridge_fact_messages")}</dt>
@@ -250,8 +275,12 @@ export default function BridgesUserSettingsTab(): JSX.Element {
                         <p className="mx_BridgesTab_summary">
                             {_t("tg_layout|bridges_summary", {
                                 connected: logins.filter((l) => l.health === "connected").length,
-                                total: logins.length,
+                                total: logins.filter((l) => l.health !== "unreported").length,
                             })}
+                            {logins.some((l) => l.health === "unreported") &&
+                                ` · ${_t("tg_layout|bridges_not_reporting", {
+                                    count: logins.filter((l) => l.health === "unreported").length,
+                                })}`}
                         </p>
                         <div className="mx_BridgesTab_list">
                             {logins.map((login) => (
