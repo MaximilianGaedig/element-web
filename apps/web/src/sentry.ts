@@ -6,13 +6,21 @@ SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only OR LicenseRef-Element-Com
 Please see LICENSE files in the repository root for full details.
 */
 
-import * as Sentry from "@sentry/browser";
 import { type MatrixClient } from "matrix-js-sdk/src/matrix";
+import type * as SentrySdk from "@sentry/browser";
 
 import SdkConfig from "./SdkConfig";
 import { MatrixClientPeg } from "./MatrixClientPeg";
 import SettingsStore from "./settings/SettingsStore";
 import { type IConfigOptions } from "./IConfigOptions";
+
+/**
+ * The Sentry SDK, loaded on demand.
+ *
+ * It is a few hundred kilobytes that a deployment without a `sentry` config never uses, and every one of
+ * its uses here is already asynchronous or fire-and-forget, so it stays off the startup path.
+ */
+const sentry = (): Promise<typeof SentrySdk> => import("@sentry/browser");
 
 type StorageContext = {
     storageManager_persisted?: string;
@@ -176,6 +184,7 @@ export async function sendSentryReport(userText: string, issueUrl: string, error
 
     // If there's no error and no issueUrl, the report will just produce non-grouped noise in Sentry, so don't
     // upload it
+    const Sentry = await sentry();
     if (error) {
         Sentry.captureException(error, captureContext);
     } else if (issueUrl) {
@@ -183,14 +192,15 @@ export async function sendSentryReport(userText: string, issueUrl: string, error
     }
 }
 
-export function setSentryUser(mxid: string): void {
-    if (SdkConfig.get().sentry) {
-        Sentry.setUser({ username: mxid });
-    }
+export async function setSentryUser(mxid: string): Promise<void> {
+    if (!SdkConfig.get().sentry) return;
+    const Sentry = await sentry();
+    Sentry.setUser({ username: mxid });
 }
 
 export async function initSentry(sentryConfig: IConfigOptions["sentry"]): Promise<void> {
     if (!sentryConfig) return;
+    const Sentry = await sentry();
     const integrations = [
         Sentry.inboundFiltersIntegration(),
         Sentry.functionToStringIntegration(),

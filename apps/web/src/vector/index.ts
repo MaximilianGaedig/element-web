@@ -23,9 +23,6 @@ import "../../res/css/_index.pcss";
 // Our own CSS (which is themed) is imported via separate webpack entry points
 // in webpack.config.js
 // eslint-disable-next-line @typescript-eslint/no-require-imports,import/no-commonjs,unicorn/prefer-module
-require("katex/dist/katex.css");
-
-// eslint-disable-next-line @typescript-eslint/no-require-imports,import/no-commonjs,unicorn/prefer-module
 require("./localstorage-fix");
 
 // Patch a fake window.TouchEvent for re-resizable's unguarded `instanceof TouchEvent`.

@@ -858,7 +858,7 @@ async function doSetLoggedIn(
     MatrixClientPeg.set(createClientWithCreds(credentials, oauthClientId));
     const client = MatrixClientPeg.safeGet();
 
-    setSentryUser(credentials.userId);
+    void setSentryUser(credentials.userId);
 
     if (PosthogAnalytics.instance.isEnabled()) {
         PosthogAnalytics.instance.startListeningToSettingsChanges(client);

@@ -15,6 +15,7 @@ import parse from "html-react-parser";
 import { getMockClientWithEventEmitter } from "test-utils";
 
 import { bodyToHtml, bodyToNode, formatEmojis, sanitizedHtmlNode, topicToHtml } from "./HtmlUtils";
+import { loadLatexIfEnabled } from "./Latex";
 import SettingsStore from "./settings/SettingsStore";
 import { SettingLevel } from "./settings/SettingLevel";
 import SdkConfig from "./SdkConfig";
@@ -174,8 +175,10 @@ describe("bodyToHtml", () => {
     });
 
     describe("feature_latex_maths", () => {
-        beforeEach(() => {
+        beforeEach(async () => {
             SettingsStore.setValue("feature_latex_maths", null, SettingLevel.DEVICE, true);
+            // KaTeX is loaded on demand, as the app does when the flag is on, so that rendering is synchronous.
+            await loadLatexIfEnabled();
         });
 
         afterEach(() => {

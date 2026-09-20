@@ -95,6 +95,7 @@ import UIStore, { UI_EVENTS } from "../../stores/UIStore";
 import SoftLogout from "./auth/SoftLogout";
 import { copyPlaintext } from "../../utils/strings";
 import { initSentry } from "../../sentry";
+import { loadLatexIfEnabled } from "../../Latex";
 import { showSpaceInvite } from "../../utils/space";
 import { type ButtonEvent } from "../views/elements/AccessibleButton";
 import { type ActionPayload } from "../../dispatcher/payloads";
@@ -479,6 +480,7 @@ export default class MatrixChat extends React.PureComponent<IProps, IState> {
         void this.fontWatcher.start();
 
         void initSentry(SdkConfig.get("sentry"));
+        void loadLatexIfEnabled();
         window.addEventListener("resize", this.onWindowResized);
 
         // Once we start loading the MatrixClient, we can't stop, even if MatrixChat gets unmounted (as it does
