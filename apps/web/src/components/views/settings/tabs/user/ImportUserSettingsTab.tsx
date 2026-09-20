@@ -17,7 +17,6 @@ import dis from "../../../../../dispatcher/dispatcher";
 import { Action } from "../../../../../dispatcher/actions";
 import { formatFullDateNoTime } from "../../../../../DateUtils";
 import { BACKFILL_EVENT_TYPE, requestFullBackfill, requestSkipBackfill } from "../../../../../utils/chatHistory";
-import { BRIDGE_LOGIN_EVENT_TYPE, bridgeLoginsIn, type BridgeLogin } from "../../../../../utils/bridgeLogins";
 import {
     collectImports,
     type ImportEntry,
@@ -26,7 +25,8 @@ import {
 } from "../../../../../utils/importOverview";
 
 const number = (n: number): string => n.toLocaleString();
-const compact = (n: number): string => new Intl.NumberFormat(undefined, { notation: "compact", maximumFractionDigits: 1 }).format(n);
+const compact = (n: number): string =>
+    new Intl.NumberFormat(undefined, { notation: "compact", maximumFractionDigits: 1 }).format(n);
 
 function eta(ms: number): string {
     const minutes = Math.max(1, Math.round(ms / 60_000));
@@ -37,16 +37,14 @@ function eta(ms: number): string {
 }
 
 /** The overview, kept current: bridges write a chat's state as it changes, and a running import ages. */
-function useOverview(): { overview?: ImportOverview; logins: BridgeLogin[] } {
+function useOverview(): { overview?: ImportOverview } {
     const client = useContext(MatrixClientContext);
     const [overview, setOverview] = useState<ImportOverview | undefined>();
-    const [logins, setLogins] = useState<BridgeLogin[]>([]);
     useEffect(() => {
         if (!client) return;
         let timer: number | undefined;
         const refresh = (): void => {
             setOverview(collectImports(client));
-            setLogins(bridgeLoginsIn(client));
         };
         const later = (): void => {
             // Many chats update at once: gather them into one pass.
@@ -54,7 +52,7 @@ function useOverview(): { overview?: ImportOverview; logins: BridgeLogin[] } {
             timer = window.setTimeout(refresh, 1000);
         };
         const onState = (event: { getType(): string }): void => {
-            if (event.getType() === BACKFILL_EVENT_TYPE || event.getType() === BRIDGE_LOGIN_EVENT_TYPE) later();
+            if (event.getType() === BACKFILL_EVENT_TYPE) later();
         };
         refresh();
         client.on(RoomStateEvent.Events, onState);
@@ -65,7 +63,7 @@ function useOverview(): { overview?: ImportOverview; logins: BridgeLogin[] } {
             window.clearTimeout(timer);
         };
     }, [client]);
-    return { overview, logins };
+    return { overview };
 }
 
 function Bar({ value, tone }: { value: number; tone?: "done" }): JSX.Element {
@@ -129,7 +127,9 @@ function Summary({ overview }: { overview: ImportOverview }): JSX.Element {
             </div>
             <p className="mx_ImportSummary_line">
                 {[
-                    overview.etaMs !== undefined ? _t("tg_layout|history_eta", { time: eta(overview.etaMs) }) : undefined,
+                    overview.etaMs !== undefined
+                        ? _t("tg_layout|history_eta", { time: eta(overview.etaMs) })
+                        : undefined,
                     overview.ratePerMinute
                         ? _t("tg_layout|history_pace", { rate: number(Math.round(overview.ratePerMinute)) })
                         : undefined,
@@ -151,7 +151,15 @@ function Summary({ overview }: { overview: ImportOverview }): JSX.Element {
     );
 }
 
-function Row({ entry, actions, showPhase }: { entry: ImportEntry; actions?: JSX.Element; showPhase?: boolean }): JSX.Element {
+function Row({
+    entry,
+    actions,
+    showPhase,
+}: {
+    entry: ImportEntry;
+    actions?: JSX.Element;
+    showPhase?: boolean;
+}): JSX.Element {
     const { room, status, phase } = entry;
     const fraction = status.remote_total ? Math.min(0.99, status.bridged_messages / status.remote_total) : undefined;
     return (
@@ -159,11 +167,20 @@ function Row({ entry, actions, showPhase }: { entry: ImportEntry; actions?: JSX.
             <button
                 type="button"
                 className="mx_ImportRow_main"
-                onClick={(): void => dis.dispatch({ action: Action.ViewRoom, room_id: room.roomId, metricsTrigger: undefined })}
+                onClick={(): void =>
+                    dis.dispatch({ action: Action.ViewRoom, room_id: room.roomId, metricsTrigger: undefined })
+                }
             >
                 <span className="mx_ImportRow_name">{room.name}</span>
                 <span className="mx_ImportRow_meta">
-                    {showPhase && <span className={`mx_ImportRow_phase mx_ImportRow_phase--${phase}`}>{_t(`tg_layout|history_badge_${phase === "importing" ? "importing" : phase === "queued" ? "queued" : phase === "paused" ? "paused" : phase === "skipped" ? "skipped" : phase === "unavailable" ? "unavailable" : "complete"}`)} · </span>}
+                    {showPhase && (
+                        <span className={`mx_ImportRow_phase mx_ImportRow_phase--${phase}`}>
+                            {_t(
+                                `tg_layout|history_badge_${phase === "importing" ? "importing" : phase === "queued" ? "queued" : phase === "paused" ? "paused" : phase === "skipped" ? "skipped" : phase === "unavailable" ? "unavailable" : "complete"}`,
+                            )}{" "}
+                            ·{" "}
+                        </span>
+                    )}
                     {phase === "queued" && status.queue_ahead !== undefined
                         ? _t("tg_layout|import_queue_position", { position: status.queue_ahead + 1 })
                         : phase === "importing" && status.rate_per_min
@@ -224,13 +241,19 @@ function Section({
                 ))}
             </ul>
             {shown.length < entries.length && (
-                <p className="mx_ImportSummary_note">{_t("tg_layout|import_more", { count: entries.length - shown.length })}</p>
+                <p className="mx_ImportSummary_note">
+                    {_t("tg_layout|import_more", { count: entries.length - shown.length })}
+                </p>
             )}
         </SettingsSubsection>
     );
 }
 
-function NetworkLine({ network }: { network: ImportSummary & { network: string; entries: ImportEntry[] } }): JSX.Element {
+function NetworkLine({
+    network,
+}: {
+    network: ImportSummary & { network: string; entries: ImportEntry[] };
+}): JSX.Element {
     const open = network.byPhase.importing + network.byPhase.queued + network.byPhase.paused;
     const rooms = [...network.entries].sort((a, b) => Number(a.phase === "complete") - Number(b.phase === "complete"));
     return (
@@ -282,7 +305,7 @@ function NetworkList({ overview }: { overview: ImportOverview }): JSX.Element {
  * and each network's totals.
  */
 export default function ImportUserSettingsTab(): JSX.Element {
-    const { overview, logins } = useOverview();
+    const { overview } = useOverview();
     if (!overview) {
         return (
             <SettingsTab data-testid="mx_ImportUserSettingsTab">
@@ -309,10 +332,14 @@ export default function ImportUserSettingsTab(): JSX.Element {
     return (
         <SettingsTab data-testid="mx_ImportUserSettingsTab">
             <SettingsSection>
-                <BridgesSection logins={logins} />
                 <Summary overview={overview} />
                 <Section title={_t("tg_layout|import_now")} entries={by("importing")} action={skipAction} />
-                <Section title={_t("tg_layout|import_queue")} entries={by("queued")} action={skipAction} limit={QUEUE_LIMIT} />
+                <Section
+                    title={_t("tg_layout|import_queue")}
+                    entries={by("queued")}
+                    action={skipAction}
+                    limit={QUEUE_LIMIT}
+                />
                 <Section title={_t("tg_layout|import_paused")} entries={paused} action={importAction} />
                 <Section title={_t("tg_layout|import_skipped")} entries={by("skipped")} action={importAction} />
                 {overview.byPhase.importing + overview.byPhase.queued + overview.byPhase.paused > 0 && (
@@ -325,51 +352,22 @@ export default function ImportUserSettingsTab(): JSX.Element {
     );
 }
 
-function BridgesSection({ logins }: { logins: BridgeLogin[] }): JSX.Element | null {
-    if (!logins.length) return null;
-    return (
-        <SettingsSubsection heading={_t("tg_layout|bridges_heading")}>
-            <ul className="mx_ImportList">
-                {logins.map((login) => (
-                    <li key={`${login.room.roomId}${login.accountId}`} className={`mx_BridgeLogin mx_BridgeLogin--${login.health}`}>
-                        <span className="mx_BridgeLogin_dot" aria-hidden />
-                        <span className="mx_BridgeLogin_text">
-                            <span className="mx_BridgeLogin_name">
-                                {login.network}
-                                {login.remoteName ? ` · ${login.remoteName}` : ""}
-                            </span>
-                            <span className="mx_BridgeLogin_state">
-                                {_t(`tg_layout|bridge_state_${login.health}`)}
-                                {login.message && login.health !== "connected" ? ` — ${login.message}` : ""}
-                            </span>
-                            {(login.health === "disconnected" || login.health === "problem") && (
-                                <span className="mx_BridgeLogin_hint">
-                                    {_t("tg_layout|bridge_relogin", { command: `${login.commandPrefix} login` })}
-                                </span>
-                            )}
-                        </span>
-                        <button
-                            type="button"
-                            className="mx_ImportRow_action"
-                            onClick={(): void =>
-                                dis.dispatch({ action: Action.ViewRoom, room_id: login.room.roomId, metricsTrigger: undefined })
-                            }
-                        >
-                            {_t("tg_layout|bridge_open_chat")}
-                        </button>
-                    </li>
-                ))}
-            </ul>
-        </SettingsSubsection>
-    );
-}
-
 function skipAction(entry: ImportEntry): JSX.Element | undefined {
     if (!entry.status.command_prefix) return undefined;
-    return <Action_ label={_t("tg_layout|import_skip_short")} onClick={() => void requestSkipBackfill(entry.room, entry.status)} />;
+    return (
+        <Action_
+            label={_t("tg_layout|import_skip_short")}
+            onClick={() => void requestSkipBackfill(entry.room, entry.status)}
+        />
+    );
 }
 
 function importAction(entry: ImportEntry): JSX.Element | undefined {
     if (!entry.status.command_prefix) return undefined;
-    return <Action_ label={_t("tg_layout|import_start_short")} onClick={() => void requestFullBackfill(entry.room, entry.status)} />;
+    return (
+        <Action_
+            label={_t("tg_layout|import_start_short")}
+            onClick={() => void requestFullBackfill(entry.room, entry.status)}
+        />
+    );
 }

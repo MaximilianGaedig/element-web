@@ -759,6 +759,15 @@ html[data-tg-screen] .mx_RoomView_body[data-telegram-layout="true"] > .mx_TgImpo
     }
 }
 
+/* On its own settings page: no inset for the profile card's icon column, the charts use the full width. */
+.mx_ActivitySection--page {
+    padding: 0;
+
+    .mx_ActivitySection_hint {
+        margin: 0 0 0.75rem;
+    }
+}
+
 .mx_ActivitySection_title {
     font: var(--cpd-font-body-md-regular);
 }

@@ -193,7 +193,9 @@ html[data-tg-screen="mobile"] {
         display: none;
     }
 
-    .mx_UserSettingsDialog {
+    .mx_UserSettingsDialog,
+    .mx_RoomSettingsDialog,
+    .mx_SpaceSettingsDialog {
         position: relative;
         height: calc(100dvh - var(--tg-safe-top, 0px) - 1.5rem);
         background: var(--cpd-color-bg-canvas-default);
@@ -234,15 +236,10 @@ html[data-tg-screen="mobile"] {
         padding: 1rem 0.5rem 0;
     }
 
-    /* Just the section's name: "Settings:" is the dialog title's lead-in. */
     .mx_SettingsNavBar_title {
         text-align: center;
-        font-size: 0;
+        font: var(--cpd-font-body-lg-semibold);
         color: var(--cpd-color-text-primary);
-
-        .mx_UserSettingsDialog_title_strong {
-            font: var(--cpd-font-body-lg-semibold);
-        }
     }
 
     .mx_SettingsNavBar_back,
@@ -397,6 +394,8 @@ html[data-tg-screen="mobile"] {
             }
         }
 
+        /* Dropdowns take the width there is, all alike. */
+        .mx_Dropdown,
         .mx_SettingsDropdown .mx_Dropdown_input,
         .mx_SettingsSubsection_dropdown .mx_Dropdown_input {
             width: 100%;

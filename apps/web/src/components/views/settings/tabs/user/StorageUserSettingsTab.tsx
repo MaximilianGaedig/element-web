@@ -15,7 +15,6 @@ import { SettingsSubsection } from "../../shared/SettingsSubsection";
 import { formatBytes } from "../../../../../utils/FormattingUtils";
 import { fetchStorageOverview, type Storage, type StorageOverview, storedBytes } from "../../../../../utils/storage";
 import dis from "../../../../../dispatcher/dispatcher";
-import { ActivityCharts } from "../../../telegram/TgHistory";
 import { Action } from "../../../../../dispatcher/actions";
 
 /** A bar split in the shares it is made of, each with its name and size underneath. */
@@ -23,7 +22,11 @@ function Breakdown({ parts }: { parts: Array<{ label: string; bytes: number; ton
     const total = parts.reduce((sum, part) => sum + part.bytes, 0);
     return (
         <div className="mx_StorageBreakdown">
-            <div className="mx_StorageBreakdown_bar" role="img" aria-label={parts.map((p) => `${p.label} ${formatBytes(p.bytes)}`).join(", ")}>
+            <div
+                className="mx_StorageBreakdown_bar"
+                role="img"
+                aria-label={parts.map((p) => `${p.label} ${formatBytes(p.bytes)}`).join(", ")}
+            >
                 {parts.map((part) => (
                     <span
                         key={part.label}
@@ -35,7 +38,10 @@ function Breakdown({ parts }: { parts: Array<{ label: string; bytes: number; ton
             <ul className="mx_StorageBreakdown_legend">
                 {parts.map((part) => (
                     <li key={part.label}>
-                        <span className={`mx_StorageBreakdown_dot mx_StorageBreakdown_part--${part.tone}`} aria-hidden />
+                        <span
+                            className={`mx_StorageBreakdown_dot mx_StorageBreakdown_part--${part.tone}`}
+                            aria-hidden
+                        />
                         <span className="mx_StorageBreakdown_label">{part.label}</span>
                         <span className="mx_StorageBreakdown_value">{formatBytes(part.bytes)}</span>
                     </li>
@@ -61,7 +67,7 @@ export default function StorageUserSettingsTab(): JSX.Element {
     const [overview, setOverview] = useState<StorageOverview | undefined | null>(null);
     useEffect(() => {
         let cancelled = false;
-        void fetchStorageOverview(client!).then((o) => {
+        void fetchStorageOverview(client).then((o) => {
             if (!cancelled) setOverview(o);
         });
         return (): void => {
@@ -114,20 +120,17 @@ export default function StorageUserSettingsTab(): JSX.Element {
                         </div>
                         <Breakdown
                             parts={[
-                                { label: _t("settings|storage|database"), bytes: overview.server.database, tone: "messages" },
-                                { label: _t("settings|storage|media_files"), bytes: overview.server.media, tone: "media" },
+                                {
+                                    label: _t("settings|storage|database"),
+                                    bytes: overview.server.database,
+                                    tone: "messages",
+                                },
+                                {
+                                    label: _t("settings|storage|media_files"),
+                                    bytes: overview.server.media,
+                                    tone: "media",
+                                },
                             ]}
-                        />
-                    </SettingsSubsection>
-                )}
-
-                {!!(overview.by_month?.length || overview.by_hour_of_week) && (
-                    <SettingsSubsection heading={_t("settings|storage|activity_heading")}>
-                        <ActivityCharts
-                            months={overview.by_month ?? []}
-                            week={overview.by_hour_of_week}
-                            total={overview.by_month?.reduce((sum, m) => sum + m.count, 0) ?? 0}
-                            open
                         />
                     </SettingsSubsection>
                 )}
@@ -142,7 +145,11 @@ export default function StorageUserSettingsTab(): JSX.Element {
                                         type="button"
                                         className="mx_StorageChats_row"
                                         onClick={(): void =>
-                                            dis.dispatch({ action: Action.ViewRoom, room_id: room.room_id, metricsTrigger: undefined })
+                                            dis.dispatch({
+                                                action: Action.ViewRoom,
+                                                room_id: room.room_id,
+                                                metricsTrigger: undefined,
+                                            })
                                         }
                                     >
                                         <span className="mx_StorageChats_name">{room.name ?? room.room_id}</span>

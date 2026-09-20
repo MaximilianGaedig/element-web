@@ -216,7 +216,7 @@ export function UserMenuView({ vm, className }: UserMenuViewProps): JSX.Element 
                         </Text>
                     )}
                 </section>
-                <Separator />
+                <Separator className={styles.separator} />
                 <section className={styles.actions}>
                     {actions.openHomePage && (
                         <MenuItem Icon={HomeIcon} label={_t("user_menu|open_home")} onSelect={vm.openHomePage} />
@@ -248,7 +248,7 @@ export function UserMenuView({ vm, className }: UserMenuViewProps): JSX.Element 
                 </section>
                 {!!sections?.length && (
                     <>
-                        <Separator />
+                        <Separator className={styles.separator} />
                         <section className={styles.actions}>
                             {sections.map(({ id, label, Icon }) => (
                                 <MenuItem key={id} Icon={Icon} label={label} onSelect={() => vm.openSection?.(id)} />

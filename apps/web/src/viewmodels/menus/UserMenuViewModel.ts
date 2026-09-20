@@ -24,8 +24,9 @@ import { type SetStatusViewModel, UserMenuSetStatusViewModel } from "../status/S
 import SettingsStore from "../../settings/SettingsStore";
 import { _t } from "../../languageHandler";
 import {
+    CalendarIcon,
     ChartIcon,
-    DevicesIcon,
+    ComputerIcon,
     HelpIcon,
     HistoryIcon,
     KeyIcon,
@@ -39,9 +40,13 @@ import {
 import type React from "react";
 
 /** The settings sections the menu lists on a handheld, in Element's usual order. */
-const SECTIONS: Array<{ id: UserTab; label: Parameters<typeof _t>[0]; Icon: React.ComponentType<React.SVGAttributes<SVGElement>> }> = [
+const SECTIONS: Array<{
+    id: UserTab;
+    label: Parameters<typeof _t>[0];
+    Icon: React.ComponentType<React.SVGAttributes<SVGElement>>;
+}> = [
     { id: UserTab.Account, label: "settings|account|title", Icon: UserProfileIcon },
-    { id: UserTab.SessionManager, label: "settings|sessions|title", Icon: DevicesIcon },
+    { id: UserTab.SessionManager, label: "settings|sessions|title", Icon: ComputerIcon },
     { id: UserTab.Appearance, label: "common|appearance", Icon: VisibilityOnIcon },
     { id: UserTab.Notifications, label: "notifications|enable_prompt_toast_title", Icon: NotificationsIcon },
     { id: UserTab.Preferences, label: "common|preferences", Icon: PreferencesIcon },
@@ -49,6 +54,7 @@ const SECTIONS: Array<{ id: UserTab; label: Parameters<typeof _t>[0]; Icon: Reac
     { id: UserTab.Encryption, label: "settings|encryption|title", Icon: KeyIcon },
     { id: UserTab.Bridges, label: "tg_layout|bridges_tab", Icon: LinkIcon },
     { id: UserTab.Import, label: "tg_layout|import_tab", Icon: HistoryIcon },
+    { id: UserTab.Activity, label: "tg_layout|activity_tab", Icon: CalendarIcon },
     { id: UserTab.Storage, label: "settings|storage|title", Icon: ChartIcon },
     { id: UserTab.Help, label: "setting|help_about|title", Icon: HelpIcon },
 ];
@@ -130,7 +136,10 @@ export class UserMenuViewModel
     public readonly setOpen = (isOpen: boolean): void => {
         // On a phone the menu is the settings' front page: list the sections (fresh, as the screen size may
         // have changed since the menu was built).
-        this.snapshot.merge({ open: isOpen, ...(isOpen ? UserMenuViewModel.handheldParts(this.snapshot.current) : {}) });
+        this.snapshot.merge({
+            open: isOpen,
+            ...(isOpen ? UserMenuViewModel.handheldParts(this.snapshot.current) : {}),
+        });
     };
 
     /** Settings sections shown in the menu on a handheld, and the entries they replace. */

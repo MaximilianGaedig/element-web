@@ -110,7 +110,7 @@ function useHistory(room: Room): {
     return { status, phase, progress, queued };
 }
 
-const PHASE_KEYS: Record<HistoryPhase, { title: string; badge: string }> = {
+const PHASE_KEYS: Record<HistoryPhase, { title: TranslationKey; badge: TranslationKey }> = {
     importing: { title: "tg_layout|history_importing", badge: "tg_layout|history_badge_importing" },
     queued: { title: "tg_layout|history_queued", badge: "tg_layout|history_badge_queued" },
     paused: { title: "tg_layout|history_paused", badge: "tg_layout|history_badge_paused" },
@@ -146,7 +146,15 @@ function Stat({ label, value }: { label: string; value: string }): JSX.Element {
  * Once a chat's history is settled (all imported, skipped, or nothing to import) it takes one line, a
  * verification: a check and the number. Tapping it opens the few details that back the claim up.
  */
-function CompactHistory({ room, status, phase }: { room: Room; status: BackfillStatus; phase: HistoryPhase }): JSX.Element {
+function CompactHistory({
+    room,
+    status,
+    phase,
+}: {
+    room: Room;
+    status: BackfillStatus;
+    phase: HistoryPhase;
+}): JSX.Element {
     const [asked, setAsked] = useState(false);
     const network = status.network || _t("tg_layout|history_network");
     const summary =
@@ -169,7 +177,10 @@ function CompactHistory({ room, status, phase }: { room: Room; status: BackfillS
                 </summary>
                 <dl className="mx_HistoryCard_stats mx_HistoryCompact_details">
                     {status.oldest_ts ? (
-                        <Stat label={_t("tg_layout|history_stat_oldest")} value={formatFullDateNoTime(new Date(status.oldest_ts))} />
+                        <Stat
+                            label={_t("tg_layout|history_stat_oldest")}
+                            value={formatFullDateNoTime(new Date(status.oldest_ts))}
+                        />
                     ) : null}
                     {status.remote_total !== undefined && (
                         <Stat
@@ -234,12 +245,18 @@ export function TgHistoryCard({ room }: { room: Room }): JSX.Element | null {
         [
             _t("tg_layout|history_stat_imported"),
             status.remote_total
-                ? _t("tg_layout|history_x_of_y", { done: number(status.bridged_messages), total: number(status.remote_total) })
+                ? _t("tg_layout|history_x_of_y", {
+                      done: number(status.bridged_messages),
+                      total: number(status.remote_total),
+                  })
                 : number(status.bridged_messages),
         ],
     ];
     if (phase === "queued" && queued.waitMs !== undefined) {
-        stats.push([_t("tg_layout|history_stat_starts"), _t("tg_layout|history_in_time", { time: formatEta(queued.waitMs) })]);
+        stats.push([
+            _t("tg_layout|history_stat_starts"),
+            _t("tg_layout|history_in_time", { time: formatEta(queued.waitMs) }),
+        ]);
     }
     if (etaMs !== undefined) stats.push([_t("tg_layout|history_stat_eta"), formatEta(etaMs)]);
     if (phase === "importing" || phase === "queued") {
@@ -263,11 +280,11 @@ export function TgHistoryCard({ room }: { room: Room }): JSX.Element | null {
             <header className="mx_HistoryCard_header">
                 <PhaseIcon phase={phase} />
                 <div className="mx_HistoryCard_text">
-                    <h3 className="mx_HistoryCard_title">{_t(PHASE_KEYS[phase].title as never)}</h3>
+                    <h3 className="mx_HistoryCard_title">{_t(PHASE_KEYS[phase].title)}</h3>
                     {subtitle && <p className="mx_HistoryCard_subtitle">{subtitle}</p>}
                 </div>
                 <span className="mx_HistoryCard_badge" role="status">
-                    {_t(PHASE_KEYS[phase].badge as never)}
+                    {_t(PHASE_KEYS[phase].badge)}
                 </span>
             </header>
 
@@ -276,13 +293,16 @@ export function TgHistoryCard({ room }: { room: Room }): JSX.Element | null {
                     <div
                         className={`mx_HistoryBar${percent === undefined && phase === "importing" ? " mx_HistoryBar--indeterminate" : ""}`}
                         role="progressbar"
-                        aria-label={_t(PHASE_KEYS[phase].title as never)}
+                        aria-label={_t(PHASE_KEYS[phase].title)}
                         aria-valuemin={0}
                         aria-valuemax={100}
                         aria-valuenow={percent}
                         aria-valuetext={percent === undefined ? undefined : `${percent}%`}
                     >
-                        <span className="mx_HistoryBar_fill" style={percent === undefined ? undefined : { width: `${Math.max(2, percent)}%` }} />
+                        <span
+                            className="mx_HistoryBar_fill"
+                            style={percent === undefined ? undefined : { width: `${Math.max(2, percent)}%` }}
+                        />
                     </div>
                     {percent !== undefined && <span className="mx_HistoryCard_percent">{percent}%</span>}
                 </div>
@@ -350,8 +370,12 @@ export function ImportBanner({ room }: { room: Room }): JSX.Element | null {
                 progress.left !== undefined && progress.left > 0
                     ? _t("tg_layout|banner_left", { formatted: number(progress.left) })
                     : undefined,
-                progress.etaMs !== undefined ? _t("tg_layout|history_eta", { time: formatEta(progress.etaMs) }) : undefined,
-                progress.perMinute ? _t("tg_layout|history_pace", { rate: number(Math.round(progress.perMinute)) }) : undefined,
+                progress.etaMs !== undefined
+                    ? _t("tg_layout|history_eta", { time: formatEta(progress.etaMs) })
+                    : undefined,
+                progress.perMinute
+                    ? _t("tg_layout|history_pace", { rate: number(Math.round(progress.perMinute)) })
+                    : undefined,
             ]
                 .filter(Boolean)
                 .join(" · ") || _t("tg_layout|history_working", { network });
@@ -366,10 +390,15 @@ export function ImportBanner({ room }: { room: Room }): JSX.Element | null {
                       })
                     : undefined,
                 status.queue_ahead !== undefined && status.queue_size
-                    ? _t("tg_layout|history_queue_position", { position: status.queue_ahead + 1, size: status.queue_size })
+                    ? _t("tg_layout|history_queue_position", {
+                          position: status.queue_ahead + 1,
+                          size: status.queue_size,
+                      })
                     : undefined,
                 queued.waitMs !== undefined
-                    ? _t("tg_layout|history_stat_starts") + " " + _t("tg_layout|history_in_time", { time: formatEta(queued.waitMs) })
+                    ? _t("tg_layout|history_stat_starts") +
+                      " " +
+                      _t("tg_layout|history_in_time", { time: formatEta(queued.waitMs) })
                     : undefined,
             ]
                 .filter(Boolean)
@@ -379,7 +408,8 @@ export function ImportBanner({ room }: { room: Room }): JSX.Element | null {
         detail = _t("tg_layout|history_paused_hint");
     }
 
-    const open = (): void => sdkContext.rightPanelStore.setCard({ phase: RightPanelPhases.RoomSummary }, false, room.roomId);
+    const open = (): void =>
+        sdkContext.rightPanelStore.setCard({ phase: RightPanelPhases.RoomSummary }, false, room.roomId);
     return (
         <div className={`mx_TgImport mx_TgImport--${phase}`} role="status" data-testid="import-banner">
             <button type="button" className="mx_TgImport_main" onClick={open}>
@@ -446,7 +476,7 @@ function BarChart({
         <div className="mx_ActivityChart" role="img" aria-label={label} style={{ height }}>
             {values.map((value, i) => (
                 <span
-                    key={i}
+                    key={labels[i]}
                     className="mx_ActivityChart_bar"
                     style={{ height: `${Math.max(value ? 3 : 0, (value / max) * 100)}%` }}
                     title={`${labels[i]}: ${number(value)}`}
@@ -477,23 +507,16 @@ export function ActivityCharts({
     const { weekdays, hoursOfDay } = weekdayAndHour(week ? hourOfWeekLocal(week) : new Array(168).fill(0));
     const busiestDay = weekdays.indexOf(Math.max(...weekdays));
     const busiestHour = hoursOfDay.indexOf(Math.max(...hoursOfDay));
-    return (
-        <details className="mx_ActivitySection" open={open}>
-            <summary>
-                <span className="mx_ActivitySection_title">{_t("tg_layout|activity_title")}</span>
-                {week && total > 0 && (
-                    <span className="mx_ActivitySection_hint">
-                        {_t("tg_layout|activity_busiest", {
-                            day: weekdayNames[busiestDay],
-                            hour: `${String(busiestHour).padStart(2, "0")}:00`,
-                        })}
-                    </span>
-                )}
-            </summary>
+    const blocks = (
+        <>
             {years.length > 1 && (
                 <div className="mx_ActivitySection_block">
                     <div className="mx_ActivitySection_label">{_t("tg_layout|activity_years")}</div>
-                    <BarChart values={years.map((y) => y.count)} labels={years.map((y) => y.year)} label={_t("tg_layout|activity_years")} />
+                    <BarChart
+                        values={years.map((y) => y.count)}
+                        labels={years.map((y) => y.year)}
+                        label={_t("tg_layout|activity_years")}
+                    />
                     <div className="mx_ActivityChart_axis">
                         <span>{years[0].year}</span>
                         <span>{years[years.length - 1].year}</span>
@@ -540,6 +563,38 @@ export function ActivityCharts({
                     </div>
                 </>
             )}
+        </>
+    );
+    // On its own page the charts need no disclosure, and no inset for the profile card's icon column.
+    if (open) {
+        return (
+            <div className="mx_ActivitySection mx_ActivitySection--page">
+                {week && total > 0 && (
+                    <p className="mx_ActivitySection_hint">
+                        {_t("tg_layout|activity_busiest", {
+                            day: weekdayNames[busiestDay],
+                            hour: `${String(busiestHour).padStart(2, "0")}:00`,
+                        })}
+                    </p>
+                )}
+                {blocks}
+            </div>
+        );
+    }
+    return (
+        <details className="mx_ActivitySection">
+            <summary>
+                <span className="mx_ActivitySection_title">{_t("tg_layout|activity_title")}</span>
+                {week && total > 0 && (
+                    <span className="mx_ActivitySection_hint">
+                        {_t("tg_layout|activity_busiest", {
+                            day: weekdayNames[busiestDay],
+                            hour: `${String(busiestHour).padStart(2, "0")}:00`,
+                        })}
+                    </span>
+                )}
+            </summary>
+            {blocks}
         </details>
     );
 }
@@ -610,4 +665,3 @@ export function TgStatsSection({ room }: { room: Room }): JSX.Element | null {
         </section>
     );
 }
-

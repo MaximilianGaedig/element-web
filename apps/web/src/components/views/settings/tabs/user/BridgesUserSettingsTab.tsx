@@ -10,6 +10,8 @@ import { RoomStateEvent } from "matrix-js-sdk/src/matrix";
 
 import { _t } from "../../../../../languageHandler";
 import MatrixClientContext from "../../../../../contexts/MatrixClientContext";
+import BaseAvatar from "../../../avatars/BaseAvatar";
+import { mediaFromMxc } from "../../../../../customisations/Media";
 import SettingsTab from "../SettingsTab";
 import { SettingsSection } from "../../shared/SettingsSection";
 import dis from "../../../../../dispatcher/dispatcher";
@@ -28,12 +30,6 @@ import { collectImports, type ImportOverview, type NetworkSummary } from "../../
 const number = (n: number): string => n.toLocaleString();
 
 /** A stable colour per network, so each bridge is recognisable at a glance. */
-function networkHue(network: string): number {
-    let hash = 0;
-    for (const char of network) hash = (hash * 31 + char.charCodeAt(0)) % 360;
-    return hash;
-}
-
 const HEALTH_GLYPH: Record<LoginHealth, string> = { connected: "✓", connecting: "↻", problem: "!", disconnected: "⏻" };
 
 function ago(ts: number): string {
@@ -90,8 +86,14 @@ function ImportLine({ network }: { network: NetworkSummary }): JSX.Element {
         <div className="mx_BridgeCard_import">
             <div className="mx_BridgeCard_importText">
                 {open === 0
-                    ? _t("tg_layout|bridge_all_imported", { chats: number(network.chats), messages: number(network.messages) })
-                    : _t("tg_layout|import_chats", { done: number(network.chats - open), total: number(network.chats) })}
+                    ? _t("tg_layout|bridge_all_imported", {
+                          chats: number(network.chats),
+                          messages: number(network.messages),
+                      })
+                    : _t("tg_layout|import_chats", {
+                          done: number(network.chats - open),
+                          total: number(network.chats),
+                      })}
             </div>
             {open > 0 && (
                 <span className="mx_ImportBar" aria-hidden>
@@ -102,14 +104,47 @@ function ImportLine({ network }: { network: NetworkSummary }): JSX.Element {
     );
 }
 
+/** The bridge's own picture: its bot's avatar, from what the client already knows, else from the bot's profile. */
+function useBotAvatar(login: BridgeLogin): string | undefined {
+    const client = useContext(MatrixClientContext);
+    const me = client.getSafeUserId();
+    const botId = login.botId ?? login.room.getJoinedMembers().find((member) => member.userId !== me)?.userId;
+    const known =
+        (botId && (login.room.getMember(botId)?.getMxcAvatarUrl() ?? client.getUser(botId)?.avatarUrl)) || undefined;
+    const [fetched, setFetched] = useState<string>();
+
+    useEffect(() => {
+        if (known || !botId) return;
+        let cancelled = false;
+        client
+            .getProfileInfo(botId)
+            .then((profile) => {
+                if (!cancelled) setFetched(profile.avatar_url);
+            })
+            .catch(() => {});
+        return (): void => {
+            cancelled = true;
+        };
+    }, [client, botId, known]);
+
+    const mxc = known ?? fetched;
+    return mxc ? (mediaFromMxc(mxc, client).getSquareThumbnailHttp(80) ?? undefined) : undefined;
+}
+
 function BridgeCard({ login, network }: { login: BridgeLogin; network?: NetworkSummary }): JSX.Element {
+    const avatar = useBotAvatar(login);
     const needsAction = login.health === "disconnected" || login.health === "problem";
     return (
         <details className={`mx_BridgeCard mx_BridgeCard--${login.health}`} open={needsAction || undefined}>
             <summary className="mx_BridgeCard_summary">
-                <span className="mx_BridgeCard_avatar" style={{ ["--hue" as string]: networkHue(login.network) }} aria-hidden>
-                    {login.network.slice(0, 1).toUpperCase()}
-                </span>
+                <BaseAvatar
+                    className="mx_BridgeCard_avatar"
+                    name={login.network}
+                    idName={login.network}
+                    url={avatar}
+                    size="40px"
+                    type="round"
+                />
                 <span className="mx_BridgeCard_titles">
                     <span className="mx_BridgeCard_title">{login.network}</span>
                     <span className="mx_BridgeCard_subtitle">{login.remoteName || login.accountId}</span>
@@ -174,7 +209,11 @@ function BridgeCard({ login, network }: { login: BridgeLogin; network?: NetworkS
                         type="button"
                         className="mx_BridgeCard_secondary"
                         onClick={(): void =>
-                            dis.dispatch({ action: Action.ViewRoom, room_id: login.room.roomId, metricsTrigger: undefined })
+                            dis.dispatch({
+                                action: Action.ViewRoom,
+                                room_id: login.room.roomId,
+                                metricsTrigger: undefined,
+                            })
                         }
                     >
                         {_t("tg_layout|bridge_open_chat")}

@@ -41,6 +41,8 @@ import { SettingsNavBar, SettingsNavProfile } from "./SettingsNav";
 import ImportUserSettingsTab from "../settings/tabs/user/ImportUserSettingsTab";
 import HistoryIcon from "@vector-im/compound-design-tokens/assets/web/icons/history";
 import StorageUserSettingsTab from "../settings/tabs/user/StorageUserSettingsTab";
+import ActivityUserSettingsTab from "../settings/tabs/user/ActivityUserSettingsTab";
+import ActivityIcon from "@vector-im/compound-design-tokens/assets/web/icons/calendar";
 import StorageIcon from "@vector-im/compound-design-tokens/assets/web/icons/chart";
 import HelpUserSettingsTab from "../settings/tabs/user/HelpUserSettingsTab";
 import MjolnirUserSettingsTab from "../settings/tabs/user/MjolnirUserSettingsTab";
@@ -109,6 +111,8 @@ function titleForTabID(tabId: UserTab): React.ReactNode {
             return _t("tg_layout|import_dialog_title", undefined, subs);
         case UserTab.Storage:
             return _t("settings|storage|dialog_title", undefined, subs);
+        case UserTab.Activity:
+            return _t("tg_layout|activity_dialog_title", undefined, subs);
         case UserTab.Help:
             return _t("setting|help_about|dialog_title", undefined, subs);
     }
@@ -259,17 +263,11 @@ export default function UserSettingsDialog(props: IProps): JSX.Element {
             );
         }
         tabs.push(new Tab(UserTab.Bridges, _td("tg_layout|bridges_tab"), <BridgeIcon />, <BridgesUserSettingsTab />));
+        tabs.push(new Tab(UserTab.Import, _td("tg_layout|import_tab"), <HistoryIcon />, <ImportUserSettingsTab />));
         tabs.push(
-            new Tab(UserTab.Import, _td("tg_layout|import_tab"), <HistoryIcon />, <ImportUserSettingsTab />),
+            new Tab(UserTab.Activity, _td("tg_layout|activity_tab"), <ActivityIcon />, <ActivityUserSettingsTab />),
         );
-        tabs.push(
-            new Tab(
-                UserTab.Storage,
-                _td("settings|storage|title"),
-                <StorageIcon />,
-                <StorageUserSettingsTab />,
-            ),
-        );
+        tabs.push(new Tab(UserTab.Storage, _td("settings|storage|title"), <StorageIcon />, <StorageUserSettingsTab />));
         tabs.push(
             new Tab(
                 UserTab.Help,
@@ -298,6 +296,7 @@ export default function UserSettingsDialog(props: IProps): JSX.Element {
     // profile on top), and picking one pushes its page with a back button. CSS shows one or the other by
     // data-page; on a desktop both are always there.
     const [page, setPage] = useState<"list" | "page">(props.initialTabId ? "page" : "list");
+    const activeTab = getTabs().find((tab) => tab.id === activeTabId);
     const openTab = (tabId: UserTab): void => {
         setActiveTabId(tabId);
         setPage("page");
@@ -319,7 +318,7 @@ export default function UserSettingsDialog(props: IProps): JSX.Element {
                     <div className="mx_SettingsDialog_content" data-page={page}>
                         <SettingsNavBar
                             page={page}
-                            title={titleForTabID(activeTabId)}
+                            title={activeTab ? _t(activeTab.label) : null}
                             onBack={(): void => setPage("list")}
                             onClose={props.onFinished}
                         />

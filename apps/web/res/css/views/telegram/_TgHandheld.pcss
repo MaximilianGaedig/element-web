@@ -131,25 +131,6 @@ html[data-tg-screen="mobile"] {
             display: none;
         }
     }
-
-    /* Settings: full-screen sheets that slide in like tweb's sidebar tabs. */
-    .mx_Dialog:has(> .mx_UserSettingsDialog, > .mx_RoomSettingsDialog, > .mx_SpaceSettingsDialog) {
-        width: 100vw;
-        height: calc(var(--tg-vh) * 100);
-        max-width: none;
-        max-height: none;
-        border-radius: 0;
-        padding: var(--cpd-space-4x);
-        animation: mx_TgSheet_in var(--tg-transition-standard-in);
-
-        > .mx_UserSettingsDialog,
-        > .mx_RoomSettingsDialog,
-        > .mx_SpaceSettingsDialog {
-            width: 100%;
-            height: 100%;
-            max-width: none;
-        }
-    }
 }
 
 @keyframes mx_TgSheet_in {

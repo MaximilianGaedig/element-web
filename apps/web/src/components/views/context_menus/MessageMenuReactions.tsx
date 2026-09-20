@@ -23,9 +23,9 @@ interface Props {
     mxEvent: MatrixEvent;
     reactions?: Relations | null;
     /** Called after a reaction was sent or taken back. */
-    onFinished(): void;
+    onFinished: () => void;
     /** Opens the full emoji picker. */
-    onMore(): void;
+    onMore: () => void;
     moreRef?: React.Ref<HTMLButtonElement>;
 }
 
@@ -50,7 +50,9 @@ export function MessageMenuReactions({ mxEvent, reactions, onFinished, onMore, m
         <div className="mx_MessageMenuReactions" role="group" aria-label={_t("action|react")}>
             {emoji.map((unicode) => {
                 const selected = mine.hasOwnProperty(unicode);
-                const disabled = selected ? !roomContext.canSelfRedact : !isReactionAllowed(roomContext.room ?? null, unicode);
+                const disabled = selected
+                    ? !roomContext.canSelfRedact
+                    : !isReactionAllowed(roomContext.room ?? null, unicode);
                 return (
                     <button
                         key={unicode}

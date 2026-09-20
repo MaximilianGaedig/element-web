@@ -11,7 +11,7 @@ Please see LICENSE files in the repository root for full details.
  * without reading the bridge's chat.
  */
 
-import { type MatrixClient, type MatrixEvent, type Room } from "matrix-js-sdk/src/matrix";
+import { type MatrixClient, type Room } from "matrix-js-sdk/src/matrix";
 
 export const BRIDGE_LOGIN_EVENT_TYPE = "im.mxg.bridge_login";
 
@@ -20,6 +20,8 @@ export type LoginHealth = "connected" | "connecting" | "problem" | "disconnected
 export interface BridgeLogin {
     room: Room;
     accountId: string;
+    /** The bridge's bot, which wrote the entry. */
+    botId?: string;
     /** CONNECTED, CONNECTING, TRANSIENT_DISCONNECT, BAD_CREDENTIALS, UNKNOWN_ERROR, … */
     state: string;
     health: LoginHealth;
@@ -55,13 +57,14 @@ export function loginHealth(state: string): LoginHealth {
 export function bridgeLoginsIn(client: MatrixClient): BridgeLogin[] {
     const logins: BridgeLogin[] = [];
     for (const room of client.getRooms()) {
-        const events = room.currentState.getStateEvents(BRIDGE_LOGIN_EVENT_TYPE) as MatrixEvent[];
+        const events = room.currentState.getStateEvents(BRIDGE_LOGIN_EVENT_TYPE);
         for (const event of events ?? []) {
             const content = event.getContent();
             if (!content.state) continue;
             logins.push({
                 room,
                 accountId: event.getStateKey() ?? "",
+                botId: event.getSender() ?? undefined,
                 state: content.state,
                 health: loginHealth(content.state),
                 error: content.error,
