@@ -7,7 +7,8 @@ Please see LICENSE files in the repository root for full details.
 
 /*
  * What is worth acting on in a piece of text: links, phone numbers, the times people arrange things
- * for, and the places they arrange them at. The text may be a message body or whatever was read out of
+ * for, the places they arrange them at, the flights and parcels they are waiting on, and measurements
+ * in units they do not think in. The text may be a message body or whatever was read out of
  * a picture, so this knows nothing about either.
  *
  * All three are left to libraries that know about the world's languages and countries, because the
@@ -63,7 +64,34 @@ export interface DetectedAddress extends Found {
     url: string;
 }
 
-export type Detected = DetectedUrl | DetectedPhone | DetectedDateTime | DetectedAddress;
+export interface DetectedFlight extends Found {
+    kind: "flight";
+    /** The airline and number, as a lookup wants them. */
+    flight: string;
+    airline: string;
+    url: string;
+}
+
+export interface DetectedParcel extends Found {
+    kind: "parcel";
+    carrier: string;
+    url: string;
+}
+
+export interface DetectedMeasure extends Found {
+    kind: "measure";
+    /** What it comes to in the reader's own units. */
+    converted: string;
+}
+
+export type Detected =
+    | DetectedUrl
+    | DetectedPhone
+    | DetectedDateTime
+    | DetectedAddress
+    | DetectedFlight
+    | DetectedParcel
+    | DetectedMeasure;
 
 /** The languages chrono speaks; each is asked, because the text does not say which it is in. */
 const LOCALES = ["en", "de", "fr", "ja", "pt", "nl", "zh", "ru", "es", "uk", "it", "sv", "fi", "vi"] as const;
@@ -155,12 +183,22 @@ export async function detectEntities(
     text: string,
     { now = new Date(), country }: { now?: Date; country?: CountryCode } = {},
 ): Promise<Detected[]> {
-    const [phones, dates, { detectAddresses, mapUrl }, { localityFilter }] = await Promise.all([
-        detectPhones(text, country),
-        detectDateTimes(text, now),
-        import("./addresses"),
-        import("./localities"),
-    ]);
+    const [phones, dates, { detectAddresses, mapUrl }, { localityFilter }, flights, parcels, measures] =
+        await Promise.all([
+            detectPhones(text, country),
+            detectDateTimes(text, now),
+            import("./addresses"),
+            import("./localities"),
+            import("./flights").then(({ detectFlights, flightUrl }) =>
+                detectFlights(text).map((f) => ({ ...f, kind: "flight" as const, url: flightUrl(f.flight) })),
+            ),
+            import("./parcels").then(({ detectParcels }) =>
+                detectParcels(text).map((p) => ({ ...p, kind: "parcel" as const })),
+            ),
+            import("./units").then(({ detectMeasures }) =>
+                detectMeasures(text).map((m) => ({ ...m, kind: "measure" as const })),
+            ),
+        ]);
     // The towns of the reader's country, where this app carries them: what makes a plainly written
     // address readable. Absent, the plainer readings are simply not offered.
     const towns = await localityFilter(country);
@@ -171,7 +209,11 @@ export async function detectEntities(
     const places = detectAddresses(text, towns)
         .filter((place) => ![...links, ...callable].some((other) => overlaps(place, other)))
         .map((place) => ({ ...place, kind: "address" as const, url: mapUrl(place.text) }));
-    return [...links, ...callable, ...dates, ...places].sort((a, b) => a.start - b.start);
+    // A flight number inside a parcel number, or a measurement inside either, is part of the longer
+    // thing: the one that was recognised by a stronger rule wins its span.
+    const strong = [...links, ...callable, ...dates, ...places, ...parcels];
+    const rest = [...flights, ...measures].filter((entry) => !strong.some((other) => overlaps(entry, other)));
+    return [...strong, ...rest].sort((a, b) => a.start - b.start);
 }
 
 /**

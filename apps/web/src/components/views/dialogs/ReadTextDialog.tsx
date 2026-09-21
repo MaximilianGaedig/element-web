@@ -76,8 +76,12 @@ export default function ReadTextDialog({ read, onFinished }: Props): JSX.Element
                             {_t("action|copy")}
                         </AccessibleButton>
                         {entities.map((entity) =>
-                            // A link and an address are both somewhere to go; a number is somewhere to ring.
-                            entity.kind === "url" || entity.kind === "address" ? (
+                            // A link, an address, a flight and a parcel are all somewhere to go; a
+                            // number is somewhere to ring; a time is something to put in a calendar.
+                            entity.kind === "url" ||
+                            entity.kind === "address" ||
+                            entity.kind === "flight" ||
+                            entity.kind === "parcel" ? (
                                 <AccessibleButton
                                     key={`${entity.start}`}
                                     kind="primary_outline"
@@ -97,7 +101,7 @@ export default function ReadTextDialog({ read, onFinished }: Props): JSX.Element
                                 >
                                     {entity.text}
                                 </AccessibleButton>
-                            ) : (
+                            ) : entity.kind === "datetime" ? (
                                 <AccessibleButton
                                     key={`${entity.start}`}
                                     kind="primary_outline"
@@ -105,6 +109,11 @@ export default function ReadTextDialog({ read, onFinished }: Props): JSX.Element
                                 >
                                     {_t("timeline|context_menu|add_to_calendar")}
                                 </AccessibleButton>
+                            ) : (
+                                // A measurement is its own answer.
+                                <span key={`${entity.start}`} className="mx_ReadTextDialog_measure">
+                                    {entity.converted}
+                                </span>
                             ),
                         )}
                     </div>

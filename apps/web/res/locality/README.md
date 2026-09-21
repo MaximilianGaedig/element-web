@@ -4,7 +4,7 @@ Built by `scripts/build-locality-filters.ts` from [GeoNames](https://www.geoname
 places, licensed [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
 
 Each file is one country's town names as a bitmap of 10 bits per name with
-7 hashes: it says with certainty that a name is *not* a town, and with about 99% certainty that
+7 hashes: it says with certainty that a name is _not_ a town, and with about 99% certainty that
 it is one. `utils/detect/addresses.ts` asks it, which is how "Morska 1 Mielno" is read as an address
 and "Nokia 3310 Classic" is not.
 

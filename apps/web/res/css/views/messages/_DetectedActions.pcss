@@ -33,3 +33,20 @@ Please see LICENSE files in the repository root for full details.
         }
     }
 }
+
+/* A measurement needs no press: the converted value is the whole of the answer. */
+.mx_DetectedActions_chip--plain {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--cpd-space-1x);
+    padding: var(--cpd-space-1x) var(--cpd-space-2x);
+    border-radius: 99px;
+    background: var(--cpd-color-bg-subtle-secondary);
+    font: var(--cpd-font-body-sm-medium);
+    color: var(--cpd-color-text-secondary);
+
+    svg {
+        width: 1em;
+        height: 1em;
+    }
+}

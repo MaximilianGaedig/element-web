@@ -50,11 +50,12 @@ async function getTranscriber(): Promise<Transcriber> {
     transcriber ??= (async () => {
         const { pipeline } = await import("@huggingface/transformers");
         const device = await bestDevice();
-        return (await pipeline("automatic-speech-recognition", MODEL, {
+        const engine = await pipeline("automatic-speech-recognition", MODEL, {
             // Quantised: a quarter of the size, and no worse at speech at this size.
             dtype: device === "webgpu" ? "fp16" : "q8",
             device,
-        })) as unknown as Transcriber;
+        });
+        return engine;
     })();
     return transcriber;
 }

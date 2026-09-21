@@ -7,7 +7,8 @@ Please see LICENSE files in the repository root for full details.
 
 /*
  * What a message is asking you to do, under the message: the time somebody suggested, offered as a
- * calendar entry; a phone number, offered as a call; an address, offered as a map.
+ * calendar entry; a phone number, offered as a call; an address, offered as a map; a flight or a parcel,
+ * offered as where to follow it; a measurement in foreign units, simply converted.
  *
  * This runs on messages whoever sent them, including your own: what you wrote is as likely to be the
  * arrangement as what you were told, and a time you proposed yourself is a time you meant to keep.
@@ -26,19 +27,33 @@ import { type MatrixEvent } from "matrix-js-sdk/src/matrix";
 import CalendarIcon from "@vector-im/compound-design-tokens/assets/web/icons/calendar";
 import CallIcon from "@vector-im/compound-design-tokens/assets/web/icons/voice-call";
 import LocationIcon from "@vector-im/compound-design-tokens/assets/web/icons/location-pin";
+// A paper plane for a flight and a link for a parcel: the icon set has neither a plane nor a box, and a
+// borrowed glyph that means something else would be worse than the nearest honest one.
+import FlightIcon from "@vector-im/compound-design-tokens/assets/web/icons/send";
+import ParcelIcon from "@vector-im/compound-design-tokens/assets/web/icons/link";
+import MeasureIcon from "@vector-im/compound-design-tokens/assets/web/icons/info";
 
 import { _t } from "../../../languageHandler";
 import AccessibleButton from "../elements/AccessibleButton";
 import {
     type DetectedAddress,
     type DetectedDateTime,
+    type DetectedFlight,
+    type DetectedMeasure,
+    type DetectedParcel,
     type DetectedPhone,
     icsForEvent,
 } from "../../../utils/detect/entities";
 import { formatFullDateNoDay, formatTime } from "../../../DateUtils";
 
 /** What a message can be asking of you, once the links are left to the timeline. */
-type Actionable = DetectedDateTime | DetectedPhone | DetectedAddress;
+type Actionable =
+    | DetectedDateTime
+    | DetectedPhone
+    | DetectedAddress
+    | DetectedFlight
+    | DetectedParcel
+    | DetectedMeasure;
 
 /** Nothing without a digit in it can name a time, a number or a house, and that is most messages. */
 const COULD_HOLD_ONE = /\d/;
@@ -68,6 +83,37 @@ function addToCalendar(when: DetectedDateTime, description: string): void {
 function whenLabel(when: DetectedDateTime): string {
     const day = formatFullDateNoDay(when.date);
     return when.hasTime ? `${day}, ${formatTime(when.date)}` : day;
+}
+
+/** The icon and words for something that is somewhere to go. */
+function label(entity: Exclude<Actionable, DetectedDateTime | DetectedMeasure>): JSX.Element {
+    if (entity.kind === "phone")
+        return (
+            <>
+                <CallIcon />
+                {entity.text}
+            </>
+        );
+    if (entity.kind === "address")
+        return (
+            <>
+                <LocationIcon />
+                {entity.text}
+            </>
+        );
+    if (entity.kind === "flight")
+        return (
+            <>
+                <FlightIcon />
+                {`${entity.airline} ${entity.text}`}
+            </>
+        );
+    return (
+        <>
+            <ParcelIcon />
+            {`${entity.carrier} ${entity.text}`}
+        </>
+    );
 }
 
 export function DetectedActions({ mxEvent }: { mxEvent: MatrixEvent }): JSX.Element | null {
@@ -108,6 +154,12 @@ export function DetectedActions({ mxEvent }: { mxEvent: MatrixEvent }): JSX.Elem
                         <CalendarIcon />
                         {whenLabel(entity)}
                     </AccessibleButton>
+                ) : entity.kind === "measure" ? (
+                    // Nowhere to go: the answer itself is the whole of what was wanted.
+                    <span key={entity.start} className="mx_DetectedActions_chip mx_DetectedActions_chip--plain">
+                        <MeasureIcon />
+                        {entity.converted}
+                    </span>
                 ) : (
                     <AccessibleButton
                         key={entity.start}
@@ -119,8 +171,7 @@ export function DetectedActions({ mxEvent }: { mxEvent: MatrixEvent }): JSX.Elem
                             ? { href: `tel:${entity.number}` }
                             : { href: entity.url, target: "_blank", rel: "noreferrer noopener" })}
                     >
-                        {entity.kind === "phone" ? <CallIcon /> : <LocationIcon />}
-                        {entity.text}
+                        {label(entity)}
                     </AccessibleButton>
                 ),
             )}
