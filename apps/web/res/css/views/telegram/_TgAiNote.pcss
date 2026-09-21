@@ -178,6 +178,36 @@ Please see LICENSE files in the repository root for full details.
         color: var(--cpd-color-text-action-accent);
     }
 
+    /*
+     * Was it any good: a thumb up and the same thumb turned over, faint until one is pressed. It is the
+     * smallest thing that can be asked and the only one anybody will actually answer.
+     */
+    .mx_TgAiNote_rate {
+        display: flex;
+        gap: var(--cpd-space-1x);
+        margin-block-start: var(--cpd-space-2x);
+    }
+
+    .mx_TgAiNote_verdict {
+        color: var(--cpd-color-text-secondary);
+        opacity: 0.6;
+
+        svg {
+            display: block;
+            width: 16px;
+            height: 16px;
+        }
+
+        &:hover {
+            opacity: 1;
+        }
+    }
+
+    .mx_TgAiNote_verdict_chosen {
+        opacity: 1;
+        color: var(--cpd-color-text-action-accent);
+    }
+
     /* Below the words, the way a message's own footer sits: small, quiet, no buttons shouting. */
     .mx_TgAiNote_actions {
         display: flex;

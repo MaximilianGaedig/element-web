@@ -12,15 +12,17 @@ Please see LICENSE files in the repository root for full details.
  * with the picture on screen reads it anyway. This is the other half: "which of these is the receipt",
  * "what does the sign say", "is that the right door" - questions no reading of the text can settle.
  *
- * Kept deliberately small. The newest few pictures, shrunk to something a model can see and no larger,
- * and only for a question that was actually asked: pictures are the expensive part of any of this, in
- * bytes leaving the device and in what is being shown to a machine, so they go when they are asked for
- * and not a moment sooner.
+ * Kept deliberately small: the newest few, shrunk, and only for a question that was actually asked - a
+ * summary is not worth uploading a chat's photographs for. A picture whose text has already been read
+ * still goes, because reading the text is not seeing the picture: what is behind the sign, which of the
+ * three receipts is the right one, whether the door is the blue one. The ones nobody has read go first,
+ * since the transcript already carries what the others say.
  */
 
-import { type MatrixEvent, type Room } from "matrix-js-sdk/src/matrix";
+import { type MatrixClient, type MatrixEvent, type Room } from "matrix-js-sdk/src/matrix";
 
 import { MediaEventHelper } from "../MediaEventHelper";
+import { storedMediaText } from "../detect/mediaText";
 
 /** How many, and how big each may be once shrunk. */
 const MOST = 3;
@@ -55,13 +57,18 @@ async function shrink(blob: Blob): Promise<string | undefined> {
  * encrypted room's pictures need decrypting - a bare fetch gets a 401 or a blob of ciphertext. One that
  * will not load is left out rather than failing the question.
  */
-export async function picturesFor(room: Room): Promise<string[]> {
-    const events = room
+export async function picturesFor(client: MatrixClient, room: Room): Promise<string[]> {
+    const pictures = room
         .getLiveTimeline()
         .getEvents()
         .slice(-WITHIN)
-        .filter((event: MatrixEvent) => event.getContent().msgtype === "m.image" && !event.isRedacted())
-        .slice(-MOST);
+        .filter((event: MatrixEvent) => event.getContent().msgtype === "m.image" && !event.isRedacted());
+
+    // What has been read is already in the transcript as words; only what nobody has read is worth sending.
+    const read = await Promise.all(
+        pictures.map((event) => storedMediaText(client, event.getRoomId()!, event.getId()!).catch(() => undefined)),
+    );
+    const events = pictures.filter((_, at) => !read[at]?.ocr && !read[at]?.description).slice(-MOST);
 
     const loaded = await Promise.all(
         events.map(async (event) => {

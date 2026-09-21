@@ -78,11 +78,11 @@ export function TgAsk({ room, anchor }: Props): JSX.Element | null {
 
             const newFrom = kind === "summary" ? unreadFrom(room, events) : undefined;
             // Built once: what is sent is what the answer will say was sent. A question also takes the
-            // newest pictures, for the parts of a chat that were never words (utils/ai/pictures.ts);
-            // a summary does not, because summarising a chat is not worth uploading its photographs.
+            // pictures nobody has read - the ones whose text is already in the transcript stay out of it
+            // (utils/ai/pictures.ts) - and a summary sends none at all.
             const [sending, pictures] = await Promise.all([
                 readable(client, room, kind === "summary" ? READ_BACK : 40),
-                kind === "question" ? picturesFor(room) : Promise.resolve([]),
+                kind === "question" ? picturesFor(client, room) : Promise.resolve([]),
             ]);
             setBusy(true);
             setFailed(undefined);
@@ -136,6 +136,7 @@ export function TgAsk({ room, anchor }: Props): JSX.Element | null {
                     answer: answer.answer,
                     cites: answer.cites ?? [],
                     confident: answer.confident,
+                    kept: answer.kept,
                     ts: Date.now(),
                     sent: {
                         messages: sending.length,

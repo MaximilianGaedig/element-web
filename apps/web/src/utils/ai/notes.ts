@@ -38,6 +38,10 @@ export interface AiNote {
     ts: number;
     /** Whether the model thought what it saw really answered it. */
     confident?: boolean;
+    /** Where the ask is kept, so it can be opened and rated after the fact. */
+    kept?: { roomId: string; eventId: string };
+    /** What you thought of it, once you have said. */
+    verdict?: "good" | "bad";
     /**
      * Exactly what left the device to get this answer.
      *

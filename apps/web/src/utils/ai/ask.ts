@@ -33,6 +33,8 @@ export interface AskMessage {
 
 /** What comes back once it has finished. */
 export interface Answer {
+    /** Where this ask was kept, so it can be opened, read back and rated: a thread in your own log room. */
+    kept?: { roomId: string; eventId: string };
     answer: string;
     /** Event ids the answer rests on, and web pages where it used them. */
     cites: string[];
@@ -67,6 +69,28 @@ const config = (): AiConfig => SdkConfig.get() as unknown as AiConfig;
 function endpoint(): string {
     const configured = config().ai_proxy_url;
     return configured ? configured.replace(/\/$/, "") : "/_ai";
+}
+
+/**
+ * What the reader thought of an answer.
+ *
+ * A reaction on the ask in their own log room, where the question, everything that was sent and the answer
+ * are already sitting in a thread. So a bad answer can be opened and read rather than remembered as "it
+ * was rubbish yesterday", which is the only way any of this gets better.
+ */
+export async function rate(
+    client: MatrixClient,
+    kept: { roomId: string; eventId: string },
+    verdict: "good" | "bad",
+): Promise<void> {
+    await fetch(`${endpoint()}/rate`, {
+        method: "POST",
+        headers: {
+            "Authorization": `Bearer ${client.getAccessToken()}`,
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ room_id: kept.roomId, event_id: kept.eventId, verdict }),
+    });
 }
 
 /** Whether there is anything to ask at all. */

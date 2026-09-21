@@ -24,11 +24,14 @@ import SendIcon from "@vector-im/compound-design-tokens/assets/web/icons/send";
 import DeleteIcon from "@vector-im/compound-design-tokens/assets/web/icons/delete";
 import SearchIcon from "@vector-im/compound-design-tokens/assets/web/icons/search";
 import InfoIcon from "@vector-im/compound-design-tokens/assets/web/icons/info";
+import GoodIcon from "@vector-im/compound-design-tokens/assets/web/icons/check-circle";
+import BadIcon from "@vector-im/compound-design-tokens/assets/web/icons/close";
 import SparkleIcon from "@vector-im/compound-design-tokens/assets/web/icons/extensions";
 
 import { _t } from "../../../languageHandler";
 import AccessibleButton from "../elements/AccessibleButton";
-import { type AiNote, removeNote, sendNote } from "../../../utils/ai/notes";
+import { type AiNote, keepNote, removeNote, sendNote } from "../../../utils/ai/notes";
+import { rate } from "../../../utils/ai/ask";
 import dis from "../../../dispatcher/dispatcher";
 import { Action } from "../../../dispatcher/actions";
 import { type ViewRoomPayload } from "../../../dispatcher/payloads/ViewRoomPayload";
@@ -81,6 +84,7 @@ const LIST = 12;
 export function TgAiNote({ client, roomId, note, streaming, onGone }: Props): JSX.Element {
     const [sent, setSent] = useState(false);
     const [showSent, setShowSent] = useState(false);
+    const [verdict, setVerdict] = useState(note.verdict);
     const [busy, setBusy] = useState(false);
     const text = streaming ? streaming.text : note.answer;
 
@@ -217,6 +221,36 @@ export function TgAiNote({ client, roomId, note, streaming, onGone }: Props): JS
                         </a>
                     ))}
                 </p>
+            )}
+
+            {/*
+                Was it any good? One press either way, which lands as a reaction on this ask in your own
+                log room - where the question, everything that was sent and the answer are sitting in a
+                thread you can open. A bad answer can then be read rather than remembered as a mood.
+            */}
+            {!streaming && note.kept && (
+                <div className="mx_TgAiNote_rate">
+                    {(["good", "bad"] as const).map((which) => (
+                        <AccessibleButton
+                            key={which}
+                            kind="link"
+                            className={`mx_TgAiNote_verdict${verdict === which ? " mx_TgAiNote_verdict_chosen" : ""}${
+                                which === "bad" ? " mx_TgAiNote_verdict_bad" : ""
+                            }`}
+                            aria-pressed={verdict === which}
+                            aria-label={_t(which === "good" ? "tg_layout|ai_was_good" : "tg_layout|ai_was_bad")}
+                            title={_t(which === "good" ? "tg_layout|ai_was_good" : "tg_layout|ai_was_bad")}
+                            onClick={() => {
+                                setVerdict(which);
+                                void rate(client, note.kept!, which);
+                                // Kept with the note as well, so the buttons still say so tomorrow.
+                                void keepNote(client, roomId, { ...note, verdict: which });
+                            }}
+                        >
+                            {which === "good" ? <GoodIcon /> : <BadIcon />}
+                        </AccessibleButton>
+                    ))}
+                </div>
             )}
 
             {!streaming && (
