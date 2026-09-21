@@ -19,10 +19,11 @@ Please see LICENSE files in the repository root for full details.
  */
 
 import React, { type JSX, useCallback, useEffect, useState } from "react";
-import { type Room } from "matrix-js-sdk/src/matrix";
+import { type MatrixEvent, type Room, RoomEvent } from "matrix-js-sdk/src/matrix";
+
+import { Button } from "@vector-im/compound-web";
 
 import { _t } from "../../../languageHandler";
-import AccessibleButton from "../elements/AccessibleButton";
 import { useMatrixClientContext } from "../../../contexts/MatrixClientContext";
 import { repliesFor, repliesKnown, takeDraft } from "../../../utils/ai/replies";
 import dis from "../../../dispatcher/dispatcher";
@@ -49,16 +50,37 @@ export function TgReplies({ room }: Props): JSX.Element | null {
         });
     }, []);
 
+    /*
+     * Drafted for whatever the last message is now, and again whenever that changes.
+     *
+     * Once on opening the chat is not enough, twice over: a message that arrives while you are reading
+     * needs its own drafts, and the ones this or another device has already written arrive as room
+     * account data - which, on a fresh load, lands after the chat is on screen. Listening for both is
+     * what makes the row appear when there is something to say and go when there is not.
+     */
     useEffect(() => {
         let gone = false;
-        setUsed(undefined);
-        // What is already drafted shows at once; what is not is asked for.
-        setLines(repliesKnown(client, room));
-        void repliesFor(client, room).then((suggested) => {
-            if (!gone) setLines(suggested);
-        });
+        const look = (): void => {
+            setUsed(undefined);
+            // What is already drafted shows at once; what is not is asked for.
+            setLines(repliesKnown(client, room));
+            void repliesFor(client, room).then((suggested) => {
+                if (!gone) setLines(suggested);
+            });
+        };
+        const onTimeline = (_event: MatrixEvent, inRoom?: Room): void => {
+            if (inRoom?.roomId === room.roomId) look();
+        };
+        const onAccountData = (_event: MatrixEvent, inRoom: Room): void => {
+            if (inRoom.roomId === room.roomId) look();
+        };
+        client.on(RoomEvent.Timeline, onTimeline);
+        client.on(RoomEvent.AccountData, onAccountData);
+        look();
         return () => {
             gone = true;
+            client.off(RoomEvent.Timeline, onTimeline);
+            client.off(RoomEvent.AccountData, onAccountData);
         };
     }, [client, room]);
 
@@ -76,15 +98,17 @@ export function TgReplies({ room }: Props): JSX.Element | null {
     return (
         <div className="mx_TgReplies" role="list" aria-label={_t("tg_layout|ai_replies")}>
             {lines.map((line) => (
-                <AccessibleButton
+                // Compound's own button, at its smallest: what a chip looks like in this app.
+                <Button
                     key={line}
                     role="listitem"
                     kind="secondary"
+                    size="md"
                     className={`mx_TgReplies_pill${used === line ? " mx_TgReplies_pill_used" : ""}`}
                     onClick={() => put(line)}
                 >
                     {line}
-                </AccessibleButton>
+                </Button>
             ))}
         </div>
     );

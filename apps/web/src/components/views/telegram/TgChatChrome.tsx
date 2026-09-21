@@ -63,13 +63,16 @@ export function TgChatChrome({ body }: Props): JSX.Element {
             /*
              * Two heights, because two things need different ones: the composer alone is what the pills
              * above it sit on top of, and the whole stack is what the messages must be padded clear of.
+             *
+             * Added up from heights rather than read off positions. The pills are placed at the
+             * composer's height, so setting that height is what moves them - and a box that moves
+             * without changing size tells a ResizeObserver nothing. Measured by where it was, the strip
+             * went on being counted where it started: the space kept for the bottom of the chat stayed
+             * the composer's own, and the messages ran underneath the pills.
              */
-            set("--tg-composer-height", composer ? Math.max(0, b.bottom - composer.top) : 0);
-            const stackTop = above?.height ? Math.min(above.top, composer?.top ?? above.top) : composer?.top;
-            set(
-                "--tg-composer-block",
-                stackTop !== undefined ? Math.max(0, b.bottom - stackTop) + (status?.height ?? 0) : 0,
-            );
+            const composerHeight = composer ? Math.max(0, b.bottom - composer.top) : 0;
+            set("--tg-composer-height", composerHeight);
+            set("--tg-composer-block", composerHeight + (above?.height ?? 0) + (status?.height ?? 0));
             if (atBottom && scroll) scroll.scrollTop = scroll.scrollHeight;
         };
         const observer = new ResizeObserver(update);

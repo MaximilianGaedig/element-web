@@ -17,6 +17,12 @@ Please see LICENSE files in the repository root for full details.
 .mx_TgAiNote {
     position: relative;
     box-sizing: border-box;
+    /*
+     * The message list is a flex column, so an item that does not say otherwise is shrunk to fit it: this
+     * bubble was arriving sixteen pixels tall - its padding, with two hundred pixels of answer clipped
+     * inside - while every tile around it kept its height. Same trap as the digest in the room list.
+     */
+    flex: 0 0 auto;
     width: fit-content;
     max-width: min(30rem, 78%);
     margin: var(--cpd-space-1x) 0 var(--cpd-space-1x) calc(var(--TgSenderRun-inset, 8px) + 2.875rem);

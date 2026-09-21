@@ -25,6 +25,8 @@ import SparkleIcon from "@vector-im/compound-design-tokens/assets/web/icons/exte
 import CloseIcon from "@vector-im/compound-design-tokens/assets/web/icons/close";
 import InfoIcon from "@vector-im/compound-design-tokens/assets/web/icons/info";
 
+import { Button } from "@vector-im/compound-web";
+
 import { _t } from "../../../languageHandler";
 import AccessibleButton from "../elements/AccessibleButton";
 import { useMatrixClientContext } from "../../../contexts/MatrixClientContext";
@@ -128,10 +130,10 @@ export function TgDigest(): JSX.Element | null {
 
     if (text === undefined && !failed) {
         return (
-            <AccessibleButton kind="secondary" className="mx_TgDigest_ask" onClick={() => void run()}>
+            <Button kind="secondary" size="md" className="mx_TgDigest_ask" onClick={() => void run()}>
                 <SparkleIcon />
                 {_t("tg_layout|ai_digest")}
-            </AccessibleButton>
+            </Button>
         );
     }
 
@@ -187,9 +189,10 @@ export function TgDigest(): JSX.Element | null {
                             </AccessibleButton>
                             <div className="mx_TgDigest_drafts">
                                 {drafted.map((draft) => (
-                                    <AccessibleButton
+                                    <Button
                                         key={draft}
                                         kind="secondary"
+                                        size="md"
                                         className="mx_TgDigest_draft"
                                         onClick={() => {
                                             leaveDraft(roomId, draft);
@@ -197,7 +200,7 @@ export function TgDigest(): JSX.Element | null {
                                         }}
                                     >
                                         {draft}
-                                    </AccessibleButton>
+                                    </Button>
                                 ))}
                             </div>
                         </div>

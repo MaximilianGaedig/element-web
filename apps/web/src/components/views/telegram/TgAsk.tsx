@@ -26,6 +26,8 @@ import { type MatrixEvent, type Room } from "matrix-js-sdk/src/matrix";
 import SparkleIcon from "@vector-im/compound-design-tokens/assets/web/icons/extensions";
 import SendIcon from "@vector-im/compound-design-tokens/assets/web/icons/send";
 
+import { Button } from "@vector-im/compound-web";
+
 import { _t } from "../../../languageHandler";
 import AccessibleButton from "../elements/AccessibleButton";
 import { useMatrixClientContext } from "../../../contexts/MatrixClientContext";
@@ -175,15 +177,16 @@ export function TgAsk({ room, anchor }: Props): JSX.Element | null {
                 </p>
             ) : (
                 <>
-                    <AccessibleButton
+                    <Button
                         kind="secondary"
+                        size="md"
                         className="mx_TgAsk_catchUp"
                         disabled={busy}
                         onClick={() => void run("summary")}
                     >
                         <SparkleIcon />
                         {_t("tg_layout|ai_catch_up")}
-                    </AccessibleButton>
+                    </Button>
 
                     {!open && (
                         <AccessibleButton kind="link" className="mx_TgAsk_open_button" onClick={() => setOpen(true)}>
