@@ -52,22 +52,6 @@ interface Props {
     onGone?: (id: string) => void;
 }
 
-/** What the model is doing, in words rather than a spinner. */
-export function lookingWords(tool: string): string {
-    switch (tool) {
-        case "search_messages":
-            return _t("ai|looking_messages");
-        case "read_around":
-            return _t("ai|looking_around");
-        case "search_web":
-            return _t("ai|looking_web");
-        case "list_chats":
-            return _t("ai|looking_chats");
-        default:
-            return _t("ai|thinking");
-    }
-}
-
 /**
  * The messages that were sent, as they can still be seen.
  *

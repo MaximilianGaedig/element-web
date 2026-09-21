@@ -35,7 +35,7 @@ import { useMatrixClientContext } from "../../../contexts/MatrixClientContext";
 import { ask, aiAvailable } from "../../../utils/ai/ask";
 import { digestMessages, type UnreadChat, unreadChats } from "../../../utils/ai/digest";
 import { leaveDraft, repliesFor } from "../../../utils/ai/replies";
-import { lookingWords } from "./AiNote";
+import { lookingWords } from "../../../utils/ai/asking";
 import { AiSources } from "./AiSources";
 import { AiText } from "../../../utils/ai/render";
 import RoomAvatar from "../avatars/RoomAvatar";

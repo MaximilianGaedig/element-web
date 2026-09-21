@@ -24,6 +24,7 @@ import {
     StickerIcon,
     TextFormattingIcon,
 } from "@vector-im/compound-design-tokens/assets/web/icons";
+import AiIcon from "@vector-im/compound-design-tokens/assets/web/icons/ai";
 import { UploadButton, useViewModel } from "@element-hq/web-shared-components";
 
 import { _t } from "../../../languageHandler";
@@ -43,6 +44,7 @@ import { EmojiButton } from "./EmojiButton";
 import { TgEmoticonsDropdown } from "../telegram/TgEmoticonsDropdown";
 import UIStore from "../../../stores/UIStore";
 import { filterBoolean } from "../../../utils/arrays";
+import { askAbout, askOpenQuestions, canAsk, composerText } from "../../../utils/ai/asking";
 import { useSettingValue } from "../../../hooks/useSettings";
 import AccessibleButton, { type ButtonEvent } from "../elements/AccessibleButton";
 import { useScopedRoomContext } from "../../../contexts/ScopedRoomContext.tsx";
@@ -77,6 +79,43 @@ interface IProps {
     toggleButtonMenu: () => void;
     isRichTextEnabled: boolean;
     onComposerModeClick: () => void;
+}
+
+/*
+ * Asking about this chat, from the menu the other things you can do already live in.
+ *
+ * Here rather than in a strip of its own above the composer: that strip was ninety pixels of the
+ * conversation, in every chat, permanently, to offer something used twice a day. What happens next is
+ * shown over the composer while it happens (views/ai/AiStatus.tsx).
+ *
+ * Asking about what is typed is offered only when something is - it asks about the words in the composer,
+ * so with an empty composer there is no question to ask.
+ */
+function askingOptions(client: MatrixClient, room: Room): ReactNode[] {
+    if (!canAsk()) return [];
+    const typed = composerText();
+    return filterBoolean([
+        <IconizedContextMenuOption
+            key="ai-catch-up"
+            icon={<AiIcon />}
+            label={_t("ai|catch_up")}
+            onClick={() => void askAbout(client, room, "summary")}
+        />,
+        <IconizedContextMenuOption
+            key="ai-questions"
+            icon={<AiIcon />}
+            label={_t("ai|open_questions")}
+            onClick={() => void askOpenQuestions(client, room)}
+        />,
+        typed ? (
+            <IconizedContextMenuOption
+                key="ai-ask"
+                icon={<AiIcon />}
+                label={_t("ai|ask")}
+                onClick={() => void askAbout(client, room, "question", typed)}
+            />
+        ) : null,
+    ]);
 }
 
 const MessageComposerButtons: React.FC<IProps> = (props: IProps) => {
@@ -118,6 +157,7 @@ const MessageComposerButtons: React.FC<IProps> = (props: IProps) => {
             uploadOptions,
             props.showPollsButton ? pollButton(room, props.relation) : null,
             showLocationButton(props, room, matrixClient),
+            askingOptions(matrixClient, room),
         ];
     } else if (narrow) {
         mainButtons = [
@@ -138,6 +178,7 @@ const MessageComposerButtons: React.FC<IProps> = (props: IProps) => {
             voiceRecordingButton(props, narrow),
             props.showPollsButton ? pollButton(room, props.relation) : null,
             showLocationButton(props, room, matrixClient),
+            askingOptions(matrixClient, room),
         ];
     } else {
         mainButtons = [
@@ -157,6 +198,7 @@ const MessageComposerButtons: React.FC<IProps> = (props: IProps) => {
             voiceRecordingButton(props, narrow),
             props.showPollsButton ? pollButton(room, props.relation) : null,
             showLocationButton(props, room, matrixClient),
+            askingOptions(matrixClient, room),
         ];
     }
 

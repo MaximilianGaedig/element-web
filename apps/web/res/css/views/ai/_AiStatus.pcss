@@ -1,0 +1,42 @@
+/*
+Copyright 2026 New Vector Ltd.
+
+SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only OR LicenseRef-Element-Commercial
+Please see LICENSE files in the repository root for full details.
+*/
+
+/*
+ * What the model is doing, over the composer (AiStatus.tsx).
+ *
+ * One line, on screen only while something is happening. It floats over the conversation rather than
+ * pushing it down, because a chat that jumps every time this appears is a chat you stop reading - and it
+ * keeps a gap below itself, because a pill whose bottom edge is exactly the composer's top edge reads as
+ * part of the composer rather than as something above it. That is what it looked like, measured: zero
+ * pixels between them.
+ */
+.mx_AiStatus {
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    gap: var(--cpd-space-2x);
+    width: fit-content;
+    max-width: min(32rem, calc(100% - var(--cpd-space-8x)));
+    margin: 0 auto;
+    padding: var(--cpd-space-1x) var(--cpd-space-3x);
+    border-radius: 99px;
+    background: var(--cpd-color-bg-canvas-default);
+    /* Lifted off the conversation it floats over, the way the other floating plates in this layout are. */
+    box-shadow: 0 1px 4px rgb(0 0 0 / 12%);
+    font: var(--cpd-font-body-sm-medium);
+    color: var(--cpd-color-text-secondary);
+}
+
+.mx_AiStatus_what {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.mx_AiStatus_failed {
+    color: var(--cpd-color-text-critical-primary);
+}

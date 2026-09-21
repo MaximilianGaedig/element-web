@@ -105,7 +105,7 @@ import EditorStateTransfer from "../../utils/EditorStateTransfer";
 import ErrorDialog from "../views/dialogs/ErrorDialog";
 import UploadBar from "./UploadBar";
 import MessageComposer from "../views/rooms/MessageComposer";
-import { AiBar } from "../views/ai/AiBar";
+import { AiStatus } from "../views/ai/AiStatus";
 import { AiReplies } from "../views/ai/AiReplies";
 import JumpToBottomButton from "../views/rooms/JumpToBottomButton";
 import TopUnreadMessagesBar from "../views/rooms/TopUnreadMessagesBar";
@@ -2565,7 +2565,7 @@ export class RoomView extends React.Component<IRoomProps, IRoomState> {
                         measured with it, or it ends up behind the composer with the messages running
                         under it. Asking about this chat, and replies drafted for it. */}
                     <div className="mx_TgComposerAbove">
-                        <AiBar room={this.state.room} />
+                        <AiStatus />
                         <AiReplies room={this.state.room} />
                     </div>
                     <MessageComposer

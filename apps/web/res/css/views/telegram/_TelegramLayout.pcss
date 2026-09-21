@@ -159,6 +159,12 @@ html[data-tg-screen] .mx_RoomView_body[data-telegram-layout="true"] {
         display: flex;
         flex-direction: column;
         gap: var(--cpd-space-1x);
+        /*
+         * A gap above the composer. Without it the lowest of these sits with its bottom edge exactly on
+         * the composer's top edge - measured at zero - and a rounded pill flush against a rounded pill
+         * reads as one object, so the suggestions looked like part of the box you type in.
+         */
+        padding-block-end: var(--cpd-space-2x);
         pointer-events: none;
 
         > * {
