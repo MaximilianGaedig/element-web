@@ -2559,13 +2559,15 @@ export class RoomView extends React.Component<IRoomProps, IRoomState> {
         if (showComposer) {
             messageComposer = (
                 <>
-                    {/* Fork: asking about this chat, above the box you type in - the one place you are
-                        already looking when you wonder what you missed. The answer appears in the
-                        timeline rather than here, under the message it is about. */}
-                    <TgAsk room={this.state.room} />
-                    {/* Fork: things you might say, drafted when you open a chat somebody is waiting on.
-                        Pressing one fills the composer; sending is still yours. */}
-                    <TgReplies room={this.state.room} />
+                    {/* Fork: everything that floats directly above the box you type in. It is one
+                        element because the Telegram layout floats the composer over the timeline and
+                        reserves the space it takes (TgChatChrome): anything above the composer has to be
+                        measured with it, or it ends up behind the composer with the messages running
+                        under it. Asking about this chat, and replies drafted for it. */}
+                    <div className="mx_TgComposerAbove">
+                        <TgAsk room={this.state.room} />
+                        <TgReplies room={this.state.room} />
+                    </div>
                     <MessageComposer
                         room={this.state.room}
                         e2eStatus={this.state.e2eStatus}

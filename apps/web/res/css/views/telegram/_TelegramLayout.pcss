@@ -145,6 +145,27 @@ html[data-tg-screen] .mx_RoomView_body[data-telegram-layout="true"] {
         z-index: 3;
     }
 
+    /*
+     * What floats directly above the composer, on the composer's own layer and resting on its top edge.
+     * In flow it fell behind the composer - which floats absolutely - and the messages ran underneath it,
+     * because the space reserved for the bottom of the chat was measured from the composer alone.
+     */
+    > .mx_TgComposerAbove {
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: var(--tg-composer-height, 0px);
+        z-index: 3;
+        display: flex;
+        flex-direction: column;
+        gap: var(--cpd-space-1x);
+        pointer-events: none;
+
+        > * {
+            pointer-events: auto;
+        }
+    }
+
     > .mx_RoomView_statusArea {
         position: absolute;
         left: 0;

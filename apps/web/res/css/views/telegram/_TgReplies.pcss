@@ -28,23 +28,14 @@ Please see LICENSE files in the repository root for full details.
         display: none;
     }
 
+    /* Element's own button (Compound): sized and clipped here, never restyled here. */
     .mx_TgReplies_pill {
         flex: 0 0 auto;
         max-width: 22rem;
-        padding: var(--cpd-space-1x) var(--cpd-space-3x);
-        border: 1px solid var(--cpd-color-border-interactive-secondary);
-        border-radius: 99px;
-        background: var(--cpd-color-bg-canvas-default);
-        font: var(--cpd-font-body-sm-regular);
-        color: var(--cpd-color-text-primary);
         white-space: nowrap;
         text-overflow: ellipsis;
         overflow: hidden;
         scroll-snap-align: start;
-
-        &:hover {
-            background: var(--cpd-color-bg-subtle-secondary);
-        }
     }
 
     /* Taken: it stays in the row, faded, so the row does not reshuffle under your finger. */

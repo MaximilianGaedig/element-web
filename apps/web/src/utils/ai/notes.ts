@@ -38,6 +38,24 @@ export interface AiNote {
     ts: number;
     /** Whether the model thought what it saw really answered it. */
     confident?: boolean;
+    /**
+     * Exactly what left the device to get this answer.
+     *
+     * Kept with the answer rather than worked out again later, because what was sent is a fact about the
+     * moment it was sent: the timeline has moved on since, and a count recomputed tomorrow would be a
+     * different, confident-sounding number. What the model then went and looked up itself is in `looked`.
+     */
+    sent?: {
+        /** How many messages of this chat went with the question. */
+        messages: number;
+        /** The first and last of them, so they can be seen rather than taken on trust. */
+        first?: string;
+        last?: string;
+        /** How many of your own messages went as a writing sample, where any did. */
+        style?: number;
+        /** What it went and looked at afterwards: searches, chats read, pages fetched. */
+        looked?: string[];
+    };
 }
 
 /** Enough to keep a chat's worth of thinking, not enough to bloat the account. */

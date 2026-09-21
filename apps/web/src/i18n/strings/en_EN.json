@@ -3451,9 +3451,27 @@
         "ai_replies": "Suggested replies",
         "ai_send": "Send to chat",
         "ai_sent": "Sent",
+        "ai_sent_digest": {
+            "one": "Sent 1 message from %(chats)s chats",
+            "other": "Sent %(count)s messages from %(chats)s chats"
+        },
+        "ai_sent_looked": " — then it looked at: %(tools)s",
+        "ai_sent_messages": {
+            "one": "1 message from this chat",
+            "other": "%(count)s messages from this chat"
+        },
+        "ai_sent_more": {
+            "one": "…and 1 more",
+            "other": "…and %(count)s more"
+        },
+        "ai_sent_style": {
+            "one": ", and 1 of your own messages as a writing sample",
+            "other": ", and %(count)s of your own messages as a writing sample"
+        },
         "ai_thinking": "Thinking…",
         "ai_unread_from": "Summarise what is new, starting at message %(id)s. Everything before it is context you may use but should not report.",
         "ai_unsure": "This may not be the whole answer — what it found did not cover it.",
+        "ai_what_was_sent": "What was sent to the model",
         "banner_left": "~%(formatted)s left",
         "bio": "Bio",
         "bridge_fact_messages": "Messages imported",

@@ -15,6 +15,11 @@ Please see LICENSE files in the repository root for full details.
  * shrink (a tall answer was being squeezed to nothing and read as a blank card), and past a share of the
  * height it scrolls itself rather than pushing the chats off the screen.
  */
+/*
+ * The button is Element's own (AccessibleButton, Compound tokens): it is placed here, not restyled here.
+ * A bespoke glass pill in the middle of the room list looks like something from another app, which is
+ * exactly what it looked like.
+ */
 .mx_TgDigest_ask {
     display: flex;
     align-self: center;
@@ -22,17 +27,7 @@ Please see LICENSE files in the repository root for full details.
     justify-content: center;
     gap: var(--cpd-space-1x);
     width: fit-content;
-    margin: var(--cpd-space-1x) auto;
-    padding: var(--cpd-space-1x) var(--cpd-space-3x);
-    border: 1px solid var(--cpd-color-border-interactive-secondary);
-    border-radius: 99px;
-    background: var(--tg-glass-background, var(--cpd-color-bg-canvas-default));
-    backdrop-filter: var(--tg-glass-backdrop, blur(24px));
-    box-shadow: 0 2px 12px rgb(0 0 0 / 8%);
-    font: var(--cpd-font-body-sm-medium);
-    transition:
-        border-radius var(--tg-transition-standard-out),
-        padding var(--tg-transition-standard-out);
+    margin: var(--cpd-space-2x) auto;
 
     svg {
         width: 1em;
@@ -41,7 +36,7 @@ Please see LICENSE files in the repository root for full details.
 }
 
 .mx_TgDigest {
-    /* The pill it grew from: same place, same glass, opened out. */
+    /* An Element panel: the app's own surface and radius, not a glass slab of its own. */
     position: relative;
     display: flex;
     flex: 0 0 auto;
@@ -49,17 +44,11 @@ Please see LICENSE files in the repository root for full details.
     min-height: 0;
     max-height: min(24rem, 45%);
     overflow: hidden;
-    margin: var(--cpd-space-1x) var(--cpd-space-3x);
+    margin: var(--cpd-space-2x) var(--cpd-space-3x);
     padding: var(--cpd-space-3x);
-    border: 1px solid var(--cpd-color-border-interactive-secondary);
-    border-radius: 16px;
-    background: var(--tg-glass-background, var(--cpd-color-bg-canvas-default));
-    backdrop-filter: var(--tg-glass-backdrop, blur(24px));
-    box-shadow: 0 2px 12px rgb(0 0 0 / 8%);
+    border-radius: 8px;
+    background: var(--cpd-color-bg-subtle-secondary);
     font: var(--cpd-font-body-sm-regular);
-    transition:
-        border-radius var(--tg-transition-standard-out),
-        padding var(--tg-transition-standard-out);
 
     .mx_TgDigest_head {
         flex: 0 0 auto;
@@ -89,6 +78,20 @@ Please see LICENSE files in the repository root for full details.
     .mx_TgDigest_title {
         font: var(--cpd-font-body-sm-medium);
         color: var(--cpd-color-text-secondary);
+    }
+
+    .mx_TgDigest_spacer {
+        flex: 1 1 auto;
+    }
+
+    .mx_TgDigest_info {
+        color: var(--cpd-color-text-secondary);
+
+        svg {
+            display: block;
+            width: 16px;
+            height: 16px;
+        }
     }
 
     .mx_TgDigest_close svg {
@@ -155,19 +158,16 @@ Please see LICENSE files in the repository root for full details.
     .mx_TgDigest_draft {
         flex: 0 0 auto;
         max-width: 18rem;
-        padding: var(--cpd-space-1x) var(--cpd-space-3x);
-        border: 1px solid var(--cpd-color-border-interactive-secondary);
-        border-radius: 99px;
-        background: var(--cpd-color-bg-canvas-default);
-        font: var(--cpd-font-body-sm-regular);
-        color: var(--cpd-color-text-primary);
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
+    }
 
-        &:hover {
-            background: var(--cpd-color-bg-subtle-secondary);
-        }
+    /* What was sent, said plainly - the same fact the answers in the timeline state. */
+    .mx_TgDigest_sent {
+        margin: var(--cpd-space-2x) 0 0;
+        font: var(--cpd-font-body-xs-regular);
+        color: var(--cpd-color-text-secondary);
     }
 
     .mx_TgDigest_cites {

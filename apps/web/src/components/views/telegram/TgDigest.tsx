@@ -23,6 +23,7 @@ Please see LICENSE files in the repository root for full details.
 import React, { type JSX, useCallback, useState } from "react";
 import SparkleIcon from "@vector-im/compound-design-tokens/assets/web/icons/extensions";
 import CloseIcon from "@vector-im/compound-design-tokens/assets/web/icons/close";
+import InfoIcon from "@vector-im/compound-design-tokens/assets/web/icons/info";
 
 import { _t } from "../../../languageHandler";
 import AccessibleButton from "../elements/AccessibleButton";
@@ -47,6 +48,9 @@ export function TgDigest(): JSX.Element | null {
     const [cites, setCites] = useState<string[]>([]);
     /** Drafts per chat, as each chat's come back: the digest answers and the replies fill in behind it. */
     const [replies, setReplies] = useState<Record<string, string[]>>({});
+    /** What left the device to produce this: the same fact the answers in the timeline state. */
+    const [sent, setSent] = useState<{ messages: number; chats: number }>();
+    const [showSent, setShowSent] = useState(false);
 
     /*
      * Replies for each chat that is waiting, one chat at a time.
@@ -72,8 +76,10 @@ export function TgDigest(): JSX.Element | null {
             return;
         }
 
+        const sending = digestMessages(chats);
         beginAnswer();
         setFailed(undefined);
+        setSent({ messages: sending.length, chats: chats.length });
         setReplies({});
         setText("");
         // Drafted alongside the digest rather than after it, so the pills are there when it finishes.
@@ -134,6 +140,19 @@ export function TgDigest(): JSX.Element | null {
             <div className="mx_TgDigest_head">
                 <SparkleIcon className="mx_TgDigest_spark" />
                 <span className="mx_TgDigest_title">{_t("tg_layout|ai_digest")}</span>
+                <span className="mx_TgDigest_spacer" />
+                {sent && (
+                    <AccessibleButton
+                        kind="link"
+                        className="mx_TgDigest_info"
+                        aria-label={_t("tg_layout|ai_what_was_sent")}
+                        aria-expanded={showSent}
+                        title={_t("tg_layout|ai_what_was_sent")}
+                        onClick={() => setShowSent(!showSent)}
+                    >
+                        <InfoIcon />
+                    </AccessibleButton>
+                )}
                 <AccessibleButton
                     kind="link"
                     className="mx_TgDigest_close"
@@ -184,6 +203,11 @@ export function TgDigest(): JSX.Element | null {
                         </div>
                     );
                 })}
+                {showSent && sent && (
+                    <p className="mx_TgDigest_sent">
+                        {_t("tg_layout|ai_sent_digest", { count: sent.messages, chats: sent.chats })}
+                    </p>
+                )}
                 {cites.length > 0 && (
                     <p className="mx_TgDigest_cites">
                         {cites.slice(0, 6).map((eventId, index) => (

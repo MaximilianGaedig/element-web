@@ -92,6 +92,8 @@ export function TgAsk({ room, anchor }: Props): JSX.Element | null {
             if (!at) return;
 
             const newFrom = kind === "summary" ? unreadFrom(room, events) : undefined;
+            // Built once: what is sent is what the answer will say was sent.
+            const sending = readable(events).slice(kind === "summary" ? -READ_BACK : -40);
             setBusy(true);
             setFailed(undefined);
             beginAnswer();
@@ -109,7 +111,7 @@ export function TgAsk({ room, anchor }: Props): JSX.Element | null {
                         kind,
                         // A summary reads the chat around what was missed; a question may need the whole
                         // history, which the model goes and searches for itself.
-                        messages: readable(events).slice(kind === "summary" ? -READ_BACK : -40),
+                        messages: sending,
                         question:
                             kind === "summary"
                                 ? // Not a question: where to start. The earlier messages are there to be
@@ -144,6 +146,12 @@ export function TgAsk({ room, anchor }: Props): JSX.Element | null {
                     cites: answer.cites ?? [],
                     confident: answer.confident,
                     ts: Date.now(),
+                    sent: {
+                        messages: sending.length,
+                        first: sending[0]?.id,
+                        last: sending[sending.length - 1]?.id,
+                        looked: answer.looked?.map((what) => String(what.tool)),
+                    },
                 };
                 await keepNote(client, room.roomId, note);
                 setQuestion("");

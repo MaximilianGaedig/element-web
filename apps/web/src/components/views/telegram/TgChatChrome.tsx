@@ -49,6 +49,8 @@ export function TgChatChrome({ body }: Props): JSX.Element {
             const pinned = el.querySelector(":scope > .mx_TgPinned")?.getBoundingClientRect();
             const composer = el.querySelector(":scope > .mx_MessageComposer")?.getBoundingClientRect();
             const status = el.querySelector(":scope > .mx_RoomView_statusArea")?.getBoundingClientRect();
+            // What floats directly above the composer (asking, drafted replies): part of the same block.
+            const above = el.querySelector(":scope > .mx_TgComposerAbove")?.getBoundingClientRect();
             const headerBottom = header ? Math.max(0, header.bottom - b.top) : 0;
             // The pinned plate floats under the header; the top block (padding, blur) covers both.
             const pinnedBottom = pinned?.height ? Math.max(0, pinned.bottom - b.top) : 0;
@@ -58,7 +60,16 @@ export function TgChatChrome({ body }: Props): JSX.Element {
             set("--tg-header-bottom", headerBottom);
             set("--tg-plates-bottom", Math.max(headerBottom, pinnedBottom));
             set("--tg-header-block", Math.max(headerBottom, pinnedBottom, importBottom));
-            set("--tg-composer-block", composer ? Math.max(0, b.bottom - composer.top) + (status?.height ?? 0) : 0);
+            /*
+             * Two heights, because two things need different ones: the composer alone is what the pills
+             * above it sit on top of, and the whole stack is what the messages must be padded clear of.
+             */
+            set("--tg-composer-height", composer ? Math.max(0, b.bottom - composer.top) : 0);
+            const stackTop = above?.height ? Math.min(above.top, composer?.top ?? above.top) : composer?.top;
+            set(
+                "--tg-composer-block",
+                stackTop !== undefined ? Math.max(0, b.bottom - stackTop) + (status?.height ?? 0) : 0,
+            );
             if (atBottom && scroll) scroll.scrollTop = scroll.scrollHeight;
         };
         const observer = new ResizeObserver(update);
@@ -66,7 +77,7 @@ export function TgChatChrome({ body }: Props): JSX.Element {
             observer.disconnect();
             observer.observe(el);
             for (const child of el.querySelectorAll(
-                ":scope > .mx_RoomHeader, :scope > .mx_TgPinned, :scope > .mx_TgImport, :scope > .mx_MessageComposer, :scope > .mx_RoomView_statusArea",
+                ":scope > .mx_RoomHeader, :scope > .mx_TgPinned, :scope > .mx_TgImport, :scope > .mx_TgComposerAbove, :scope > .mx_MessageComposer, :scope > .mx_RoomView_statusArea",
             )) {
                 observer.observe(child);
             }
@@ -82,6 +93,7 @@ export function TgChatChrome({ body }: Props): JSX.Element {
             el.style.removeProperty("--tg-header-bottom");
             el.style.removeProperty("--tg-plates-bottom");
             el.style.removeProperty("--tg-header-block");
+            el.style.removeProperty("--tg-composer-height");
             el.style.removeProperty("--tg-composer-block");
         };
     }, [body]);

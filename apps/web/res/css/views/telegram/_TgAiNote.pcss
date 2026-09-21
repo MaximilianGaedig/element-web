@@ -88,6 +88,78 @@ Please see LICENSE files in the repository root for full details.
         }
     }
 
+    /* The info button: the smallest thing in the header, and the only new affordance. */
+    .mx_TgAiNote_info {
+        margin-inline-start: auto;
+        color: var(--cpd-color-text-secondary);
+
+        svg {
+            display: block;
+            width: 16px;
+            height: 16px;
+        }
+
+        &:hover {
+            color: var(--cpd-color-text-primary);
+        }
+    }
+
+    /*
+     * What was sent, opened: the messages themselves, inset from the answer so it reads as a footnote to
+     * it rather than more of it. Each row is the sender and the start of what they said, and pressing it
+     * goes there - the quickest way to check an answer is to look at what it was given.
+     */
+    .mx_TgAiNote_sentPanel {
+        margin-block-start: var(--cpd-space-2x);
+        padding-block-start: var(--cpd-space-2x);
+        border-block-start: 1px solid var(--cpd-color-border-interactive-secondary);
+    }
+
+    .mx_TgAiNote_sentWhat {
+        margin: 0;
+        font: var(--cpd-font-body-xs-regular);
+        color: var(--cpd-color-text-secondary);
+    }
+
+    .mx_TgAiNote_sentList {
+        margin: var(--cpd-space-1x) 0 0;
+        padding: 0;
+        list-style: none;
+        max-height: 12rem;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+    }
+
+    .mx_TgAiNote_sentOne {
+        display: flex;
+        gap: var(--cpd-space-2x);
+        width: 100%;
+        padding: 2px 0;
+        font: var(--cpd-font-body-xs-regular);
+        color: var(--cpd-color-text-secondary);
+        text-align: start;
+
+        &:hover {
+            color: var(--cpd-color-text-primary);
+        }
+    }
+
+    .mx_TgAiNote_sentWho {
+        flex: 0 0 auto;
+        max-width: 8rem;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        font: var(--cpd-font-body-xs-medium);
+    }
+
+    .mx_TgAiNote_sentBody {
+        flex: 1 1 auto;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
     .mx_TgAiNote_unsure {
         margin: var(--cpd-space-1x) 0 0;
         font: var(--cpd-font-body-sm-regular);

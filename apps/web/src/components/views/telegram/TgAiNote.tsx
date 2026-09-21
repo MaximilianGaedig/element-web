@@ -19,10 +19,11 @@ Please see LICENSE files in the repository root for full details.
  */
 
 import React, { type JSX, useState } from "react";
-import { type MatrixClient } from "matrix-js-sdk/src/matrix";
+import { type MatrixClient, type MatrixEvent, type Room } from "matrix-js-sdk/src/matrix";
 import SendIcon from "@vector-im/compound-design-tokens/assets/web/icons/send";
 import DeleteIcon from "@vector-im/compound-design-tokens/assets/web/icons/delete";
 import SearchIcon from "@vector-im/compound-design-tokens/assets/web/icons/search";
+import InfoIcon from "@vector-im/compound-design-tokens/assets/web/icons/info";
 import SparkleIcon from "@vector-im/compound-design-tokens/assets/web/icons/extensions";
 
 import { _t } from "../../../languageHandler";
@@ -58,8 +59,28 @@ export function lookingWords(tool: string): string {
     }
 }
 
+/**
+ * The messages that were sent, as they can still be seen.
+ *
+ * The note keeps the first and the last of them and how many there were, not the whole list: two hundred
+ * ids per answer, forty answers to a room, is a quarter of a megabyte of account data to say something the
+ * timeline already knows. So the range is resolved here, from what is loaded, and what cannot be found is
+ * said as a number rather than quietly left out.
+ */
+function whatWasSent(room: Room | null, sent: NonNullable<AiNote["sent"]>): MatrixEvent[] {
+    const events = room?.getLiveTimeline().getEvents() ?? [];
+    const from = sent.first ? events.findIndex((event) => event.getId() === sent.first) : -1;
+    const to = sent.last ? events.findIndex((event) => event.getId() === sent.last) : -1;
+    if (from < 0 || to < from) return [];
+    return events.slice(from, to + 1).filter((event) => event.getType() === "m.room.message");
+}
+
+/** How many of the sent messages the panel lists before it stops and says how many more there were. */
+const LIST = 12;
+
 export function TgAiNote({ client, roomId, note, streaming, onGone }: Props): JSX.Element {
     const [sent, setSent] = useState(false);
+    const [showSent, setShowSent] = useState(false);
     const [busy, setBusy] = useState(false);
     const text = streaming ? streaming.text : note.answer;
 
@@ -103,6 +124,18 @@ export function TgAiNote({ client, roomId, note, streaming, onGone }: Props): JS
                 <SparkleIcon className="mx_TgAiNote_spark" />
                 <span className="mx_TgAiNote_who">{_t("tg_layout|ai_only_you")}</span>
                 {note.question && <span className="mx_TgAiNote_question">{note.question}</span>}
+                {!streaming && note.sent && (
+                    <AccessibleButton
+                        kind="link"
+                        className="mx_TgAiNote_info"
+                        aria-label={_t("tg_layout|ai_what_was_sent")}
+                        aria-expanded={showSent}
+                        title={_t("tg_layout|ai_what_was_sent")}
+                        onClick={() => setShowSent(!showSent)}
+                    >
+                        <InfoIcon />
+                    </AccessibleButton>
+                )}
             </div>
 
             {streaming?.looking && (
@@ -113,6 +146,47 @@ export function TgAiNote({ client, roomId, note, streaming, onGone }: Props): JS
             )}
 
             <AiText className="mx_TgAiNote_text" text={text} />
+
+            {/*
+                What left the device, behind the info button: the messages themselves, each one somewhere
+                to go, and what the model went off to look at afterwards. An answer whose inputs you cannot
+                see is an answer you have to take on trust - but it is also not what you are reading the
+                chat for, so it is one press away rather than always underfoot.
+            */}
+            {showSent && note.sent && (
+                <div className="mx_TgAiNote_sentPanel">
+                    <p className="mx_TgAiNote_sentWhat">
+                        {_t("tg_layout|ai_sent_messages", { count: note.sent.messages })}
+                        {note.sent.style ? _t("tg_layout|ai_sent_style", { count: note.sent.style }) : null}
+                        {note.sent.looked?.length
+                            ? _t("tg_layout|ai_sent_looked", { tools: note.sent.looked.join(", ") })
+                            : null}
+                    </p>
+                    <ol className="mx_TgAiNote_sentList">
+                        {whatWasSent(client.getRoom(roomId), note.sent)
+                            .slice(0, LIST)
+                            .map((event) => (
+                                <li key={event.getId()}>
+                                    <AccessibleButton
+                                        kind="link"
+                                        className="mx_TgAiNote_sentOne"
+                                        onClick={() => jumpTo(event.getId()!)}
+                                    >
+                                        <span className="mx_TgAiNote_sentWho">
+                                            {event.sender?.name ?? event.getSender()}
+                                        </span>
+                                        <span className="mx_TgAiNote_sentBody">{event.getContent().body}</span>
+                                    </AccessibleButton>
+                                </li>
+                            ))}
+                    </ol>
+                    {note.sent.messages > LIST && (
+                        <p className="mx_TgAiNote_sentWhat">
+                            {_t("tg_layout|ai_sent_more", { count: note.sent.messages - LIST })}
+                        </p>
+                    )}
+                </div>
+            )}
 
             {!streaming && note.confident === false && (
                 <p className="mx_TgAiNote_unsure">{_t("tg_layout|ai_unsure")}</p>
