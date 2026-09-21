@@ -67,6 +67,7 @@ import { SDKContext } from "../../contexts/SDKContext.ts";
 import { ResizerViewModel } from "../../viewmodels/structures/ResizerViewModel.ts";
 import { TgColumns } from "../views/telegram/TgColumns";
 import { TgTweaksPanel } from "../views/telegram/TgTweaksPanel";
+import { TgMetricsPanel } from "../views/telegram/TgMetricsPanel";
 
 // We need to fetch each pinned message individually (if we don't already have it)
 // so each pinned message may trigger a request. Limit the number per room for sanity.
@@ -724,6 +725,7 @@ class LoggedInView extends React.Component<IProps, IState> {
                 >
                     {roomView}
                     <TgTweaksPanel />
+                    <TgMetricsPanel />
                 </TgColumns>
             );
         } else if (resizerViewModel && !moduleRenderer) {

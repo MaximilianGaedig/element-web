@@ -567,6 +567,44 @@ html[data-tg-screen="mobile"] {
     }
 }
 
+/*
+ * TgMetricsPanel: what the layout thinks the screen is, shown on the screen (?metrics). It sits under
+ * the status bar and above everything else, because the things it explains are exactly the ones that go
+ * wrong at the screen's edges.
+ */
+.mx_TgMetricsPanel {
+    position: fixed;
+    inset-inline: 8px;
+    top: calc(var(--tg-safe-top) + 4px);
+    z-index: 6000;
+    padding: 8px 10px;
+    border-radius: 10px;
+    background-color: color-mix(in srgb, var(--cpd-color-bg-canvas-default) 92%, transparent);
+    box-shadow: 0 4px 16px rgb(0 0 0 / 25%);
+    font: var(--cpd-font-body-xs-regular);
+    font-variant-numeric: tabular-nums;
+
+    dl {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        gap: 1px 10px;
+        margin: 6px 0 0;
+    }
+
+    dt {
+        color: var(--cpd-color-text-secondary);
+    }
+
+    dd {
+        margin: 0;
+        text-align: end;
+    }
+
+    .mx_TgMetricsPanel_toggle {
+        color: var(--cpd-color-text-action-accent);
+    }
+}
+
 /* TgTweaksPanel: on-screen sliders for tuning values (?tweaks). */
 .mx_TgTweaksPanel {
     position: fixed;
