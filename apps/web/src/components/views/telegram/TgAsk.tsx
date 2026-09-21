@@ -27,6 +27,7 @@ import AccessibleButton from "../elements/AccessibleButton";
 import { useMatrixClientContext } from "../../../contexts/MatrixClientContext";
 import { type AskMessage, ask, aiAvailable, beginAnswer } from "../../../utils/ai/ask";
 import { type AiNote, keepNote } from "../../../utils/ai/notes";
+import { setStreaming } from "../../../utils/ai/streaming";
 import { lookingWords } from "./TgAiNote";
 
 /** How much of what is on screen a summary is given: a day of a busy chat, not a year of one. */
@@ -53,14 +54,13 @@ interface Props {
     room: Room;
     /** Where the answer will sit: the message it is about, usually the newest one. */
     anchor?: string;
-    /** Reports the answer as it is written, so the timeline can show it arriving. */
-    onStreaming?: (state: { anchor: string; text: string; looking?: string } | undefined) => void;
 }
 
-export function TgAsk({ room, anchor, onStreaming }: Props): JSX.Element | null {
+export function TgAsk({ room, anchor }: Props): JSX.Element | null {
     const client = useMatrixClientContext();
     const [question, setQuestion] = useState("");
     const [busy, setBusy] = useState(false);
+    const [open, setOpen] = useState(false);
     const [failed, setFailed] = useState<string>();
     const abort = useRef<AbortController>(undefined);
 
@@ -78,7 +78,7 @@ export function TgAsk({ room, anchor, onStreaming }: Props): JSX.Element | null 
 
             let looking: string | undefined;
             let text = "";
-            onStreaming?.({ anchor: at, text: "", looking: _t("tg_layout|ai_thinking") });
+            setStreaming({ anchor: at, roomId: room.roomId, text: "", looking: _t("tg_layout|ai_thinking") });
 
             try {
                 const answer = await ask(
@@ -93,11 +93,11 @@ export function TgAsk({ room, anchor, onStreaming }: Props): JSX.Element | null 
                     {
                         onText: (whole) => {
                             text = whole;
-                            onStreaming?.({ anchor: at, text, looking: undefined });
+                            setStreaming({ anchor: at, roomId: room.roomId, text, looking: undefined });
                         },
                         onLooking: (what) => {
                             looking = lookingWords(what.tool);
-                            onStreaming?.({ anchor: at, text, looking });
+                            setStreaming({ anchor: at, roomId: room.roomId, text, looking });
                         },
                     },
                     abort.current.signal,
@@ -117,17 +117,17 @@ export function TgAsk({ room, anchor, onStreaming }: Props): JSX.Element | null 
             } catch (error) {
                 setFailed(_t("tg_layout|ai_failed", { reason: String((error as Error).message).slice(0, 160) }));
             } finally {
-                onStreaming?.(undefined);
+                setStreaming(undefined);
                 setBusy(false);
             }
         },
-        [client, room, anchor, onStreaming],
+        [client, room, anchor],
     );
 
     if (!aiAvailable()) return null;
 
     return (
-        <div className="mx_TgAsk">
+        <div className={`mx_TgAsk${open ? " mx_TgAsk_open" : ""}`}>
             <AccessibleButton
                 kind="secondary"
                 className="mx_TgAsk_catchUp"
@@ -138,33 +138,41 @@ export function TgAsk({ room, anchor, onStreaming }: Props): JSX.Element | null 
                 {_t("tg_layout|ai_catch_up")}
             </AccessibleButton>
 
-            <form
-                className="mx_TgAsk_form"
-                onSubmit={(event) => {
-                    event.preventDefault();
-                    const asked = question.trim();
-                    if (asked) void run("question", asked);
-                }}
-            >
-                <input
-                    className="mx_TgAsk_input"
-                    value={question}
-                    disabled={busy}
-                    placeholder={_t("tg_layout|ai_ask_placeholder")}
-                    onChange={(event) => setQuestion(event.target.value)}
-                    aria-label={_t("tg_layout|ai_ask")}
-                />
-                <AccessibleButton
-                    kind="primary"
-                    className="mx_TgAsk_send"
-                    element="button"
-                    onClick={null}
-                    disabled={busy || !question.trim()}
-                    {...{ type: "submit" }}
-                >
-                    <SendIcon />
+            {!open && (
+                <AccessibleButton kind="link" className="mx_TgAsk_open_button" onClick={() => setOpen(true)}>
+                    {_t("tg_layout|ai_ask")}
                 </AccessibleButton>
-            </form>
+            )}
+
+            {open && (
+                <form
+                    className="mx_TgAsk_form"
+                    onSubmit={(event) => {
+                        event.preventDefault();
+                        const asked = question.trim();
+                        if (asked) void run("question", asked);
+                    }}
+                >
+                    <input
+                        className="mx_TgAsk_input"
+                        value={question}
+                        disabled={busy}
+                        placeholder={_t("tg_layout|ai_ask_placeholder")}
+                        onChange={(event) => setQuestion(event.target.value)}
+                        aria-label={_t("tg_layout|ai_ask")}
+                    />
+                    <AccessibleButton
+                        kind="primary"
+                        className="mx_TgAsk_send"
+                        element="button"
+                        onClick={null}
+                        disabled={busy || !question.trim()}
+                        {...{ type: "submit" }}
+                    >
+                        <SendIcon />
+                    </AccessibleButton>
+                </form>
+            )}
 
             {failed && <p className="mx_TgAsk_failed">{failed}</p>}
         </div>

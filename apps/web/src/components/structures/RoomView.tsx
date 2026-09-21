@@ -105,6 +105,7 @@ import EditorStateTransfer from "../../utils/EditorStateTransfer";
 import ErrorDialog from "../views/dialogs/ErrorDialog";
 import UploadBar from "./UploadBar";
 import MessageComposer from "../views/rooms/MessageComposer";
+import { TgAsk } from "../views/telegram/TgAsk";
 import JumpToBottomButton from "../views/rooms/JumpToBottomButton";
 import TopUnreadMessagesBar from "../views/rooms/TopUnreadMessagesBar";
 import { fetchInitialEvent } from "../../utils/EventUtils";
@@ -2556,13 +2557,19 @@ export class RoomView extends React.Component<IRoomProps, IRoomState> {
             !MessageSelectionStore.instance.isSelecting(this.state.room.roomId);
         if (showComposer) {
             messageComposer = (
-                <MessageComposer
-                    room={this.state.room}
-                    e2eStatus={this.state.e2eStatus}
-                    resizeNotifier={this.context.resizeNotifier}
-                    replyToEvent={this.state.replyToEvent}
-                    permalinkCreator={this.permalinkCreator}
-                />
+                <>
+                    {/* Fork: asking about this chat, above the box you type in - the one place you are
+                        already looking when you wonder what you missed. The answer appears in the
+                        timeline rather than here, under the message it is about. */}
+                    <TgAsk room={this.state.room} />
+                    <MessageComposer
+                        room={this.state.room}
+                        e2eStatus={this.state.e2eStatus}
+                        resizeNotifier={this.context.resizeNotifier}
+                        replyToEvent={this.state.replyToEvent}
+                        permalinkCreator={this.permalinkCreator}
+                    />
+                </>
             );
         }
 

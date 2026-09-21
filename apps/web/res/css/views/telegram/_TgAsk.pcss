@@ -1,0 +1,82 @@
+/*
+Copyright 2026 New Vector Ltd.
+
+SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only OR LicenseRef-Element-Commercial
+Please see LICENSE files in the repository root for full details.
+*/
+
+/*
+ * Asking about the chat, above the box you type in (TgAsk.tsx).
+ *
+ * It has to be quiet: it sits over every conversation, and a chat is not about it. So it is one line of
+ * secondary text until it is pressed, and only then a box. The answer never appears here - it appears in
+ * the timeline, under the message it is about.
+ */
+.mx_TgAsk {
+    display: flex;
+    align-items: center;
+    gap: var(--cpd-space-2x);
+    padding: var(--cpd-space-1x) var(--cpd-space-4x) 0;
+    font: var(--cpd-font-body-sm-regular);
+
+    .mx_TgAsk_catchUp {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--cpd-space-1x);
+        padding: var(--cpd-space-1x) var(--cpd-space-3x);
+        border-radius: 99px;
+        font: var(--cpd-font-body-sm-medium);
+
+        svg {
+            width: 1em;
+            height: 1em;
+        }
+    }
+
+    .mx_TgAsk_open_button {
+        color: var(--cpd-color-text-secondary);
+    }
+
+    .mx_TgAsk_form {
+        display: flex;
+        flex: 1;
+        align-items: center;
+        gap: var(--cpd-space-2x);
+    }
+
+    .mx_TgAsk_input {
+        flex: 1;
+        min-width: 0;
+        padding: var(--cpd-space-2x) var(--cpd-space-3x);
+        border: 1px solid var(--cpd-color-border-interactive-secondary);
+        border-radius: 99px;
+        background: var(--cpd-color-bg-canvas-default);
+        font: var(--cpd-font-body-md-regular);
+        color: var(--cpd-color-text-primary);
+
+        &:focus {
+            border-color: var(--cpd-color-border-interactive-primary);
+            outline: none;
+        }
+    }
+
+    .mx_TgAsk_send {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 32px;
+        height: 32px;
+        padding: 0;
+        border-radius: 99px;
+
+        svg {
+            width: 1em;
+            height: 1em;
+        }
+    }
+
+    .mx_TgAsk_failed {
+        margin: 0;
+        color: var(--cpd-color-text-critical-primary);
+    }
+}

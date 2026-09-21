@@ -25,6 +25,7 @@ import { formatDate, wantsDateSeparator } from "../../DateUtils";
 import { MatrixClientPeg } from "../../MatrixClientPeg";
 import { TgAiNote } from "../views/telegram/TgAiNote";
 import { type AiNote, notesByAnchor } from "../../utils/ai/notes";
+import { onStreaming, streaming } from "../../utils/ai/streaming";
 import SettingsStore from "../../settings/SettingsStore";
 import RoomContext, { TimelineRenderingType } from "../../contexts/RoomContext";
 import { Layout } from "../../settings/enums/Layout";
@@ -128,12 +129,6 @@ export function shouldFormContinuation(
 }
 
 interface IProps {
-    /**
-     * Fork: an answer being written right now, and what the model is looking at while it writes. It is
-     * shown under the message it is about until it is kept, so the reader watches it arrive in place.
-     */
-    aiStreaming?: { anchor: string; text: string; looking?: string };
-
     // the list of MatrixEvents to display
     events: MatrixEvent[];
 
@@ -338,10 +333,18 @@ export default class MessagePanel extends React.Component<IProps, IState> {
         );
         this.calculateRoomMembersCount();
         this.props.room?.currentState.on(RoomStateEvent.Update, this.calculateRoomMembersCount);
+        // An answer being written elsewhere in the app shows up under the message it is about.
+        this.stopWatchingAi = onStreaming(() => {
+            if (!this.unmounted) this.forceUpdate();
+        });
     }
+
+    /** Stops listening for the answer being written, once this timeline is gone. */
+    private stopWatchingAi?: () => void;
 
     public componentWillUnmount(): void {
         this.unmounted = true;
+        this.stopWatchingAi?.();
         MessageSelectionStore.instance.off(UPDATE_EVENT, this.onSelectionStoreUpdate);
         this.props.room?.currentState.off(RoomStateEvent.Update, this.calculateRoomMembersCount);
         SettingsStore.unwatchSetting(this.showTypingNotificationsWatcherRef);
@@ -821,11 +824,17 @@ export default class MessagePanel extends React.Component<IProps, IState> {
     /** The reader's own notes for one message, and an empty list for the many that have none. */
     private aiNotesFor(eventId: string): AiNote[] {
         if (!this.props.room) return [];
-        const streaming = this.props.aiStreaming;
+        const writing = this.aiStreaming();
         const kept = notesByAnchor(MatrixClientPeg.safeGet(), this.props.room.roomId).get(eventId) ?? [];
-        if (streaming?.anchor !== eventId) return kept;
+        if (writing?.anchor !== eventId) return kept;
         // One being written now has no place in the kept list yet, so it is added at the end.
-        return [...kept, { id: "writing", anchor: eventId, answer: streaming.text, cites: [], ts: Date.now() }];
+        return [...kept, { id: "writing", anchor: eventId, answer: writing.text, cites: [], ts: Date.now() }];
+    }
+
+    /** The answer being written in *this* room, if one is. */
+    private aiStreaming(): { anchor: string; text: string; looking?: string } | undefined {
+        const writing = streaming();
+        return writing && writing.roomId === this.props.room?.roomId ? writing : undefined;
     }
 
     public getTilesForEvent(
@@ -952,8 +961,8 @@ export default class MessagePanel extends React.Component<IProps, IState> {
                     roomId={this.props.room!.roomId}
                     note={note}
                     streaming={
-                        this.props.aiStreaming?.anchor === eventId
-                            ? { text: this.props.aiStreaming.text, looking: this.props.aiStreaming.looking }
+                        this.aiStreaming()?.anchor === eventId
+                            ? { text: this.aiStreaming()!.text, looking: this.aiStreaming()!.looking }
                             : undefined
                     }
                     onGone={() => this.forceUpdate()}
