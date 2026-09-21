@@ -20,6 +20,7 @@ Please see LICENSE files in the repository root for full details.
 import { type MatrixClient, type Room, type MatrixEvent } from "matrix-js-sdk/src/matrix";
 
 import { type AskMessage } from "./ask";
+import { sayable } from "./readable";
 
 /** Chats worth asking about, and how much of each is worth sending. */
 const MAX_CHATS = 12;
@@ -63,22 +64,25 @@ export function unreadChats(client: MatrixClient): UnreadChat[] {
  *
  * The id carried is the event's own, so the answer can cite a message and the reader can be taken to it;
  * the sender carries the chat's name, because a line saying "Alice asked about the hotel" is only useful
- * if you can see which conversation it was in.
+ * if you can see which conversation it was in. A picture arrives as what it says, where anybody has read
+ * it (utils/ai/readable.ts): a morning of screenshots is not a morning of nothing.
  */
-export function digestMessages(chats: UnreadChat[]): AskMessage[] {
-    const out: AskMessage[] = [];
+export async function digestMessages(client: MatrixClient, chats: UnreadChat[]): Promise<AskMessage[]> {
     const share = Math.max(3, Math.floor(MAX_MESSAGES / Math.max(1, chats.length)));
-    for (const { room, unread } of chats) {
-        for (const event of unread.slice(-Math.min(share, MAX_PER_CHAT))) {
-            const body = event.getContent().body;
-            if (typeof body !== "string" || !body.trim()) continue;
-            out.push({
-                id: event.getId()!,
-                sender: `${room.name} / ${event.sender?.name ?? event.getSender() ?? "?"}`,
-                ts: new Date(event.getTs()).toISOString().slice(0, 16).replace("T", " "),
-                body: body.slice(0, 600),
-            });
-        }
+    const taken = chats.flatMap(({ room, unread }) =>
+        unread.slice(-Math.min(share, MAX_PER_CHAT)).map((event) => ({ room, event })),
+    );
+    const lines = await Promise.all(taken.map(({ event }) => sayable(client, event)));
+    const out: AskMessage[] = [];
+    for (const [at, { room, event }] of taken.entries()) {
+        const body = lines[at];
+        if (!body) continue;
+        out.push({
+            id: event.getId()!,
+            sender: `${room.name} / ${event.sender?.name ?? event.getSender() ?? "?"}`,
+            ts: new Date(event.getTs()).toISOString().slice(0, 16).replace("T", " "),
+            body: body.slice(0, 600),
+        });
     }
     return out;
 }

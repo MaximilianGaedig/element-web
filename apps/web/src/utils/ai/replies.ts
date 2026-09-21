@@ -20,7 +20,8 @@ Please see LICENSE files in the repository root for full details.
 
 import { type MatrixClient, type MatrixEvent, type Room } from "matrix-js-sdk/src/matrix";
 
-import { type AskMessage, ask, aiAvailable } from "./ask";
+import { ask, aiAvailable } from "./ask";
+import { readable } from "./readable";
 
 /** How much of the chat a draft needs: the turn being replied to, not the year around it. */
 const READ_BACK = 20;
@@ -92,7 +93,11 @@ export async function repliesFor(client: MatrixClient, room: Room): Promise<stri
     // Claimed before it is asked for, so two callers at once ask once.
     known.set(at, []);
     try {
-        const answer = await ask(client, { kind: "replies", messages: readable(room), style: styleOf(client, room) });
+        const answer = await ask(client, {
+            kind: "replies",
+            messages: await readable(client, room, READ_BACK),
+            style: styleOf(client, room),
+        });
         const suggested = drafts(answer.answer);
         known.set(at, suggested);
         return suggested;
@@ -106,21 +111,6 @@ export async function repliesFor(client: MatrixClient, room: Room): Promise<stri
 export function repliesKnown(client: MatrixClient, room: Room): string[] {
     const at = waitingOn(room, client.getSafeUserId())?.getId();
     return at ? (known.get(at) ?? []) : [];
-}
-
-/** The chat as the model is given it. */
-function readable(room: Room): AskMessage[] {
-    const out: AskMessage[] = [];
-    for (const event of room.getLiveTimeline().getEvents().slice(-READ_BACK)) {
-        const body = text(event);
-        if (!body) continue;
-        out.push({
-            id: event.getId()!,
-            sender: event.sender?.name ?? event.getSender() ?? "?",
-            body: body.slice(0, 600),
-        });
-    }
-    return out;
 }
 
 /** How you write, in this chat: your own messages, newest last, as many as are worth sending. */

@@ -76,7 +76,7 @@ export function TgDigest(): JSX.Element | null {
             return;
         }
 
-        const sending = digestMessages(chats);
+        const sending = await digestMessages(client, chats);
         beginAnswer();
         setFailed(undefined);
         setSent({ messages: sending.length, chats: chats.length });
@@ -88,7 +88,7 @@ export function TgDigest(): JSX.Element | null {
         try {
             const answer = await ask(
                 client,
-                { kind: "digest", messages: digestMessages(chats) },
+                { kind: "digest", messages: sending },
                 {
                     onText: (whole) => {
                         setText(whole);

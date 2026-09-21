@@ -29,7 +29,8 @@ import SendIcon from "@vector-im/compound-design-tokens/assets/web/icons/send";
 import { _t } from "../../../languageHandler";
 import AccessibleButton from "../elements/AccessibleButton";
 import { useMatrixClientContext } from "../../../contexts/MatrixClientContext";
-import { type AskMessage, ask, aiAvailable, beginAnswer } from "../../../utils/ai/ask";
+import { ask, aiAvailable, beginAnswer } from "../../../utils/ai/ask";
+import { readable } from "../../../utils/ai/readable";
 import { type AiNote, keepNote } from "../../../utils/ai/notes";
 import { setStreaming } from "../../../utils/ai/streaming";
 import { lookingWords } from "./TgAiNote";
@@ -50,23 +51,6 @@ function unreadFrom(room: Room, events: MatrixEvent[]): string | undefined {
     const readUpTo = room.getEventReadUpTo(room.client.getSafeUserId(), true);
     const at = readUpTo ? events.findIndex((event) => event.getId() === readUpTo) : -1;
     return at >= 0 ? events[at + 1]?.getId() : undefined;
-}
-
-/** The messages as the model is given them: an id it can cite, who said it, when, and the words. */
-function readable(events: MatrixEvent[]): AskMessage[] {
-    const out: AskMessage[] = [];
-    for (const event of events.slice(-READ_BACK)) {
-        if (event.getType() !== "m.room.message" || event.isRedacted()) continue;
-        const body = event.getContent().body;
-        if (typeof body !== "string" || !body.trim()) continue;
-        out.push({
-            id: event.getId()!,
-            sender: event.sender?.name ?? event.getSender() ?? "?",
-            ts: new Date(event.getTs()).toISOString().slice(0, 16).replace("T", " "),
-            body: body.slice(0, 2000),
-        });
-    }
-    return out;
 }
 
 interface Props {
@@ -93,7 +77,7 @@ export function TgAsk({ room, anchor }: Props): JSX.Element | null {
 
             const newFrom = kind === "summary" ? unreadFrom(room, events) : undefined;
             // Built once: what is sent is what the answer will say was sent.
-            const sending = readable(events).slice(kind === "summary" ? -READ_BACK : -40);
+            const sending = await readable(client, room, kind === "summary" ? READ_BACK : 40);
             setBusy(true);
             setFailed(undefined);
             beginAnswer();
