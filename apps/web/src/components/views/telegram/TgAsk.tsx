@@ -8,9 +8,13 @@ Please see LICENSE files in the repository root for full details.
 /*
  * Asking about the chat you are in.
  *
- * Two ways in, both of them one press: "what did I miss", which reads what is on screen and answers
- * without being asked anything else, and a box for a question, which lets the model go and look through
- * the history for the answer.
+ * Two ways in, both of them one press on something you were already doing: "what did I miss", which reads
+ * what is on screen and answers without being asked anything else, and "ask", which takes whatever you
+ * have typed in the composer as the question and goes looking through the history for the answer.
+ *
+ * The composer, not a box of its own. You wonder about something mid-conversation and start typing it;
+ * a second input appearing above the one you are already typing in is a second place to type the same
+ * thing. So: type the question where you type everything else, and press ask instead of send.
  *
  * The shape of it: a pill floating over the conversation, and the answer arriving where an answer belongs
  * - in the timeline, as a message, under the thing it is about (TgAiNote). The pill does not grow into a
@@ -21,15 +25,13 @@ Please see LICENSE files in the repository root for full details.
  * tomorrow.
  */
 
-import React, { type JSX, useCallback, useRef, useState } from "react";
+import React, { type JSX, useCallback, useEffect, useRef, useState } from "react";
 import { type MatrixEvent, type Room } from "matrix-js-sdk/src/matrix";
 import SparkleIcon from "@vector-im/compound-design-tokens/assets/web/icons/extensions";
-import SendIcon from "@vector-im/compound-design-tokens/assets/web/icons/send";
 
 import { Button } from "@vector-im/compound-web";
 
 import { _t } from "../../../languageHandler";
-import AccessibleButton from "../elements/AccessibleButton";
 import { useMatrixClientContext } from "../../../contexts/MatrixClientContext";
 import { ask, aiAvailable, beginAnswer } from "../../../utils/ai/ask";
 import { readable } from "../../../utils/ai/readable";
@@ -62,11 +64,22 @@ interface Props {
     anchor?: string;
 }
 
+/**
+ * What is typed in the composer right now.
+ *
+ * Read off the composer's own element rather than through a store: what is in front of the reader is
+ * what gets asked, and nothing else in the app has to know that asking exists.
+ */
+function composerText(): string {
+    const input = document.querySelector(".mx_MessageComposer .mx_BasicMessageComposer_input");
+    return (input?.textContent ?? "").trim();
+}
+
 export function TgAsk({ room, anchor }: Props): JSX.Element | null {
     const client = useMatrixClientContext();
-    const [question, setQuestion] = useState("");
     const [busy, setBusy] = useState(false);
-    const [open, setOpen] = useState(false);
+    /** What is in the composer, watched so the ask button can say what it will ask about. */
+    const [typed, setTyped] = useState("");
     const [failed, setFailed] = useState<string>();
     /** What the model is doing right now, said in the pill while it does it. */
     const [doing, setDoing] = useState<string>();
@@ -105,12 +118,7 @@ export function TgAsk({ room, anchor }: Props): JSX.Element | null {
                         // history, which the model goes and searches for itself.
                         messages: sending,
                         images: pictures,
-                        question:
-                            kind === "summary"
-                                ? // Not a question: where to start. The earlier messages are there to be
-                                  // understood from, not summarised.
-                                  newFrom && _t("tg_layout|ai_unread_from", { id: newFrom })
-                                : asked,
+                        question: asked,
                     },
                     {
                         onText: (whole) => {
@@ -149,8 +157,6 @@ export function TgAsk({ room, anchor }: Props): JSX.Element | null {
                     },
                 };
                 await keepNote(client, room.roomId, note);
-                setQuestion("");
-                setOpen(false);
             } catch (error) {
                 setFailed(_t("tg_layout|ai_failed", { reason: String((error as Error).message).slice(0, 160) }));
             } finally {
@@ -162,11 +168,20 @@ export function TgAsk({ room, anchor }: Props): JSX.Element | null {
         [client, room, anchor],
     );
 
+    /*
+     * What is typed, polled while the strip is on screen.
+     *
+     * The composer is somebody else's component with its own editor model; watching it from here means
+     * reading what it shows. A quarter of a second is far below noticing and costs nothing measurable.
+     */
+    useEffect(() => {
+        const tick = window.setInterval(() => setTyped(composerText()), 250);
+        return () => window.clearInterval(tick);
+    }, []);
+
     if (!aiAvailable()) return null;
 
-    // One element throughout: a pill, and a pill with a box in it. The class says which, and the shape
-    // moves between them rather than one thing replacing another.
-    const state = doing ? "doing" : open ? "asking" : "idle";
+    const state = doing ? "doing" : "idle";
 
     return (
         <div className={`mx_TgAsk mx_TgAsk_${state}`} data-state={state}>
@@ -188,45 +203,22 @@ export function TgAsk({ room, anchor }: Props): JSX.Element | null {
                         {_t("tg_layout|ai_catch_up")}
                     </Button>
 
-                    {!open && (
-                        <AccessibleButton kind="link" className="mx_TgAsk_open_button" onClick={() => setOpen(true)}>
-                            {_t("tg_layout|ai_ask")}
-                        </AccessibleButton>
-                    )}
-
-                    {open && (
-                        <form
-                            className="mx_TgAsk_form"
-                            onSubmit={(event) => {
-                                event.preventDefault();
-                                const asked = question.trim();
-                                if (asked) void run("question", asked);
-                            }}
-                        >
-                            <input
-                                className="mx_TgAsk_input"
-                                value={question}
-                                disabled={busy}
-                                autoFocus
-                                placeholder={_t("tg_layout|ai_ask_placeholder")}
-                                onChange={(event) => setQuestion(event.target.value)}
-                                onKeyDown={(event) => {
-                                    if (event.key === "Escape") setOpen(false);
-                                }}
-                                aria-label={_t("tg_layout|ai_ask")}
-                            />
-                            <AccessibleButton
-                                kind="primary"
-                                className="mx_TgAsk_send"
-                                element="button"
-                                onClick={null}
-                                disabled={busy || !question.trim()}
-                                {...{ type: "submit" }}
-                            >
-                                <SendIcon />
-                            </AccessibleButton>
-                        </form>
-                    )}
+                    {/*
+                        Asks what is in the composer. Nothing to type here, nothing to open: you were
+                        already writing the question when you wondered whether to send it to a person or
+                        to the model.
+                    */}
+                    <Button
+                        kind="secondary"
+                        size="md"
+                        className="mx_TgAsk_askButton"
+                        disabled={busy || !typed}
+                        title={typed ? _t("tg_layout|ai_ask_this", { question: typed }) : _t("tg_layout|ai_ask_hint")}
+                        onClick={() => void run("question", typed)}
+                    >
+                        <SparkleIcon />
+                        {_t("tg_layout|ai_ask")}
+                    </Button>
                 </>
             )}
 

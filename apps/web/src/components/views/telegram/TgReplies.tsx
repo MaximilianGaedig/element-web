@@ -39,6 +39,8 @@ export function TgReplies({ room }: Props): JSX.Element | null {
     const client = useMatrixClientContext();
     const [lines, setLines] = useState<string[]>([]);
     const [used, setUsed] = useState<string>();
+    /** Whether what is on screen is being replaced: the old drafts stay, faded, until the new ones land. */
+    const [stale, setStale] = useState(false);
 
     // Into the composer, never into the room: what is sent is still sent by a person pressing send.
     const put = useCallback((text: string): void => {
@@ -62,10 +64,19 @@ export function TgReplies({ room }: Props): JSX.Element | null {
         let gone = false;
         const look = (): void => {
             setUsed(undefined);
-            // What is already drafted shows at once; what is not is asked for.
-            setLines(repliesKnown(client, room));
+            /*
+             * What is already drafted shows at once. What is not is asked for - and while that is being
+             * asked, what was already there stays where it is: a message arriving mid-conversation used
+             * to empty the row and drop the composer up to meet your thumb, then push it back down a
+             * second later. Old drafts, faded, until the new ones are ready to replace them.
+             */
+            const had = repliesKnown(client, room);
+            if (had.length) setLines(had);
+            setStale(!had.length);
             void repliesFor(client, room).then((suggested) => {
-                if (!gone) setLines(suggested);
+                if (gone) return;
+                setLines(suggested);
+                setStale(false);
             });
         };
         const onTimeline = (_event: MatrixEvent, inRoom?: Room): void => {
@@ -96,7 +107,12 @@ export function TgReplies({ room }: Props): JSX.Element | null {
     if (!lines.length) return null;
 
     return (
-        <div className="mx_TgReplies" role="list" aria-label={_t("tg_layout|ai_replies")}>
+        <div
+            className={`mx_TgReplies${stale ? " mx_TgReplies_stale" : ""}`}
+            role="list"
+            aria-busy={stale}
+            aria-label={_t("tg_layout|ai_replies")}
+        >
             {lines.map((line) => (
                 // Compound's own button, at its smallest: what a chip looks like in this app.
                 <Button

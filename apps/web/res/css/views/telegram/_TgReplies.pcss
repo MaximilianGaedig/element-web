@@ -38,6 +38,15 @@ Please see LICENSE files in the repository root for full details.
         scroll-snap-align: start;
     }
 
+    /*
+     * Being replaced: the drafts on screen answer the message before this one, so they fade rather than
+     * vanish. A row that empties and fills again drops the composer up to meet your thumb and pushes it
+     * back a second later, which is worse than a stale suggestion nobody taps.
+     */
+    &.mx_TgReplies_stale .mx_TgReplies_pill {
+        opacity: 0.4;
+    }
+
     /* Taken: it stays in the row, faded, so the row does not reshuffle under your finger. */
     .mx_TgReplies_pill_used {
         opacity: 0.5;
