@@ -41,6 +41,7 @@ import {
     CopyIcon,
     TreeIcon,
     CheckCircleIcon,
+    CalendarIcon,
 } from "@vector-im/compound-design-tokens/assets/web/icons";
 
 import { MatrixClientPeg } from "../../../MatrixClientPeg";
@@ -58,6 +59,7 @@ import { Action } from "../../../dispatcher/actions";
 import { type RoomPermalinkCreator } from "../../../utils/permalinks/Permalinks";
 import { type ButtonEvent } from "../elements/AccessibleButton";
 import { copyPlaintext, getSelectedText } from "../../../utils/strings";
+import { type DetectedDateTime, detectDateTimes, icsForEvent } from "../../../utils/detect/entities";
 import ContextMenu, { toRightOf, type MenuProps } from "../../structures/ContextMenu";
 import ReactionPicker from "../emojipicker/ReactionPicker";
 import ViewSource from "../../structures/ViewSource";
@@ -376,6 +378,28 @@ export default class MessageContextMenu extends React.Component<IProps, IState> 
         this.setState({ reactionPickerDisplayed: true });
     };
 
+    /*
+     * The time somebody suggested, handed to whatever keeps the calendar. An .ics file is taken by every
+     * calendar on every platform, needs no account connected, and leaves the device only if the user
+     * hands it on themselves.
+     */
+    private onAddToCalendarClick = (when: DetectedDateTime) => (): void => {
+        const body = this.props.mxEvent.getContent().body;
+        const ics = icsForEvent({
+            title: typeof body === "string" ? body.slice(0, 80) : _t("timeline|context_menu|calendar_event"),
+            start: when.date,
+            hasTime: when.hasTime,
+            description: typeof body === "string" ? body : undefined,
+        });
+        const url = URL.createObjectURL(new Blob([ics], { type: "text/calendar" }));
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = "event.ics";
+        link.click();
+        URL.revokeObjectURL(url);
+        this.closeMenu();
+    };
+
     private onSelectMessagesClick = (): void => {
         const roomId = this.props.mxEvent.getRoomId()!;
         MessageSelectionStore.instance.enterSelectionMode(roomId, this.props.mxEvent.getId());
@@ -504,6 +528,18 @@ export default class MessageContextMenu extends React.Component<IProps, IState> 
                 icon={<CheckCircleIcon />}
                 label={_t("action|select_messages")}
                 onClick={this.onSelectMessagesClick}
+            />
+        );
+
+        // A message that suggests a time offers to put it in the calendar; the first one, since a menu
+        // with an entry per date in a long message would be worse than none.
+        const body = mxEvent.getContent().body;
+        const [when] = typeof body === "string" ? detectDateTimes(body) : [];
+        const addToCalendarButton = when && (
+            <IconizedContextMenuOption
+                icon={<CalendarIcon />}
+                label={_t("timeline|context_menu|add_to_calendar")}
+                onClick={this.onAddToCalendarClick(when)}
             />
         );
 
@@ -778,6 +814,7 @@ export default class MessageContextMenu extends React.Component<IProps, IState> 
                 {cancelSendButton}
                 {viewInRoomButton}
                 {openInMapSiteButton}
+                {addToCalendarButton}
                 {endPollButton}
                 {forwardButton}
                 {selectMessagesButton}

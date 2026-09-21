@@ -2164,14 +2164,16 @@
             "in_reply_to_for_export": "In reply to <a>this message</a>"
         },
         "context_menu": {
-            "resent_unsent_reactions": "Resend %(unsentCount)s reaction(s)",
-            "open_in_osm": "Open in OpenStreetMap",
-            "view_source": "View source",
-            "show_url_preview": "Show preview",
-            "external_url": "Source URL",
+            "add_to_calendar": "Add to calendar",
+            "calendar_event": "Event",
             "collapse_reply_thread": "Collapse reply thread",
+            "external_url": "Source URL",
+            "open_in_osm": "Open in OpenStreetMap",
+            "report": "Report",
+            "resent_unsent_reactions": "Resend %(unsentCount)s reaction(s)",
+            "show_url_preview": "Show preview",
             "view_related_event": "View related event",
-            "report": "Report"
+            "view_source": "View source"
         },
         "mab": {
             "view_in_room": "View in room",
