@@ -12,6 +12,10 @@ Please see LICENSE files in the repository root for full details.
  * a machine. This asks once, about every chat that has something unread, and answers a few lines with
  * what needs you first - each chat it names being somewhere to go.
  *
+ * Each chat it names comes with replies drafted in your own words (utils/ai/replies.ts): pressing one
+ * opens that chat with the words already in the composer, so a morning of forty chats can be answered
+ * without opening forty chats. Sending is still yours, every time.
+ *
  * Asked for, never automatic: the whole unread pile leaving the device every morning unasked is a
  * different thing with different consent, and this is not it.
  */
@@ -24,12 +28,16 @@ import { _t } from "../../../languageHandler";
 import AccessibleButton from "../elements/AccessibleButton";
 import { useMatrixClientContext } from "../../../contexts/MatrixClientContext";
 import { ask, aiAvailable, beginAnswer } from "../../../utils/ai/ask";
-import { digestMessages, unreadChats } from "../../../utils/ai/digest";
+import { digestMessages, type UnreadChat, unreadChats } from "../../../utils/ai/digest";
+import { leaveDraft, repliesFor } from "../../../utils/ai/replies";
 import { lookingWords } from "./TgAiNote";
 import { AiText } from "../../../utils/ai/render";
 import dis from "../../../dispatcher/dispatcher";
 import { Action } from "../../../dispatcher/actions";
 import { type ViewRoomPayload } from "../../../dispatcher/payloads/ViewRoomPayload";
+
+/** How many of the waiting chats get drafts: the ones anybody will actually get through. */
+const MOST_CHATS = 8;
 
 export function TgDigest(): JSX.Element | null {
     const client = useMatrixClientContext();
@@ -37,6 +45,25 @@ export function TgDigest(): JSX.Element | null {
     const [doing, setDoing] = useState<string>();
     const [failed, setFailed] = useState<string>();
     const [cites, setCites] = useState<string[]>([]);
+    /** Drafts per chat, as each chat's come back: the digest answers and the replies fill in behind it. */
+    const [replies, setReplies] = useState<Record<string, string[]>>({});
+
+    /*
+     * Replies for each chat that is waiting, one chat at a time.
+     *
+     * One at a time on purpose: forty chats asking at once is forty requests against a daily allowance
+     * and a rate limit, and the first few are the ones that will actually be read. Each arrives on its
+     * own, so the pills appear as they are drafted rather than all at the end.
+     */
+    const draftFor = useCallback(
+        async (chats: UnreadChat[]): Promise<void> => {
+            for (const { room } of chats.slice(0, MOST_CHATS)) {
+                const drafted = await repliesFor(client, room);
+                if (drafted.length) setReplies((had) => ({ ...had, [room.roomId]: drafted }));
+            }
+        },
+        [client],
+    );
 
     const run = useCallback(async (): Promise<void> => {
         const chats = unreadChats(client);
@@ -47,7 +74,10 @@ export function TgDigest(): JSX.Element | null {
 
         beginAnswer();
         setFailed(undefined);
+        setReplies({});
         setText("");
+        // Drafted alongside the digest rather than after it, so the pills are there when it finishes.
+        void draftFor(chats);
         setDoing(_t("tg_layout|ai_thinking"));
         try {
             const answer = await ask(
@@ -68,9 +98,14 @@ export function TgDigest(): JSX.Element | null {
         } finally {
             setDoing(undefined);
         }
-    }, [client]);
+    }, [client, draftFor]);
 
     if (!aiAvailable()) return null;
+
+    /** A chat is somewhere to go; a draft goes there with you (TgReplies takes it as the chat opens). */
+    const open = (roomId: string): void => {
+        dis.dispatch<ViewRoomPayload>({ action: Action.ViewRoom, room_id: roomId, metricsTrigger: undefined });
+    };
 
     // A cited message is somewhere to go: the chat it is in, at the message itself.
     const jump = (eventId: string): void => {
@@ -121,6 +156,34 @@ export function TgDigest(): JSX.Element | null {
                 ) : (
                     <AiText className="mx_TgDigest_text" text={text ?? ""} />
                 )}
+                {/* Each waiting chat, with something to send: pressing one opens the chat with the
+                    words in the composer. */}
+                {Object.entries(replies).map(([roomId, drafted]) => {
+                    const room = client.getRoom(roomId);
+                    if (!room) return null;
+                    return (
+                        <div key={roomId} className="mx_TgDigest_chat">
+                            <AccessibleButton kind="link" className="mx_TgDigest_chatName" onClick={() => open(roomId)}>
+                                {room.name}
+                            </AccessibleButton>
+                            <div className="mx_TgDigest_drafts">
+                                {drafted.map((draft) => (
+                                    <AccessibleButton
+                                        key={draft}
+                                        kind="secondary"
+                                        className="mx_TgDigest_draft"
+                                        onClick={() => {
+                                            leaveDraft(roomId, draft);
+                                            open(roomId);
+                                        }}
+                                    >
+                                        {draft}
+                                    </AccessibleButton>
+                                ))}
+                            </div>
+                        </div>
+                    );
+                })}
                 {cites.length > 0 && (
                     <p className="mx_TgDigest_cites">
                         {cites.slice(0, 6).map((eventId, index) => (

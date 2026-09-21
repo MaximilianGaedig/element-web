@@ -83,7 +83,14 @@ export function aiAvailable(): boolean {
  */
 export async function ask(
     client: MatrixClient,
-    request: { kind: AskKind; messages?: AskMessage[]; question?: string; better?: boolean },
+    request: {
+        kind: AskKind;
+        messages?: AskMessage[];
+        question?: string;
+        /** The reader's own messages, when what is wanted is something written in their voice. */
+        style?: string[];
+        better?: boolean;
+    },
     events: AskEvents = {},
     signal?: AbortSignal,
 ): Promise<Answer> {

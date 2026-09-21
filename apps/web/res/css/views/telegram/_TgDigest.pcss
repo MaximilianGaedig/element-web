@@ -125,6 +125,51 @@ Please see LICENSE files in the repository root for full details.
         color: var(--cpd-color-text-critical-primary);
     }
 
+    /* A chat that is waiting, and something to send it. */
+    .mx_TgDigest_chat {
+        margin-block-start: var(--cpd-space-2x);
+    }
+
+    .mx_TgDigest_chatName {
+        font: var(--cpd-font-body-sm-medium);
+        color: var(--cpd-color-text-primary);
+    }
+
+    /*
+     * The drafts scroll sideways rather than wrapping: three long replies wrapping into six lines is the
+     * card growing past what it is worth, for every chat in the list.
+     */
+    .mx_TgDigest_drafts {
+        display: flex;
+        gap: var(--cpd-space-2x);
+        margin-block-start: var(--cpd-space-1x);
+        overflow-x: auto;
+        overscroll-behavior-x: contain;
+        scrollbar-width: none;
+
+        &::-webkit-scrollbar {
+            display: none;
+        }
+    }
+
+    .mx_TgDigest_draft {
+        flex: 0 0 auto;
+        max-width: 18rem;
+        padding: var(--cpd-space-1x) var(--cpd-space-3x);
+        border: 1px solid var(--cpd-color-border-interactive-secondary);
+        border-radius: 99px;
+        background: var(--cpd-color-bg-canvas-default);
+        font: var(--cpd-font-body-sm-regular);
+        color: var(--cpd-color-text-primary);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+
+        &:hover {
+            background: var(--cpd-color-bg-subtle-secondary);
+        }
+    }
+
     .mx_TgDigest_cites {
         display: flex;
         flex-wrap: wrap;
