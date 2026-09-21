@@ -9,3 +9,23 @@
     background-color: var(--cpd-color-bg-canvas-default);
     height: 100%;
 }
+
+/*
+ * The two things that are about every chat rather than about one of them: what is waiting for you, and
+ * what the chats turned out to contain. Side by side while they are both buttons; once the digest opens
+ * into a panel it takes the row and the other wraps below it.
+ */
+.mx_RoomListPanel_tools {
+    display: flex;
+    flex: 0 0 auto;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: var(--cpd-space-2x);
+    padding: var(--cpd-space-1x) var(--cpd-space-3x);
+}
+
+.mx_RoomListPanel_found {
+    flex: 0 0 auto;
+    white-space: nowrap;
+}

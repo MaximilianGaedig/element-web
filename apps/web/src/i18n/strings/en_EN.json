@@ -1456,6 +1456,19 @@
         "sent": "Sent",
         "title_multiple": "Forward %(count)s messages"
     },
+    "found": {
+        "already_happened": "Already happened",
+        "go_to_message": "Go to the message this came from",
+        "links": "Links",
+        "nothing_yet": "Nothing found yet. Your chats are read in the background, so check again in a minute.",
+        "onway": "On the way",
+        "open": "Open",
+        "open_it": "What's in my chats",
+        "title": "Found in your chats",
+        "when": "When",
+        "where": "Where",
+        "who": "Who"
+    },
     "identity_server": {
         "change": "Change identity server",
         "change_prompt": "Disconnect from the identity server <current /> and connect to <new /> instead?",

@@ -47,6 +47,9 @@ import {
     icsForEvent,
 } from "../../../utils/detect/entities";
 import { formatFullDateNoDay, formatTime } from "../../../DateUtils";
+import { mightHold, whenIdle } from "../../../utils/detect/collect";
+import { remember } from "../../../utils/detect/collected";
+import { MatrixClientPeg } from "../../../MatrixClientPeg";
 
 /** What a message can be asking of you, once the links are left to the timeline. */
 type Actionable =
@@ -56,20 +59,6 @@ type Actionable =
     | DetectedFlight
     | DetectedParcel
     | DetectedMeasure;
-
-/** Nothing without a digit in it can name a time, a number or a house, and that is most messages. */
-const COULD_HOLD_ONE = /\d/;
-
-/** Runs `work` when the browser is next idle, or soon, where that is not offered. */
-function whenIdle(work: () => void): () => void {
-    const idle = window.requestIdleCallback;
-    if (idle) {
-        const handle = idle(work, { timeout: 2000 });
-        return () => window.cancelIdleCallback(handle);
-    }
-    const handle = window.setTimeout(work, 500);
-    return () => window.clearTimeout(handle);
-}
 
 function addToCalendar(when: DetectedDateTime, description: string): void {
     const ics = icsForEvent({ title: description.slice(0, 80), start: when.date, hasTime: when.hasTime, description });
@@ -136,11 +125,17 @@ export function DetectedActions({
 
     useEffect(() => {
         setFound([]);
-        if (!COULD_HOLD_ONE.test(text)) return;
+        if (!mightHold(text)) return;
         let cancelled = false;
         const cancelIdle = whenIdle(() => {
             void import("../../../utils/detect/entities").then(async ({ detectEntities }) => {
                 const entities = await detectEntities(text);
+                /*
+                 * Also written down, where it can be looked at later. This message has been read anyway -
+                 * that is what put the chips under it - so the list of what the chats contain costs
+                 * nothing extra for anything that has been on screen.
+                 */
+                void remember(MatrixClientPeg.safeGet().getSafeUserId(), mxEvent, entities);
                 if (cancelled) return;
                 setFound(entities.filter((entity): entity is Actionable => entity.kind !== "url"));
                 // And mark them where they were written, which is where a finger goes first.
