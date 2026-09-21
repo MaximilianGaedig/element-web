@@ -11,12 +11,22 @@ Please see LICENSE files in the repository root for full details.
     display: flex;
     flex-direction: column;
     background-color: $authpage-bg-color;
-    height: 100vh;
+    /*
+     * The screen the app actually has, and the edges it must keep clear of. Installed to a home screen
+     * the app draws under the status bar and the home indicator (viewport-fit=cover), and iOS then
+     * reports 100vh as the *safe* height - which left the bottom of the screen unpainted below this
+     * page. The dynamic viewport is the whole screen, and the insets put the content back inside it.
+     */
+    height: 100dvh;
+    box-sizing: border-box;
+    padding-block: env(safe-area-inset-top, 0px) env(safe-area-inset-bottom, 0px);
     overflow: auto;
 }
 
 .mx_AuthPage_modal {
     display: flex;
+    /* Never wider than the screen it is on, whatever the card inside it asks for. */
+    max-width: 100%;
     margin: 100px auto auto;
     border-radius: var(--cpd-space-6x);
     background-color: $authpage-modal-bg-color;
