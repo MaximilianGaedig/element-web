@@ -25,8 +25,16 @@ import { readable } from "./readable";
 
 /** How much of the chat a draft needs: the turn being replied to, not the year around it. */
 const READ_BACK = 20;
-/** How many of your own messages are enough to write like you. */
-const STYLE = 60;
+/**
+ * How much of your own writing is enough to write like you - and how little is enough.
+ *
+ * Sixty of them, each up to four hundred characters, came to some three thousand tokens against a
+ * conversation of five hundred: the drafts drifted towards the samples, which is why they read as though
+ * they had not seen the chat and why they changed character between one message and the next. Twenty
+ * short ones carry a voice just as well and leave the conversation the loudest thing in the request.
+ */
+const STYLE = 20;
+const STYLE_LONGEST = 120;
 /** Three at most, each short enough to be something somebody would actually send. */
 const MOST = 3;
 const LONGEST = 240;
@@ -189,7 +197,8 @@ function voiceOf(client: MatrixClient, room: Room): { style: string[]; elsewhere
         for (let at = events.length - 1; at >= 0 && into.length < room_for; at--) {
             const body = events[at].getSender() === me ? text(events[at]) : undefined;
             // Only what you typed: a line long enough to have a voice in it.
-            if (body && body.length > 1) into.push(body.slice(0, 400));
+            // Long enough to have a voice in it, short enough not to drown the chat it is drafting for.
+            if (body && body.length > 1) into.push(body.slice(0, STYLE_LONGEST));
         }
     };
     const style: string[] = [];
