@@ -93,6 +93,11 @@ allowBuilds:
   esbuild: false
   # Performs additional version checks, which we do not need
   protobufjs: false
+  # Ships its own bundles; its scripts only rebuild them from source, which we never do
+  tesseract.js: false
+  # The speech model runs in the browser through onnxruntime-web; the node build is never used, and its
+  # script downloads a native binary we would only throw away
+  onnxruntime-node: false
   # Builds optional crypto binding, which we do not need
   ssh2: false
   # The following are to make wrangler-action happy - https://github.com/cloudflare/wrangler-action/issues/436
@@ -102,7 +107,6 @@ allowBuilds:
   "@parcel/watcher": false
   # Builds native bindings, which we do not need as they are handled by `electron-builder install-app-deps`
   pkcs11js: false
-  onnxruntime-node: set this to true or false
 
 patchedDependencies:
   # Workaround for missing types export
@@ -233,8 +237,3 @@ minimumReleaseAgeExclude:
   # window. Revisit once the release has aged past the cutoff.
   - "@tanstack/*"
 
-# tesseract.js ships its bundles; its scripts only rebuild them from source, which we never do.
-ignoredBuiltDependencies:
-  - tesseract.js
-  # The speech model runs in the browser; its node build is never used here.
-  - onnxruntime-node
