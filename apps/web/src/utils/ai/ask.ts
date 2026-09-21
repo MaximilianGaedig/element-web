@@ -1,0 +1,197 @@
+/*
+Copyright 2026 New Vector Ltd.
+
+SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only OR LicenseRef-Element-Commercial
+Please see LICENSE files in the repository root for full details.
+*/
+
+/*
+ * Asking the model, which lives behind the account rather than in the app.
+ *
+ * The app holds no key: it sends the access token it already has to our own server, which checks with
+ * the homeserver whose token it is and answers only for accounts on it. What comes back is streamed -
+ * the words as they are written, and a line for each thing the model went off to look at - because
+ * waiting in silence and watching something read your chats are different experiences of the same ten
+ * seconds.
+ */
+
+import { type MatrixClient } from "matrix-js-sdk/src/matrix";
+import { logger } from "matrix-js-sdk/src/logger";
+
+import SdkConfig from "../../SdkConfig";
+
+/** What it can be asked for. */
+export type AskKind = "summary" | "question" | "replies" | "digest";
+
+/** A message as the model is given it: an id it can cite, who said it, when, and the words. */
+export interface AskMessage {
+    id: string;
+    sender: string;
+    ts?: string;
+    body: string;
+}
+
+/** What comes back once it has finished. */
+export interface Answer {
+    answer: string;
+    /** Event ids the answer rests on, and web pages where it used them. */
+    cites: string[];
+    /** False when what it saw does not really answer the question. */
+    confident: boolean;
+    /** What it went and looked at on the way. */
+    looked?: Array<{ tool: string; [key: string]: unknown }>;
+    usage?: { input: number; output: number; model: string; cost: number };
+}
+
+/** What happens while it works. */
+export interface AskEvents {
+    /** More words of the answer. */
+    onText?: (whole: string) => void;
+    /** It has gone to look something up: searching the chats, reading around one, asking the web. */
+    onLooking?: (what: { tool: string; [key: string]: unknown }) => void;
+}
+
+/*
+ * Where the model lives, and whether it is there at all. Neither is one of Element's own settings, so
+ * they are read off the config object rather than through the typed accessor, which knows only the
+ * settings upstream defines.
+ */
+interface AiConfig {
+    ai_proxy_url?: string;
+    ai_disabled?: boolean;
+}
+
+const config = (): AiConfig => SdkConfig.get() as unknown as AiConfig;
+
+/** Beside the app by default, which is how it is deployed. */
+function endpoint(): string {
+    const configured = config().ai_proxy_url;
+    return configured ? configured.replace(/\/$/, "") : "/_ai";
+}
+
+/** Whether there is anything to ask at all. */
+export function aiAvailable(): boolean {
+    return config().ai_disabled !== true;
+}
+
+/**
+ * Asks, and reports as it goes.
+ *
+ * `messages` may be empty: a question about the whole history starts with none, and the model searches
+ * for what it needs. Rate limits and refusals come back as an error with what the server said, because
+ * "you have asked 300 times today" is something a person should be told rather than a spinner.
+ */
+export async function ask(
+    client: MatrixClient,
+    request: { kind: AskKind; messages?: AskMessage[]; question?: string; better?: boolean },
+    events: AskEvents = {},
+    signal?: AbortSignal,
+): Promise<Answer> {
+    const response = await fetch(`${endpoint()}/ask`, {
+        method: "POST",
+        headers: {
+            "Authorization": `Bearer ${client.getAccessToken()}`,
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ ...request, messages: request.messages ?? [], stream: true }),
+        signal,
+    });
+
+    if (!response.ok || !response.body) {
+        const said = await response.text().catch(() => "");
+        let message = `The model could not be reached (${response.status}).`;
+        try {
+            const parsed = JSON.parse(said);
+            if (parsed.error) message = parsed.error;
+        } catch {
+            // Then the status is all there is to say.
+        }
+        throw new Error(message);
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+    let answer: Answer | undefined;
+
+    for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() ?? "";
+        for (const line of lines) {
+            if (!line.startsWith("data:")) continue;
+            let event: { type: string; [key: string]: unknown };
+            try {
+                event = JSON.parse(line.slice(5).trim());
+            } catch {
+                continue;
+            }
+            if (event.type === "delta" && typeof event.text === "string") {
+                // The raw stream is the JSON the model is writing; the reader wants the words in it.
+                events.onText?.(readable(bufferOf(event.text)));
+            } else if (event.type === "looking") {
+                events.onLooking?.(event as unknown as { tool: string });
+            } else if (event.type === "done") {
+                answer = event as unknown as Answer;
+            } else if (event.type === "failed") {
+                const said = typeof event.error === "string" ? event.error : "The model stopped part way through.";
+                throw new Error(said);
+            }
+        }
+    }
+
+    if (!answer) throw new Error("The model stopped before it answered.");
+    return answer;
+}
+
+/*
+ * The answer arrives as JSON being written character by character, which is not a thing to show anyone.
+ * These two keep the part of it that is the answer, and hand it over as readable text while it grows.
+ */
+let streamed = "";
+function bufferOf(piece: string): string {
+    streamed += piece;
+    return streamed;
+}
+
+/** The answer's own words out of half-written JSON: everything after "answer": " up to its closing quote. */
+function readable(whole: string): string {
+    const start = whole.indexOf('"answer"');
+    if (start < 0) return "";
+    const opening = whole.indexOf('"', whole.indexOf(":", start) + 1);
+    if (opening < 0) return "";
+    let text = "";
+    for (let at = opening + 1; at < whole.length; at++) {
+        const character = whole[at];
+        if (character === "\\") {
+            const next = whole[at + 1];
+            text += next === "n" ? "\n" : (next ?? "");
+            at++;
+        } else if (character === '"') {
+            break;
+        } else {
+            text += character;
+        }
+    }
+    return text;
+}
+
+/** Starts a fresh answer: the streamed text is read as one growing string. */
+export function beginAnswer(): void {
+    streamed = "";
+}
+
+/** What the model has cost, and what is left of today. */
+export async function askUsage(client: MatrixClient): Promise<unknown | undefined> {
+    try {
+        const response = await fetch(`${endpoint()}/usage`, {
+            headers: { Authorization: `Bearer ${client.getAccessToken()}` },
+        });
+        return response.ok ? await response.json() : undefined;
+    } catch (error) {
+        logger.warn("Could not read what the model has cost", error);
+        return undefined;
+    }
+}

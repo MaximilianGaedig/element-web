@@ -1,0 +1,134 @@
+/*
+Copyright 2026 New Vector Ltd.
+
+SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only OR LicenseRef-Element-Commercial
+Please see LICENSE files in the repository root for full details.
+*/
+
+/*
+ * The model's answer in the timeline (TgAiNote.tsx): a note in the margin of a chat, which only the
+ * reader has.
+ *
+ * It has to look unlike a message, because it is not one and must never be mistaken for one: no bubble,
+ * no tail, a hairline down its start edge and the secondary colour. While it is being written the edge
+ * moves - the one piece of shine in the whole thing, and it stops the moment the answer is whole.
+ */
+.mx_TgAiNote {
+    position: relative;
+    margin: var(--cpd-space-2x) 0 var(--cpd-space-2x) var(--cpd-space-4x);
+    padding: var(--cpd-space-2x) var(--cpd-space-3x);
+    border-inline-start: 2px solid var(--cpd-color-border-interactive-secondary);
+    border-radius: 0 12px 12px 0;
+    background: var(--cpd-color-bg-subtle-secondary);
+    color: var(--cpd-color-text-primary);
+    font: var(--cpd-font-body-md-regular);
+    max-width: min(46rem, 100%);
+    box-sizing: border-box;
+
+    .mx_TgAiNote_head {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: baseline;
+        gap: var(--cpd-space-2x);
+        margin-block-end: var(--cpd-space-1x);
+    }
+
+    .mx_TgAiNote_who {
+        font: var(--cpd-font-body-xs-medium);
+        color: var(--cpd-color-text-secondary);
+        text-transform: none;
+    }
+
+    .mx_TgAiNote_question {
+        font: var(--cpd-font-body-sm-medium);
+        color: var(--cpd-color-text-primary);
+    }
+
+    .mx_TgAiNote_text {
+        margin: 0;
+        white-space: pre-wrap;
+    }
+
+    .mx_TgAiNote_looking {
+        display: flex;
+        align-items: center;
+        gap: var(--cpd-space-1x);
+        margin: 0 0 var(--cpd-space-1x);
+        font: var(--cpd-font-body-sm-regular);
+        color: var(--cpd-color-text-secondary);
+
+        svg {
+            width: 1em;
+            height: 1em;
+        }
+    }
+
+    .mx_TgAiNote_unsure {
+        margin: var(--cpd-space-1x) 0 0;
+        font: var(--cpd-font-body-sm-regular);
+        color: var(--cpd-color-text-secondary);
+    }
+
+    .mx_TgAiNote_cites {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--cpd-space-2x);
+        margin: var(--cpd-space-2x) 0 0;
+    }
+
+    .mx_TgAiNote_cite {
+        font: var(--cpd-font-body-sm-medium);
+        color: var(--cpd-color-text-action-accent);
+    }
+
+    .mx_TgAiNote_actions {
+        display: flex;
+        align-items: center;
+        gap: var(--cpd-space-2x);
+        margin-block-start: var(--cpd-space-2x);
+    }
+
+    .mx_TgAiNote_action {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--cpd-space-1x);
+
+        svg {
+            width: 1em;
+            height: 1em;
+        }
+    }
+}
+
+/* Being written: the edge travels, once, slowly, and only while the words are still arriving. */
+.mx_TgAiNote_writing {
+    border-inline-start-color: transparent;
+    background-image: linear-gradient(
+        var(--cpd-color-bg-accent-rest),
+        var(--cpd-color-bg-accent-rest) 40%,
+        transparent 40%
+    );
+    background-repeat: no-repeat;
+    background-size: 2px 250%;
+    background-position-y: -150%;
+    animation: mx_TgAiNote_edge 1.6s ease-in-out infinite;
+}
+
+@keyframes mx_TgAiNote_edge {
+    from {
+        background-position-y: -150%;
+    }
+
+    to {
+        background-position-y: 250%;
+    }
+}
+
+/* Somebody who has asked not to be moved should not be: the edge simply stays lit. */
+@media (prefers-reduced-motion: reduce) {
+    .mx_TgAiNote_writing {
+        animation: none;
+        border-inline-start-color: var(--cpd-color-bg-accent-rest);
+        background-image: none;
+    }
+}

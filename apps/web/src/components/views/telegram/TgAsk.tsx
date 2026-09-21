@@ -1,0 +1,172 @@
+/*
+Copyright 2026 New Vector Ltd.
+
+SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only OR LicenseRef-Element-Commercial
+Please see LICENSE files in the repository root for full details.
+*/
+
+/*
+ * Asking about the chat you are in.
+ *
+ * Two ways in, both of them one press: "what did I miss", which reads what is on screen and answers
+ * without being asked anything else, and a box for a question, which lets the model go and look through
+ * the history for the answer.
+ *
+ * The answer does not appear here. It appears in the timeline, under the message it is about, where the
+ * conversation it concerns is - and only you can see it (utils/ai/notes.ts). This is the doorway, not
+ * the room.
+ */
+
+import React, { type JSX, useCallback, useRef, useState } from "react";
+import { type MatrixEvent, type Room } from "matrix-js-sdk/src/matrix";
+import SparkleIcon from "@vector-im/compound-design-tokens/assets/web/icons/extensions";
+import SendIcon from "@vector-im/compound-design-tokens/assets/web/icons/send";
+
+import { _t } from "../../../languageHandler";
+import AccessibleButton from "../elements/AccessibleButton";
+import { useMatrixClientContext } from "../../../contexts/MatrixClientContext";
+import { type AskMessage, ask, aiAvailable, beginAnswer } from "../../../utils/ai/ask";
+import { type AiNote, keepNote } from "../../../utils/ai/notes";
+import { lookingWords } from "./TgAiNote";
+
+/** How much of what is on screen a summary is given: a day of a busy chat, not a year of one. */
+const READ_BACK = 200;
+
+/** The messages as the model is given them: an id it can cite, who said it, when, and the words. */
+function readable(events: MatrixEvent[]): AskMessage[] {
+    const out: AskMessage[] = [];
+    for (const event of events.slice(-READ_BACK)) {
+        if (event.getType() !== "m.room.message" || event.isRedacted()) continue;
+        const body = event.getContent().body;
+        if (typeof body !== "string" || !body.trim()) continue;
+        out.push({
+            id: event.getId()!,
+            sender: event.sender?.name ?? event.getSender() ?? "?",
+            ts: new Date(event.getTs()).toISOString().slice(0, 16).replace("T", " "),
+            body: body.slice(0, 2000),
+        });
+    }
+    return out;
+}
+
+interface Props {
+    room: Room;
+    /** Where the answer will sit: the message it is about, usually the newest one. */
+    anchor?: string;
+    /** Reports the answer as it is written, so the timeline can show it arriving. */
+    onStreaming?: (state: { anchor: string; text: string; looking?: string } | undefined) => void;
+}
+
+export function TgAsk({ room, anchor, onStreaming }: Props): JSX.Element | null {
+    const client = useMatrixClientContext();
+    const [question, setQuestion] = useState("");
+    const [busy, setBusy] = useState(false);
+    const [failed, setFailed] = useState<string>();
+    const abort = useRef<AbortController>(undefined);
+
+    const run = useCallback(
+        async (kind: "summary" | "question", asked?: string): Promise<void> => {
+            const events = room.getLiveTimeline().getEvents();
+            const at = anchor ?? events[events.length - 1]?.getId();
+            if (!at) return;
+
+            setBusy(true);
+            setFailed(undefined);
+            beginAnswer();
+            abort.current?.abort();
+            abort.current = new AbortController();
+
+            let looking: string | undefined;
+            let text = "";
+            onStreaming?.({ anchor: at, text: "", looking: _t("tg_layout|ai_thinking") });
+
+            try {
+                const answer = await ask(
+                    client,
+                    {
+                        kind,
+                        // A question may need the whole history, which the model searches for itself; a
+                        // summary is about what is here.
+                        messages: kind === "summary" ? readable(events) : readable(events).slice(-40),
+                        question: asked,
+                    },
+                    {
+                        onText: (whole) => {
+                            text = whole;
+                            onStreaming?.({ anchor: at, text, looking: undefined });
+                        },
+                        onLooking: (what) => {
+                            looking = lookingWords(what.tool);
+                            onStreaming?.({ anchor: at, text, looking });
+                        },
+                    },
+                    abort.current.signal,
+                );
+
+                const note: AiNote = {
+                    id: `ai-${Date.now().toString(36)}`,
+                    anchor: at,
+                    question: asked,
+                    answer: answer.answer,
+                    cites: answer.cites ?? [],
+                    confident: answer.confident,
+                    ts: Date.now(),
+                };
+                await keepNote(client, room.roomId, note);
+                setQuestion("");
+            } catch (error) {
+                setFailed(_t("tg_layout|ai_failed", { reason: String((error as Error).message).slice(0, 160) }));
+            } finally {
+                onStreaming?.(undefined);
+                setBusy(false);
+            }
+        },
+        [client, room, anchor, onStreaming],
+    );
+
+    if (!aiAvailable()) return null;
+
+    return (
+        <div className="mx_TgAsk">
+            <AccessibleButton
+                kind="secondary"
+                className="mx_TgAsk_catchUp"
+                disabled={busy}
+                onClick={() => void run("summary")}
+            >
+                <SparkleIcon />
+                {_t("tg_layout|ai_catch_up")}
+            </AccessibleButton>
+
+            <form
+                className="mx_TgAsk_form"
+                onSubmit={(event) => {
+                    event.preventDefault();
+                    const asked = question.trim();
+                    if (asked) void run("question", asked);
+                }}
+            >
+                <input
+                    className="mx_TgAsk_input"
+                    value={question}
+                    disabled={busy}
+                    placeholder={_t("tg_layout|ai_ask_placeholder")}
+                    onChange={(event) => setQuestion(event.target.value)}
+                    aria-label={_t("tg_layout|ai_ask")}
+                />
+                <AccessibleButton
+                    kind="primary"
+                    className="mx_TgAsk_send"
+                    element="button"
+                    onClick={null}
+                    disabled={busy || !question.trim()}
+                    {...{ type: "submit" }}
+                >
+                    <SendIcon />
+                </AccessibleButton>
+            </form>
+
+            {failed && <p className="mx_TgAsk_failed">{failed}</p>}
+        </div>
+    );
+}

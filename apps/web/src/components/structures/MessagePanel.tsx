@@ -23,6 +23,8 @@ import { ReadMarker, TimelineSeparator, type EventTileRenderingMode } from "@ele
 import shouldHideEvent from "../../shouldHideEvent";
 import { formatDate, wantsDateSeparator } from "../../DateUtils";
 import { MatrixClientPeg } from "../../MatrixClientPeg";
+import { TgAiNote } from "../views/telegram/TgAiNote";
+import { type AiNote, notesByAnchor } from "../../utils/ai/notes";
 import SettingsStore from "../../settings/SettingsStore";
 import RoomContext, { TimelineRenderingType } from "../../contexts/RoomContext";
 import { Layout } from "../../settings/enums/Layout";
@@ -126,6 +128,12 @@ export function shouldFormContinuation(
 }
 
 interface IProps {
+    /**
+     * Fork: an answer being written right now, and what the model is looking at while it writes. It is
+     * shown under the message it is about until it is kept, so the reader watches it arrive in place.
+     */
+    aiStreaming?: { anchor: string; text: string; looking?: string };
+
     // the list of MatrixEvents to display
     events: MatrixEvent[];
 
@@ -810,6 +818,16 @@ export default class MessagePanel extends React.Component<IProps, IState> {
         return ret;
     }
 
+    /** The reader's own notes for one message, and an empty list for the many that have none. */
+    private aiNotesFor(eventId: string): AiNote[] {
+        if (!this.props.room) return [];
+        const streaming = this.props.aiStreaming;
+        const kept = notesByAnchor(MatrixClientPeg.safeGet(), this.props.room.roomId).get(eventId) ?? [];
+        if (streaming?.anchor !== eventId) return kept;
+        // One being written now has no place in the kept list yet, so it is added at the end.
+        return [...kept, { id: "writing", anchor: eventId, answer: streaming.text, cites: [], ts: Date.now() }];
+    }
+
     public getTilesForEvent(
         prevEvent: MatrixEvent | null,
         wrappedEvent: WrappedEvent,
@@ -920,6 +938,28 @@ export default class MessagePanel extends React.Component<IProps, IState> {
                 {...tileProps}
             />,
         );
+
+        /*
+         * Fork: what the model said about this message, under it, for this reader alone. It is kept as
+         * the reader's own account data for the room (utils/ai/notes.ts), so it outlives a reload and
+         * follows them to their other devices while staying invisible to everybody else in the chat.
+         */
+        for (const note of this.aiNotesFor(eventId)) {
+            ret.push(
+                <TgAiNote
+                    key={`ai-${note.id}`}
+                    client={MatrixClientPeg.safeGet()}
+                    roomId={this.props.room!.roomId}
+                    note={note}
+                    streaming={
+                        this.props.aiStreaming?.anchor === eventId
+                            ? { text: this.props.aiStreaming.text, looking: this.props.aiStreaming.looking }
+                            : undefined
+                    }
+                    onGone={() => this.forceUpdate()}
+                />,
+            );
+        }
 
         return ret;
     }
