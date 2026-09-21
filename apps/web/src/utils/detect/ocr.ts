@@ -68,13 +68,17 @@ async function getWorker(): Promise<Worker> {
         // Imported here, not at the top: none of this belongs on the startup path.
         say("starting the engine");
         ({ createWorker } = await import("tesseract.js"));
+        // Absolute, every one of them. The engine runs in a worker made from a blob, and inside such a
+        // worker a relative path resolves against the blob's own URL - "ocr/..." becomes
+        // "blob:https://host/ocr/...", which cannot be fetched and fails where nobody is looking.
+        const here = (file: string): string => new URL(file, document.baseURI).href;
         return createWorker("eng", undefined, {
-            corePath: "ocr/",
-            langPath: "ocr/",
+            corePath: here("ocr/"),
+            langPath: here("ocr/"),
             // Its worker too. Left to itself the library reaches for a copy on a CDN, which is both a
             // thing to fetch before a picture can be read offline and, if it is ever loaded directly,
             // a worker from another origin - which no browser allows. Everything it needs is here.
-            workerPath: "ocr/worker.min.js",
+            workerPath: here("ocr/worker.min.js"),
             // The data is served compressed and cached; the library must not reach for the CDN copy.
             gzip: true,
             logger: () => {},

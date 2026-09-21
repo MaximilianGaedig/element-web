@@ -66,7 +66,9 @@ async function getZxing(): Promise<typeof ZXing> {
         module.prepareZXingModule({
             // Served by us (see the `barcode` pattern in webpack.config.ts), not fetched from a CDN:
             // the app works offline, and a picture is nobody else's business.
-            overrides: { locateFile: (file: string) => `barcode/${file}` },
+            // Absolute for the same reason the text engine's paths are: a relative one resolves against
+            // whatever the loader's own URL happens to be.
+            overrides: { locateFile: (file: string) => new URL(`barcode/${file}`, document.baseURI).href },
         });
         return module;
     })();

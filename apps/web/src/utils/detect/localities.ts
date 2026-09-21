@@ -40,7 +40,7 @@ function region(): string | undefined {
 
 async function fetchFilter(country: string): Promise<LocalityFilter | undefined> {
     try {
-        const response = await fetch(`locality/${country}.bloom`);
+        const response = await fetch(new URL(`locality/${country}.bloom`, document.baseURI));
         if (!response.ok) return undefined;
         return readFilter(await response.arrayBuffer());
     } catch {
