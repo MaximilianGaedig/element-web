@@ -30,8 +30,23 @@ import { type AiNote, keepNote } from "../../../utils/ai/notes";
 import { setStreaming } from "../../../utils/ai/streaming";
 import { lookingWords } from "./TgAiNote";
 
-/** How much of what is on screen a summary is given: a day of a busy chat, not a year of one. */
+/** How much a summary is given at most: a day of a busy chat, not a year of one. */
 const READ_BACK = 200;
+
+/**
+ * What you actually missed: everything after the last message you have read.
+ *
+ * "What did I miss" means the unread ones, not the last two hundred - a chat you read an hour ago has
+ * nothing to summarise, and one you left a week ago has more than fits on screen. Where the read marker
+ * cannot be found (it has fallen out of the timeline, or there is none), what is loaded is all there is
+ * to go on, and the last of it is the honest answer.
+ */
+function unreadOf(room: Room, events: MatrixEvent[]): MatrixEvent[] {
+    const readUpTo = room.getEventReadUpTo(room.client.getSafeUserId(), true);
+    const at = readUpTo ? events.findIndex((event) => event.getId() === readUpTo) : -1;
+    const after = at >= 0 ? events.slice(at + 1) : [];
+    return after.length ? after.slice(-READ_BACK) : events.slice(-READ_BACK);
+}
 
 /** The messages as the model is given them: an id it can cite, who said it, when, and the words. */
 function readable(events: MatrixEvent[]): AskMessage[] {
@@ -87,7 +102,9 @@ export function TgAsk({ room, anchor }: Props): JSX.Element | null {
                         kind,
                         // A question may need the whole history, which the model searches for itself; a
                         // summary is about what is here.
-                        messages: kind === "summary" ? readable(events) : readable(events).slice(-40),
+                        // A summary is of what was missed; a question may need the whole history, which
+                        // the model goes and searches for itself.
+                        messages: kind === "summary" ? readable(unreadOf(room, events)) : readable(events).slice(-40),
                         question: asked,
                     },
                     {

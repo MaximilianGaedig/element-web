@@ -3439,6 +3439,8 @@
         "ai_ask_placeholder": "Ask anything about this chat",
         "ai_catch_up": "What did I miss",
         "ai_cite": "Message %(number)s",
+        "ai_digest": "What needs me",
+        "ai_digest_nothing": "Nothing unread.",
         "ai_failed": "Could not ask: %(reason)s",
         "ai_looking_around": "Reading what came of it…",
         "ai_looking_chats": "Finding the right chat…",

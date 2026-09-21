@@ -1,0 +1,96 @@
+/*
+Copyright 2026 New Vector Ltd.
+
+SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only OR LicenseRef-Element-Commercial
+Please see LICENSE files in the repository root for full details.
+*/
+
+/*
+ * What needs you, over the list of chats (TgDigest.tsx).
+ *
+ * Unasked it is one quiet button; asked it becomes a few lines with the chats it names. It sits above
+ * the list rather than in it, because it is about the list rather than part of it.
+ */
+.mx_TgDigest_ask {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--cpd-space-1x);
+    margin: var(--cpd-space-1x) var(--cpd-space-3x);
+    padding: var(--cpd-space-1x) var(--cpd-space-3x);
+    border-radius: 99px;
+    font: var(--cpd-font-body-sm-medium);
+
+    svg {
+        width: 1em;
+        height: 1em;
+    }
+}
+
+.mx_TgDigest {
+    margin: var(--cpd-space-1x) var(--cpd-space-3x);
+    padding: var(--cpd-space-2x) var(--cpd-space-3x);
+    border-radius: 12px;
+    background: var(--cpd-color-bg-subtle-secondary);
+    font: var(--cpd-font-body-sm-regular);
+
+    .mx_TgDigest_head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: var(--cpd-space-2x);
+    }
+
+    .mx_TgDigest_title {
+        font: var(--cpd-font-body-sm-medium);
+        color: var(--cpd-color-text-secondary);
+    }
+
+    .mx_TgDigest_close svg {
+        width: 16px;
+        height: 16px;
+    }
+
+    .mx_TgDigest_text {
+        margin: var(--cpd-space-1x) 0 0;
+        white-space: pre-wrap;
+    }
+
+    .mx_TgDigest_doing,
+    .mx_TgDigest_failed {
+        margin: var(--cpd-space-1x) 0 0;
+        color: var(--cpd-color-text-secondary);
+    }
+
+    .mx_TgDigest_failed {
+        color: var(--cpd-color-text-critical-primary);
+    }
+
+    .mx_TgDigest_cites {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--cpd-space-2x);
+        margin: var(--cpd-space-2x) 0 0;
+    }
+}
+
+/* Being written: the same travelling edge the notes in the timeline use. */
+.mx_TgDigest_writing {
+    background-image: linear-gradient(90deg, var(--cpd-color-bg-accent-rest), transparent 40%);
+    background-repeat: no-repeat;
+    background-size: 100% 2px;
+    background-position-x: -100%;
+    animation: mx_TgDigest_edge 1.6s ease-in-out infinite;
+}
+
+@keyframes mx_TgDigest_edge {
+    to {
+        background-position-x: 200%;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .mx_TgDigest_writing {
+        animation: none;
+    }
+}

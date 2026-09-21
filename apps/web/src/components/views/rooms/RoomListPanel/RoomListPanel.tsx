@@ -11,6 +11,7 @@ import { Flex, RoomListHeaderView, useCreateAutoDisposedViewModel } from "@eleme
 import { shouldShowComponent } from "../../../../customisations/helpers/UIComponents";
 import { UIComponent } from "../../../../settings/UIFeature";
 import { RoomListSearch } from "./RoomListSearch";
+import { TgDigest } from "../../telegram/TgDigest";
 import { RoomListView } from "./RoomListView";
 import { _t } from "../../../../languageHandler";
 import { getKeyBindingsManager } from "../../../../KeyBindingsManager";
@@ -79,6 +80,10 @@ export const RoomListPanel: React.FC<RoomListPanelProps> = ({ activeSpace }) => 
         >
             {displayRoomSearch && <RoomListSearch activeSpace={activeSpace} />}
             <RoomListHeaderView vm={vm} />
+            {/* Fork: what is waiting for you across every chat, in one press - asked for, never
+                automatic. Opening forty unread chats to find the two that need answering is the thing
+                worth handing to a machine. */}
+            <TgDigest />
             <RoomListView />
         </Flex>
     );
