@@ -43,8 +43,11 @@ const READ_BACK = 60;
  */
 const STYLE = 20;
 const STYLE_LONGEST = 120;
-/** Three at most, each short enough to be something somebody would actually send. */
-const MOST = 3;
+/**
+ * A ceiling, not a target: how many are worth offering is the model's judgement, and one good draft beats
+ * three padded ones. This is the point past which a row of pills stops being a row of pills.
+ */
+const MOST = 6;
 const LONGEST = 240;
 
 /** Drafts already asked for, by the message they reply to: a chat re-entered costs nothing. */
