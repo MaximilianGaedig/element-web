@@ -135,6 +135,71 @@
         "zoom_in": "Zoom in",
         "zoom_out": "Zoom out"
     },
+    "ai": {
+        "a_file": "a file",
+        "a_picture": "a picture",
+        "a_sticker": "a sticker",
+        "a_video": "a video",
+        "a_voice_message": "a voice message",
+        "ask": "Ask about this chat",
+        "ask_hint": "Type what you are wondering in the composer, then press this instead of send",
+        "ask_this": "Ask the model: \"%(question)s\"",
+        "asks_left": {
+            "one": ", 1 ask left today",
+            "other": ", %(count)s asks left today"
+        },
+        "catch_up": "What did I miss",
+        "cite": "Message %(number)s",
+        "digest": "What needs me",
+        "digest_nothing": "Nothing unread.",
+        "failed": "Could not ask: %(reason)s",
+        "go_to_message": "Go to this message",
+        "looking_around": "Reading what came of it…",
+        "looking_chats": "Finding the right chat…",
+        "looking_messages": "Searching your chats…",
+        "looking_web": "Asking the web…",
+        "no_answer": "It did not manage an answer this time.",
+        "no_open_questions": "Nothing here was left unanswered.",
+        "only_you": "Only you can see this",
+        "open_questions": "Answer open questions",
+        "reading_questions": "Looking for what was asked…",
+        "replies": "Suggested replies",
+        "send": "Send to chat",
+        "sent": "Sent",
+        "sent_by": " — %(model)s, %(seconds)ss",
+        "sent_digest": {
+            "one": "Sent 1 message from %(chats)s chats",
+            "other": "Sent %(count)s messages from %(chats)s chats"
+        },
+        "sent_looked": " — then it looked at: %(tools)s",
+        "sent_messages": {
+            "one": "1 message from this chat",
+            "other": "%(count)s messages from this chat"
+        },
+        "sent_more": {
+            "one": "…and 1 more",
+            "other": "…and %(count)s more"
+        },
+        "sent_pictures": {
+            "one": ", and 1 picture to look at",
+            "other": ", and %(count)s pictures to look at"
+        },
+        "sent_style": {
+            "one": ", and 1 of your own messages as a writing sample",
+            "other": ", and %(count)s of your own messages as a writing sample"
+        },
+        "sources": "Sources",
+        "sources_more": {
+            "one": "and %(count)s more",
+            "other": "and %(count)s more"
+        },
+        "thinking": "Thinking…",
+        "unsure": "This may not be the whole answer — what it found did not cover it.",
+        "was_bad": "This answer was not good",
+        "was_good": "This answer was good",
+        "what_can_be_done": "What can be done with this",
+        "what_was_sent": "What was sent to the model"
+    },
     "analytics": {
         "accept_button": "That's fine",
         "bullet_1": "We <Bold>don't</Bold> record or profile any account data",
@@ -3435,62 +3500,6 @@
         "activity_weekdays": "Per weekday",
         "activity_years": "Per year",
         "address": "Address",
-        "ai_a_file": "a file",
-        "ai_a_picture": "a picture",
-        "ai_a_sticker": "a sticker",
-        "ai_a_video": "a video",
-        "ai_a_voice_message": "a voice message",
-        "ai_ask": "Ask about this chat",
-        "ai_ask_hint": "Type what you are wondering in the composer, then press this instead of send",
-        "ai_ask_this": "Ask the model: \"%(question)s\"",
-        "ai_asks_left": {
-            "one": ", 1 ask left today",
-            "other": ", %(count)s asks left today"
-        },
-        "ai_catch_up": "What did I miss",
-        "ai_cite": "Message %(number)s",
-        "ai_digest": "What needs me",
-        "ai_digest_nothing": "Nothing unread.",
-        "ai_failed": "Could not ask: %(reason)s",
-        "ai_looking_around": "Reading what came of it…",
-        "ai_looking_chats": "Finding the right chat…",
-        "ai_looking_messages": "Searching your chats…",
-        "ai_looking_web": "Asking the web…",
-        "ai_no_answer": "It did not manage an answer this time.",
-        "ai_no_open_questions": "Nothing here was left unanswered.",
-        "ai_only_you": "Only you can see this",
-        "ai_open_questions": "Answer open questions",
-        "ai_reading_questions": "Looking for what was asked…",
-        "ai_replies": "Suggested replies",
-        "ai_send": "Send to chat",
-        "ai_sent": "Sent",
-        "ai_sent_by": " — %(model)s, %(seconds)ss",
-        "ai_sent_digest": {
-            "one": "Sent 1 message from %(chats)s chats",
-            "other": "Sent %(count)s messages from %(chats)s chats"
-        },
-        "ai_sent_looked": " — then it looked at: %(tools)s",
-        "ai_sent_messages": {
-            "one": "1 message from this chat",
-            "other": "%(count)s messages from this chat"
-        },
-        "ai_sent_more": {
-            "one": "…and 1 more",
-            "other": "…and %(count)s more"
-        },
-        "ai_sent_pictures": {
-            "one": ", and 1 picture to look at",
-            "other": ", and %(count)s pictures to look at"
-        },
-        "ai_sent_style": {
-            "one": ", and 1 of your own messages as a writing sample",
-            "other": ", and %(count)s of your own messages as a writing sample"
-        },
-        "ai_thinking": "Thinking…",
-        "ai_unsure": "This may not be the whole answer — what it found did not cover it.",
-        "ai_was_bad": "This answer was not good",
-        "ai_was_good": "This answer was good",
-        "ai_what_was_sent": "What was sent to the model",
         "banner_left": "~%(formatted)s left",
         "bio": "Bio",
         "bridge_fact_messages": "Messages imported",

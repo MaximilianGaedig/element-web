@@ -30,10 +30,10 @@ const LONGEST = 2000;
 
 /** The message types that are a thing sent rather than something said. */
 const MEDIA: Record<string, string> = {
-    "m.image": "tg_layout|ai_a_picture",
-    "m.video": "tg_layout|ai_a_video",
-    "m.audio": "tg_layout|ai_a_voice_message",
-    "m.file": "tg_layout|ai_a_file",
+    "m.image": "ai|a_picture",
+    "m.video": "ai|a_video",
+    "m.audio": "ai|a_voice_message",
+    "m.file": "ai|a_file",
 };
 
 /**
@@ -55,6 +55,62 @@ function kindOf(event: MatrixEvent): string | undefined {
     return undefined;
 }
 
+/**
+ * What is in a message's content that the line about it does not already say.
+ *
+ * Everything the model was missing - what something was a reply to, whether it was a sticker, how long a
+ * voice message is, where a location points - is in the event, and each time one of them was missed it had
+ * to be noticed and added by hand. So the content travels with the message: whatever the event says, minus
+ * the parts that are noise (the body, which is the line itself) and the parts that must never leave the
+ * device at all.
+ *
+ * Those are the ones to be careful about. An encrypted room's `file` carries the key the media is
+ * decrypted with, and `url` is a handle to the media itself: neither means anything to a model, and both
+ * would hand a server that only ever needed to read words the ability to fetch and decrypt the pictures.
+ * They are dropped here, at the point they would otherwise be copied.
+ */
+const TELLS_NOTHING = new Set(["body", "formatted_body", "url", "file", "msgtype"]);
+
+function detailOf(event: MatrixEvent): Record<string, unknown> | undefined {
+    const content = event.getContent() as Record<string, unknown>;
+    const detail: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(content)) {
+        if (TELLS_NOTHING.has(key) || value === undefined) continue;
+        if (key === "info" && value && typeof value === "object") {
+            // The same rule one level down: a thumbnail has its own url and its own key.
+            const info = Object.fromEntries(
+                Object.entries(value as Record<string, unknown>).filter(
+                    ([name]) => !name.startsWith("thumbnail_") && name !== "xyz.amorgan.blurhash",
+                ),
+            );
+            if (Object.keys(info).length) detail.info = info;
+            continue;
+        }
+        detail[key] = value;
+    }
+    return Object.keys(detail).length ? detail : undefined;
+}
+
+/**
+ * What people reacted with, which is a reply of the shortest kind.
+ *
+ * A thumbs-up on the question about Saturday is the answer to it, and a chat read without the reactions is
+ * a chat where three people said nothing. The aggregation is the one the timeline itself draws from, so
+ * this says exactly what is on the screen.
+ */
+function reactionsOf(room: Room, event: MatrixEvent): Record<string, number> | undefined {
+    const id = event.getId();
+    const relations = id
+        ? room.getUnfilteredTimelineSet().relations?.getChildEventsForEvent(id, "m.annotation", "m.reaction")
+        : undefined;
+    const counted: Record<string, number> = {};
+    for (const [key, events] of relations?.getSortedAnnotationsByKey() ?? []) {
+        const alive = [...events].filter((one) => !one.isRedacted()).length;
+        if (key && alive) counted[key] = alive;
+    }
+    return Object.keys(counted).length ? counted : undefined;
+}
+
 /** The message this one is a reply to, where it is one. */
 const replyOf = (event: MatrixEvent): string | undefined =>
     event.getContent()["m.relates_to"]?.["m.in_reply_to"]?.event_id;
@@ -63,7 +119,7 @@ const replyOf = (event: MatrixEvent): string | undefined =>
 export async function sayable(client: MatrixClient, event: MatrixEvent): Promise<string | undefined> {
     const content = event.getContent();
     const body = typeof content.body === "string" ? content.body : "";
-    if (event.getType() === "m.sticker") return body.trim() || _t("tg_layout|ai_a_sticker");
+    if (event.getType() === "m.sticker") return body.trim() || _t("ai|a_sticker");
     const media = typeof content.msgtype === "string" ? MEDIA[content.msgtype] : undefined;
     if (!media) return body.trim() || undefined;
 
@@ -120,6 +176,8 @@ export async function readable(
             replyTo: replyOf(event),
             kind: kindOf(event),
             edited: !!event.replacingEventId(),
+            reactions: reactionsOf(room, event),
+            detail: detailOf(event),
         });
     }
     return out;

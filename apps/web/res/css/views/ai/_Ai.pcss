@@ -1,0 +1,101 @@
+/*
+Copyright 2026 New Vector Ltd.
+
+SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only OR LicenseRef-Element-Commercial
+Please see LICENSE files in the repository root for full details.
+*/
+
+/*
+ * What the four AI surfaces share: one mark, one shimmer, one set of colours.
+ *
+ * Everything else about them is Element's - Compound's buttons, Element's bubbles, the app's own spacing
+ * tokens - because a feature that brings its own design language to the middle of somebody's chat looks
+ * like an advertisement for itself. The only thing that is not Element's is the mark, and it is the same
+ * mark in all four places: the strip above the composer, the answer in the timeline, the drafted replies
+ * and the morning's digest.
+ *
+ * These three colours are the only hard-coded ones in the feature. They are a deliberate exception: there
+ * is no accent in the palette that drifts, and the drift is the whole of the difference between "a machine
+ * wrote this" and every other line on the screen.
+ */
+:root {
+    --mx-ai-drift-1: #7a5cff;
+    --mx-ai-drift-2: #2bb3ff;
+    --mx-ai-drift-3: #ff7ac0;
+}
+
+/* The mark: one glyph, lit by a slow drift through the three. Never more than one per surface. */
+.mx_Ai_mark {
+    flex: 0 0 auto;
+    width: 1em;
+    height: 1em;
+    color: var(--mx-ai-drift-1);
+    animation: mx_Ai_drift 4s ease-in-out infinite;
+}
+
+@keyframes mx_Ai_drift {
+    0%,
+    100% {
+        color: var(--mx-ai-drift-1);
+    }
+
+    35% {
+        color: var(--mx-ai-drift-2);
+    }
+
+    70% {
+        color: var(--mx-ai-drift-3);
+    }
+}
+
+/*
+ * Being written: a sheen crosses the surface once a pass and stops the moment the words are whole. It is
+ * behind the text, it is the only motion, and it never moves the layout.
+ */
+.mx_Ai_writing::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(110deg, transparent 30%, rgb(122 92 255 / 20%) 50%, transparent 70%);
+    background-size: 250% 100%;
+    animation: mx_Ai_sheen 1.8s linear infinite;
+    pointer-events: none;
+}
+
+@keyframes mx_Ai_sheen {
+    from {
+        background-position-x: 150%;
+    }
+
+    to {
+        background-position-x: -150%;
+    }
+}
+
+/*
+ * Markdown from the model, rendered by the message pipeline (utils/ai/render.tsx): it comes back with the
+ * pipeline's spacing, which is a message's, and a paragraph's default margins inside a bubble are a hole.
+ */
+.mx_Ai_prose {
+    margin: 0;
+
+    :is(p, ul, ol) {
+        margin: 0 0 var(--cpd-space-1x);
+    }
+
+    :is(ul, ol) {
+        padding-inline-start: var(--cpd-space-5x);
+    }
+
+    > :last-child {
+        margin-block-end: 0;
+    }
+}
+
+/* Somebody who has asked not to be moved should not be. */
+@media (prefers-reduced-motion: reduce) {
+    .mx_Ai_mark,
+    .mx_Ai_writing::after {
+        animation: none;
+    }
+}

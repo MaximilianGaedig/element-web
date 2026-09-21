@@ -1,0 +1,156 @@
+/*
+Copyright 2026 New Vector Ltd.
+
+SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only OR LicenseRef-Element-Commercial
+Please see LICENSE files in the repository root for full details.
+*/
+
+/*
+ * What needs you, over the list of chats (AiDigest.tsx).
+ *
+ * Unasked it is one quiet button; asked it becomes the same list of chats the panel underneath it is,
+ * only shorter and with a reason attached to each one. That is the point of laying it out per chat: it
+ * reads as the room list with the noise taken out, not as a card that happens to be above the room list.
+ *
+ * It is a child of a column with a fixed height, so it has to say both of these or it loses: it will not
+ * shrink (a tall answer was being squeezed to nothing and read as a blank card), and past a share of the
+ * height it scrolls itself rather than pushing the chats off the screen.
+ */
+.mx_AiDigest_ask {
+    align-self: center;
+    width: fit-content;
+    margin: var(--cpd-space-2x) auto;
+}
+
+.mx_AiDigest {
+    /* An Element panel: the app's own surface and radius, not a glass slab of its own. */
+    position: relative;
+    display: flex;
+    flex: 0 0 auto;
+    flex-direction: column;
+    min-height: 0;
+    max-height: min(24rem, 45%);
+    overflow: hidden;
+    margin: var(--cpd-space-2x) var(--cpd-space-3x);
+    padding: var(--cpd-space-3x);
+    border-radius: 8px;
+    background: var(--cpd-color-bg-subtle-secondary);
+    font: var(--cpd-font-body-sm-regular);
+
+    .mx_AiDigest_head {
+        display: flex;
+        flex: 0 0 auto;
+        align-items: center;
+        gap: var(--cpd-space-2x);
+    }
+
+    .mx_AiDigest_title {
+        flex: 1 1 auto;
+        margin: 0;
+        font: var(--cpd-font-body-sm-medium);
+        color: var(--cpd-color-text-secondary);
+    }
+
+    /* Everything that can run long, scrolling on its own. */
+    .mx_AiDigest_body {
+        flex: 1 1 auto;
+        min-height: 0;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+    }
+
+    .mx_AiDigest_intro,
+    .mx_AiDigest_said {
+        color: var(--cpd-color-text-primary);
+    }
+
+    .mx_AiDigest_intro {
+        margin: var(--cpd-space-1x) 0 0;
+    }
+
+    .mx_AiDigest_doing,
+    .mx_AiDigest_failed {
+        margin: var(--cpd-space-1x) 0 0;
+        color: var(--cpd-color-text-secondary);
+    }
+
+    .mx_AiDigest_failed {
+        color: var(--cpd-color-text-critical-primary);
+    }
+
+    /* One chat: its name, what it wants, and what could be sent back. In that order, once. */
+    .mx_AiDigest_chat {
+        margin-block-start: var(--cpd-space-3x);
+    }
+
+    .mx_AiDigest_chatName {
+        display: flex;
+        align-items: center;
+        gap: var(--cpd-space-2x);
+        width: 100%;
+        margin: 0;
+        padding: 0;
+        border: none;
+        background: none;
+        font: var(--cpd-font-body-sm-semibold);
+        color: var(--cpd-color-text-primary);
+        text-align: start;
+        cursor: pointer;
+
+        &:hover {
+            text-decoration: underline;
+        }
+    }
+
+    /* A heading the model wrote for a chat that is not on the screen: a name, with nowhere to go. */
+    .mx_AiDigest_chatName_plain {
+        cursor: default;
+
+        &:hover {
+            text-decoration: none;
+        }
+    }
+
+    .mx_AiDigest_said {
+        margin-block-start: var(--cpd-space-1x);
+    }
+
+    /*
+     * The drafts scroll sideways rather than wrapping: three long replies wrapping into six lines is the
+     * card growing past what it is worth, for every chat in the list.
+     */
+    .mx_AiDigest_drafts {
+        display: flex;
+        gap: var(--cpd-space-2x);
+        margin-block-start: var(--cpd-space-1x);
+        overflow-x: auto;
+        overscroll-behavior-x: contain;
+        scrollbar-width: none;
+
+        &::-webkit-scrollbar {
+            display: none;
+        }
+    }
+
+    .mx_AiDigest_draft {
+        flex: 0 0 auto;
+        max-width: 15rem;
+        min-width: 0;
+        justify-content: flex-start;
+    }
+
+    .mx_AiDigest_draftText {
+        display: block;
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    /* What was sent, said plainly - the same fact the answers in the timeline state. */
+    .mx_AiDigest_sent {
+        margin: var(--cpd-space-2x) 0 0;
+        font: var(--cpd-font-body-xs-regular);
+        color: var(--cpd-color-text-secondary);
+    }
+}

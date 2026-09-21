@@ -23,7 +23,7 @@ import { ReadMarker, TimelineSeparator, type EventTileRenderingMode } from "@ele
 import shouldHideEvent from "../../shouldHideEvent";
 import { formatDate, wantsDateSeparator } from "../../DateUtils";
 import { MatrixClientPeg } from "../../MatrixClientPeg";
-import { TgAiNote } from "../views/telegram/TgAiNote";
+import { AiNote as AiNoteTile } from "../views/ai/AiNote";
 import { type AiNote, notesByAnchor } from "../../utils/ai/notes";
 import { onStreaming, streaming } from "../../utils/ai/streaming";
 import SettingsStore from "../../settings/SettingsStore";
@@ -955,7 +955,7 @@ export default class MessagePanel extends React.Component<IProps, IState> {
          */
         for (const note of this.aiNotesFor(eventId)) {
             ret.push(
-                <TgAiNote
+                <AiNoteTile
                     key={`ai-${note.id}`}
                     client={MatrixClientPeg.safeGet()}
                     roomId={this.props.room!.roomId}

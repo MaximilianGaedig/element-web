@@ -50,6 +50,17 @@ export interface AskMessage {
     kind?: string;
     /** Whether it was edited after it was sent, which changes what "they said" means. */
     edited?: boolean;
+    /** What people reacted with, and how many of them: the shortest kind of reply there is. */
+    reactions?: Record<string, number>;
+    /**
+     * The rest of the event's content, as it is.
+     *
+     * Everything a person can see about a message that a sentence about it does not carry: what it relates
+     * to, how long the voice message runs, where the location is, which sticker pack it came from. Sent as
+     * the event has it rather than described, so there is nothing to keep remembering to describe - minus
+     * the media's url and its decryption key, which never leave the device.
+     */
+    detail?: Record<string, unknown>;
 }
 
 /** What comes back once it has finished. */
@@ -182,6 +193,13 @@ export async function ask(
     const decoder = new TextDecoder();
     let buffer = "";
     let answer: Answer | undefined;
+    /*
+     * The answer's own JSON, as it is written.
+     *
+     * One per call, not one per module: a digest and a question asked at the same time were appending to
+     * the same string, so each showed the other's half-written words.
+     */
+    let written = "";
 
     for (;;) {
         const { done, value } = await reader.read();
@@ -200,11 +218,12 @@ export async function ask(
             if (event.type === "turn") {
                 // The model started again: what it wrote before was it thinking on the way to a tool,
                 // and showing that as the answer would be showing the reader the workings.
-                beginAnswer();
+                written = "";
                 events.onText?.("");
             } else if (event.type === "delta" && typeof event.text === "string") {
                 // The raw stream is the JSON the model is writing; the reader wants the words in it.
-                events.onText?.(readable(bufferOf(event.text)));
+                written += event.text;
+                events.onText?.(answerSoFar(written));
             } else if (event.type === "looking") {
                 events.onLooking?.(event as unknown as { tool: string });
             } else if (event.type === "done") {
@@ -220,18 +239,13 @@ export async function ask(
     return answer;
 }
 
-/*
- * The answer arrives as JSON being written character by character, which is not a thing to show anyone.
- * These two keep the part of it that is the answer, and hand it over as readable text while it grows.
+/**
+ * The answer's own words out of half-written JSON: everything after `"answer": "` up to its closing quote.
+ *
+ * The model writes one JSON object and the reader wants one field of it, while it is still being written -
+ * so it is read out by hand rather than parsed, because there is nothing parseable until the last brace.
  */
-let streamed = "";
-function bufferOf(piece: string): string {
-    streamed += piece;
-    return streamed;
-}
-
-/** The answer's own words out of half-written JSON: everything after "answer": " up to its closing quote. */
-function readable(whole: string): string {
+function answerSoFar(whole: string): string {
     const start = whole.indexOf('"answer"');
     if (start < 0) return "";
     const opening = whole.indexOf('"', whole.indexOf(":", start) + 1);
@@ -250,11 +264,6 @@ function readable(whole: string): string {
         }
     }
     return text;
-}
-
-/** Starts a fresh answer: the streamed text is read as one growing string. */
-export function beginAnswer(): void {
-    streamed = "";
 }
 
 /** What the model has cost, and what is left of today. */

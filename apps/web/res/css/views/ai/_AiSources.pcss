@@ -1,0 +1,57 @@
+/*
+Copyright 2026 New Vector Ltd.
+
+SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only OR LicenseRef-Element-Commercial
+Please see LICENSE files in the repository root for full details.
+*/
+
+/*
+ * What an answer rests on (AiSources.tsx): chips, not links.
+ *
+ * A row of blue underlined words under a paragraph reads as a footnote, and nobody presses a footnote.
+ * These are somewhere to go - a message opens the chat at that message, a page opens the page - so they
+ * are shaped like the thing in this app that means "press me and you will arrive somewhere": a chip.
+ */
+.mx_AiSources {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--cpd-space-1x);
+    margin: var(--cpd-space-2x) 0 0;
+    padding: 0;
+    list-style: none;
+}
+
+.mx_AiSources_one {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--cpd-space-1x);
+    max-width: 14rem;
+    padding: 1px var(--cpd-space-2x);
+    border: 1px solid var(--cpd-color-border-interactive-secondary);
+    border-radius: 99px;
+    background: none;
+    font: var(--cpd-font-body-xs-medium);
+    color: var(--cpd-color-text-secondary);
+    text-decoration: none;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    cursor: pointer;
+
+    svg {
+        flex: 0 0 auto;
+        width: 12px;
+        height: 12px;
+    }
+
+    &:hover {
+        border-color: var(--cpd-color-border-interactive-primary);
+        color: var(--cpd-color-text-primary);
+    }
+}
+
+.mx_AiSources_rest {
+    font: var(--cpd-font-body-xs-regular);
+    color: var(--cpd-color-text-secondary);
+}

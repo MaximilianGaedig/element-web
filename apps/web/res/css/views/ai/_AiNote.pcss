@@ -1,0 +1,158 @@
+/*
+Copyright 2026 New Vector Ltd.
+
+SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only OR LicenseRef-Element-Commercial
+Please see LICENSE files in the repository root for full details.
+*/
+
+/*
+ * The model's answer in the timeline (AiNote.tsx): an incoming message, because that is the shape a chat
+ * is read in and anything else in the middle of it reads as an advert.
+ *
+ * So it takes the incoming bubble exactly - the same surface, the same corner radius, the same indent from
+ * the avatar column - and earns its difference with the mark and a line of footer. Everything that can be
+ * done with it is behind one button, the way it is for every other message in the room.
+ */
+.mx_AiNote {
+    position: relative;
+    box-sizing: border-box;
+    /*
+     * The message list is a flex column, so an item that does not say otherwise is shrunk to fit it: this
+     * bubble was arriving sixteen pixels tall - its padding, with two hundred pixels of answer clipped
+     * inside - while every tile around it kept its height.
+     */
+    flex: 0 0 auto;
+    width: fit-content;
+    max-width: min(30rem, 78%);
+    margin: var(--cpd-space-1x) 0 var(--cpd-space-1x) calc(var(--TgSenderRun-inset, 8px) + 2.875rem);
+    padding: var(--cpd-space-2x) var(--cpd-space-3x);
+    border-radius: var(--event-tile-bubble-corner-radius, 12px);
+    background: var(--event-tile-bubble-other-background, var(--cpd-color-bg-subtle-secondary));
+    color: var(--cpd-color-text-primary);
+    font: var(--cpd-font-body-md-regular);
+    /* The sheen is painted over the bubble, so it has to be cut to the bubble's corners. */
+    overflow: hidden;
+
+    /* What was asked, above the answer, the way a quoted message sits above a reply. */
+    .mx_AiNote_question {
+        margin: 0 0 var(--cpd-space-1x);
+        padding-inline-start: var(--cpd-space-2x);
+        border-inline-start: 2px solid var(--cpd-color-border-interactive-primary);
+        font: var(--cpd-font-body-sm-regular);
+        color: var(--cpd-color-text-secondary);
+    }
+
+    .mx_AiNote_looking,
+    .mx_AiNote_unsure {
+        margin: 0 0 var(--cpd-space-1x);
+        font: var(--cpd-font-body-sm-regular);
+        color: var(--cpd-color-text-secondary);
+    }
+
+    /*
+     * The footer: the mark, who can see it, and what can be done with it. One row, the height of a small
+     * icon button, and the only chrome the bubble has.
+     */
+    .mx_AiNote_footer {
+        display: flex;
+        align-items: center;
+        gap: var(--cpd-space-1x);
+        margin-block-start: var(--cpd-space-1x);
+    }
+
+    .mx_AiNote_only {
+        margin-inline-end: auto;
+        font: var(--cpd-font-body-xs-regular);
+        color: var(--cpd-color-text-secondary);
+    }
+
+    /* Faint until one is pressed: an opinion asked for quietly is one somebody might actually give. */
+    .mx_AiNote_verdict {
+        opacity: 0.5;
+    }
+
+    .mx_AiNote_verdict:hover,
+    .mx_AiNote_verdict_chosen {
+        opacity: 1;
+    }
+
+    .mx_AiNote_verdict_chosen {
+        color: var(--cpd-color-text-action-accent);
+    }
+
+    /*
+     * What was sent, opened: the messages themselves, rendered as messages, inset from the answer so they
+     * read as a footnote to it rather than more of it.
+     */
+    .mx_AiNote_sentPanel {
+        margin-block-start: var(--cpd-space-2x);
+        padding-block-start: var(--cpd-space-2x);
+        border-block-start: 1px solid var(--cpd-color-border-interactive-secondary);
+    }
+
+    .mx_AiNote_sentWhat {
+        margin: 0;
+        font: var(--cpd-font-body-xs-regular);
+        color: var(--cpd-color-text-secondary);
+    }
+
+    .mx_AiNote_sentList {
+        max-height: 14rem;
+        margin: var(--cpd-space-1x) 0 0;
+        padding: 0;
+        list-style: none;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+    }
+
+    /* One row of the record: who said it, the message itself, and a way to go and look at it. */
+    .mx_AiNote_sentOne {
+        display: flex;
+        align-items: flex-start;
+        gap: var(--cpd-space-2x);
+        padding: var(--cpd-space-1x) 0;
+        border-block-end: 1px solid var(--cpd-color-border-interactive-secondary);
+        font: var(--cpd-font-body-xs-regular);
+        color: var(--cpd-color-text-secondary);
+
+        &:last-child {
+            border-block-end: none;
+        }
+    }
+
+    .mx_AiNote_sentWho {
+        flex: 0 0 auto;
+        max-width: 7rem;
+        padding-block-start: 2px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        font: var(--cpd-font-body-xs-medium);
+    }
+
+    /*
+     * The message, drawn by the app's own renderer. It is shown at the size of a footnote and kept from
+     * growing past a couple of lines, because this is a record of what was sent and not a second timeline:
+     * forty messages each at full height is a panel taller than the chat it is about.
+     */
+    .mx_AiNote_sentBody {
+        flex: 1 1 auto;
+        min-width: 0;
+        max-height: 4.5em;
+        overflow: hidden;
+        font: var(--cpd-font-body-xs-regular);
+
+        /* Media inside a footnote stays a thumbnail. */
+        img,
+        video {
+            max-width: 8rem;
+            max-height: 4rem;
+        }
+    }
+}
+
+/* The words sit above the sheen, which is painted across the whole bubble. */
+.mx_AiNote.mx_Ai_writing > * {
+    position: relative;
+    z-index: 1;
+}

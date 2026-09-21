@@ -93,15 +93,6 @@ const STALE_MS = 3 * 24 * 60 * 60 * 1000;
 const CROWD = 8;
 
 /**
- * Messages that are an acknowledgement rather than something to answer.
- *
- * Not a language model's job: "ok" needs no suggestions in any language, and asking costs a request, a
- * second of waiting and a row of pills over the composer saying nothing.
- */
-const NOTHING_TO_SAY =
-    /^(ok(ej|ay|k)?|spoko|dobra|git|jasne|no|tak|nie|yes|yeah|yep|nope|thx|thanks|dzięki|dzieki|dzięks|haha+|hah|lol|xd+|😂|👍|❤️|\+1|k|np|nara|pa|cześć|czesc|hi|hej|siema)[.!?…]*$/i;
-
-/**
  * The last message, if it is one worth drafting a reply to.
  *
  * Most messages are not. Somebody else's words, recent, addressed to this reader, and actually asking
@@ -122,16 +113,25 @@ export function waitingOn(room: Room, me: string): MatrixEvent | undefined {
         // somebody waiting for an answer.
         if (event.getContent().msgtype !== "m.text") return undefined;
         if (Date.now() - event.getTs() > STALE_MS) return undefined;
-        if (NOTHING_TO_SAY.test(body.trim())) return undefined;
         /*
-         * In a crowd, only what is actually aimed at you: a question, or your own name. Otherwise every
-         * busy room you glance at drafts three replies to a conversation between other people.
+         * In a crowd, only what is actually aimed at you. Otherwise every busy room you glance at drafts
+         * replies to a conversation between other people.
+         *
+         * Aimed at you is a fact about the event, not about its wording: your name in it, or a reply to
+         * something you said. Whether the words themselves want an answer is a judgement, and judgements
+         * about language are the model's - a list of words that mean "nothing to reply to" is a list that
+         * is right in one language, wrong in the next, and silently wrong in the one somebody actually
+         * writes in. The model is asked that question directly (see the gate in the proxy's `replies`),
+         * and it answers it in whatever language the chat is in.
          */
         if (room.getJoinedMemberCount() > CROWD) {
+            const named = room.getMember(me)?.name;
             const mentioned =
-                body.includes(room.client.getUserIdLocalpart() ?? "\0") ||
-                body.includes(room.getMember(me)?.name ?? "\0");
-            if (!mentioned && !body.includes("?")) return undefined;
+                body.includes(room.client.getUserIdLocalpart() ?? "\0") || (!!named && body.includes(named));
+            const toMe = event.replyEventId
+                ? room.findEventById(event.replyEventId)?.getSender() === me
+                : false;
+            if (!mentioned && !toMe) return undefined;
         }
         return event;
     }

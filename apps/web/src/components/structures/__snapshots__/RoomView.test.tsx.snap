@@ -1145,7 +1145,7 @@ exports[`RoomView > should hide the composer when hideComposer=true 1`] = `
         class="mx_RoomView_body mx_MainSplit_timeline"
         data-layout="group"
         data-telegram-layout="true"
-        style="--tg-header-bottom: 0px; --tg-plates-bottom: 0px; --tg-header-block: 0px; --tg-composer-block: 0px;"
+        style="--tg-header-bottom: 0px; --tg-plates-bottom: 0px; --tg-header-block: 0px; --tg-composer-height: 0px; --tg-composer-block: 0px;"
       >
         <header
           class="_flex_4dswl_9 mx_RoomHeader light-panel"
@@ -1391,7 +1391,7 @@ exports[`RoomView > should hide the header when hideHeader=true 1`] = `
         class="mx_RoomView_body mx_MainSplit_timeline"
         data-layout="group"
         data-telegram-layout="true"
-        style="--tg-header-bottom: 0px; --tg-plates-bottom: 0px; --tg-header-block: 0px; --tg-composer-block: 0px;"
+        style="--tg-header-bottom: 0px; --tg-plates-bottom: 0px; --tg-header-block: 0px; --tg-composer-height: 0px; --tg-composer-block: 0px;"
       >
         <div
           class="_scrollbar_1d5jg_8 mx_AutoHideScrollbar mx_AuxPanel"
@@ -1433,15 +1433,14 @@ exports[`RoomView > should hide the header when hideHeader=true 1`] = `
           </div>
         </div>
         <div
-          class="mx_TgAsk mx_TgAsk_idle"
-          data-state="idle"
+          class="mx_TgComposerAbove"
         >
           <div
-            class="mx_AccessibleButton mx_TgAsk_catchUp mx_AccessibleButton_hasKind mx_AccessibleButton_kind_secondary"
-            role="button"
-            tabindex="0"
+            class="mx_AiBar"
           >
             <svg
+              aria-hidden="true"
+              class="mx_Ai_mark"
               fill="currentColor"
               height="1em"
               viewBox="0 0 24 24"
@@ -1449,17 +1448,29 @@ exports[`RoomView > should hide the header when hideHeader=true 1`] = `
               xmlns="http://www.w3.org/2000/svg"
             >
               <path
-                d="M17.25 11.672a.9.9 0 0 1-.663-.282L12.61 7.413a.9.9 0 0 1-.282-.663q0-.381.282-.663l3.977-3.977a.9.9 0 0 1 .663-.282q.381 0 .663.282l3.977 3.977a.9.9 0 0 1 .282.663.9.9 0 0 1-.282.663l-3.977 3.977a.9.9 0 0 1-.663.282m2.475-4.922L17.25 4.275 14.775 6.75l2.475 2.475zM4 11a.97.97 0 0 1-.712-.287A.97.97 0 0 1 3 10V4q0-.424.288-.712A.97.97 0 0 1 4 3h6q.424 0 .713.288Q11 3.575 11 4v6q0 .424-.287.713A.97.97 0 0 1 10 11zm5-2V5H5v4zm5 12a.97.97 0 0 1-.713-.288A.97.97 0 0 1 13 20v-6q0-.424.287-.713A.97.97 0 0 1 14 13h6q.424 0 .712.287.288.288.288.713v6q0 .424-.288.712A.97.97 0 0 1 20 21zm5-2v-4h-4v4zM4 21a.97.97 0 0 1-.712-.288A.97.97 0 0 1 3 20v-6q0-.424.288-.713A.97.97 0 0 1 4 13h6q.424 0 .713.287.287.288.287.713v6q0 .424-.287.712A.97.97 0 0 1 10 21zm5-2v-4H5v4z"
+                d="M9.5 2 11 6.5 15.5 8 11 9.5 9.5 14 8 9.5 3.5 8 8 6.5zm9.5 9 1 3 3 1-3 1-1 3-1-3-3-1 3-1zm-7 6 .75 2.25L15 20l-2.25.75L12 23l-.75-2.25L9 20l2.25-.75z"
               />
             </svg>
-            What did I miss
-          </div>
-          <div
-            class="mx_AccessibleButton mx_TgAsk_open_button mx_AccessibleButton_hasKind mx_AccessibleButton_kind_link"
-            role="button"
-            tabindex="0"
-          >
-            Ask about this chat
+            <button
+              aria-disabled="false"
+              class="_button_1nw83_8 mx_AiBar_button"
+              data-kind="secondary"
+              data-size="md"
+              role="button"
+              tabindex="0"
+            >
+              What did I miss
+            </button>
+            <button
+              aria-disabled="false"
+              class="_button_1nw83_8 mx_AiBar_button"
+              data-kind="secondary"
+              data-size="md"
+              role="button"
+              tabindex="0"
+            >
+              Answer open questions
+            </button>
           </div>
         </div>
         <div
@@ -1743,7 +1754,7 @@ exports[`RoomView > should hide the pinned message banner when hidePinnedMessage
         class="mx_RoomView_body mx_MainSplit_timeline"
         data-layout="group"
         data-telegram-layout="true"
-        style="--tg-header-bottom: 0px; --tg-plates-bottom: 0px; --tg-header-block: 0px; --tg-composer-block: 0px;"
+        style="--tg-header-bottom: 0px; --tg-plates-bottom: 0px; --tg-header-block: 0px; --tg-composer-height: 0px; --tg-composer-block: 0px;"
       >
         <header
           class="_flex_4dswl_9 mx_RoomHeader light-panel"
@@ -1951,15 +1962,14 @@ exports[`RoomView > should hide the pinned message banner when hidePinnedMessage
           </div>
         </div>
         <div
-          class="mx_TgAsk mx_TgAsk_idle"
-          data-state="idle"
+          class="mx_TgComposerAbove"
         >
           <div
-            class="mx_AccessibleButton mx_TgAsk_catchUp mx_AccessibleButton_hasKind mx_AccessibleButton_kind_secondary"
-            role="button"
-            tabindex="0"
+            class="mx_AiBar"
           >
             <svg
+              aria-hidden="true"
+              class="mx_Ai_mark"
               fill="currentColor"
               height="1em"
               viewBox="0 0 24 24"
@@ -1967,17 +1977,29 @@ exports[`RoomView > should hide the pinned message banner when hidePinnedMessage
               xmlns="http://www.w3.org/2000/svg"
             >
               <path
-                d="M17.25 11.672a.9.9 0 0 1-.663-.282L12.61 7.413a.9.9 0 0 1-.282-.663q0-.381.282-.663l3.977-3.977a.9.9 0 0 1 .663-.282q.381 0 .663.282l3.977 3.977a.9.9 0 0 1 .282.663.9.9 0 0 1-.282.663l-3.977 3.977a.9.9 0 0 1-.663.282m2.475-4.922L17.25 4.275 14.775 6.75l2.475 2.475zM4 11a.97.97 0 0 1-.712-.287A.97.97 0 0 1 3 10V4q0-.424.288-.712A.97.97 0 0 1 4 3h6q.424 0 .713.288Q11 3.575 11 4v6q0 .424-.287.713A.97.97 0 0 1 10 11zm5-2V5H5v4zm5 12a.97.97 0 0 1-.713-.288A.97.97 0 0 1 13 20v-6q0-.424.287-.713A.97.97 0 0 1 14 13h6q.424 0 .712.287.288.288.288.713v6q0 .424-.288.712A.97.97 0 0 1 20 21zm5-2v-4h-4v4zM4 21a.97.97 0 0 1-.712-.288A.97.97 0 0 1 3 20v-6q0-.424.288-.713A.97.97 0 0 1 4 13h6q.424 0 .713.287.287.288.287.713v6q0 .424-.287.712A.97.97 0 0 1 10 21zm5-2v-4H5v4z"
+                d="M9.5 2 11 6.5 15.5 8 11 9.5 9.5 14 8 9.5 3.5 8 8 6.5zm9.5 9 1 3 3 1-3 1-1 3-1-3-3-1 3-1zm-7 6 .75 2.25L15 20l-2.25.75L12 23l-.75-2.25L9 20l2.25-.75z"
               />
             </svg>
-            What did I miss
-          </div>
-          <div
-            class="mx_AccessibleButton mx_TgAsk_open_button mx_AccessibleButton_hasKind mx_AccessibleButton_kind_link"
-            role="button"
-            tabindex="0"
-          >
-            Ask about this chat
+            <button
+              aria-disabled="false"
+              class="_button_1nw83_8 mx_AiBar_button"
+              data-kind="secondary"
+              data-size="md"
+              role="button"
+              tabindex="0"
+            >
+              What did I miss
+            </button>
+            <button
+              aria-disabled="false"
+              class="_button_1nw83_8 mx_AiBar_button"
+              data-kind="secondary"
+              data-size="md"
+              role="button"
+              tabindex="0"
+            >
+              Answer open questions
+            </button>
           </div>
         </div>
         <div
@@ -2261,7 +2283,7 @@ exports[`RoomView > should not display the timeline when the room encryption is 
         class="mx_RoomView_body mx_MainSplit_timeline"
         data-layout="group"
         data-telegram-layout="true"
-        style="--tg-header-bottom: 0px; --tg-plates-bottom: 0px; --tg-header-block: 0px; --tg-composer-block: 0px;"
+        style="--tg-header-bottom: 0px; --tg-plates-bottom: 0px; --tg-header-block: 0px; --tg-composer-height: 0px; --tg-composer-block: 0px;"
       >
         <header
           class="_flex_4dswl_9 mx_RoomHeader light-panel"
@@ -2492,7 +2514,7 @@ exports[`RoomView > should not display the timeline when the room encryption is 
         class="mx_RoomView_body mx_MainSplit_timeline"
         data-layout="group"
         data-telegram-layout="true"
-        style="--tg-header-bottom: 0px; --tg-plates-bottom: 0px; --tg-header-block: 0px; --tg-composer-block: 0px;"
+        style="--tg-header-bottom: 0px; --tg-plates-bottom: 0px; --tg-header-block: 0px; --tg-composer-height: 0px; --tg-composer-block: 0px;"
       >
         <header
           class="_flex_4dswl_9 mx_RoomHeader light-panel"
@@ -2718,15 +2740,14 @@ exports[`RoomView > should not display the timeline when the room encryption is 
           </div>
         </div>
         <div
-          class="mx_TgAsk mx_TgAsk_idle"
-          data-state="idle"
+          class="mx_TgComposerAbove"
         >
           <div
-            class="mx_AccessibleButton mx_TgAsk_catchUp mx_AccessibleButton_hasKind mx_AccessibleButton_kind_secondary"
-            role="button"
-            tabindex="0"
+            class="mx_AiBar"
           >
             <svg
+              aria-hidden="true"
+              class="mx_Ai_mark"
               fill="currentColor"
               height="1em"
               viewBox="0 0 24 24"
@@ -2734,17 +2755,29 @@ exports[`RoomView > should not display the timeline when the room encryption is 
               xmlns="http://www.w3.org/2000/svg"
             >
               <path
-                d="M17.25 11.672a.9.9 0 0 1-.663-.282L12.61 7.413a.9.9 0 0 1-.282-.663q0-.381.282-.663l3.977-3.977a.9.9 0 0 1 .663-.282q.381 0 .663.282l3.977 3.977a.9.9 0 0 1 .282.663.9.9 0 0 1-.282.663l-3.977 3.977a.9.9 0 0 1-.663.282m2.475-4.922L17.25 4.275 14.775 6.75l2.475 2.475zM4 11a.97.97 0 0 1-.712-.287A.97.97 0 0 1 3 10V4q0-.424.288-.712A.97.97 0 0 1 4 3h6q.424 0 .713.288Q11 3.575 11 4v6q0 .424-.287.713A.97.97 0 0 1 10 11zm5-2V5H5v4zm5 12a.97.97 0 0 1-.713-.288A.97.97 0 0 1 13 20v-6q0-.424.287-.713A.97.97 0 0 1 14 13h6q.424 0 .712.287.288.288.288.713v6q0 .424-.288.712A.97.97 0 0 1 20 21zm5-2v-4h-4v4zM4 21a.97.97 0 0 1-.712-.288A.97.97 0 0 1 3 20v-6q0-.424.288-.713A.97.97 0 0 1 4 13h6q.424 0 .713.287.287.288.287.713v6q0 .424-.287.712A.97.97 0 0 1 10 21zm5-2v-4H5v4z"
+                d="M9.5 2 11 6.5 15.5 8 11 9.5 9.5 14 8 9.5 3.5 8 8 6.5zm9.5 9 1 3 3 1-3 1-1 3-1-3-3-1 3-1zm-7 6 .75 2.25L15 20l-2.25.75L12 23l-.75-2.25L9 20l2.25-.75z"
               />
             </svg>
-            What did I miss
-          </div>
-          <div
-            class="mx_AccessibleButton mx_TgAsk_open_button mx_AccessibleButton_hasKind mx_AccessibleButton_kind_link"
-            role="button"
-            tabindex="0"
-          >
-            Ask about this chat
+            <button
+              aria-disabled="false"
+              class="_button_1nw83_8 mx_AiBar_button"
+              data-kind="secondary"
+              data-size="md"
+              role="button"
+              tabindex="0"
+            >
+              What did I miss
+            </button>
+            <button
+              aria-disabled="false"
+              class="_button_1nw83_8 mx_AiBar_button"
+              data-kind="secondary"
+              data-size="md"
+              role="button"
+              tabindex="0"
+            >
+              Answer open questions
+            </button>
           </div>
         </div>
         <div
@@ -3058,7 +3091,7 @@ exports[`RoomView > video rooms > should render joined video room view 1`] = `
         class="mx_RoomView_body mx_MainSplit_call"
         data-layout="group"
         data-telegram-layout="true"
-        style="--tg-header-bottom: 0px; --tg-plates-bottom: 0px; --tg-header-block: 0px; --tg-composer-block: 0px;"
+        style="--tg-header-bottom: 0px; --tg-plates-bottom: 0px; --tg-header-block: 0px; --tg-composer-height: 0px; --tg-composer-block: 0px;"
       >
         <header
           class="_flex_4dswl_9 mx_RoomHeader light-panel"

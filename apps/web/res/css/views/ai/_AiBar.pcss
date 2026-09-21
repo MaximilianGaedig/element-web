@@ -1,0 +1,74 @@
+/*
+Copyright 2026 New Vector Ltd.
+
+SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only OR LicenseRef-Element-Commercial
+Please see LICENSE files in the repository root for full details.
+*/
+
+/*
+ * Asking about this chat: one line above the composer (AiBar.tsx).
+ *
+ * One line, and it stays one line. Measured before this was written: the strip was eighty-six pixels tall
+ * with two of its three buttons wrapped to double height, and the failure message was a third column of
+ * red text wedged in beside them - a hundred and thirty pixels of machinery above a forty-eight pixel
+ * composer, permanently, in every chat. So: the labels never wrap, the row scrolls sideways if it runs out
+ * of room, and a failure replaces the row instead of joining it.
+ *
+ * It floats over the conversation rather than pushing it down, because a chat that jumps every time this
+ * appears is a chat you stop reading.
+ */
+.mx_AiBar {
+    position: relative;
+    z-index: 3;
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    gap: var(--cpd-space-2x);
+    /* Sized by what is in it, centred over the composer, and never taller than one row of buttons. */
+    width: fit-content;
+    max-width: calc(100% - var(--cpd-space-8x));
+    margin: 0 auto;
+    padding: var(--cpd-space-1x) var(--cpd-space-2x);
+    border-radius: 99px;
+    background: var(--cpd-color-bg-canvas-default);
+    /* Lifted off the conversation it floats over, the way the other floating plates in this layout are. */
+    box-shadow: 0 1px 4px rgb(0 0 0 / 12%);
+    font: var(--cpd-font-body-sm-regular);
+    color: var(--cpd-color-text-secondary);
+    /* Too many buttons for the width is a scroll, never a second line. */
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+
+    &::-webkit-scrollbar {
+        display: none;
+    }
+
+    /* Element's own buttons: placed and kept on one line here, never repainted here. */
+    .mx_AiBar_button {
+        flex: 0 0 auto;
+        white-space: nowrap;
+    }
+}
+
+/* While it works, the strip says what it is doing - in the space the buttons were, at the same height. */
+.mx_AiBar_doing {
+    gap: var(--cpd-space-2x);
+    padding-inline: var(--cpd-space-3x);
+    white-space: nowrap;
+}
+
+/*
+ * A failure takes the row rather than squeezing in beside it, and can be put away: an error that outlives
+ * the moment it happened, in the one place you go to type, is an error you learn to read past.
+ */
+.mx_AiBar_failed {
+    max-width: min(32rem, calc(100% - var(--cpd-space-8x)));
+    color: var(--cpd-color-text-critical-primary);
+
+    .mx_AiBar_reason {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+}

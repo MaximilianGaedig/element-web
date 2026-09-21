@@ -1,0 +1,73 @@
+/*
+Copyright 2026 New Vector Ltd.
+
+SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only OR LicenseRef-Element-Commercial
+Please see LICENSE files in the repository root for full details.
+*/
+
+/*
+ * Drafted replies, in a row above the composer (AiReplies.tsx).
+ *
+ * One line that scrolls sideways rather than a block that wraps: a wrapping row pushes the composer down
+ * by however long the model happened to be, and a composer that moves while you are reaching for it is
+ * worse than a pill you have to scroll to.
+ *
+ * The width is the thing to get right. At twenty-two rems every draft came out exactly the same width,
+ * clipped mid-sentence, so three different suggestions looked like three identical grey stubs and the only
+ * way to tell them apart was to read the first four words. Narrower is better: a pill you can see the
+ * whole shape of, several of them on screen at once, and the difference between them visible without
+ * reading. The real fix for a draft too long to fit is a shorter draft, which is the model's job.
+ */
+.mx_AiReplies {
+    display: flex;
+    flex: 0 0 auto;
+    gap: var(--cpd-space-2x);
+    padding: var(--cpd-space-1x) var(--cpd-space-4x);
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+    /* Dragged past the end it settles on a pill, the way a row of chips should. */
+    scroll-snap-type: x proximity;
+
+    &::-webkit-scrollbar {
+        display: none;
+    }
+
+    /* Element's own button (Compound): sized and clipped here, never restyled here. */
+    .mx_AiReplies_pill {
+        flex: 0 0 auto;
+        max-width: 17rem;
+        min-width: 0;
+        /* A label is read from its beginning: centred, a long one loses its first words as well. */
+        justify-content: flex-start;
+        scroll-snap-align: start;
+    }
+
+    /*
+     * The label is its own box so that a draft too long for the pill ends in an ellipsis rather than
+     * being cut in half. It should rarely happen - a suggestion you cannot read the whole of is not a
+     * suggestion, and the fix for that is a shorter draft, which is the model's job - but when it does,
+     * the pill still reads as a beginning rather than as a fragment.
+     */
+    .mx_AiReplies_text {
+        display: block;
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    /*
+     * Being replaced: the drafts on screen answer the message before this one, so they fade rather than
+     * vanish. A row that empties and fills again drops the composer up to meet your thumb and pushes it
+     * back a second later, which is worse than a stale suggestion nobody taps.
+     */
+    &.mx_AiReplies_stale .mx_AiReplies_pill {
+        opacity: 0.4;
+    }
+
+    /* Taken: it stays in the row, faded, so the row does not reshuffle under your finger. */
+    .mx_AiReplies_pill_used {
+        opacity: 0.5;
+    }
+}
