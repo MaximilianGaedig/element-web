@@ -329,3 +329,14 @@ html[data-low-power] .mx_TgMediaViewer {
         }
     }
 }
+
+/*
+ * Tapped away: the bars go, the picture stays. Telegram does this on a phone so a photograph can be
+ * looked at without its chrome, and it is also what makes the text read off a picture reachable - a tap
+ * that closed the viewer left no way to touch the words.
+ */
+.mx_TgMediaViewer_barsHidden .mx_TgMediaViewer_chrome {
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity var(--tg-transition-standard-out);
+}

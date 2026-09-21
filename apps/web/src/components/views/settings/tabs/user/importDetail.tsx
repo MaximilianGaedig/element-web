@@ -221,6 +221,26 @@ export function NetworkImportDetail({
                 {messageShare !== undefined && <Bar value={messageShare} />}
             </div>
 
+            {open === 0 &&
+                !blocked && (
+                    // Said plainly, because "62 of 63" with nothing running is not an answer to "is it done".
+                    // What can be claimed differs by network: where the other side says how many messages a
+                    // chat holds, every one of them is accounted for; where it does not, all that can be
+                    // said is that it stopped offering older ones.
+                    <p className="mx_ImportSummary_line mx_ImportSummary_line--done">
+                        {messageShare === undefined
+                            ? _t("tg_layout|import_all_done_uncounted", {
+                                  messages: number(network.messages),
+                                  chats: number(network.chats),
+                                  network: network.network,
+                              })
+                            : _t("tg_layout|import_all_done", {
+                                  messages: number(network.countedImported),
+                                  chats: number(network.chats),
+                              })}
+                    </p>
+                )}
+
             {open > 0 && !blocked && (
                 <p className="mx_ImportSummary_line">
                     {[

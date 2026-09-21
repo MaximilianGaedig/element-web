@@ -18,6 +18,47 @@ Please see LICENSE files in the repository root for full details.
     /* Only the words take the pointer: the picture keeps its own click, which opens the viewer. */
     pointer-events: none;
 
+    /*
+     * The glyph that says this picture was read, in its corner the way iOS marks one. Pressing it shows
+     * the words it found; pressing again puts them back out of the way. Without it nothing on screen
+     * says there is anything to select, which is the difference between a feature and a rumour.
+     */
+    .mx_TgLiveText_reveal {
+        position: absolute;
+        inset-block-end: var(--cpd-space-2x);
+        inset-inline-end: var(--cpd-space-2x);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 28px;
+        height: 28px;
+        padding: 0;
+        border: none;
+        border-radius: 8px;
+        background: color-mix(in srgb, var(--cpd-color-bg-canvas-default) 70%, transparent);
+        backdrop-filter: blur(12px);
+        color: var(--cpd-color-icon-primary);
+        cursor: pointer;
+        pointer-events: auto;
+
+        svg {
+            width: 18px;
+            height: 18px;
+        }
+
+        &[aria-pressed="true"] {
+            background: var(--cpd-color-bg-accent-rest);
+            color: var(--cpd-color-text-on-solid-primary);
+        }
+    }
+
+    /* Asked for: every word it read, tinted where it sits, so the reading can be seen and not guessed. */
+    &[data-revealed] .mx_TgLiveText_word {
+        border-radius: 3px;
+        background: color-mix(in srgb, var(--cpd-color-bg-accent-rest) 22%, transparent);
+        box-shadow: 0 0 0 1px color-mix(in srgb, var(--cpd-color-bg-accent-rest) 35%, transparent);
+    }
+
     .mx_TgLiveText_word {
         position: absolute;
         display: block;

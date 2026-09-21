@@ -17,6 +17,9 @@ Please see LICENSE files in the repository root for full details.
 
 import React, { type JSX, useEffect, useRef, useState } from "react";
 
+import TextIcon from "@vector-im/compound-design-tokens/assets/web/icons/text-formatting";
+
+import { _t } from "../../../languageHandler";
 import { MatrixClientPeg } from "../../../MatrixClientPeg";
 import { type Detected } from "../../../utils/detect/entities";
 import { type OcrResult, type OcrWord } from "../../../utils/detect/ocr";
@@ -71,6 +74,9 @@ function href(entity: Detected): string | undefined {
 export function TgLiveText({ eventId, roomId, source, size }: Props): JSX.Element | null {
     const [words, setWords] = useState<Placed[]>([]);
     const [codes, setCodes] = useState<FoundBarcode[]>([]);
+    // iOS keeps read text invisible until you ask for it, and marks the picture with a glyph to say
+    // there is some. Without that nothing on screen says a picture was read at all.
+    const [revealed, setRevealed] = useState(false);
     const root = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
@@ -112,7 +118,15 @@ export function TgLiveText({ eventId, roomId, source, size }: Props): JSX.Elemen
         };
     }, [eventId, roomId, source, size]);
 
-    return <Words words={words} codes={codes} elementRef={root} />;
+    return (
+        <Words
+            words={words}
+            codes={codes}
+            elementRef={root}
+            revealed={revealed}
+            onReveal={words.length ? () => setRevealed((on) => !on) : undefined}
+        />
+    );
 }
 
 /**
@@ -211,15 +225,43 @@ function Words({
     words,
     codes = NONE,
     elementRef,
+    revealed = false,
+    onReveal,
 }: {
     words: Placed[];
     /** The codes in the same picture, drawn over where they sit. */
     codes?: FoundBarcode[];
     /** The image overlay is what is watched for coming into view, so its caller holds a ref to it. */
     elementRef?: React.RefObject<HTMLDivElement | null>;
+    /** Whether the words are shown as well as selectable. */
+    revealed?: boolean;
+    /** Offered where there is text to show; absent where the picture said nothing. */
+    onReveal?: () => void;
 }): JSX.Element {
     return (
-        <div className="mx_TgLiveText" ref={elementRef} aria-hidden={words.length === 0}>
+        <div
+            className="mx_TgLiveText"
+            ref={elementRef}
+            data-revealed={revealed ? "" : undefined}
+            aria-hidden={words.length === 0}
+        >
+            {onReveal && (
+                <button
+                    type="button"
+                    className="mx_TgLiveText_reveal"
+                    aria-pressed={revealed}
+                    title={_t("timeline|read_text|action")}
+                    aria-label={_t("timeline|read_text|action")}
+                    onClick={(event) => {
+                        // The picture's own click opens the viewer; this one is about the text on it.
+                        event.stopPropagation();
+                        event.preventDefault();
+                        onReveal();
+                    }}
+                >
+                    <TextIcon />
+                </button>
+            )}
             {words.map((word) => {
                 // Two identical words can sit in one picture, so the key is where it sits, not what it says.
                 const key = `${word.left},${word.top},${word.text}`;

@@ -749,6 +749,8 @@ function TgMediaViewer({ items, index: startIndex, source, onClosed }: Props): J
     const [index, setIndex] = useState(startIndex);
     const [active, setActive] = useState(false);
     const [scale, setScale] = useState(ZOOM_INITIAL_VALUE);
+    // Telegram on a phone hides its bars when you tap the picture, and shows them again on the next tap.
+    const [barsHidden, setBarsHidden] = useState(false);
     const zoomed = scale !== ZOOM_INITIAL_VALUE;
     const rootRef = useRef<HTMLDivElement>(null);
     const moversRef = useRef<HTMLDivElement>(null);
@@ -893,6 +895,12 @@ function TgMediaViewer({ items, index: startIndex, source, onClosed }: Props): J
         // tweb onDoubleClick: a double tap zooms to 3x at the tap, or back out.
         if (!t.pinch && !t.moved && e.changedTouches.length === 1) {
             const now = Date.now();
+            // A tap is how a phone gets at the picture itself: it puts the bars away rather than
+            // throwing the picture away. Closing is the swipe down, the back gesture and the X.
+            if (!(e.target as HTMLElement).closest(".mx_TgMediaViewer_chrome, video, .mx_TgLiveText")) {
+                setBarsHidden((hidden) => !hidden);
+                c.ignoreNextClick = true;
+            }
             if (now - t.lastTap < 300) {
                 const p = e.changedTouches[0];
                 if (c.isZooming) c.resetZoom();
@@ -913,7 +921,7 @@ function TgMediaViewer({ items, index: startIndex, source, onClosed }: Props): J
             c.ignoreNextClick = false;
             return;
         }
-        if ((e.target as HTMLElement).closest(".mx_TgMediaViewer_chrome, video")) return;
+        if ((e.target as HTMLElement).closest(".mx_TgMediaViewer_chrome, video, .mx_TgLiveText")) return;
         if (c.isZooming) return;
         close();
     };
@@ -961,7 +969,7 @@ function TgMediaViewer({ items, index: startIndex, source, onClosed }: Props): J
         // oxlint-disable-next-line jsx-a11y/click-events-have-key-events
         <div
             ref={rootRef}
-            className={`mx_TgMediaViewer${active ? " mx_TgMediaViewer_active" : ""}${zoomed ? " mx_TgMediaViewer_zoomed" : ""}`}
+            className={`mx_TgMediaViewer${active ? " mx_TgMediaViewer_active" : ""}${zoomed ? " mx_TgMediaViewer_zoomed" : ""}${barsHidden ? " mx_TgMediaViewer_barsHidden" : ""}`}
             role="dialog"
             aria-modal="true"
             onClick={onClick}
