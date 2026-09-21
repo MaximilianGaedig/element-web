@@ -53,6 +53,8 @@ export interface AiNote {
         last?: string;
         /** How many of your own messages went as a writing sample, where any did. */
         style?: number;
+        /** How many pictures were sent to be looked at, where any were. */
+        pictures?: number;
         /** What it went and looked at afterwards: searches, chats read, pages fetched. */
         looked?: string[];
     };

@@ -3468,6 +3468,10 @@
             "one": "…and 1 more",
             "other": "…and %(count)s more"
         },
+        "ai_sent_pictures": {
+            "one": ", and 1 picture to look at",
+            "other": ", and %(count)s pictures to look at"
+        },
         "ai_sent_style": {
             "one": ", and 1 of your own messages as a writing sample",
             "other": ", and %(count)s of your own messages as a writing sample"

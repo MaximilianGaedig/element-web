@@ -31,6 +31,7 @@ import AccessibleButton from "../elements/AccessibleButton";
 import { useMatrixClientContext } from "../../../contexts/MatrixClientContext";
 import { ask, aiAvailable, beginAnswer } from "../../../utils/ai/ask";
 import { readable } from "../../../utils/ai/readable";
+import { picturesFor } from "../../../utils/ai/pictures";
 import { type AiNote, keepNote } from "../../../utils/ai/notes";
 import { setStreaming } from "../../../utils/ai/streaming";
 import { lookingWords } from "./TgAiNote";
@@ -76,8 +77,13 @@ export function TgAsk({ room, anchor }: Props): JSX.Element | null {
             if (!at) return;
 
             const newFrom = kind === "summary" ? unreadFrom(room, events) : undefined;
-            // Built once: what is sent is what the answer will say was sent.
-            const sending = await readable(client, room, kind === "summary" ? READ_BACK : 40);
+            // Built once: what is sent is what the answer will say was sent. A question also takes the
+            // newest pictures, for the parts of a chat that were never words (utils/ai/pictures.ts);
+            // a summary does not, because summarising a chat is not worth uploading its photographs.
+            const [sending, pictures] = await Promise.all([
+                readable(client, room, kind === "summary" ? READ_BACK : 40),
+                kind === "question" ? picturesFor(room) : Promise.resolve([]),
+            ]);
             setBusy(true);
             setFailed(undefined);
             beginAnswer();
@@ -96,6 +102,7 @@ export function TgAsk({ room, anchor }: Props): JSX.Element | null {
                         // A summary reads the chat around what was missed; a question may need the whole
                         // history, which the model goes and searches for itself.
                         messages: sending,
+                        images: pictures,
                         question:
                             kind === "summary"
                                 ? // Not a question: where to start. The earlier messages are there to be
@@ -132,6 +139,7 @@ export function TgAsk({ room, anchor }: Props): JSX.Element | null {
                     ts: Date.now(),
                     sent: {
                         messages: sending.length,
+                        pictures: pictures.length,
                         first: sending[0]?.id,
                         last: sending[sending.length - 1]?.id,
                         looked: answer.looked?.map((what) => String(what.tool)),

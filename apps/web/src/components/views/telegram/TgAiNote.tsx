@@ -157,6 +157,7 @@ export function TgAiNote({ client, roomId, note, streaming, onGone }: Props): JS
                 <div className="mx_TgAiNote_sentPanel">
                     <p className="mx_TgAiNote_sentWhat">
                         {_t("tg_layout|ai_sent_messages", { count: note.sent.messages })}
+                        {note.sent.pictures ? _t("tg_layout|ai_sent_pictures", { count: note.sent.pictures }) : null}
                         {note.sent.style ? _t("tg_layout|ai_sent_style", { count: note.sent.style }) : null}
                         {note.sent.looked?.length
                             ? _t("tg_layout|ai_sent_looked", { tools: note.sent.looked.join(", ") })

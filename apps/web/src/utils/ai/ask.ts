@@ -89,6 +89,8 @@ export async function ask(
         question?: string;
         /** The reader's own messages, when what is wanted is something written in their voice. */
         style?: string[];
+        /** Pictures to look at, as data urls: a question the words of the chat cannot answer. */
+        images?: string[];
         better?: boolean;
     },
     events: AskEvents = {},
