@@ -588,6 +588,9 @@ importers:
       browserslist:
         specifier: ^4.23.2
         version: 4.28.9
+      chrono-node:
+        specifier: ^2.10.1
+        version: 2.10.1
       classnames:
         specifier: ^2.2.6
         version: 2.5.1
@@ -648,6 +651,12 @@ importers:
       katex:
         specifier: ^0.18.0
         version: 0.18.7
+      libphonenumber-js:
+        specifier: ^1.13.13
+        version: 1.13.13
+      linkifyjs:
+        specifier: 4.3.3
+        version: 4.3.3
       lodash:
         specifier: npm:lodash-es@4.18.1
         version: lodash-es@4.18.1
@@ -7278,6 +7287,10 @@ packages:
   chromium-pickle-js@0.2.0:
     resolution: {integrity: sha512-1R5Fho+jBq0DDydt+/vHWj5KJNJCKdARKOCwZUen84I5BreWoLqRLANH1U87eJy1tiASPtMnGqJJq0ZsLoRPOw==}
 
+  chrono-node@2.10.1:
+    resolution: {integrity: sha512-tPOsBzYVAK5zth+CiHCgp5NGeqRc4mMD8FPthQ5IxkgjPWWxIFdM5odnmfw//IRAzl6C++Xy8olQW7wn5qBR1g==}
+    engines: {node: ^12.20.0 || ^14.13.1 || >=16.0.0}
+
   ci-info@4.3.1:
     resolution: {integrity: sha512-Wdy2Igu8OcBpI2pZePZ5oWjPC38tmDVx5WKUXKwlLYkA0ozo85sLsLvkBbBn/sZaSCMFOGZJ14fvW9t5/d7kdA==}
     engines: {node: '>=8'}
@@ -9467,6 +9480,9 @@ packages:
   levn@0.4.1:
     resolution: {integrity: sha512-+bT2uH4E5LGE7h/n3evcS/sQlJXCpIp6ym8OWJ5eV6+67Dsql/LaaT7qJBAt2rzfoa/5QBGBhxDix1dMt2kQKQ==}
     engines: {node: '>= 0.8.0'}
+
+  libphonenumber-js@1.13.13:
+    resolution: {integrity: sha512-hV6SmWnyQ8U1QXhhqbqYBHIStNnscG7A5XbGodgdHhf/8N5PwhYpJA5U/yHDjYwPYTd8uNGXqq416XctuvK2PA==}
 
   lie@3.3.0:
     resolution: {integrity: sha512-UaiMJzeWRlEujzAuw5LokY1L5ecNQYZKfmyZ9L7wDHb/p5etKaxXhohBcrw0EYby+G/NA52vRSN4N39dxHAIwQ==}
@@ -19379,6 +19395,8 @@ snapshots:
 
   chromium-pickle-js@0.2.0: {}
 
+  chrono-node@2.10.1: {}
+
   ci-info@4.3.1: {}
 
   ci-info@4.4.0: {}
@@ -21782,6 +21800,8 @@ snapshots:
     dependencies:
       prelude-ls: 1.2.1
       type-check: 0.4.0
+
+  libphonenumber-js@1.13.13: {}
 
   lie@3.3.0:
     dependencies:

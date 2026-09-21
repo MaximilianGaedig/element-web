@@ -6,34 +6,49 @@ Please see LICENSE files in the repository root for full details.
 */
 
 /*
- * What is worth acting on in a piece of text: links, and the times people arrange things for.
+ * What is worth acting on in a piece of text: links, phone numbers, and the times people arrange
+ * things for. The text may be a message body or whatever was read out of a picture, so this knows
+ * nothing about either.
  *
- * The text may be a message body or whatever was read out of a picture, so this knows nothing about
- * either - it takes a string and gives back what it found, with the span it found it in so a caller can
- * mark it up.
+ * All three are left to libraries that know about the world's languages and countries, because the
+ * hand-written alternative only ever knows about one: linkify for links, libphonenumber for numbers,
+ * and chrono for dates and times in the fourteen languages it speaks.
  *
- * It is deliberately conservative. A missed date costs a tap; a wrong one puts the wrong thing in
- * somebody's calendar, so anything ambiguous is left alone: a bare number is never a date, a day without
- * a time is a day rather than an appointment, and a date that has already passed this year is read as
- * next year only when the text says so.
+ * The one rule the libraries do not enforce, and this does: a wrong answer is worse than none. Chrono's
+ * *default* parser is English, and given "Treffen morgen um 18:00" it quietly matches only the time and
+ * answers today - the right hour on the wrong day. So every locale is asked, the longest match wins,
+ * and a time is offered only when the text actually named a day, which chrono marks as a certainty. A
+ * bare "18:00" in a language chrono does not speak is left alone rather than guessed at.
+ *
+ * Polish is not one of chrono's fourteen, and is the language most of these messages are written in, so
+ * it has its own parser here rather than being missed - see chronoPl.ts.
  */
 
+import { find as findLinks } from "linkifyjs";
+import type { CountryCode } from "libphonenumber-js";
+import type { ParsedResult } from "chrono-node";
+
 /** Something found in the text, with where it was found. */
-export interface DetectedEntity {
-    kind: "url" | "datetime";
+interface Found {
     /** The text as it appeared. */
     text: string;
     start: number;
     end: number;
 }
 
-export interface DetectedUrl extends DetectedEntity {
+export interface DetectedUrl extends Found {
     kind: "url";
     /** With a scheme, ready to open. */
     url: string;
 }
 
-export interface DetectedDateTime extends DetectedEntity {
+export interface DetectedPhone extends Found {
+    kind: "phone";
+    /** In international form, which is what a dialler wants. */
+    number: string;
+}
+
+export interface DetectedDateTime extends Found {
     kind: "datetime";
     /** When it means, in local time. */
     date: Date;
@@ -41,118 +56,103 @@ export interface DetectedDateTime extends DetectedEntity {
     hasTime: boolean;
 }
 
-export type Detected = DetectedUrl | DetectedDateTime;
+export type Detected = DetectedUrl | DetectedPhone | DetectedDateTime;
 
-/*
- * A URL with a scheme, or a bare host that is plainly one. Trailing punctuation is left out of the
- * match: sentences end in a full stop far more often than URLs do.
- */
-const URL_RE = /\b(?:https?:\/\/|www\.)[^\s<>"']+[^\s<>"'.,;:!?)\]}]/gi;
-
-/** 18:30, 6pm, 6:05 PM. A bare hour needs am/pm: "at 6" is as likely to be a count as a time. */
-const TIME_RE = /\b(\d{1,2})(?::(\d{2}))?\s*(am|pm)\b|\b(\d{1,2}):(\d{2})\b/gi;
-
-/** 21.09.2026, 21/09/2026, 2026-09-21, 21.09 - day first, which is how the dates here are written. */
-const DATE_RE = /\b(\d{4})-(\d{2})-(\d{2})\b|\b(\d{1,2})[./](\d{1,2})(?:[./](\d{2,4}))?\b/g;
-
-/** today, tomorrow: only ever a date when a time follows, so "tomorrow" alone stays a word. */
-const RELATIVE_RE = /\b(today|tomorrow)\b/gi;
+/** The languages chrono speaks; each is asked, because the text does not say which it is in. */
+const LOCALES = ["en", "de", "fr", "ja", "pt", "nl", "zh", "ru", "es", "uk", "it", "sv", "fi", "vi"] as const;
 
 const MINUTE = 60_000;
 
-function hasScheme(text: string): boolean {
-    return /^https?:\/\//i.test(text);
+const overlaps = (a: Found, b: Found): boolean => a.start < b.end && a.end > b.start;
+
+/**
+ * Links and email addresses, through the same library the timeline links with, so what is offered here
+ * and what is clickable in a message agree with each other.
+ */
+export function detectLinks(text: string): DetectedUrl[] {
+    return findLinks(text)
+        .filter((match) => match.type === "url" || match.type === "email")
+        .map((match) => ({
+            kind: "url" as const,
+            text: match.value,
+            start: match.start,
+            end: match.end,
+            url: match.href,
+        }));
 }
 
-/** Links, with a scheme added to a bare `www.` host so the result can be opened as it stands. */
-export function detectUrls(text: string): DetectedUrl[] {
-    return [...text.matchAll(URL_RE)].map((match) => ({
-        kind: "url",
-        text: match[0],
-        start: match.index,
-        end: match.index + match[0].length,
-        url: hasScheme(match[0]) ? match[0] : `https://${match[0]}`,
+/** The region a number written without a country code most likely belongs to. */
+function defaultCountry(): CountryCode | undefined {
+    const region = typeof navigator === "undefined" ? undefined : navigator.language.split("-")[1];
+    return region && /^[A-Za-z]{2}$/.test(region) ? (region.toUpperCase() as CountryCode) : undefined;
+}
+
+/** Phone numbers, in international form whatever shape they were written in. */
+async function detectPhones(text: string, country = defaultCountry()): Promise<DetectedPhone[]> {
+    const { findNumbers } = await import("libphonenumber-js");
+    // Without a region, only numbers carrying their own country code are found - which is the safe half
+    // of the job, since a local number with no region to read it against could belong anywhere.
+    const found = findNumbers(text, { defaultCountry: country, v2: true });
+    return found.map((match) => ({
+        kind: "phone" as const,
+        text: text.slice(match.startsAt, match.endsAt),
+        start: match.startsAt,
+        end: match.endsAt,
+        number: match.number.number,
     }));
 }
 
-interface TimeOfDay {
-    hours: number;
-    minutes: number;
-    start: number;
-    end: number;
-}
+/**
+ * Dates and times, in any of the languages chrono speaks.
+ *
+ * Every locale is asked and the longest match wins, because the wrong locale tends to match a fragment
+ * - the time alone - where the right one matches the whole phrase.
+ */
+async function detectDateTimes(text: string, now: Date): Promise<DetectedDateTime[]> {
+    const [chrono, { parsePolish }] = await Promise.all([import("chrono-node"), import("./chronoPl")]);
+    const found: DetectedDateTime[] = [];
 
-/** The first time of day in `text` at or after `from`, if it is within `within` characters of it. */
-function timeNear(text: string, from: number, within: number): TimeOfDay | undefined {
-    TIME_RE.lastIndex = 0;
-    for (const match of text.matchAll(TIME_RE)) {
-        if (match.index < from || match.index > from + within) continue;
-        const [, h12, m12, meridiem, h24, m24] = match;
-        if (meridiem) {
-            const hour = Number(h12) % 12;
-            return {
-                hours: meridiem.toLowerCase() === "pm" ? hour + 12 : hour,
-                minutes: Number(m12 ?? 0),
-                start: match.index,
-                end: match.index + match[0].length,
+    const results: ParsedResult[] = [
+        ...LOCALES.flatMap((locale) => chrono[locale].parse(text, now)),
+        ...parsePolish(text, now),
+    ];
+
+    {
+        for (const result of results) {
+            // The text has to have named a day. A time on its own would be read as today, which is
+            // exactly how a meeting ends up in somebody's calendar a day early.
+            if (!result.start.isCertain("day")) continue;
+            const entry: DetectedDateTime = {
+                kind: "datetime",
+                text: result.text,
+                start: result.index,
+                end: result.index + result.text.length,
+                date: result.start.date(),
+                hasTime: result.start.isCertain("hour"),
             };
+            const clash = found.findIndex((other) => overlaps(entry, other));
+            if (clash < 0) found.push(entry);
+            else if (entry.text.length > found[clash].text.length) found[clash] = entry;
         }
-        const hours = Number(h24);
-        const minutes = Number(m24);
-        if (hours > 23 || minutes > 59) continue;
-        return { hours, minutes, start: match.index, end: match.index + match[0].length };
     }
-    return undefined;
-}
-
-function at(base: Date, time: TimeOfDay | undefined): Date {
-    const date = new Date(base);
-    date.setHours(time?.hours ?? 0, time?.minutes ?? 0, 0, 0);
-    return date;
+    return found;
 }
 
 /**
- * Dates and times, each with the span that covers the date and its time together, so "tomorrow at 18:00"
- * is one thing rather than two.
+ * Everything worth acting on, in the order it appears.
+ *
+ * Asynchronous because the languages and the world's dialling codes are a few hundred kilobytes, which
+ * belong nowhere near the startup path: they load the first time something is looked at.
  */
-export function detectDateTimes(text: string, now: Date = new Date()): DetectedDateTime[] {
-    const found: DetectedDateTime[] = [];
-    const taken: Array<[number, number]> = [];
-    const overlaps = (start: number, end: number): boolean => taken.some(([s, e]) => start < e && end > s);
-
-    const push = (date: Date, hasTime: boolean, start: number, end: number): void => {
-        if (overlaps(start, end)) return;
-        taken.push([start, end]);
-        found.push({ kind: "datetime", text: text.slice(start, end), date, hasTime, start, end });
-    };
-
-    for (const match of text.matchAll(DATE_RE)) {
-        const [whole, isoY, isoM, isoD, d, m, y] = match;
-        const year = isoY ? Number(isoY) : y ? Number(y.length === 2 ? `20${y}` : y) : now.getFullYear();
-        const month = (isoM ? Number(isoM) : Number(m)) - 1;
-        const day = isoD ? Number(isoD) : Number(d);
-        const date = new Date(year, month, day);
-        // A date the calendar does not have - 31.02, or 13 as a month - is a number that looked like one.
-        if (date.getMonth() !== month || date.getDate() !== day) continue;
-        const time = timeNear(text, match.index + whole.length, 12);
-        push(at(date, time), !!time, match.index, time ? time.end : match.index + whole.length);
-    }
-
-    for (const match of text.matchAll(RELATIVE_RE)) {
-        const time = timeNear(text, match.index + match[0].length, 12);
-        // Without a time of day this is just a word in a sentence.
-        if (!time) continue;
-        const date = new Date(now);
-        if (match[0].toLowerCase() === "tomorrow") date.setDate(date.getDate() + 1);
-        push(at(date, time), true, match.index, time.end);
-    }
-
-    return found.sort((a, b) => a.start - b.start);
-}
-
-/** Everything worth acting on, in the order it appears. */
-export function detectEntities(text: string, now: Date = new Date()): Detected[] {
-    return [...detectUrls(text), ...detectDateTimes(text, now)].sort((a, b) => a.start - b.start);
+export async function detectEntities(
+    text: string,
+    { now = new Date(), country }: { now?: Date; country?: CountryCode } = {},
+): Promise<Detected[]> {
+    const [phones, dates] = await Promise.all([detectPhones(text, country), detectDateTimes(text, now)]);
+    const links = detectLinks(text);
+    // A number that is part of a link is part of the link, not something to ring.
+    const callable = phones.filter((phone) => !links.some((link) => overlaps(phone, link)));
+    return [...links, ...callable, ...dates].sort((a, b) => a.start - b.start);
 }
 
 /**

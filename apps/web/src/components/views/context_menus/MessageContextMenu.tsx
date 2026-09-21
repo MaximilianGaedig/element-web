@@ -59,7 +59,7 @@ import { Action } from "../../../dispatcher/actions";
 import { type RoomPermalinkCreator } from "../../../utils/permalinks/Permalinks";
 import { type ButtonEvent } from "../elements/AccessibleButton";
 import { copyPlaintext, getSelectedText } from "../../../utils/strings";
-import { type DetectedDateTime, detectDateTimes, icsForEvent } from "../../../utils/detect/entities";
+import { type Detected, type DetectedDateTime, detectEntities, icsForEvent } from "../../../utils/detect/entities";
 import { hasThumbnail } from "../../../utils/telegram/mediaThumbnail";
 import { MediaEventHelper } from "../../../utils/MediaEventHelper";
 import ContextMenu, { toRightOf, type MenuProps } from "../../structures/ContextMenu";
@@ -146,6 +146,8 @@ interface IState {
     canRedact: boolean;
     canPin: boolean;
     reactionPickerDisplayed: boolean;
+    /** The first time the message names, once the languages have been read in. */
+    when?: DetectedDateTime;
 }
 
 export default class MessageContextMenu extends React.Component<IProps, IState> {
@@ -164,6 +166,8 @@ export default class MessageContextMenu extends React.Component<IProps, IState> 
         };
     }
 
+    private unmounted = false;
+
     public componentDidMount(): void {
         MatrixClientPeg.safeGet().on(RoomMemberEvent.PowerLevel, this.checkPermissions);
 
@@ -172,9 +176,25 @@ export default class MessageContextMenu extends React.Component<IProps, IState> 
         this.props.mxEvent.on(MatrixEventEvent.Status, this.checkPermissions);
 
         this.checkPermissions();
+        this.findWhen();
+    }
+
+    /*
+     * A message that names a time offers to put it in the calendar. Reading it takes the parsers for
+     * fourteen languages, which are fetched on demand rather than kept on the startup path, so the
+     * entry appears a moment after the menu does - and only for a message that has one.
+     */
+    private findWhen(): void {
+        const body = this.props.mxEvent.getContent().body;
+        if (typeof body !== "string" || !body) return;
+        void detectEntities(body).then((found: Detected[]) => {
+            const when = found.find((entity) => entity.kind === "datetime");
+            if (when && !this.unmounted) this.setState({ when });
+        });
     }
 
     public componentWillUnmount(): void {
+        this.unmounted = true;
         const cli = MatrixClientPeg.get();
         if (cli) {
             cli.removeListener(RoomMemberEvent.PowerLevel, this.checkPermissions);
@@ -554,10 +574,6 @@ export default class MessageContextMenu extends React.Component<IProps, IState> 
             />
         );
 
-        // A message that suggests a time offers to put it in the calendar; the first one, since a menu
-        // with an entry per date in a long message would be worse than none.
-        const body = mxEvent.getContent().body;
-        const [when] = typeof body === "string" ? detectDateTimes(body) : [];
         // Text trapped in a picture is worth offering to read; a message's own text already is text.
         const readTextButton = hasThumbnail(mxEvent) && (
             <IconizedContextMenuOption
@@ -567,6 +583,9 @@ export default class MessageContextMenu extends React.Component<IProps, IState> 
             />
         );
 
+        // Only the first time a message names: a menu with an entry per date in a long one would be
+        // worse than no entry at all.
+        const when = this.state.when;
         const addToCalendarButton = when && (
             <IconizedContextMenuOption
                 icon={<CalendarIcon />}

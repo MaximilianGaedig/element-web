@@ -11,7 +11,7 @@ Please see LICENSE files in the repository root for full details.
  * thing it means rather than something to retype.
  */
 
-import React, { type JSX, useEffect, useMemo, useState } from "react";
+import React, { type JSX, useEffect, useState } from "react";
 
 import { _t } from "../../../languageHandler";
 import BaseDialog from "./BaseDialog";
@@ -51,7 +51,18 @@ export default function ReadTextDialog({ read, onFinished }: Props): JSX.Element
         };
     }, [read]);
 
-    const entities = useMemo(() => (result ? detectEntities(result.text) : []), [result]);
+    // The languages and dialling codes load with the detector, so what it found arrives after the text.
+    const [entities, setEntities] = useState<Detected[]>([]);
+    useEffect(() => {
+        if (!result) return;
+        let cancelled = false;
+        void detectEntities(result.text).then((found) => {
+            if (!cancelled) setEntities(found);
+        });
+        return () => {
+            cancelled = true;
+        };
+    }, [result]);
 
     return (
         <BaseDialog title={_t("timeline|read_text|title")} onFinished={onFinished} className="mx_ReadTextDialog">
@@ -72,6 +83,16 @@ export default function ReadTextDialog({ read, onFinished }: Props): JSX.Element
                                     element="a"
                                     onClick={null}
                                     {...{ href: entity.url, target: "_blank", rel: "noreferrer noopener" }}
+                                >
+                                    {entity.text}
+                                </AccessibleButton>
+                            ) : entity.kind === "phone" ? (
+                                <AccessibleButton
+                                    key={`${entity.start}`}
+                                    kind="primary_outline"
+                                    element="a"
+                                    onClick={null}
+                                    {...{ href: `tel:${entity.number}` }}
                                 >
                                     {entity.text}
                                 </AccessibleButton>
