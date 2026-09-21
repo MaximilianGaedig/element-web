@@ -43,6 +43,7 @@ import PopOutIcon from "@vector-im/compound-design-tokens/assets/web/icons/pop-o
 import { EditMessageComposerWrapper } from "../rooms/EditMessageComposerWrapper";
 import { ModuleApi } from "../../../modules/Api";
 import BridgeButtons from "./BridgeButtons";
+import { DetectedActions } from "./DetectedActions";
 import { isTelegramLayout } from "../../../utils/telegram/telegramLayout";
 import { TgWebPage } from "../telegram/TgWebPage";
 
@@ -344,6 +345,9 @@ export function TextualBodyFactory(props: Readonly<IBodyProps>): JSX.Element {
                         <MediaPreviewGroupPreview vm={mediaPreviewVm} />
                     )}
                     <BridgeButtons mxEvent={props.mxEvent} inhibitInteraction={props.inhibitInteraction} />
+                    {/* Fork: what the message asks of you - a time to put in the calendar, a number to
+                        ring - offered under it rather than hidden in a menu. */}
+                    {!props.inhibitInteraction && <DetectedActions mxEvent={props.mxEvent} />}
                 </>
             }
             className={getTextualBodyClassName(content.msgtype as MsgType | undefined)}
