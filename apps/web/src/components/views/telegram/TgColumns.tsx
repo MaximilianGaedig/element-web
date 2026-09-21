@@ -46,6 +46,7 @@ import {
     visualLeftWidth,
 } from "../../../utils/telegram/tgLayout/columnWidths";
 import { ScreenSize, useScreenSize, viewportWidth } from "../../../utils/telegram/tgLayout/mediaSizes";
+import { useDocumentAttribute } from "../../../utils/telegram/tgLayout/documentAttribute";
 import {
     beginSwipeBack,
     moveSwipeBack,
@@ -268,29 +269,15 @@ export function TgColumns({
     }, [handheld]);
 
     // Overlays rendered outside this tree (dialogs) follow the tier too.
-    useEffect(() => {
-        const root = document.documentElement;
-        root.setAttribute(SCREEN_ATTRIBUTE, screen);
-        return () => root.removeAttribute(SCREEN_ATTRIBUTE);
-    }, [screen]);
+    useDocumentAttribute(SCREEN_ATTRIBUTE, screen);
 
     // The bubble tail is drawn in CSS, so the choice just has to reach the document.
-    const tail = useSettingValue("bubbleTail");
-    useEffect(() => {
-        const root = document.documentElement;
-        root.setAttribute(TAIL_ATTRIBUTE, tail);
-        return () => root.removeAttribute(TAIL_ATTRIBUTE);
-    }, [tail]);
+    useDocumentAttribute(TAIL_ATTRIBUTE, useSettingValue("bubbleTail"));
 
     // The frosted panels are drawn by the GPU on every frame behind them, which is most of the
     // graphics work while scrolling; turning them off leaves plain panels (see _TgBase.pcss).
     const glass = useSettingValue("glassEffects");
-    useEffect(() => {
-        const root = document.documentElement;
-        if (glass) root.removeAttribute(NO_GLASS_ATTRIBUTE);
-        else root.setAttribute(NO_GLASS_ATTRIBUTE, "true");
-        return () => root.removeAttribute(NO_GLASS_ATTRIBUTE);
-    }, [glass]);
+    useDocumentAttribute(NO_GLASS_ATTRIBUTE, glass ? undefined : "true");
 
     // A blurred panel forces everything moving beneath it to be drawn again each frame, which is
     // most of the cost of a scroll. So the blur pauses while anything scrolls and returns once it

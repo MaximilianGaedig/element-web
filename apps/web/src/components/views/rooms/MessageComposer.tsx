@@ -594,7 +594,10 @@ export class MessageComposer extends React.Component<IProps, IState> {
     private onRecordStartEndClick = (): void => {
         void this.voiceRecordingButton.current?.onRecordStartEndClick();
 
-        if (this.context.narrow) {
+        // On a narrow screen the voice button lives inside the overflow menu, so recording closes it.
+        // Toggling regardless *opened* that menu wherever the button is its own control, which is where
+        // the Telegram layout puts it: pressing the microphone brought up the attachment drawer.
+        if (this.context.narrow && this.state.isMenuOpen) {
             this.toggleButtonMenu();
         }
     };
