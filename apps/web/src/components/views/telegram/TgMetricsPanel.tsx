@@ -92,18 +92,22 @@ export function TgMetricsPanel(): JSX.Element | null {
 
     useEffect(() => {
         if (!enabled) return;
-        const update = (): void => setMetrics(readMetrics());
+        // Read through a local, as viewportHeight.ts does: these are the browser's own numbers, which is
+        // the one thing UIStore cannot stand in for here.
+        const win: Window = window;
+        const visual = win.visualViewport;
+        const update = (): void => setMetrics(readMetrics(win));
         update();
         // Everything here changes with the viewport, the keyboard, or a re-render that writes the blocks.
-        const timer = window.setInterval(update, 500);
-        window.addEventListener("resize", update);
-        window.visualViewport?.addEventListener("resize", update);
-        window.visualViewport?.addEventListener("scroll", update);
+        const timer = win.setInterval(update, 500);
+        win.addEventListener("resize", update);
+        visual?.addEventListener("resize", update);
+        visual?.addEventListener("scroll", update);
         return () => {
-            window.clearInterval(timer);
-            window.removeEventListener("resize", update);
-            window.visualViewport?.removeEventListener("resize", update);
-            window.visualViewport?.removeEventListener("scroll", update);
+            win.clearInterval(timer);
+            win.removeEventListener("resize", update);
+            visual?.removeEventListener("resize", update);
+            visual?.removeEventListener("scroll", update);
         };
     }, [enabled]);
 
