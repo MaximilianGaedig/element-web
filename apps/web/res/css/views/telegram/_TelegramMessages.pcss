@@ -93,6 +93,16 @@ Please see LICENSE files in the repository root for full details.
         display: inline;
     }
 
+    /*
+     * Bodies that are a row rather than a paragraph - a deleted message, one that could not be
+     * decrypted - keep the time's width free at their end. The floated copy above cannot do it for
+     * them: a float has to share a line box with text, and these are a flex row of icon and label, so
+     * without this the time sits on top of "Message deleted".
+     */
+    :is(.mx_RedactedBody, .mx_DecryptionFailureBody) {
+        padding-inline-end: calc(var(--TgTime-width, 0px) + 0.1875rem);
+    }
+
     /* Files and voice/audio players: no text to share a line with, so the time gets its own row. */
     .mx_MediaBody {
         padding-inline-end: var(--cpd-space-3x) !important;
