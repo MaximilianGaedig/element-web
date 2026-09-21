@@ -738,6 +738,9 @@ importers:
       tesseract.js:
         specifier: ^7.0.0
         version: 7.0.0
+      tesseract.js-core:
+        specifier: ^7.0.0
+        version: 7.0.0
       ua-parser-js:
         specifier: 1.0.40
         version: 1.0.40

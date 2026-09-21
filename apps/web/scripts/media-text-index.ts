@@ -31,7 +31,7 @@ Please see LICENSE files in the repository root for full details.
  *   whisper-cpp and ffmpeg, for voice messages - `nix shell nixpkgs#whisper-cpp nixpkgs#ffmpeg`
  * Pictures need nothing: the engine is this app's own, from node_modules.
  *
- *   MATRIX_TOKEN=… node scripts/media-text-index.ts --server https://matrix.example --room '!a:b'
+ *   MATRIX_TOKEN=… node apps/web/scripts/media-text-index.ts --server https://matrix.example --room '!a:b'
  *
  * With no --room it works through every room the account is in. It can be stopped and started: what it
  * has done is on the server.
@@ -192,9 +192,7 @@ async function canTranscribe(): Promise<boolean> {
 
 const transcribing = !PICTURES_ONLY && (await canTranscribe());
 if (!transcribing) {
-    console.log(
-        PICTURES_ONLY ? "Pictures only, as asked." : "No whisper-cpp, ffmpeg or WHISPER_MODEL: pictures only.",
-    );
+    console.log(PICTURES_ONLY ? "Pictures only, as asked." : "No whisper-cpp, ffmpeg or WHISPER_MODEL: pictures only.");
 }
 
 const pause = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));

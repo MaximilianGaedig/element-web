@@ -64,13 +64,6 @@ async function getWorker(): Promise<Worker> {
     return worker;
 }
 
-/** Stops the worker and forgets it, so its memory goes back when the session is done reading. */
-export async function stopOcr(): Promise<void> {
-    const running = worker;
-    worker = undefined;
-    await running?.then((w) => w.terminate()).catch(() => {});
-}
-
 /**
  * The text in an image, or undefined when there is none worth offering.
  *

@@ -60,11 +60,6 @@ async function getTranscriber(): Promise<Transcriber> {
     return transcriber;
 }
 
-/** Lets the model's memory go once a session is done asking for transcripts. */
-export function forgetTranscriber(): void {
-    transcriber = undefined;
-}
-
 /**
  * The audio as whisper wants it: one channel at 16 kHz.
  *
