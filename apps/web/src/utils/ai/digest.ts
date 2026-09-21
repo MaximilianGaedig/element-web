@@ -79,7 +79,9 @@ export async function digestMessages(client: MatrixClient, chats: UnreadChat[]):
         if (!body) continue;
         out.push({
             id: event.getId()!,
-            sender: `${room.name} / ${event.sender?.name ?? event.getSender() ?? "?"}`,
+            sender: event.sender?.name ?? event.getSender() ?? "?",
+            // Which conversation this is, so a dozen of them do not read as one.
+            chat: room.name,
             senderId: event.getSender(),
             avatar: event.sender?.getMxcAvatarUrl(),
             mine: event.getSender() === client.getSafeUserId(),

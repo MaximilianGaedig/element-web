@@ -42,6 +42,8 @@ export interface AskMessage {
     new?: boolean;
     /** Whether the reader said it. Which side of a conversation they are on is not guessable from names. */
     mine?: boolean;
+    /** Which chat it came from, where several are being read at once: a digest is not one conversation. */
+    chat?: string;
 }
 
 /** What comes back once it has finished. */
