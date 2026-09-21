@@ -21,7 +21,7 @@ import { logger } from "matrix-js-sdk/src/logger";
 import SdkConfig from "../../SdkConfig";
 
 /** What it can be asked for. */
-export type AskKind = "summary" | "question" | "replies" | "digest";
+export type AskKind = "summary" | "question" | "replies" | "digest" | "questions";
 
 /** A message as the model is given it: an id it can cite, who said it, when, and the words. */
 export interface AskMessage {
@@ -48,6 +48,8 @@ export interface AskMessage {
 export interface Answer {
     /** Messages to send, where what was asked for was drafts rather than an answer. */
     drafts?: string[];
+    /** The open questions of a chat, answered: each one belongs under the message that asked it. */
+    answers?: Array<{ id: string; question: string; answer: string; cites: string[] }>;
     /** Where this ask was kept, so it can be opened, read back and rated: a thread in your own log room. */
     kept?: { roomId: string; eventId: string };
     answer: string;

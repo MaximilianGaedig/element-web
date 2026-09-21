@@ -23,8 +23,16 @@ import { type MatrixClient, type MatrixEvent, type Room } from "matrix-js-sdk/sr
 import { ask, aiAvailable } from "./ask";
 import { readable } from "./readable";
 
-/** How much of the chat a draft needs: the turn being replied to, not the year around it. */
-const READ_BACK = 20;
+/**
+ * How much of the chat a draft needs.
+ *
+ * Twenty was the turn being replied to and little else, which is why a reply could miss what the
+ * conversation had been about for the last hour. Sixty is the evening: what was arranged, what was
+ * refused, what is still open. It costs about two thousand tokens against a context of two hundred and
+ * sixty thousand, so the limit is not the model - it is that a draft written from last month is a draft
+ * about last month.
+ */
+const READ_BACK = 60;
 /**
  * How much of your own writing is enough to write like you - and how little is enough.
  *

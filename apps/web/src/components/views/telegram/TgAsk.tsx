@@ -36,6 +36,7 @@ import { useMatrixClientContext } from "../../../contexts/MatrixClientContext";
 import { ask, aiAvailable, beginAnswer } from "../../../utils/ai/ask";
 import { readable } from "../../../utils/ai/readable";
 import { picturesFor } from "../../../utils/ai/pictures";
+import { answerQuestions } from "../../../utils/ai/questions";
 import { type AiNote, keepNote } from "../../../utils/ai/notes";
 import { setStreaming } from "../../../utils/ai/streaming";
 import { lookingWords } from "./TgAiNote";
@@ -179,6 +180,22 @@ export function TgAsk({ room, anchor }: Props): JSX.Element | null {
         return () => window.clearInterval(tick);
     }, []);
 
+    /** The chat's own open questions, answered under the messages that asked them. */
+    const findAnswers = useCallback(async (): Promise<void> => {
+        setBusy(true);
+        setFailed(undefined);
+        setDoing(_t("tg_layout|ai_reading_questions"));
+        try {
+            const found = await answerQuestions(client, room);
+            if (!found) setFailed(_t("tg_layout|ai_no_open_questions"));
+        } catch (error) {
+            setFailed(_t("tg_layout|ai_failed", { reason: String((error as Error).message).slice(0, 160) }));
+        } finally {
+            setDoing(undefined);
+            setBusy(false);
+        }
+    }, [client, room]);
+
     if (!aiAvailable()) return null;
 
     const state = doing ? "doing" : "idle";
@@ -201,6 +218,21 @@ export function TgAsk({ room, anchor }: Props): JSX.Element | null {
                     >
                         <SparkleIcon />
                         {_t("tg_layout|ai_catch_up")}
+                    </Button>
+
+                    {/*
+                        The questions in the chat that nobody answered - wondered aloud as often as asked
+                        outright. Each answer lands under the message that asked it.
+                    */}
+                    <Button
+                        kind="secondary"
+                        size="md"
+                        className="mx_TgAsk_questions"
+                        disabled={busy}
+                        onClick={() => void findAnswers()}
+                    >
+                        <SparkleIcon />
+                        {_t("tg_layout|ai_open_questions")}
                     </Button>
 
                     {/*
