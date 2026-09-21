@@ -76,6 +76,8 @@ export async function readable(client: MatrixClient, room: Room, most: number): 
         out.push({
             id: event.getId()!,
             sender: event.sender?.name ?? event.getSender() ?? "?",
+            senderId: event.getSender(),
+            avatar: event.sender?.getMxcAvatarUrl(),
             ts: new Date(event.getTs()).toISOString().slice(0, 16).replace("T", " "),
             body: body.slice(0, LONGEST),
         });

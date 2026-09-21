@@ -29,6 +29,15 @@ export interface AskMessage {
     sender: string;
     ts?: string;
     body: string;
+    /**
+     * Who said it, and what they look like.
+     *
+     * Not for the model - it never sees either - but for the log room, where each message is mirrored by
+     * a puppet wearing the sender's name and picture. A log you can recognise people in is one you will
+     * actually read.
+     */
+    senderId?: string;
+    avatar?: string;
 }
 
 /** What comes back once it has finished. */

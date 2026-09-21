@@ -80,6 +80,8 @@ export async function digestMessages(client: MatrixClient, chats: UnreadChat[]):
         out.push({
             id: event.getId()!,
             sender: `${room.name} / ${event.sender?.name ?? event.getSender() ?? "?"}`,
+            senderId: event.getSender(),
+            avatar: event.sender?.getMxcAvatarUrl(),
             ts: new Date(event.getTs()).toISOString().slice(0, 16).replace("T", " "),
             body: body.slice(0, 600),
         });

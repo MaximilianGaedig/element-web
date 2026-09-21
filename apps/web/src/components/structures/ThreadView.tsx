@@ -52,6 +52,7 @@ import { type ThreadPayload } from "../../dispatcher/payloads/ThreadPayload";
 import { ScopedRoomContextProvider } from "../../contexts/ScopedRoomContext.tsx";
 import { RoomUploadContextProvider } from "../../viewmodels/room/RoomUploadViewModel.tsx";
 import { EventPresentationContextProvider } from "../../utils/EventPresentationContextProvider";
+import { isTelegramLayout } from "../../utils/telegram/telegramLayout";
 
 interface IProps {
     room: Room;
@@ -373,7 +374,12 @@ export default class ThreadView extends React.Component<IProps, IState> {
                 );
             }
 
-            const layout = this.state.layout === Layout.Bubble ? Layout.Bubble : Layout.Group;
+            /*
+             * Fork: a thread is a timeline too, so it is laid out like one. The Telegram layout is built
+             * on bubbles, and a thread panel that stayed in the group layout while every other message in
+             * the app was a bubble looked like a different app in a drawer.
+             */
+            const layout = isTelegramLayout() || this.state.layout === Layout.Bubble ? Layout.Bubble : Layout.Group;
 
             timeline = (
                 <>
@@ -426,6 +432,9 @@ export default class ThreadView extends React.Component<IProps, IState> {
                         className={classNames("mx_ThreadView mx_ThreadPanel", {
                             mx_ThreadView_narrow: this.state.narrow,
                         })}
+                        // Fork: what the Telegram message styling hangs off, the same attribute the room
+                        // timeline carries.
+                        {...(isTelegramLayout() ? { "data-telegram-layout": "true", "data-layout": "bubble" } : {})}
                         onClose={this.props.onClose}
                         withoutScrollContainer={true}
                         header={this.renderThreadViewHeader()}
