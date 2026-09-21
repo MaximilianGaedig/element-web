@@ -20,7 +20,7 @@ import {
 
 import { type IBodyProps } from "./IBodyProps";
 import RoomContext, { TimelineRenderingType } from "../../../contexts/RoomContext";
-import { TgLiveText } from "../telegram/TgLiveText";
+import { TgLiveText, TgLiveTextVideo } from "../telegram/TgLiveText";
 import { isTelegramLayout } from "../../../utils/telegram/telegramLayout";
 import { LocalDeviceVerificationStateContext } from "../../../contexts/LocalDeviceVerificationStateContext";
 import { useMediaVisible } from "../../../hooks/useMediaVisible";
@@ -168,6 +168,15 @@ export function VideoBodyFactory({
         timelineRenderingType !== TimelineRenderingType.Pinned &&
         timelineRenderingType !== TimelineRenderingType.Search;
 
+    /*
+     * Fork: the text in the frame a video is paused at, laid over it (TgLiveTextVideo) - the same
+     * reading a picture gets, at the moment there is something still enough to read.
+     */
+    const liveText =
+        isTelegramLayout() && mediaVisible && !forExport && timelineRenderingType === TimelineRenderingType.Room ? (
+            <TgLiveTextVideo eventId={mxEvent.getId()!} video={videoRef} />
+        ) : null;
+
     return (
         <VideoBodyView
             vm={vm}
@@ -175,6 +184,7 @@ export function VideoBodyFactory({
             containerClassName="mx_MVideoBody_container"
             videoRef={videoRef}
         >
+            {liveText}
             {showFileBody ? (
                 <FileBodyFactory
                     mxEvent={mxEvent}
@@ -299,6 +309,7 @@ export function ImageBodyFactory({
         isTelegramLayout() && mediaVisible && !forExport && timelineRenderingType === TimelineRenderingType.Room ? (
             <TgLiveText
                 eventId={mxEvent.getId()!}
+                roomId={mxEvent.getRoomId()!}
                 source={sourceOfPicture}
                 size={
                     typeof info?.w === "number" && typeof info?.h === "number"

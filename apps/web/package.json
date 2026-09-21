@@ -109,7 +109,8 @@
         "tar-js": "^0.3.0",
         "tesseract.js": "^7.0.0",
         "ua-parser-js": "1.0.40",
-        "what-input": "^5.2.10"
+        "what-input": "^5.2.10",
+        "zxing-wasm": "^3.1.4"
     },
     "devDependencies": {
         "@babel/core": "^7.12.10",

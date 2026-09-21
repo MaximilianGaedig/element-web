@@ -47,4 +47,36 @@ Please see LICENSE files in the repository root for full details.
     .mx_TgLiveText_word--link {
         cursor: pointer;
     }
+
+    /*
+     * A code in the picture, marked the way iOS marks one: the code itself keeps its own outline, and
+     * what it says sits under it as something to press.
+     */
+    .mx_TgLiveText_code {
+        position: absolute;
+        display: flex;
+        align-items: flex-end;
+        justify-content: center;
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+        border: 2px solid var(--cpd-color-bg-accent-rest);
+        border-radius: 8px;
+        background: transparent;
+        cursor: pointer;
+        pointer-events: auto;
+
+        .mx_TgLiveText_code_label {
+            max-width: 100%;
+            margin-block-end: -12px;
+            padding: 2px 8px;
+            overflow: hidden;
+            border-radius: 99px;
+            background: var(--cpd-color-bg-accent-rest);
+            color: var(--cpd-color-text-on-solid-primary);
+            font: var(--cpd-font-body-xs-medium);
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+    }
 }

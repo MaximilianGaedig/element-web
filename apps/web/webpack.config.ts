@@ -689,6 +689,13 @@ export default (env: string, argv: Record<string, any>): webpack.Configuration =
                         to: path.join(__dirname, "webapp", "ocr"),
                     },
                     {
+                        // The code reader for browsers with none of their own, served by us so a
+                        // picture is read offline and never leaves the device.
+                        from: "zxing_reader.wasm",
+                        context: path.join(getPackageRoot("zxing-wasm"), "dist", "reader"),
+                        to: path.join(__dirname, "webapp", "barcode"),
+                    },
+                    {
                         // The town names the address detector checks against, one file per country, of
                         // which a reader fetches the one they are in.
                         from: "*.bloom",
