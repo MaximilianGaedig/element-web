@@ -158,7 +158,42 @@ html[data-tg-screen="mobile"] {
     }
 }
 
+/*
+ * Leaving, the same way round. exitAnimation.ts marks a closing overlay and waits for whatever this
+ * starts before React unmounts it, so a drawer slides back down instead of vanishing. Anything that is
+ * not a drawer has no rule here, and so closes at once, as it always did.
+ */
+@keyframes mx_TgDrawer_out {
+    from {
+        transform: translateY(0);
+    }
+
+    to {
+        transform: translateY(100%);
+    }
+}
+
+@keyframes mx_TgFade_out {
+    from {
+        opacity: 1;
+    }
+
+    to {
+        opacity: 0;
+    }
+}
+
 :root[data-tg-screen="mobile"] {
+    /* The menu itself carries the mark: that is the node the component hands to the exit. */
+    .mx_ContextualMenu[data-tg-closing] {
+        animation: mx_TgDrawer_out 0.2s cubic-bezier(0.4, 0, 1, 1) both;
+    }
+
+    /* The dimmed backdrop is the menu's sibling, so it is reached through their wrapper. */
+    .mx_ContextualMenu_wrapper:has(.mx_ContextualMenu[data-tg-closing]) .mx_ContextualMenu_background {
+        animation: mx_TgFade_out 0.2s ease both;
+    }
+
     .mx_Dialog_wrapper:not(.mx_Dialog_lightbox, .mx_Dialog_spinner) {
         align-items: flex-end;
 

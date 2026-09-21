@@ -28,6 +28,7 @@ import { checkInputableElement, RovingTabIndexProvider } from "../../accessibili
 import { KeyBindingAction } from "../../accessibility/KeyboardShortcuts";
 import { getKeyBindingsManager } from "../../KeyBindingsManager";
 import Modal, { ModalManagerEvent } from "../../Modal";
+import { playExit } from "../../utils/telegram/tgLayout/exitAnimation";
 
 // Shamelessly ripped off Modal.js.  There's probably a better way
 // of doing reusable widgets like dialog boxes & menus where we go and
@@ -143,8 +144,26 @@ export default class ContextMenu extends React.PureComponent<React.PropsWithChil
         this.initialFocus.focus();
     }
 
+    /*
+     * Closing, after letting the menu play its exit. React unmounts it the moment onFinished runs, which
+     * leaves CSS nothing to animate; on a handheld this menu is a drawer, and a drawer that vanishes
+     * reads as a glitch. Nothing waits longer than the animation, and a menu with none closes at once.
+     */
+    private finish = (): void => {
+        if (this.closing) return;
+        const exit = playExit(this.state.contextMenuElem);
+        if (!exit) {
+            this.props.onFinished?.();
+            return;
+        }
+        this.closing = true;
+        void exit.then(() => this.props.onFinished?.());
+    };
+
+    private closing = false;
+
     private onModalOpen = (): void => {
-        this.props.onFinished?.();
+        this.finish();
     };
 
     private collectContextMenuRect = (element: HTMLDivElement): void => {
@@ -165,28 +184,26 @@ export default class ContextMenu extends React.PureComponent<React.PropsWithChil
     };
 
     private onContextMenu = (e: React.MouseEvent): void => {
-        if (this.props.onFinished) {
-            this.props.onFinished();
+        this.finish();
 
-            e.preventDefault();
-            e.stopPropagation();
-            const x = e.clientX;
-            const y = e.clientY;
+        e.preventDefault();
+        e.stopPropagation();
+        const x = e.clientX;
+        const y = e.clientY;
 
-            // XXX: This isn't pretty but the only way to allow opening a different context menu on right click whilst
-            // a context menu and its click-guard are up without completely rewriting how the context menus work.
-            setTimeout(() => {
-                const clickEvent = new MouseEvent("contextmenu", {
-                    clientX: x,
-                    clientY: y,
-                    screenX: 0,
-                    screenY: 0,
-                    button: 0, // Left
-                    relatedTarget: null,
-                });
-                document.elementFromPoint(x, y)?.dispatchEvent(clickEvent);
-            }, 0);
-        }
+        // XXX: This isn't pretty but the only way to allow opening a different context menu on right click whilst
+        // a context menu and its click-guard are up without completely rewriting how the context menus work.
+        setTimeout(() => {
+            const clickEvent = new MouseEvent("contextmenu", {
+                clientX: x,
+                clientY: y,
+                screenX: 0,
+                screenY: 0,
+                button: 0, // Left
+                relatedTarget: null,
+            });
+            document.elementFromPoint(x, y)?.dispatchEvent(clickEvent);
+        }, 0);
     };
 
     private onContextMenuPreventBubbling = (e: React.MouseEvent): void => {
@@ -199,7 +216,7 @@ export default class ContextMenu extends React.PureComponent<React.PropsWithChil
     private onFinished = (ev: React.MouseEvent): void => {
         ev.stopPropagation();
         ev.preventDefault();
-        this.props.onFinished?.();
+        this.finish();
     };
 
     private onClick = (ev: React.MouseEvent): void => {
@@ -207,7 +224,7 @@ export default class ContextMenu extends React.PureComponent<React.PropsWithChil
         ev.stopPropagation();
 
         if (this.props.closeOnInteraction) {
-            this.props.onFinished?.();
+            this.finish();
         }
     };
 
@@ -222,7 +239,7 @@ export default class ContextMenu extends React.PureComponent<React.PropsWithChil
         // They are probably using props.focusLock along with this option as well.
         if (!this.props.managed) {
             if (action === KeyBindingAction.Escape) {
-                this.props.onFinished();
+                this.finish();
             }
             return;
         }
@@ -244,7 +261,7 @@ export default class ContextMenu extends React.PureComponent<React.PropsWithChil
                 KeyBindingAction.ArrowRight,
             ].includes(action!)
         ) {
-            this.props.onFinished();
+            this.finish();
         }
     };
 
