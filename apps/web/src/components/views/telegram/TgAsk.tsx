@@ -81,7 +81,7 @@ export function TgAsk({ room, anchor }: Props): JSX.Element | null {
             // pictures nobody has read - the ones whose text is already in the transcript stay out of it
             // (utils/ai/pictures.ts) - and a summary sends none at all.
             const [sending, pictures] = await Promise.all([
-                readable(client, room, kind === "summary" ? READ_BACK : 40),
+                readable(client, room, kind === "summary" ? READ_BACK : 40, newFrom),
                 kind === "question" ? picturesFor(client, room) : Promise.resolve([]),
             ]);
             setBusy(true);

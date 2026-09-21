@@ -38,10 +38,16 @@ export interface AskMessage {
      */
     senderId?: string;
     avatar?: string;
+    /** Whether this is one of the messages the reader has not read: what a summary is actually about. */
+    new?: boolean;
+    /** Whether the reader said it. Which side of a conversation they are on is not guessable from names. */
+    mine?: boolean;
 }
 
 /** What comes back once it has finished. */
 export interface Answer {
+    /** Messages to send, where what was asked for was drafts rather than an answer. */
+    drafts?: string[];
     /** Where this ask was kept, so it can be opened, read back and rated: a thread in your own log room. */
     kept?: { roomId: string; eventId: string };
     answer: string;

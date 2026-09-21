@@ -62,13 +62,21 @@ export async function sayable(client: MatrixClient, event: MatrixEvent): Promise
  * Media is looked up in parallel: one small request per picture against a server that usually already
  * has the answer, rather than a round trip each in turn while somebody waits.
  */
-export async function readable(client: MatrixClient, room: Room, most: number): Promise<AskMessage[]> {
+export async function readable(
+    client: MatrixClient,
+    room: Room,
+    most: number,
+    /** The first message they have not read: from there on, everything is news rather than context. */
+    newFrom?: string,
+): Promise<AskMessage[]> {
     const events = room
         .getLiveTimeline()
         .getEvents()
         .filter((event) => event.getType() === "m.room.message" && !event.isRedacted())
         .slice(-most);
     const lines = await Promise.all(events.map((event) => sayable(client, event)));
+    const from = newFrom ? events.findIndex((event) => event.getId() === newFrom) : -1;
+    const me = client.getSafeUserId();
     const out: AskMessage[] = [];
     for (const [at, event] of events.entries()) {
         const body = lines[at];
@@ -80,6 +88,8 @@ export async function readable(client: MatrixClient, room: Room, most: number): 
             avatar: event.sender?.getMxcAvatarUrl(),
             ts: new Date(event.getTs()).toISOString().slice(0, 16).replace("T", " "),
             body: body.slice(0, LONGEST),
+            new: from >= 0 && at >= from,
+            mine: event.getSender() === me,
         });
     }
     return out;

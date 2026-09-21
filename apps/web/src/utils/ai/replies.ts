@@ -34,6 +34,27 @@ const LONGEST = 240;
 /** Drafts already asked for, by the message they reply to: a chat re-entered costs nothing. */
 const known = new Map<string, string[]>();
 
+/**
+ * And kept where a reload cannot lose them.
+ *
+ * Seventeen requests for ten chats in one afternoon, because the map above lives for as long as the page
+ * does and a phone reloads the page all day. Room account data is private to the reader, syncs to their
+ * other devices and costs nothing to read, so a chat drafted on the phone is already drafted on the
+ * laptop.
+ */
+const KEPT = "im.mxg.ai_replies";
+
+interface Kept {
+    /** The message the drafts reply to: different message, different drafts. */
+    anchor: string;
+    drafts: string[];
+}
+
+function fromRoom(room: Room, anchor: string): string[] | undefined {
+    const kept = room.getAccountData(KEPT as never)?.getContent<Kept>();
+    return kept?.anchor === anchor ? kept.drafts : undefined;
+}
+
 /** A draft chosen somewhere the composer was not: taken by that room's composer when it appears. */
 const waitingDraft = new Map<string, string>();
 
@@ -87,21 +108,23 @@ export async function repliesFor(client: MatrixClient, room: Room): Promise<stri
     const to = waitingOn(room, client.getSafeUserId());
     const at = to?.getId();
     if (!at) return [];
-    const had = known.get(at);
+    const had = known.get(at) ?? fromRoom(room, at);
     if (had) return had;
+
+    const messages = await readable(client, room, READ_BACK);
+    // Nothing said is nothing to reply to: drafting from an empty chat spends a request on a shrug.
+    if (!messages.length) return [];
 
     // Claimed before it is asked for, so two callers at once ask once.
     known.set(at, []);
     try {
-        const answer = await ask(client, {
-            kind: "replies",
-            messages: await readable(client, room, READ_BACK),
-            style: styleOf(client, room),
-        });
-        const suggested = drafts(answer.answer);
+        const answer = await ask(client, { kind: "replies", messages, style: styleOf(client, room) });
+        const suggested = answer.drafts?.slice(0, MOST) ?? drafts(answer.answer);
         known.set(at, suggested);
+        // `as never` the way notes.ts does it: the typed map knows only the event types upstream defines.
+        void client.setRoomAccountData(room.roomId, KEPT as never, { anchor: at, drafts: suggested } as never);
         return suggested;
-    } catch (error) {
+    } catch {
         known.delete(at);
         return [];
     }
@@ -110,18 +133,33 @@ export async function repliesFor(client: MatrixClient, room: Room): Promise<stri
 /** What is already known, without asking for anything: what a second mount should show at once. */
 export function repliesKnown(client: MatrixClient, room: Room): string[] {
     const at = waitingOn(room, client.getSafeUserId())?.getId();
-    return at ? (known.get(at) ?? []) : [];
+    return at ? (known.get(at) ?? fromRoom(room, at) ?? []) : [];
 }
 
-/** How you write, in this chat: your own messages, newest last, as many as are worth sending. */
+/**
+ * How you write: your own messages, newest last, from this chat and then from the others.
+ *
+ * This chat first, because how somebody writes to their mother is not how they write to a client - but a
+ * chat you have just opened holds a screenful of somebody else's messages and often none of yours, which
+ * is why the drafts almost never had a voice to copy. The rest of the rooms make up the difference.
+ */
 function styleOf(client: MatrixClient, room: Room): string[] {
     const me = client.getSafeUserId();
     const mine: string[] = [];
-    const events = room.getLiveTimeline().getEvents();
-    for (let at = events.length - 1; at >= 0 && mine.length < STYLE; at--) {
-        const body = events[at].getSender() === me ? text(events[at]) : undefined;
-        // Only what you typed: a line long enough to have a voice in it.
-        if (body && body.length > 1) mine.push(body.slice(0, 400));
+    const take = (from: Room): void => {
+        const events = from.getLiveTimeline().getEvents();
+        for (let at = events.length - 1; at >= 0 && mine.length < STYLE; at--) {
+            const body = events[at].getSender() === me ? text(events[at]) : undefined;
+            // Only what you typed: a line long enough to have a voice in it.
+            if (body && body.length > 1) mine.push(body.slice(0, 400));
+        }
+    };
+    take(room);
+    if (mine.length < STYLE) {
+        for (const other of client.getVisibleRooms()) {
+            if (other.roomId === room.roomId || mine.length >= STYLE) continue;
+            take(other);
+        }
     }
     return mine.reverse();
 }

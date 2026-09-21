@@ -3477,7 +3477,6 @@
             "other": ", and %(count)s of your own messages as a writing sample"
         },
         "ai_thinking": "Thinking…",
-        "ai_unread_from": "Summarise what is new, starting at message %(id)s. Everything before it is context you may use but should not report.",
         "ai_unsure": "This may not be the whole answer — what it found did not cover it.",
         "ai_was_bad": "This answer was not good",
         "ai_was_good": "This answer was good",
