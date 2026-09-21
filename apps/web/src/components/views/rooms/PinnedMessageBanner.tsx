@@ -31,6 +31,7 @@ import { EventPreviewViewModel } from "../../../viewmodels/room/timeline/event-t
 import { useSettingValue } from "../../../hooks/useSettings";
 import { TgPinnedPlate } from "../telegram/TgPinnedMessage";
 import { useMediaThumbnail } from "../../../utils/telegram/mediaThumbnail";
+import { syncPinnedToScroll } from "../../../utils/telegram/tgLayout/pinnedScrollSync";
 
 /**
  * The props for the {@link PinnedMessageBanner} component.
@@ -71,12 +72,33 @@ export function PinnedMessageBanner({ room, permalinkCreator }: PinnedMessageBan
     // Telegram shows a cover beside the pinned message when it is a photo, a video or a sticker.
     const pinnedThumbnail = useMediaThumbnail(telegramLayout ? pinnedEvent : undefined);
 
+    /*
+     * The plate follows the timeline: scrolling back through a chat walks it back through its pins.
+     * A click jumps through them itself and scrolls the timeline to match, so the sync stands back
+     * until that has settled - otherwise the scroll it causes would immediately choose again.
+     */
+    const following = useRef(0);
+    useEffect(() => {
+        if (!telegramLayout || pinnedEvents.length < 2) return;
+        const scroller = document.querySelector<HTMLElement>(".mx_RoomView_body .mx_ScrollPanel");
+        if (!scroller) return;
+        return syncPinnedToScroll(
+            scroller,
+            (eventId) => room.findEventById(eventId)?.getTs(),
+            () => pinnedEvents.map((event) => event.getTs()),
+            setCurrentEventIndex,
+            () => Date.now() < following.current,
+        );
+    }, [telegramLayout, pinnedEvents, room]);
+
     if (!pinnedEvent) return null;
 
     const shouldUseMessageEvent = pinnedEvent.isRedacted() || pinnedEvent.isDecryptionFailure();
 
     const onBannerClick = (): void => {
         PosthogTrackers.trackInteraction("PinnedMessageBannerClick");
+        // Long enough for the jump's own scrolling to finish (tweb locks the sync over the same stretch).
+        following.current = Date.now() + 1000;
 
         // Scroll to the pinned message
         dis.dispatch<ViewRoomPayload>({
