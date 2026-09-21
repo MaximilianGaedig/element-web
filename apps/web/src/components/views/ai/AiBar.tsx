@@ -22,7 +22,7 @@ Please see LICENSE files in the repository root for full details.
  * happening while it happens.
  */
 
-import React, { type JSX, useCallback, useEffect, useRef, useState } from "react";
+import React, { type JSX, type RefObject, useCallback, useEffect, useRef, useState } from "react";
 import { type MatrixEvent, type Room } from "matrix-js-sdk/src/matrix";
 import AiIcon from "@vector-im/compound-design-tokens/assets/web/icons/ai";
 import CloseIcon from "@vector-im/compound-design-tokens/assets/web/icons/close";
@@ -73,14 +73,13 @@ const nowTyped = (): string => (document.querySelector(COMPOSER)?.textContent ??
  * wake-up per tick forever - and it still missed the clear after sending, which happens without an input
  * event because the composer empties itself. An observer sees both, and sees them at once.
  */
-function useComposerText(roomId: string): string {
+function useComposerText(roomId: string, within: RefObject<HTMLElement | null>): string {
     const [typed, setTyped] = useState("");
     useEffect(() => {
         setTyped(nowTyped());
         let watched: Element | undefined;
         const changed = new MutationObserver(() => setTyped(nowTyped()));
         const attach = (): void => {
-            // Cheap enough to run on any mutation: only a disconnected node costs a query.
             if (watched?.isConnected) return;
             const node = document.querySelector(COMPOSER) ?? undefined;
             if (node === watched) return;
@@ -89,15 +88,24 @@ function useComposerText(roomId: string): string {
             if (watched) changed.observe(watched, { characterData: true, childList: true, subtree: true });
             setTyped(nowTyped());
         };
-        // The composer itself comes and goes - joining a room, switching to one, opening a thread.
+        /*
+         * The composer itself comes and goes - joining a room, switching to one - so something has to
+         * notice when the node being watched is replaced.
+         *
+         * Only the room body, and only its own children. Watching the whole document for that would be a
+         * callback for every node the timeline adds or removes while it is scrolled, which is far more
+         * work than the quarter-second poll this replaced. The composer is a child of the body (see
+         * TgChatChrome, which measures it there), so this sees it arrive and sees nothing else.
+         */
+        const body = within.current?.closest(".mx_RoomView_body");
         const around = new MutationObserver(attach);
-        around.observe(document.body, { childList: true, subtree: true });
+        if (body) around.observe(body, { childList: true });
         attach();
         return () => {
             changed.disconnect();
             around.disconnect();
         };
-    }, [roomId]);
+    }, [roomId, within]);
     return typed;
 }
 
@@ -114,7 +122,9 @@ export function AiBar({ room, anchor }: Props): JSX.Element | null {
     /** What the model is doing right now, said in the strip while it does it. */
     const [doing, setDoing] = useState<string>();
     const abort = useRef<AbortController>(undefined);
-    const typed = useComposerText(room.roomId);
+    /** Where this strip is, which is how it finds the composer it is sitting above. */
+    const here = useRef<HTMLDivElement>(null);
+    const typed = useComposerText(room.roomId, here);
 
     // Every way of asking fails the same way, and clears the last failure before it tries again.
     const attempt = useCallback(async (what: () => Promise<void>): Promise<void> => {
@@ -222,7 +232,7 @@ export function AiBar({ room, anchor }: Props): JSX.Element | null {
 
     if (doing) {
         return (
-            <div className="mx_AiBar mx_AiBar_doing" aria-live="polite">
+            <div ref={here} className="mx_AiBar mx_AiBar_doing" aria-live="polite">
                 <AiIcon className="mx_Ai_mark" />
                 {doing}
             </div>
@@ -231,7 +241,7 @@ export function AiBar({ room, anchor }: Props): JSX.Element | null {
 
     if (failed) {
         return (
-            <div className="mx_AiBar mx_AiBar_failed" role="status">
+            <div ref={here} className="mx_AiBar mx_AiBar_failed" role="status">
                 <span className="mx_AiBar_reason">{failed}</span>
                 <IconButton size="20px" tooltip={_t("action|dismiss")} onClick={() => setFailed(undefined)}>
                     <CloseIcon />
@@ -241,7 +251,7 @@ export function AiBar({ room, anchor }: Props): JSX.Element | null {
     }
 
     return (
-        <div className="mx_AiBar">
+        <div ref={here} className="mx_AiBar">
             {/* One mark for the strip rather than one on every button: three of the same icon in a row
                 says nothing three times. */}
             <AiIcon className="mx_Ai_mark" aria-hidden />
