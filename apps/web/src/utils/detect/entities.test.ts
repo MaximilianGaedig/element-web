@@ -99,6 +99,18 @@ describe("phone numbers", () => {
     });
 });
 
+describe("addresses", () => {
+    it("offers a place to look up on a map", async () => {
+        const found = (await at("spotkajmy się na ul. Marszałkowska 12")).find((e) => e.kind === "address");
+        expect(found?.text).toBe("ul. Marszałkowska 12");
+        expect(found?.url).toContain("openstreetmap.org");
+    });
+
+    it("does not ring a house number", async () => {
+        expect((await at("Hauptstraße 5, 10115 Berlin")).filter((e) => e.kind === "phone")).toEqual([]);
+    });
+});
+
 describe("everything together", () => {
     it("returns what it found in the order it appears", async () => {
         const found = await at("tomorrow at 9:00, see https://example.com");

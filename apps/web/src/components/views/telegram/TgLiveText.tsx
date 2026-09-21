@@ -48,7 +48,7 @@ function place(result: OcrResult, entities: Detected[]): Placed[] {
 }
 
 function href(entity: Detected): string | undefined {
-    if (entity.kind === "url") return entity.url;
+    if (entity.kind === "url" || entity.kind === "address") return entity.url;
     if (entity.kind === "phone") return `tel:${entity.number}`;
     return undefined;
 }

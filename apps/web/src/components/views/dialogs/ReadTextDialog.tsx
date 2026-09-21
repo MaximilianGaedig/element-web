@@ -76,7 +76,8 @@ export default function ReadTextDialog({ read, onFinished }: Props): JSX.Element
                             {_t("action|copy")}
                         </AccessibleButton>
                         {entities.map((entity) =>
-                            entity.kind === "url" ? (
+                            // A link and an address are both somewhere to go; a number is somewhere to ring.
+                            entity.kind === "url" || entity.kind === "address" ? (
                                 <AccessibleButton
                                     key={`${entity.start}`}
                                     kind="primary_outline"

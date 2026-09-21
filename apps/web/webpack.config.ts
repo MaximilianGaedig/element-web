@@ -688,6 +688,13 @@ export default (env: string, argv: Record<string, any>): webpack.Configuration =
                         context: path.join(getPackageRoot("@tesseract.js-data/eng"), "4.0.0_best_int"),
                         to: path.join(__dirname, "webapp", "ocr"),
                     },
+                    {
+                        // The town names the address detector checks against, one file per country, of
+                        // which a reader fetches the one they are in.
+                        from: "*.bloom",
+                        context: path.resolve(__dirname, "res/locality"),
+                        to: path.join(__dirname, "webapp", "locality", "[name][ext]"),
+                    },
                     // Mobile guide assets
                     {
                         from: "assets/**",

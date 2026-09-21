@@ -7,7 +7,10 @@ Please see LICENSE files in the repository root for full details.
 
 /*
  * What a message is asking you to do, under the message: the time somebody suggested, offered as a
- * calendar entry, and a phone number, offered as a call.
+ * calendar entry; a phone number, offered as a call; an address, offered as a map.
+ *
+ * This runs on messages whoever sent them, including your own: what you wrote is as likely to be the
+ * arrangement as what you were told, and a time you proposed yourself is a time you meant to keep.
  *
  * Links are left out on purpose - they are already underlined and clickable where they are written, and
  * a chip repeating them would be noise. A message that names nothing shows nothing at all, which is
@@ -22,13 +25,22 @@ import React, { type JSX, useEffect, useState } from "react";
 import { type MatrixEvent } from "matrix-js-sdk/src/matrix";
 import CalendarIcon from "@vector-im/compound-design-tokens/assets/web/icons/calendar";
 import CallIcon from "@vector-im/compound-design-tokens/assets/web/icons/voice-call";
+import LocationIcon from "@vector-im/compound-design-tokens/assets/web/icons/location-pin";
 
 import { _t } from "../../../languageHandler";
 import AccessibleButton from "../elements/AccessibleButton";
-import { type DetectedDateTime, type DetectedPhone, icsForEvent } from "../../../utils/detect/entities";
+import {
+    type DetectedAddress,
+    type DetectedDateTime,
+    type DetectedPhone,
+    icsForEvent,
+} from "../../../utils/detect/entities";
 import { formatFullDateNoDay, formatTime } from "../../../DateUtils";
 
-/** Nothing without a digit in it can name a time or a number, and that is most messages. */
+/** What a message can be asking of you, once the links are left to the timeline. */
+type Actionable = DetectedDateTime | DetectedPhone | DetectedAddress;
+
+/** Nothing without a digit in it can name a time, a number or a house, and that is most messages. */
 const COULD_HOLD_ONE = /\d/;
 
 /** Runs `work` when the browser is next idle, or soon, where that is not offered. */
@@ -62,7 +74,7 @@ export function DetectedActions({ mxEvent }: { mxEvent: MatrixEvent }): JSX.Elem
     const body = mxEvent.getContent().body;
     const text = typeof body === "string" ? body : "";
     // Links are excluded when they are found: the timeline already makes those clickable in place.
-    const [found, setFound] = useState<Array<DetectedDateTime | DetectedPhone>>([]);
+    const [found, setFound] = useState<Actionable[]>([]);
 
     useEffect(() => {
         setFound([]);
@@ -72,9 +84,7 @@ export function DetectedActions({ mxEvent }: { mxEvent: MatrixEvent }): JSX.Elem
             void import("../../../utils/detect/entities").then(async ({ detectEntities }) => {
                 const entities = await detectEntities(text);
                 if (cancelled) return;
-                setFound(
-                    entities.filter((entity): entity is DetectedDateTime | DetectedPhone => entity.kind !== "url"),
-                );
+                setFound(entities.filter((entity): entity is Actionable => entity.kind !== "url"));
             });
         });
         return () => {
@@ -105,9 +115,11 @@ export function DetectedActions({ mxEvent }: { mxEvent: MatrixEvent }): JSX.Elem
                         className="mx_DetectedActions_chip"
                         element="a"
                         onClick={null}
-                        {...{ href: `tel:${entity.number}` }}
+                        {...(entity.kind === "phone"
+                            ? { href: `tel:${entity.number}` }
+                            : { href: entity.url, target: "_blank", rel: "noreferrer noopener" })}
                     >
-                        <CallIcon />
+                        {entity.kind === "phone" ? <CallIcon /> : <LocationIcon />}
                         {entity.text}
                     </AccessibleButton>
                 ),

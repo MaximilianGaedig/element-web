@@ -6,9 +6,9 @@ Please see LICENSE files in the repository root for full details.
 */
 
 /*
- * What is worth acting on in a piece of text: links, phone numbers, and the times people arrange
- * things for. The text may be a message body or whatever was read out of a picture, so this knows
- * nothing about either.
+ * What is worth acting on in a piece of text: links, phone numbers, the times people arrange things
+ * for, and the places they arrange them at. The text may be a message body or whatever was read out of
+ * a picture, so this knows nothing about either.
  *
  * All three are left to libraries that know about the world's languages and countries, because the
  * hand-written alternative only ever knows about one: linkify for links, libphonenumber for numbers,
@@ -21,7 +21,8 @@ Please see LICENSE files in the repository root for full details.
  * bare "18:00" in a language chrono does not speak is left alone rather than guessed at.
  *
  * Polish is not one of chrono's fourteen, and is the language most of these messages are written in, so
- * it has its own parser here rather than being missed - see chronoPl.ts.
+ * it has its own parser here rather than being missed - see chronoPl.ts. Addresses have no library at
+ * all in a browser, for the reason addresses.ts gives, and are read by their shape there.
  */
 
 import { find as findLinks } from "linkifyjs";
@@ -56,7 +57,13 @@ export interface DetectedDateTime extends Found {
     hasTime: boolean;
 }
 
-export type Detected = DetectedUrl | DetectedPhone | DetectedDateTime;
+export interface DetectedAddress extends Found {
+    kind: "address";
+    /** Where to look it up on a map. */
+    url: string;
+}
+
+export type Detected = DetectedUrl | DetectedPhone | DetectedDateTime | DetectedAddress;
 
 /** The languages chrono speaks; each is asked, because the text does not say which it is in. */
 const LOCALES = ["en", "de", "fr", "ja", "pt", "nl", "zh", "ru", "es", "uk", "it", "sv", "fi", "vi"] as const;
@@ -148,11 +155,23 @@ export async function detectEntities(
     text: string,
     { now = new Date(), country }: { now?: Date; country?: CountryCode } = {},
 ): Promise<Detected[]> {
-    const [phones, dates] = await Promise.all([detectPhones(text, country), detectDateTimes(text, now)]);
+    const [phones, dates, { detectAddresses, mapUrl }, { localityFilter }] = await Promise.all([
+        detectPhones(text, country),
+        detectDateTimes(text, now),
+        import("./addresses"),
+        import("./localities"),
+    ]);
+    // The towns of the reader's country, where this app carries them: what makes a plainly written
+    // address readable. Absent, the plainer readings are simply not offered.
+    const towns = await localityFilter(country);
     const links = detectLinks(text);
     // A number that is part of a link is part of the link, not something to ring.
     const callable = phones.filter((phone) => !links.some((link) => overlaps(phone, link)));
-    return [...links, ...callable, ...dates].sort((a, b) => a.start - b.start);
+    // A house number inside an address is not a phone number, and an address inside a link is the link.
+    const places = detectAddresses(text, towns)
+        .filter((place) => ![...links, ...callable].some((other) => overlaps(place, other)))
+        .map((place) => ({ ...place, kind: "address" as const, url: mapUrl(place.text) }));
+    return [...links, ...callable, ...dates, ...places].sort((a, b) => a.start - b.start);
 }
 
 /**
