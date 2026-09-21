@@ -383,9 +383,10 @@ export default class ScrollPanel extends React.Component<IProps> {
         const firstTile = itemlist?.firstElementChild as HTMLElement | undefined;
         const fillPromises: Promise<void>[] = [];
 
-        // if scrollTop gets to 1 screen from the top of the first tile,
-        // try backward filling
-        if (!firstTile || sn.scrollTop - firstTile.offsetTop < sn.clientHeight) {
+        // Two screens from the top of the first tile, so the next page is already being fetched while
+        // there is still a screen of history to read - the same distance the forward fill below uses.
+        // A page costs a round trip whatever its size, so the wait is what is worth removing.
+        if (!firstTile || sn.scrollTop - firstTile.offsetTop < sn.clientHeight * 2) {
             // need to back-fill
             fillPromises.push(this.maybeFill(depth, true));
         }

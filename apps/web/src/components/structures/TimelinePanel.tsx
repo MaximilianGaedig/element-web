@@ -60,9 +60,17 @@ import { getKeyBindingsManager } from "../../KeyBindingsManager";
 import { KeyBindingAction } from "../../accessibility/KeyboardShortcuts";
 import { haveRendererForEvent } from "../../events/EventTileFactory";
 
-// These pagination sizes are higher than they may possibly need be
-// once https://github.com/matrix-org/matrix-spec-proposals/pull/3874 lands
-const PAGINATE_SIZE = 50;
+/*
+ * A page costs a round trip plus the server's work, and the server's work barely grows with the size
+ * of the page: measured against this deployment's largest room (240k messages), /messages answered 20
+ * events in 13.6ms, 50 in 18ms, 100 in 27.6ms, 200 in 35ms and 500 in 31.6ms - 0.68ms an event at the
+ * smallest size against 0.06ms at the largest. Asking for more at once therefore costs almost nothing
+ * and removes most of the round trips from scrolling back through history.
+ *
+ * 100 rather than the largest that is cheap, because every event in a page is also a tile to render,
+ * and that cost does grow with the count.
+ */
+const PAGINATE_SIZE = 100;
 const INITIAL_SIZE = 30;
 const READ_RECEIPT_INTERVAL_MS = 500;
 
