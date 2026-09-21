@@ -65,17 +65,56 @@ const text = (event: MatrixEvent): string | undefined => {
 };
 
 /**
+ * How long a message can go unanswered before a suggested reply is beside the point: opening a chat from
+ * last month to look something up should not put three ways of answering it over the composer.
+ */
+const STALE_MS = 3 * 24 * 60 * 60 * 1000;
+
+/** Past this many people a room is a place rather than a conversation, and most messages are not for you. */
+const CROWD = 8;
+
+/**
+ * Messages that are an acknowledgement rather than something to answer.
+ *
+ * Not a language model's job: "ok" needs no suggestions in any language, and asking costs a request, a
+ * second of waiting and a row of pills over the composer saying nothing.
+ */
+const NOTHING_TO_SAY =
+    /^(ok(ej|ay|k)?|spoko|dobra|git|jasne|no|tak|nie|yes|yeah|yep|nope|thx|thanks|dzięki|dzieki|dzięks|haha+|hah|lol|xd+|😂|👍|❤️|\+1|k|np|nara|pa|cześć|czesc|hi|hej|siema)[.!?…]*$/i;
+
+/**
  * The last message, if it is one worth drafting a reply to.
  *
- * Somebody else's words, waiting for an answer. Your own last message is not: you are not owed a reply to
- * yourself, and a chat where you spoke last needs nothing.
+ * Most messages are not. Somebody else's words, recent, addressed to this reader, and actually asking
+ * something of them - anything else and the right number of suggestions is none: a row of pills that
+ * appears over every chat you open, saying "ok" back to "ok", is worse than no feature, and each one of
+ * them costs a request against the day's allowance.
+ *
+ * Your own last message is not one either: you are not owed a reply to yourself.
  */
 export function waitingOn(room: Room, me: string): MatrixEvent | undefined {
     const events = room.getLiveTimeline().getEvents();
     for (let at = events.length - 1; at >= 0; at--) {
         const event = events[at];
-        if (!text(event)) continue;
-        return event.getSender() === me ? undefined : event;
+        const body = text(event);
+        if (!body) continue;
+        if (event.getSender() === me) return undefined;
+        // Anything but a plain message - a notice from a bridge, a state change dressed as one - is not
+        // somebody waiting for an answer.
+        if (event.getContent().msgtype !== "m.text") return undefined;
+        if (Date.now() - event.getTs() > STALE_MS) return undefined;
+        if (NOTHING_TO_SAY.test(body.trim())) return undefined;
+        /*
+         * In a crowd, only what is actually aimed at you: a question, or your own name. Otherwise every
+         * busy room you glance at drafts three replies to a conversation between other people.
+         */
+        if (room.getJoinedMemberCount() > CROWD) {
+            const mentioned =
+                body.includes(room.client.getUserIdLocalpart() ?? "\0") ||
+                body.includes(room.getMember(me)?.name ?? "\0");
+            if (!mentioned && !body.includes("?")) return undefined;
+        }
+        return event;
     }
     return undefined;
 }
@@ -118,7 +157,7 @@ export async function repliesFor(client: MatrixClient, room: Room): Promise<stri
     // Claimed before it is asked for, so two callers at once ask once.
     known.set(at, []);
     try {
-        const answer = await ask(client, { kind: "replies", messages, style: styleOf(client, room) });
+        const answer = await ask(client, { kind: "replies", messages, ...voiceOf(client, room) });
         const suggested = answer.drafts?.slice(0, MOST) ?? drafts(answer.answer);
         known.set(at, suggested);
         // `as never` the way notes.ts does it: the typed map knows only the event types upstream defines.
@@ -143,25 +182,31 @@ export function repliesKnown(client: MatrixClient, room: Room): string[] {
  * chat you have just opened holds a screenful of somebody else's messages and often none of yours, which
  * is why the drafts almost never had a voice to copy. The rest of the rooms make up the difference.
  */
-function styleOf(client: MatrixClient, room: Room): string[] {
+function voiceOf(client: MatrixClient, room: Room): { style: string[]; elsewhere: string[] } {
     const me = client.getSafeUserId();
-    const mine: string[] = [];
-    const take = (from: Room): void => {
+    const take = (from: Room, into: string[], room_for: number): void => {
         const events = from.getLiveTimeline().getEvents();
-        for (let at = events.length - 1; at >= 0 && mine.length < STYLE; at--) {
+        for (let at = events.length - 1; at >= 0 && into.length < room_for; at--) {
             const body = events[at].getSender() === me ? text(events[at]) : undefined;
             // Only what you typed: a line long enough to have a voice in it.
-            if (body && body.length > 1) mine.push(body.slice(0, 400));
+            if (body && body.length > 1) into.push(body.slice(0, 400));
         }
     };
-    take(room);
-    if (mine.length < STYLE) {
+    const style: string[] = [];
+    take(room, style, STYLE);
+    /*
+     * Kept apart from this chat's own: a line the reader has used here is theirs to use again, but one
+     * carried in from another conversation must never come back as a ready-made message, so the two go
+     * up separately and only the second is struck out of the drafts.
+     */
+    const elsewhere: string[] = [];
+    if (style.length < STYLE) {
         for (const other of client.getVisibleRooms()) {
-            if (other.roomId === room.roomId || mine.length >= STYLE) continue;
-            take(other);
+            if (other.roomId === room.roomId || style.length + elsewhere.length >= STYLE) continue;
+            take(other, elsewhere, STYLE - style.length);
         }
     }
-    return mine.reverse();
+    return { style: style.reverse(), elsewhere: elsewhere.reverse() };
 }
 
 /** Chosen from somewhere without a composer: left for that room's own composer to pick up. */

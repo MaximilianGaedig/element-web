@@ -126,8 +126,10 @@ export async function ask(
         kind: AskKind;
         messages?: AskMessage[];
         question?: string;
-        /** The reader's own messages, when what is wanted is something written in their voice. */
+        /** The reader's own messages from this chat, when what is wanted is something in their voice. */
         style?: string[];
+        /** And from their other chats, which may be written like but never repeated word for word. */
+        elsewhere?: string[];
         /** Pictures to look at, as data urls: a question the words of the chat cannot answer. */
         images?: string[];
         better?: boolean;
