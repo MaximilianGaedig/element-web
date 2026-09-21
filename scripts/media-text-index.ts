@@ -12,10 +12,20 @@ Please see LICENSE files in the repository root for full details.
  *
  * A device does this for what is on screen, as it goes (utils/detect/ocr.ts, TgLiveText). What a device
  * cannot do is years of history: that is thousands of pictures, and a phone should not be asked to warm
- * itself for an afternoon. So this runs on a machine with time to spare - never on the server, which
- * has a gigabyte of memory and people talking through it - and sends its readings to the same endpoint
- * the device uses. The server asks nothing of either: `missing` says what has not been read, so the two
- * never do the same work twice, and `im.mxg.media_text` takes the answer.
+ * itself for an afternoon. So this reads the lot from anywhere that can reach the server, and sends its
+ * readings to the same endpoint the device uses. The server asks nothing of either: `missing` says what
+ * has not been read, so the two never do the same work twice, and `im.mxg.media_text` takes the answer.
+ *
+ * WHERE TO RUN IT. Anywhere with the token, including the homeserver itself - but it has to be told how
+ * much of the machine it may have, because the answer differs by two orders of magnitude:
+ *
+ *   a desktop           --gap 0                    engine ~300 MB, a picture in well under a second
+ *   the homeserver      --pictures-only --gap 2000  one picture at a time with a pause between, so the
+ *                                                  people talking through it never notice
+ *
+ * Transcribing is what does not fit on a small server: whisper wants most of a gigabyte to itself, which
+ * on a box with a gigabyte in total is the box. It is therefore off unless whisper-cpp, ffmpeg and
+ * WHISPER_MODEL are all there, and can be kept off with --pictures-only.
  *
  * Needs, on PATH:
  *   whisper-cpp and ffmpeg, for voice messages - `nix shell nixpkgs#whisper-cpp nixpkgs#ffmpeg`
@@ -37,14 +47,26 @@ import { createWorker } from "tesseract.js";
 const run = promisify(execFile);
 
 const args = new Map<string, string>();
-for (let index = 2; index < process.argv.length; index += 2) {
-    args.set(process.argv[index].replace(/^--/, ""), process.argv[index + 1] ?? "");
+for (let index = 2; index < process.argv.length; index++) {
+    const name = process.argv[index];
+    if (!name.startsWith("--")) continue;
+    const value = process.argv[index + 1];
+    // A flag with no value of its own - "--pictures-only" - is simply present.
+    const isFlag = value === undefined || value.startsWith("--");
+    args.set(name.slice(2), isFlag ? "" : value);
+    if (!isFlag) index++;
 }
 
 const SERVER = args.get("server") ?? process.env.MATRIX_SERVER;
 const TOKEN = process.env.MATRIX_TOKEN;
 const ONLY_ROOM = args.get("room");
 const LIMIT = Number(args.get("limit") ?? 500);
+/** How long to wait between items, for a machine that has other things to do. */
+const GAP = Number(args.get("gap") ?? 0);
+/** Pictures only: transcribing is what a small server cannot afford. */
+const PICTURES_ONLY = args.has("pictures-only");
+/** Media bigger than this is left to a machine with more room (megabytes). */
+const MAX_MB = Number(args.get("max-mb") ?? 50);
 
 if (!SERVER || !TOKEN) {
     console.error("Set MATRIX_TOKEN and pass --server https://matrix.example (or MATRIX_SERVER).");
@@ -168,10 +190,14 @@ async function canTranscribe(): Promise<boolean> {
     }
 }
 
-const transcribing = await canTranscribe();
+const transcribing = !PICTURES_ONLY && (await canTranscribe());
 if (!transcribing) {
-    console.log("No whisper-cpp, ffmpeg or WHISPER_MODEL: pictures only.");
+    console.log(
+        PICTURES_ONLY ? "Pictures only, as asked." : "No whisper-cpp, ffmpeg or WHISPER_MODEL: pictures only.",
+    );
 }
+
+const pause = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
 
 /** One room, one kind of media at a time. */
 async function work(room: string): Promise<void> {
@@ -203,11 +229,16 @@ async function work(room: string): Promise<void> {
                 // No URL means an encrypted file, which this cannot read and the server could not index.
                 if (typeof url !== "string") continue;
                 const bytes = await download(url);
+                if (bytes.length > MAX_MB * 1024 * 1024) {
+                    console.log(`  ${eventId}: ${Math.round(bytes.length / 1e6)} MB, left for a bigger machine`);
+                    continue;
+                }
                 const extension = path.extname(String(content.body ?? "")) || ".ogg";
                 const text = await read(bytes, extension);
                 // Empty is worth storing: it is how "this picture says nothing" stops being read again.
                 await store(room, eventId, kind, text);
                 if (text) console.log(`  ${eventId}: ${text.replaceAll("\n", " ").slice(0, 70)}`);
+                if (GAP) await pause(GAP);
             } catch (error) {
                 console.warn(`  ${eventId}: ${(error as Error).message.slice(0, 120)}`);
             }

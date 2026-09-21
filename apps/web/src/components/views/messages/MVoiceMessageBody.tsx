@@ -18,6 +18,8 @@ import { PlaybackQueue } from "../../../audio/PlaybackQueue";
 import { type Playback } from "../../../audio/Playback";
 import RoomContext from "../../../contexts/RoomContext";
 import { FileBodyFactory, renderMBody } from "./MBodyFactory";
+import { TgTranscript } from "../telegram/TgTranscript";
+import { isTelegramLayout } from "../../../utils/telegram/telegramLayout";
 
 export default class MVoiceMessageBody extends MAudioBody {
     public static contextType = RoomContext;
@@ -54,6 +56,8 @@ export default class MVoiceMessageBody extends MAudioBody {
         return (
             <span className="mx_MVoiceMessageBody">
                 <RecordingPlayback playback={this.state.playback} />
+                {/* Fork: what it said, under it, the way Telegram shows a transcript. */}
+                {isTelegramLayout() && !this.props.forExport && <TgTranscript mxEvent={this.props.mxEvent} />}
                 {this.showFileBody && renderMBody({ ...this.props, showFileInfo: false }, FileBodyFactory)}
             </span>
         );

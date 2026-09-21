@@ -1,0 +1,44 @@
+/*
+Copyright 2026 New Vector Ltd.
+
+SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only OR LicenseRef-Element-Commercial
+Please see LICENSE files in the repository root for full details.
+*/
+
+/*
+ * What a voice message said, under the voice message (TgTranscript.tsx).
+ *
+ * Telegram sets a transcript apart from the bubble's own text by a hairline above it and the secondary
+ * colour: it is what the machine heard, not what anyone wrote.
+ */
+.mx_TgTranscript,
+.mx_TgTranscript_button {
+    display: flex;
+    align-items: center;
+    gap: var(--cpd-space-1x);
+    margin: var(--cpd-space-1x) 0 0;
+    padding-block-start: var(--cpd-space-1x);
+    border-block-start: 1px solid var(--cpd-color-border-interactive-secondary);
+    font: var(--cpd-font-body-sm-regular);
+    color: var(--cpd-color-text-secondary);
+}
+
+.mx_TgTranscript {
+    display: block;
+    white-space: pre-wrap;
+}
+
+.mx_TgTranscript_button {
+    /* A link rather than a button: it is an offer, not the point of the message. */
+    width: 100%;
+    color: var(--cpd-color-text-action-accent);
+
+    svg {
+        width: 1em;
+        height: 1em;
+    }
+}
+
+.mx_TgTranscript_working {
+    display: flex;
+}

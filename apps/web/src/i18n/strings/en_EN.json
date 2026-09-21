@@ -2177,6 +2177,11 @@
             }
         },
         "thread_info_basic": "From a thread",
+        "transcript": {
+            "action": "Transcribe",
+            "nothing_said": "Nothing could be made out in this message.",
+            "working": "Transcribing…"
+        },
         "typing_indicator": {
             "one_user": "%(displayName)s is typing …",
             "more_users": {
