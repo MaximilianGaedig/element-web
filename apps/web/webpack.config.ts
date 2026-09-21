@@ -675,6 +675,14 @@ export default (env: string, argv: Record<string, any>): webpack.Configuration =
                      * fetched when someone asks for it, and cached by the service worker from then on.
                      */
                     {
+                        // The engine's worker, which it otherwise fetches from a CDN - and our own
+                        // content policy refuses that, so reading a picture failed silently and every
+                        // picture looked like one with nothing in it.
+                        from: "worker.min.js",
+                        context: path.join(getPackageRoot("tesseract.js"), "dist"),
+                        to: path.join(__dirname, "webapp", "ocr"),
+                    },
+                    {
                         // The LSTM engine only: the legacy one is a second copy of the library for an
                         // engine this never asks for.
                         from: "tesseract-core*lstm.wasm*",

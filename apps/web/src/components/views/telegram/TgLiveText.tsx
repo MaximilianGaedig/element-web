@@ -16,6 +16,7 @@ Please see LICENSE files in the repository root for full details.
  */
 
 import React, { type JSX, useEffect, useRef, useState } from "react";
+import { logger } from "matrix-js-sdk/src/logger";
 
 import TextIcon from "@vector-im/compound-design-tokens/assets/web/icons/text-formatting";
 
@@ -81,7 +82,7 @@ export function TgLiveText({ eventId, roomId, source, size }: Props): JSX.Elemen
 
     useEffect(() => {
         const element = root.current;
-        if (!element || !size?.width || !size.height) return;
+        if (!element) return;
         let cancelled = false;
 
         // Read it when it comes into view, and not before: most pictures in a chat are scrolled past.
@@ -91,6 +92,7 @@ export function TgLiveText({ eventId, roomId, source, size }: Props): JSX.Elemen
                 observer.disconnect();
                 void (async () => {
                     // Fetched once and read twice: the words in it, and the codes in it.
+                    if (window.location.search.includes("ocr")) logger.info("[ocr] picture on screen", eventId);
                     const picture = await source();
                     const [{ words, text }, found] = await Promise.all([
                         readAndPlace(eventId, async () => picture, size),
@@ -199,7 +201,7 @@ function frameOf(video: HTMLVideoElement): Promise<Blob> | undefined {
 async function readCodes(
     key: string,
     picture: Blob | string,
-    size: { width: number; height: number },
+    size?: { width: number; height: number },
 ): Promise<FoundBarcode[]> {
     const { readBarcodesForEvent } = await import("../../../utils/detect/barcodes");
     return readBarcodesForEvent(key, picture, size);
@@ -209,7 +211,7 @@ async function readCodes(
 async function readAndPlace(
     key: string,
     source: () => Promise<Blob | string>,
-    size: { width: number; height: number },
+    size?: { width: number; height: number },
 ): Promise<{ words: Placed[]; text: string }> {
     const [{ readImageForEvent }, { detectEntities }] = await Promise.all([
         import("../../../utils/detect/ocr"),

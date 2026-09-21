@@ -19,7 +19,21 @@ Please see LICENSE files in the repository root for full details.
  */
 
 import { logger } from "matrix-js-sdk/src/logger";
+
 import type { createWorker as CreateWorker, Page } from "tesseract.js";
+
+/**
+ * Whether to say out loud what every reading does (`?ocr` in the address).
+ *
+ * Reading a picture is the kind of feature that fails into silence: nothing on screen tells a picture
+ * that could not be read from one with nothing in it, so a broken engine looks exactly like a holiday
+ * photograph. This turns the whole path into console output, which is the difference between debugging
+ * it and guessing at it.
+ */
+const LOUD = typeof window !== "undefined" && window.location.search.includes("ocr");
+const say = (...what: unknown[]): void => {
+    if (LOUD) logger.info("[ocr]", ...what);
+};
 
 /** One word, and where it sits in the picture, as a fraction of the picture's own size. */
 export interface OcrWord {
@@ -52,10 +66,15 @@ let worker: Promise<Worker> | undefined;
 async function getWorker(): Promise<Worker> {
     worker ??= (async () => {
         // Imported here, not at the top: none of this belongs on the startup path.
+        say("starting the engine");
         ({ createWorker } = await import("tesseract.js"));
         return createWorker("eng", undefined, {
             corePath: "ocr/",
             langPath: "ocr/",
+            // Its worker too. Left to itself the library reaches for a copy on a CDN, which is both a
+            // thing to fetch before a picture can be read offline and, if it is ever loaded directly,
+            // a worker from another origin - which no browser allows. Everything it needs is here.
+            workerPath: "ocr/worker.min.js",
             // The data is served compressed and cached; the library must not reach for the CDN copy.
             gzip: true,
             logger: () => {},
@@ -74,13 +93,40 @@ async function getWorker(): Promise<Worker> {
 export async function readImage(source: Blob | string, size?: ImageSize): Promise<OcrResult | undefined> {
     try {
         const tesseract = await getWorker();
+        // The event usually says how big the picture is, but not always - a sticker, a bridged photo
+        // with no info block - and without a size the words have nowhere to go. The picture itself
+        // always knows, so ask it rather than skipping the picture.
+        size ??= await sizeOf(source);
         // Blocks carry the word geometry the overlay needs; without them only the text comes back.
+        say("reading", size ?? "(size unknown)");
         const { data } = await tesseract.recognize(source, undefined, { blocks: true, text: true });
         const text = data.text.trim();
-        if (!text || data.confidence < MIN_CONFIDENCE) return undefined;
+        say("read", { confidence: Math.round(data.confidence), chars: text.length });
+        if (!text || data.confidence < MIN_CONFIDENCE) {
+            say("nothing worth keeping: below the confidence bar, or no words at all");
+            return undefined;
+        }
         return { text, confidence: data.confidence, words: size ? wordsOf(data, size) : [] };
     } catch (error) {
+        // Loudly: a reading that fails silently is indistinguishable from a picture with nothing in it,
+        // which is exactly how this went unnoticed once already.
         logger.warn("Could not read the text in an image", error);
+        return undefined;
+    }
+}
+
+/** The picture's own size, measured from the picture, for an event that does not say. */
+async function sizeOf(source: Blob | string): Promise<ImageSize | undefined> {
+    try {
+        const blob = typeof source === "string" ? await fetch(source).then((r) => r.blob()) : source;
+        const bitmap = await createImageBitmap(blob);
+        try {
+            return { width: bitmap.width, height: bitmap.height };
+        } finally {
+            bitmap.close();
+        }
+    } catch {
+        // Then the words are read but not placed, which is still worth having: they can be searched.
         return undefined;
     }
 }
