@@ -347,7 +347,7 @@ export function TextualBodyFactory(props: Readonly<IBodyProps>): JSX.Element {
                     <BridgeButtons mxEvent={props.mxEvent} inhibitInteraction={props.inhibitInteraction} />
                     {/* Fork: what the message asks of you - a time to put in the calendar, a number to
                         ring - offered under it rather than hidden in a menu. */}
-                    {!props.inhibitInteraction && <DetectedActions mxEvent={props.mxEvent} />}
+                    {!props.inhibitInteraction && <DetectedActions mxEvent={props.mxEvent} bodyRef={contentRef} />}
                 </>
             }
             className={getTextualBodyClassName(content.msgtype as MsgType | undefined)}

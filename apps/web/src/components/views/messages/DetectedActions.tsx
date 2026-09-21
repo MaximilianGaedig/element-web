@@ -35,6 +35,8 @@ import MeasureIcon from "@vector-im/compound-design-tokens/assets/web/icons/info
 
 import { _t } from "../../../languageHandler";
 import AccessibleButton from "../elements/AccessibleButton";
+import { markEntities } from "../../../utils/detect/mark";
+import { actOn } from "../../../utils/detect/act";
 import {
     type DetectedAddress,
     type DetectedDateTime,
@@ -116,7 +118,17 @@ function label(entity: Exclude<Actionable, DetectedDateTime | DetectedMeasure>):
     );
 }
 
-export function DetectedActions({ mxEvent }: { mxEvent: MatrixEvent }): JSX.Element | null {
+export function DetectedActions({
+    mxEvent,
+    bodyRef,
+}: {
+    mxEvent: MatrixEvent;
+    /**
+     * The rendered message, so the phrases that became buttons can also be underlined where they were
+     * written. A chip says there is a time in here somewhere; a mark says which words it is.
+     */
+    bodyRef?: React.RefObject<HTMLElement | null>;
+}): JSX.Element | null {
     const body = mxEvent.getContent().body;
     const text = typeof body === "string" ? body : "";
     // Links are excluded when they are found: the timeline already makes those clickable in place.
@@ -131,13 +143,15 @@ export function DetectedActions({ mxEvent }: { mxEvent: MatrixEvent }): JSX.Elem
                 const entities = await detectEntities(text);
                 if (cancelled) return;
                 setFound(entities.filter((entity): entity is Actionable => entity.kind !== "url"));
+                // And mark them where they were written, which is where a finger goes first.
+                if (bodyRef?.current) markEntities(bodyRef.current, entities, (entity) => actOn(entity, text));
             });
         });
         return () => {
             cancelled = true;
             cancelIdle();
         };
-    }, [text]);
+    }, [text, bodyRef]);
 
     if (!found.length) return null;
     return (

@@ -121,3 +121,18 @@ Please see LICENSE files in the repository root for full details.
         }
     }
 }
+
+/*
+ * In the viewer the reading covers the picture itself, inside the mover that carries it - so it moves,
+ * zooms and pans with the picture rather than floating over the screen.
+ */
+.mx_TgMediaViewer_mover {
+    .mx_TgLiveText {
+        z-index: 2;
+    }
+
+    .mx_TgLiveText_word {
+        /* Big enough to put a finger on, which a thumbnail's words never were. */
+        font-size: 2px;
+    }
+}

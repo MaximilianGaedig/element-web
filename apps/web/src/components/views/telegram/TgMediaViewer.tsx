@@ -14,6 +14,8 @@ Please see LICENSE files in the repository root for full details.
  * with the morph (user request).
  */
 
+import { createPortal } from "react-dom";
+
 import React, { type JSX, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { type MatrixEvent, MsgType, type Room } from "matrix-js-sdk/src/matrix";
@@ -37,6 +39,7 @@ import { formatDate } from "../../../DateUtils";
 import { _t } from "../../../languageHandler";
 import UIStore from "../../../stores/UIStore";
 import { MatrixClientPeg } from "../../../MatrixClientPeg";
+import { TgLiveText } from "./TgLiveText";
 import Modal from "../../../Modal";
 import { RoomPermalinkCreator } from "../../../utils/permalinks/Permalinks";
 import MemberAvatar from "../avatars/MemberAvatar";
@@ -187,10 +190,18 @@ interface MoverState {
     rect: Rect;
 }
 
+/** The picture's own size, where the event says it, so the words can be placed on it. */
+function sizeOfEvent(event: MatrixEvent): { width: number; height: number } | undefined {
+    const info = event.getContent().info;
+    return typeof info?.w === "number" && typeof info?.h === "number" ? { width: info.w, height: info.h } : undefined;
+}
+
 /** The imperative part, like tweb's AppMediaViewerBase: movers, zoom and gestures. */
 class ViewerController {
     public root: HTMLDivElement | null = null;
     public movers: HTMLDivElement | null = null;
+    /** Told whenever a picture is put on screen, so its text can be laid over it. */
+    public onMover: ((element: HTMLDivElement, event: MatrixEvent) => void) | undefined;
     private mover: MoverState | null = null;
     private hiddenSource: HTMLElement | null = null;
     private helpers = new Map<MatrixEvent, MediaEventHelper>();
@@ -265,6 +276,7 @@ class ViewerController {
         el.append(img);
         this.movers!.append(el);
         void this.loadFull(event, el, img, !thumb);
+        this.onMover?.(el, event);
         return el;
     }
 
@@ -751,6 +763,12 @@ function TgMediaViewer({ items, index: startIndex, source, onClosed }: Props): J
     const [scale, setScale] = useState(ZOOM_INITIAL_VALUE);
     // Telegram on a phone hides its bars when you tap the picture, and shows them again on the next tap.
     const [barsHidden, setBarsHidden] = useState(false);
+    /*
+     * The picture on screen, so everything it says can be laid over it - selectable, and pressable where
+     * a phrase turned out to be a time or a place. A thumbnail in the timeline marks only those phrases;
+     * reading a receipt is done here, where the picture is big enough to read.
+     */
+    const [showing, setShowing] = useState<{ element: HTMLDivElement; event: MatrixEvent }>();
     const zoomed = scale !== ZOOM_INITIAL_VALUE;
     const rootRef = useRef<HTMLDivElement>(null);
     const moversRef = useRef<HTMLDivElement>(null);
@@ -914,6 +932,15 @@ function TgMediaViewer({ items, index: startIndex, source, onClosed }: Props): J
         t.pinch = false;
     };
 
+    useEffect(() => {
+        const c = ctl.current;
+        if (!c) return;
+        c.onMover = (element, event) => setShowing({ element, event });
+        return () => {
+            c.onMover = undefined;
+        };
+    }, []);
+
     // tweb onClick: clicking closes the viewer (never zooms); not while zoomed or right after a drag.
     const onClick = (e: React.MouseEvent): void => {
         const c = ctl.current!;
@@ -980,6 +1007,18 @@ function TgMediaViewer({ items, index: startIndex, source, onClosed }: Props): J
         >
             <div className="mx_TgMediaViewer_backdrop" />
             <div ref={moversRef} className="mx_TgMediaViewer_movers" />
+            {showing?.element.isConnected &&
+                showing.event.getContent().msgtype !== MsgType.Video &&
+                createPortal(
+                    <TgLiveText
+                        whole
+                        eventId={showing.event.getId()!}
+                        roomId={showing.event.getRoomId()!}
+                        source={async () => (await ctl.current!.helper(showing.event).sourceUrl.value) ?? ""}
+                        size={sizeOfEvent(showing.event)}
+                    />,
+                    showing.element,
+                )}
             {/* tweb topbar: author (userpic 44, name, date) | delete, forward, download, rotate, zoom, close */}
             <div className="mx_TgMediaViewer_chrome mx_TgMediaViewer_topbar">
                 <button type="button" className="mx_TgMediaViewer_author" onClick={showInChat}>

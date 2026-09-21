@@ -50,3 +50,30 @@ Please see LICENSE files in the repository root for full details.
         height: 1em;
     }
 }
+
+/*
+ * A phrase in a message that turned out to be something: a time, a number, a place, a flight, a parcel.
+ * Marked where it was written rather than only offered as a chip below - the words themselves are where
+ * a finger goes first, which is how iOS has done it for years.
+ *
+ * It has to read as part of the sentence, so it keeps the message's own type and colour and takes only
+ * an underline; a button's usual padding, background and border would make the sentence lumpy.
+ */
+.mx_DetectedMark {
+    margin: 0;
+    padding: 0;
+    border: none;
+    background: none;
+    font: inherit;
+    color: inherit;
+    text-decoration: underline;
+    text-decoration-color: color-mix(in srgb, var(--cpd-color-text-action-accent) 60%, transparent);
+    text-decoration-thickness: 2px;
+    text-underline-offset: 2px;
+    cursor: pointer;
+
+    &:hover,
+    &:focus-visible {
+        text-decoration-color: var(--cpd-color-text-action-accent);
+    }
+}

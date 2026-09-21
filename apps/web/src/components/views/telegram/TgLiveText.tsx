@@ -6,9 +6,13 @@ Please see LICENSE files in the repository root for full details.
 */
 
 /*
- * The text in a picture, over the picture, the way iOS puts it there: each word sits where it was read
- * from, invisible but selectable, so a receipt can be copied and a link on a poster can be opened
- * without retyping it.
+ * The text in a picture, over the picture, the way iOS puts it there.
+ *
+ * Two ways of showing it, because a thumbnail in a chat and a picture filling the screen want different
+ * things. In the timeline only what turned out to be *worth acting on* is marked - a time, a number, an
+ * address, a code - underlined where it sits and pressable there, the same treatment the words of a
+ * message get. Every word of it, selectable and copyable, belongs to the viewer, where the picture is
+ * big enough to select from and nothing else is competing for the touch.
  *
  * A picture is read once and only when it is on screen, one at a time, while the browser is idle - the
  * engine is a worker with one thread, and a screenful of holiday photos is not worth warming the device
@@ -23,6 +27,7 @@ import TextIcon from "@vector-im/compound-design-tokens/assets/web/icons/text-fo
 import { _t } from "../../../languageHandler";
 import { MatrixClientPeg } from "../../../MatrixClientPeg";
 import { type Detected } from "../../../utils/detect/entities";
+import { actOn } from "../../../utils/detect/act";
 import { type OcrResult, type OcrWord } from "../../../utils/detect/ocr";
 import { actionOf, type FoundBarcode } from "../../../utils/detect/barcodes";
 import { copyPlaintext } from "../../../utils/strings";
@@ -30,6 +35,11 @@ import { copyPlaintext } from "../../../utils/strings";
 interface Props {
     /** The event the picture belongs to: what is read is kept against it. */
     eventId: string;
+    /**
+     * Everything it read, selectable, rather than only the parts that became something to press. True in
+     * the viewer, where the picture is big; false in the timeline, where a thumbnail is not for reading.
+     */
+    whole?: boolean;
     /** The room it was sent in, so what was read can be shared with the server and searched for. */
     roomId: string;
     /** The picture itself, fetched only if it is going to be read. */
@@ -66,18 +76,13 @@ function place(result: OcrResult, entities: Detected[]): Placed[] {
     });
 }
 
-function href(entity: Detected): string | undefined {
-    if (entity.kind === "url" || entity.kind === "address") return entity.url;
-    if (entity.kind === "phone") return `tel:${entity.number}`;
-    return undefined;
-}
-
-export function TgLiveText({ eventId, roomId, source, size }: Props): JSX.Element | null {
+export function TgLiveText({ eventId, roomId, source, size, whole = false }: Props): JSX.Element | null {
     const [words, setWords] = useState<Placed[]>([]);
     const [codes, setCodes] = useState<FoundBarcode[]>([]);
     // iOS keeps read text invisible until you ask for it, and marks the picture with a glyph to say
     // there is some. Without that nothing on screen says a picture was read at all.
     const [revealed, setRevealed] = useState(false);
+    const [said, setSaid] = useState("");
     const root = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
@@ -101,6 +106,7 @@ export function TgLiveText({ eventId, roomId, source, size }: Props): JSX.Elemen
                     if (cancelled) return;
                     setWords(words);
                     setCodes(found);
+                    setSaid(text);
                     // Read here, findable everywhere: the server indexes what was read as if it were the
                     // message's own words, so this picture can be searched for from a device that never
                     // opened it. Only a reading with something in it is sent - "this said nothing" from a
@@ -120,13 +126,17 @@ export function TgLiveText({ eventId, roomId, source, size }: Props): JSX.Elemen
         };
     }, [eventId, roomId, source, size]);
 
+    // In the timeline: only the words that turned out to be something, and no glyph to press - the
+    // marks are the affordance, as they are in a message. In the viewer: all of it, with the glyph.
+    const shown = whole ? words : words.filter((word) => word.entity);
     return (
         <Words
-            words={words}
+            words={shown}
             codes={codes}
             elementRef={root}
-            revealed={revealed}
-            onReveal={words.length ? () => setRevealed((on) => !on) : undefined}
+            revealed={whole && revealed}
+            onReveal={whole && words.length ? () => setRevealed((on) => !on) : undefined}
+            context={said}
         />
     );
 }
@@ -229,6 +239,7 @@ function Words({
     elementRef,
     revealed = false,
     onReveal,
+    context = "",
 }: {
     words: Placed[];
     /** The codes in the same picture, drawn over where they sit. */
@@ -239,6 +250,8 @@ function Words({
     revealed?: boolean;
     /** Offered where there is text to show; absent where the picture said nothing. */
     onReveal?: () => void;
+    /** Everything the picture said, which is what a calendar entry made from it is described by. */
+    context?: string;
 }): JSX.Element {
     return (
         <div
@@ -273,25 +286,26 @@ function Words({
                     width: `${word.width * 100}%`,
                     height: `${word.height * 100}%`,
                 };
-                const link = word.entity && href(word.entity);
-                return link ? (
-                    <a
+                // A word that turned out to be something is pressable where it sits, exactly as the same
+                // phrase is in a message; the rest are there to be selected, not pressed.
+                const entity = word.entity;
+                return entity ? (
+                    <button
                         key={key}
-                        className="mx_TgLiveText_word mx_TgLiveText_word--link"
+                        type="button"
+                        className="mx_TgLiveText_word mx_TgLiveText_word--marked"
                         style={style}
-                        href={link}
-                        target="_blank"
-                        rel="noreferrer noopener"
-                        onClick={(event) => event.stopPropagation()}
+                        title={entity.text}
+                        onClick={(event) => {
+                            event.preventDefault();
+                            event.stopPropagation();
+                            actOn(entity, context);
+                        }}
                     >
                         {word.text}
-                    </a>
+                    </button>
                 ) : (
-                    <span
-                        key={key}
-                        className={`mx_TgLiveText_word${word.entity ? " mx_TgLiveText_word--marked" : ""}`}
-                        style={style}
-                    >
+                    <span key={key} className="mx_TgLiveText_word" style={style}>
                         {word.text}
                     </span>
                 );
