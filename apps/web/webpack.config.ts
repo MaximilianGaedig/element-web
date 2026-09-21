@@ -668,6 +668,26 @@ export default (env: string, argv: Record<string, any>): webpack.Configuration =
                         context: path.join(getPackageRoot("@element-hq/element-call-embedded"), "dist"),
                         to: path.join(__dirname, "webapp", "widgets", "element-call"),
                     },
+                    /*
+                     * Reading text out of a picture, served from here rather than from the CDN the
+                     * library reaches for by default: the app has to work offline, and nothing about a
+                     * picture - including the fact that one was read - should leave the device. Only
+                     * fetched when someone asks for it, and cached by the service worker from then on.
+                     */
+                    {
+                        // The LSTM engine only: the legacy one is a second copy of the library for an
+                        // engine this never asks for.
+                        from: "tesseract-core*lstm.wasm*",
+                        context: getPackageRoot("tesseract.js-core"),
+                        to: path.join(__dirname, "webapp", "ocr", "[name][ext]"),
+                    },
+                    {
+                        from: "eng.traineddata.gz",
+                        // The integer-quantised model: a third of the size of the full one, for text
+                        // that is on a screen rather than a scan.
+                        context: path.join(getPackageRoot("@tesseract.js-data/eng"), "4.0.0_best_int"),
+                        to: path.join(__dirname, "webapp", "ocr"),
+                    },
                     // Mobile guide assets
                     {
                         from: "assets/**",
