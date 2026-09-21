@@ -6,26 +6,51 @@ Please see LICENSE files in the repository root for full details.
 */
 
 /*
- * Asking about the chat, above the box you type in (TgAsk.tsx).
+ * Asking about the chat: a pill floating over the conversation, which grows into the answer as it is
+ * written and settles back into a pill when it is done (TgAsk.tsx).
  *
- * It has to be quiet: it sits over every conversation, and a chat is not about it. So it is one line of
- * secondary text until it is pressed, and only then a box. The answer never appears here - it appears in
- * the timeline, under the message it is about.
+ * One element throughout, three shapes. Nothing new appears out of nowhere and nothing jumps: the thing
+ * that was pressed is the thing that answers, which is what makes it read as one gesture rather than
+ * three. The shape is what moves - corner radius, width, the room it takes - and the words inside simply
+ * arrive.
+ *
+ * It floats rather than pushing the timeline down, because a conversation that jumps every time you ask
+ * something is a conversation you stop asking about.
  */
 .mx_TgAsk {
+    position: relative;
+    z-index: 3;
     display: flex;
+    align-self: center;
     align-items: center;
     gap: var(--cpd-space-2x);
-    padding: var(--cpd-space-1x) var(--cpd-space-4x) 0;
+    width: fit-content;
+    max-width: min(46rem, calc(100% - var(--cpd-space-8x)));
+    margin: 0 auto calc(var(--cpd-space-1x) * -1);
+    padding: var(--cpd-space-1x) var(--cpd-space-2x);
+    border: 1px solid var(--cpd-color-border-interactive-secondary);
+    border-radius: 99px;
+    background: var(--tg-glass-background, var(--cpd-color-bg-canvas-default));
+    backdrop-filter: var(--tg-glass-backdrop, blur(24px));
+    box-shadow: 0 2px 12px rgb(0 0 0 / 8%);
     font: var(--cpd-font-body-sm-regular);
+    /* The morph itself: the same curve the rest of the Telegram layout moves on. */
+    transition:
+        border-radius var(--tg-transition-standard-out),
+        max-width var(--tg-transition-standard-out),
+        padding var(--tg-transition-standard-out),
+        background-color var(--tg-transition-standard-out);
 
     .mx_TgAsk_catchUp {
         display: inline-flex;
         align-items: center;
         gap: var(--cpd-space-1x);
         padding: var(--cpd-space-1x) var(--cpd-space-3x);
+        border: none;
         border-radius: 99px;
+        background: none;
         font: var(--cpd-font-body-sm-medium);
+        white-space: nowrap;
 
         svg {
             width: 1em;
@@ -35,6 +60,7 @@ Please see LICENSE files in the repository root for full details.
 
     .mx_TgAsk_open_button {
         color: var(--cpd-color-text-secondary);
+        white-space: nowrap;
     }
 
     .mx_TgAsk_form {
@@ -42,20 +68,19 @@ Please see LICENSE files in the repository root for full details.
         flex: 1;
         align-items: center;
         gap: var(--cpd-space-2x);
+        min-width: 0;
     }
 
     .mx_TgAsk_input {
         flex: 1;
         min-width: 0;
-        padding: var(--cpd-space-2x) var(--cpd-space-3x);
-        border: 1px solid var(--cpd-color-border-interactive-secondary);
-        border-radius: 99px;
-        background: var(--cpd-color-bg-canvas-default);
+        padding: var(--cpd-space-1x) var(--cpd-space-2x);
+        border: none;
+        background: none;
         font: var(--cpd-font-body-md-regular);
         color: var(--cpd-color-text-primary);
 
         &:focus {
-            border-color: var(--cpd-color-border-interactive-primary);
             outline: none;
         }
     }
@@ -64,8 +89,8 @@ Please see LICENSE files in the repository root for full details.
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        width: 32px;
-        height: 32px;
+        width: 28px;
+        height: 28px;
         padding: 0;
         border-radius: 99px;
 
@@ -78,5 +103,74 @@ Please see LICENSE files in the repository root for full details.
     .mx_TgAsk_failed {
         margin: 0;
         color: var(--cpd-color-text-critical-primary);
+    }
+}
+
+/* Asked: room for a question, still a pill. */
+.mx_TgAsk_asking {
+    max-width: min(46rem, calc(100% - var(--cpd-space-8x)));
+    width: min(34rem, calc(100% - var(--cpd-space-8x)));
+}
+
+/*
+ * Answering: the pill has become the answer. Square-ish corners, the full width it is allowed, and the
+ * words filling it from the top as they arrive.
+ */
+.mx_TgAsk_answering {
+    width: min(46rem, calc(100% - var(--cpd-space-4x)));
+    max-width: min(46rem, calc(100% - var(--cpd-space-4x)));
+    padding: var(--cpd-space-3x) var(--cpd-space-4x);
+    border-radius: 16px;
+    text-align: start;
+
+    .mx_TgAsk_card {
+        display: flex;
+        flex-direction: column;
+        gap: var(--cpd-space-1x);
+        width: 100%;
+        max-height: 40vh;
+        overflow-y: auto;
+    }
+
+    .mx_TgAsk_looking {
+        margin: 0;
+        font: var(--cpd-font-body-sm-regular);
+        color: var(--cpd-color-text-secondary);
+    }
+
+    .mx_TgAsk_answer {
+        margin: 0;
+        font: var(--cpd-font-body-md-regular);
+        white-space: pre-wrap;
+    }
+
+    /* While the words are still arriving, the edge travels - the same one the notes use. */
+    border-color: transparent;
+    background-image: linear-gradient(90deg, var(--cpd-color-bg-accent-rest), transparent 45%);
+    background-repeat: no-repeat;
+    background-size: 100% 2px;
+    background-position: 0 100%;
+    animation: mx_TgAsk_edge 1.8s ease-in-out infinite;
+}
+
+@keyframes mx_TgAsk_edge {
+    from {
+        background-position-x: -100%;
+    }
+
+    to {
+        background-position-x: 200%;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .mx_TgAsk {
+        transition: none;
+    }
+
+    .mx_TgAsk_answering {
+        animation: none;
+        border-color: var(--cpd-color-bg-accent-rest);
+        background-image: none;
     }
 }

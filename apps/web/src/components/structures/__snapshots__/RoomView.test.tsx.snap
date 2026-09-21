@@ -1433,7 +1433,8 @@ exports[`RoomView > should hide the header when hideHeader=true 1`] = `
           </div>
         </div>
         <div
-          class="mx_TgAsk"
+          class="mx_TgAsk mx_TgAsk_idle"
+          data-state="idle"
         >
           <div
             class="mx_AccessibleButton mx_TgAsk_catchUp mx_AccessibleButton_hasKind mx_AccessibleButton_kind_secondary"
@@ -1950,7 +1951,8 @@ exports[`RoomView > should hide the pinned message banner when hidePinnedMessage
           </div>
         </div>
         <div
-          class="mx_TgAsk"
+          class="mx_TgAsk mx_TgAsk_idle"
+          data-state="idle"
         >
           <div
             class="mx_AccessibleButton mx_TgAsk_catchUp mx_AccessibleButton_hasKind mx_AccessibleButton_kind_secondary"
@@ -2716,7 +2718,8 @@ exports[`RoomView > should not display the timeline when the room encryption is 
           </div>
         </div>
         <div
-          class="mx_TgAsk"
+          class="mx_TgAsk mx_TgAsk_idle"
+          data-state="idle"
         >
           <div
             class="mx_AccessibleButton mx_TgAsk_catchUp mx_AccessibleButton_hasKind mx_AccessibleButton_kind_secondary"

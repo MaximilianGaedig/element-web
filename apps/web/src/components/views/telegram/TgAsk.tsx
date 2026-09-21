@@ -12,9 +12,13 @@ Please see LICENSE files in the repository root for full details.
  * without being asked anything else, and a box for a question, which lets the model go and look through
  * the history for the answer.
  *
- * The answer does not appear here. It appears in the timeline, under the message it is about, where the
- * conversation it concerns is - and only you can see it (utils/ai/notes.ts). This is the doorway, not
- * the room.
+ * The shape of it: a pill floating over the conversation, which grows into the answer as it is written
+ * and settles back into a pill when it is done. Nothing jumps about and nothing new appears out of
+ * nowhere - the thing you pressed is the thing that answers, which is what makes it feel like one
+ * gesture rather than three.
+ *
+ * The answer is *also* kept in the timeline, under the message it is about and visible only to you
+ * (utils/ai/notes.ts), so it is still there tomorrow when the card is long gone.
  */
 
 import React, { type JSX, useCallback, useRef, useState } from "react";
@@ -32,6 +36,9 @@ import { lookingWords } from "./TgAiNote";
 
 /** How much a summary is given at most: a day of a busy chat, not a year of one. */
 const READ_BACK = 200;
+
+/** How long the finished answer stays in the card before it settles back into the pill. */
+const SETTLE_MS = 2500;
 
 /**
  * What you actually missed: everything after the last message you have read.
@@ -77,6 +84,8 @@ export function TgAsk({ room, anchor }: Props): JSX.Element | null {
     const [busy, setBusy] = useState(false);
     const [open, setOpen] = useState(false);
     const [failed, setFailed] = useState<string>();
+    /** The answer as it is being written, shown in the card the pill grew into. */
+    const [answering, setAnswering] = useState<{ text: string; looking?: string }>();
     const abort = useRef<AbortController>(undefined);
 
     const run = useCallback(
@@ -93,6 +102,7 @@ export function TgAsk({ room, anchor }: Props): JSX.Element | null {
 
             let looking: string | undefined;
             let text = "";
+            setAnswering({ text: "", looking: _t("tg_layout|ai_thinking") });
             setStreaming({ anchor: at, roomId: room.roomId, text: "", looking: _t("tg_layout|ai_thinking") });
 
             try {
@@ -110,10 +120,12 @@ export function TgAsk({ room, anchor }: Props): JSX.Element | null {
                     {
                         onText: (whole) => {
                             text = whole;
+                            setAnswering({ text });
                             setStreaming({ anchor: at, roomId: room.roomId, text, looking: undefined });
                         },
                         onLooking: (what) => {
                             looking = lookingWords(what.tool);
+                            setAnswering({ text, looking });
                             setStreaming({ anchor: at, roomId: room.roomId, text, looking });
                         },
                     },
@@ -131,8 +143,15 @@ export function TgAsk({ room, anchor }: Props): JSX.Element | null {
                 };
                 await keepNote(client, room.roomId, note);
                 setQuestion("");
+                setOpen(false);
+                // Kept in the timeline now, so the card has said what it had to say: it shrinks back
+                // into the pill it grew from rather than sitting there being dismissed.
+                window.setTimeout(() => setAnswering(undefined), SETTLE_MS);
             } catch (error) {
                 setFailed(_t("tg_layout|ai_failed", { reason: String((error as Error).message).slice(0, 160) }));
+                // Nothing to show in the card, so it goes back to being a pill and the failure is said
+                // beside it rather than inside a container that never filled.
+                setAnswering(undefined);
             } finally {
                 setStreaming(undefined);
                 setBusy(false);
@@ -143,52 +162,69 @@ export function TgAsk({ room, anchor }: Props): JSX.Element | null {
 
     if (!aiAvailable()) return null;
 
+    // One element throughout: a pill, a pill with a box in it, then the card it grew into. The class
+    // says which, and the shape moves between them rather than one thing replacing another.
+    const state = answering ? "answering" : open ? "asking" : "idle";
+
     return (
-        <div className={`mx_TgAsk${open ? " mx_TgAsk_open" : ""}`}>
-            <AccessibleButton
-                kind="secondary"
-                className="mx_TgAsk_catchUp"
-                disabled={busy}
-                onClick={() => void run("summary")}
-            >
-                <SparkleIcon />
-                {_t("tg_layout|ai_catch_up")}
-            </AccessibleButton>
-
-            {!open && (
-                <AccessibleButton kind="link" className="mx_TgAsk_open_button" onClick={() => setOpen(true)}>
-                    {_t("tg_layout|ai_ask")}
-                </AccessibleButton>
-            )}
-
-            {open && (
-                <form
-                    className="mx_TgAsk_form"
-                    onSubmit={(event) => {
-                        event.preventDefault();
-                        const asked = question.trim();
-                        if (asked) void run("question", asked);
-                    }}
-                >
-                    <input
-                        className="mx_TgAsk_input"
-                        value={question}
-                        disabled={busy}
-                        placeholder={_t("tg_layout|ai_ask_placeholder")}
-                        onChange={(event) => setQuestion(event.target.value)}
-                        aria-label={_t("tg_layout|ai_ask")}
-                    />
+        <div className={`mx_TgAsk mx_TgAsk_${state}`} data-state={state}>
+            {answering ? (
+                <div className="mx_TgAsk_card">
+                    {answering.looking && <p className="mx_TgAsk_looking">{answering.looking}</p>}
+                    <p className="mx_TgAsk_answer">{answering.text}</p>
+                </div>
+            ) : (
+                <>
                     <AccessibleButton
-                        kind="primary"
-                        className="mx_TgAsk_send"
-                        element="button"
-                        onClick={null}
-                        disabled={busy || !question.trim()}
-                        {...{ type: "submit" }}
+                        kind="secondary"
+                        className="mx_TgAsk_catchUp"
+                        disabled={busy}
+                        onClick={() => void run("summary")}
                     >
-                        <SendIcon />
+                        <SparkleIcon />
+                        {_t("tg_layout|ai_catch_up")}
                     </AccessibleButton>
-                </form>
+
+                    {!open && (
+                        <AccessibleButton kind="link" className="mx_TgAsk_open_button" onClick={() => setOpen(true)}>
+                            {_t("tg_layout|ai_ask")}
+                        </AccessibleButton>
+                    )}
+
+                    {open && (
+                        <form
+                            className="mx_TgAsk_form"
+                            onSubmit={(event) => {
+                                event.preventDefault();
+                                const asked = question.trim();
+                                if (asked) void run("question", asked);
+                            }}
+                        >
+                            <input
+                                className="mx_TgAsk_input"
+                                value={question}
+                                disabled={busy}
+                                autoFocus
+                                placeholder={_t("tg_layout|ai_ask_placeholder")}
+                                onChange={(event) => setQuestion(event.target.value)}
+                                onKeyDown={(event) => {
+                                    if (event.key === "Escape") setOpen(false);
+                                }}
+                                aria-label={_t("tg_layout|ai_ask")}
+                            />
+                            <AccessibleButton
+                                kind="primary"
+                                className="mx_TgAsk_send"
+                                element="button"
+                                onClick={null}
+                                disabled={busy || !question.trim()}
+                                {...{ type: "submit" }}
+                            >
+                                <SendIcon />
+                            </AccessibleButton>
+                        </form>
+                    )}
+                </>
             )}
 
             {failed && <p className="mx_TgAsk_failed">{failed}</p>}
