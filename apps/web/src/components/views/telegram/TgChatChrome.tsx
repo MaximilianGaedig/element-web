@@ -32,7 +32,18 @@ export function TgChatChrome({ body }: Props): JSX.Element {
             const value = `${Math.round(px)}px`;
             if (el.style.getPropertyValue(name) !== value) el.style.setProperty(name, value);
         };
+        /*
+         * Growing the composer grows the padding under the last message, which moves the timeline out
+         * from under it. The scroll panel would put that right on its own, but only after the browser has
+         * painted the frame in between, which is the jump: the messages slide and snap back. Reading the
+         * scroller here, inside the observer and before that paint, and pinning it in the same frame
+         * keeps the last message exactly where it was while the composer grows under it.
+         */
+        const scroller = (): HTMLElement | null => el.querySelector(".mx_ScrollPanel");
         const update = (): void => {
+            const scroll = scroller();
+            const atBottom =
+                !!scroll && scroll.scrollHeight - (scroll.scrollTop + scroll.clientHeight) <= 1 && scroll.scrollTop > 0;
             const b = el.getBoundingClientRect();
             const header = el.querySelector(":scope > .mx_RoomHeader")?.getBoundingClientRect();
             const pinned = el.querySelector(":scope > .mx_TgPinned")?.getBoundingClientRect();
@@ -48,6 +59,7 @@ export function TgChatChrome({ body }: Props): JSX.Element {
             set("--tg-plates-bottom", Math.max(headerBottom, pinnedBottom));
             set("--tg-header-block", Math.max(headerBottom, pinnedBottom, importBottom));
             set("--tg-composer-block", composer ? Math.max(0, b.bottom - composer.top) + (status?.height ?? 0) : 0);
+            if (atBottom && scroll) scroll.scrollTop = scroll.scrollHeight;
         };
         const observer = new ResizeObserver(update);
         const observeChildren = (): void => {
