@@ -10,6 +10,10 @@ Please see LICENSE files in the repository root for full details.
  *
  * Unasked it is one quiet button; asked it becomes a few lines with the chats it names. It sits above
  * the list rather than in it, because it is about the list rather than part of it.
+ *
+ * It is a child of a column with a fixed height, so it has to say both of these or it loses: it will not
+ * shrink (a tall answer was being squeezed to nothing and read as a blank card), and past a share of the
+ * height it scrolls itself rather than pushing the chats off the screen.
  */
 .mx_TgDigest_ask {
     display: flex;
@@ -38,6 +42,13 @@ Please see LICENSE files in the repository root for full details.
 
 .mx_TgDigest {
     /* The pill it grew from: same place, same glass, opened out. */
+    position: relative;
+    display: flex;
+    flex: 0 0 auto;
+    flex-direction: column;
+    min-height: 0;
+    max-height: min(24rem, 45%);
+    overflow: hidden;
     margin: var(--cpd-space-1x) var(--cpd-space-3x);
     padding: var(--cpd-space-3x);
     border: 1px solid var(--cpd-color-border-interactive-secondary);
@@ -51,10 +62,28 @@ Please see LICENSE files in the repository root for full details.
         padding var(--tg-transition-standard-out);
 
     .mx_TgDigest_head {
+        flex: 0 0 auto;
         display: flex;
         align-items: center;
         justify-content: space-between;
         gap: var(--cpd-space-2x);
+    }
+
+    /* The one magical thing, the same one the answers in the timeline carry. */
+    .mx_TgDigest_spark {
+        width: 1em;
+        height: 1em;
+        margin-inline-end: var(--cpd-space-1x);
+        color: #7a5cff;
+        animation: mx_TgAiNote_spark 4s ease-in-out infinite;
+    }
+
+    /* Everything that can run long, scrolling on its own. */
+    .mx_TgDigest_body {
+        flex: 1 1 auto;
+        min-height: 0;
+        overflow-y: auto;
+        overscroll-behavior: contain;
     }
 
     .mx_TgDigest_title {
@@ -69,7 +98,21 @@ Please see LICENSE files in the repository root for full details.
 
     .mx_TgDigest_text {
         margin: var(--cpd-space-1x) 0 0;
-        white-space: pre-wrap;
+        font: var(--cpd-font-body-md-regular);
+        color: var(--cpd-color-text-primary);
+
+        /* Markdown, rendered by the message pipeline: give its lists and paragraphs sane spacing. */
+        :is(p, ul, ol) {
+            margin: 0 0 var(--cpd-space-1x);
+        }
+
+        :is(ul, ol) {
+            padding-inline-start: var(--cpd-space-5x);
+        }
+
+        > :last-child {
+            margin-block-end: 0;
+        }
     }
 
     .mx_TgDigest_doing,
@@ -90,23 +133,22 @@ Please see LICENSE files in the repository root for full details.
     }
 }
 
-/* Being written: the same travelling edge the notes in the timeline use. */
+/* Being written: the sheen the answers in the timeline use, behind the words, moving nothing. */
 .mx_TgDigest_writing {
-    background-image: linear-gradient(90deg, var(--cpd-color-bg-accent-rest), transparent 40%);
-    background-repeat: no-repeat;
-    background-size: 100% 2px;
-    background-position-x: -100%;
-    animation: mx_TgDigest_edge 1.6s ease-in-out infinite;
-}
-
-@keyframes mx_TgDigest_edge {
-    to {
-        background-position-x: 200%;
+    &::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(110deg, transparent 30%, rgb(122 92 255 / 18%) 50%, transparent 70%);
+        background-size: 250% 100%;
+        animation: mx_TgAiNote_sheen 1.8s linear infinite;
+        pointer-events: none;
     }
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .mx_TgDigest_writing {
+    .mx_TgDigest_writing::after,
+    .mx_TgDigest .mx_TgDigest_spark {
         animation: none;
     }
 }

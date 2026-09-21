@@ -106,6 +106,7 @@ import ErrorDialog from "../views/dialogs/ErrorDialog";
 import UploadBar from "./UploadBar";
 import MessageComposer from "../views/rooms/MessageComposer";
 import { TgAsk } from "../views/telegram/TgAsk";
+import { TgReplies } from "../views/telegram/TgReplies";
 import JumpToBottomButton from "../views/rooms/JumpToBottomButton";
 import TopUnreadMessagesBar from "../views/rooms/TopUnreadMessagesBar";
 import { fetchInitialEvent } from "../../utils/EventUtils";
@@ -2562,6 +2563,9 @@ export class RoomView extends React.Component<IRoomProps, IRoomState> {
                         already looking when you wonder what you missed. The answer appears in the
                         timeline rather than here, under the message it is about. */}
                     <TgAsk room={this.state.room} />
+                    {/* Fork: things you might say, drafted when you open a chat somebody is waiting on.
+                        Pressing one fills the composer; sending is still yours. */}
+                    <TgReplies room={this.state.room} />
                     <MessageComposer
                         room={this.state.room}
                         e2eStatus={this.state.e2eStatus}

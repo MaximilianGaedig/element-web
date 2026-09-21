@@ -1,0 +1,54 @@
+/*
+Copyright 2026 New Vector Ltd.
+
+SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only OR LicenseRef-Element-Commercial
+Please see LICENSE files in the repository root for full details.
+*/
+
+/*
+ * Drafted replies, in a row above the composer (TgReplies.tsx).
+ *
+ * One line that scrolls sideways rather than a block that wraps: a wrapping row pushes the composer down
+ * by however long the model happened to be, and a composer that moves while you are reaching for it is
+ * worse than a pill you have to scroll to. The scrollbar is hidden because the row is short and the
+ * overflow is obvious from the pill cut off at the edge.
+ */
+.mx_TgReplies {
+    display: flex;
+    flex: 0 0 auto;
+    gap: var(--cpd-space-2x);
+    padding: var(--cpd-space-1x) var(--cpd-space-4x);
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+    /* Dragged past the end it settles on a pill, the way a row of chips should. */
+    scroll-snap-type: x proximity;
+
+    &::-webkit-scrollbar {
+        display: none;
+    }
+
+    .mx_TgReplies_pill {
+        flex: 0 0 auto;
+        max-width: 22rem;
+        padding: var(--cpd-space-1x) var(--cpd-space-3x);
+        border: 1px solid var(--cpd-color-border-interactive-secondary);
+        border-radius: 99px;
+        background: var(--cpd-color-bg-canvas-default);
+        font: var(--cpd-font-body-sm-regular);
+        color: var(--cpd-color-text-primary);
+        white-space: nowrap;
+        text-overflow: ellipsis;
+        overflow: hidden;
+        scroll-snap-align: start;
+
+        &:hover {
+            background: var(--cpd-color-bg-subtle-secondary);
+        }
+    }
+
+    /* Taken: it stays in the row, faded, so the row does not reshuffle under your finger. */
+    .mx_TgReplies_pill_used {
+        opacity: 0.5;
+    }
+}

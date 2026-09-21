@@ -26,6 +26,7 @@ import { useMatrixClientContext } from "../../../contexts/MatrixClientContext";
 import { ask, aiAvailable, beginAnswer } from "../../../utils/ai/ask";
 import { digestMessages, unreadChats } from "../../../utils/ai/digest";
 import { lookingWords } from "./TgAiNote";
+import { AiText } from "../../../utils/ai/render";
 import dis from "../../../dispatcher/dispatcher";
 import { Action } from "../../../dispatcher/actions";
 import { type ViewRoomPayload } from "../../../dispatcher/payloads/ViewRoomPayload";
@@ -96,6 +97,7 @@ export function TgDigest(): JSX.Element | null {
     return (
         <div className={`mx_TgDigest${doing ? " mx_TgDigest_writing" : ""}`}>
             <div className="mx_TgDigest_head">
+                <SparkleIcon className="mx_TgDigest_spark" />
                 <span className="mx_TgDigest_title">{_t("tg_layout|ai_digest")}</span>
                 <AccessibleButton
                     kind="link"
@@ -110,22 +112,30 @@ export function TgDigest(): JSX.Element | null {
                     <CloseIcon />
                 </AccessibleButton>
             </div>
-            {doing && <p className="mx_TgDigest_doing">{doing}</p>}
-            {failed ? <p className="mx_TgDigest_failed">{failed}</p> : <p className="mx_TgDigest_text">{text}</p>}
-            {cites.length > 0 && (
-                <p className="mx_TgDigest_cites">
-                    {cites.slice(0, 6).map((eventId, index) => (
-                        <AccessibleButton
-                            key={eventId}
-                            kind="link"
-                            className="mx_TgDigest_cite"
-                            onClick={() => jump(eventId)}
-                        >
-                            {_t("tg_layout|ai_cite", { number: index + 1 })}
-                        </AccessibleButton>
-                    ))}
-                </p>
-            )}
+            {/* Its own scroller: a long morning must not squash the list of chats, and must not be
+                squashed by it - which is what happened when this was one tall flex child. */}
+            <div className="mx_TgDigest_body">
+                {doing && <p className="mx_TgDigest_doing">{doing}</p>}
+                {failed ? (
+                    <p className="mx_TgDigest_failed">{failed}</p>
+                ) : (
+                    <AiText className="mx_TgDigest_text" text={text ?? ""} />
+                )}
+                {cites.length > 0 && (
+                    <p className="mx_TgDigest_cites">
+                        {cites.slice(0, 6).map((eventId, index) => (
+                            <AccessibleButton
+                                key={eventId}
+                                kind="link"
+                                className="mx_TgDigest_cite"
+                                onClick={() => jump(eventId)}
+                            >
+                                {_t("tg_layout|ai_cite", { number: index + 1 })}
+                            </AccessibleButton>
+                        ))}
+                    </p>
+                )}
+            </div>
         </div>
     );
 }

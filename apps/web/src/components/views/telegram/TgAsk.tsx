@@ -38,18 +38,18 @@ import { lookingWords } from "./TgAiNote";
 const READ_BACK = 200;
 
 /**
- * What you actually missed: everything after the last message you have read.
+ * Where what you missed begins.
  *
- * "What did I miss" means the unread ones, not the last two hundred - a chat you read an hour ago has
- * nothing to summarise, and one you left a week ago has more than fits on screen. Where the read marker
- * cannot be found (it has fallen out of the timeline, or there is none), what is loaded is all there is
- * to go on, and the last of it is the honest answer.
+ * "What did I miss" is about the unread messages, but it cannot be answered from them alone: three
+ * replies saying "yes, do that" summarise to nothing without the question they answer. So the model is
+ * given the last READ_BACK messages either way, and told which of them are the new ones - context to
+ * read, and a line about what is new. Where the read marker cannot be found (it has fallen out of the
+ * timeline, or there is none) there is nothing to point at, and the last of the chat is the honest answer.
  */
-function unreadOf(room: Room, events: MatrixEvent[]): MatrixEvent[] {
+function unreadFrom(room: Room, events: MatrixEvent[]): string | undefined {
     const readUpTo = room.getEventReadUpTo(room.client.getSafeUserId(), true);
     const at = readUpTo ? events.findIndex((event) => event.getId() === readUpTo) : -1;
-    const after = at >= 0 ? events.slice(at + 1) : [];
-    return after.length ? after.slice(-READ_BACK) : events.slice(-READ_BACK);
+    return at >= 0 ? events[at + 1]?.getId() : undefined;
 }
 
 /** The messages as the model is given them: an id it can cite, who said it, when, and the words. */
@@ -91,6 +91,7 @@ export function TgAsk({ room, anchor }: Props): JSX.Element | null {
             const at = anchor ?? events[events.length - 1]?.getId();
             if (!at) return;
 
+            const newFrom = kind === "summary" ? unreadFrom(room, events) : undefined;
             setBusy(true);
             setFailed(undefined);
             beginAnswer();
@@ -106,12 +107,15 @@ export function TgAsk({ room, anchor }: Props): JSX.Element | null {
                     client,
                     {
                         kind,
-                        // A question may need the whole history, which the model searches for itself; a
-                        // summary is about what is here.
-                        // A summary is of what was missed; a question may need the whole history, which
-                        // the model goes and searches for itself.
-                        messages: kind === "summary" ? readable(unreadOf(room, events)) : readable(events).slice(-40),
-                        question: asked,
+                        // A summary reads the chat around what was missed; a question may need the whole
+                        // history, which the model goes and searches for itself.
+                        messages: readable(events).slice(kind === "summary" ? -READ_BACK : -40),
+                        question:
+                            kind === "summary"
+                                ? // Not a question: where to start. The earlier messages are there to be
+                                  // understood from, not summarised.
+                                  newFrom && _t("tg_layout|ai_unread_from", { id: newFrom })
+                                : asked,
                     },
                     {
                         onText: (whole) => {
