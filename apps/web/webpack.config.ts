@@ -692,7 +692,9 @@ export default (env: string, argv: Record<string, any>): webpack.Configuration =
                         // The code reader for browsers with none of their own, served by us so a
                         // picture is read offline and never leaves the device.
                         from: "zxing_reader.wasm",
-                        context: path.join(getPackageRoot("zxing-wasm"), "dist", "reader"),
+                        // The package exports the file itself, and not its own package.json, so the
+                        // directory is asked for through the one thing it does export.
+                        context: getPackageRoot("zxing-wasm", "reader/zxing_reader.wasm"),
                         to: path.join(__dirname, "webapp", "barcode"),
                     },
                     {
