@@ -36,10 +36,34 @@ const MEDIA: Record<string, string> = {
     "m.file": "tg_layout|ai_a_file",
 };
 
+/**
+ * What a message is, as the reader sees it.
+ *
+ * "A picture" covers a photograph of a receipt and a reaction gif, and a chat where somebody answers a
+ * question with a sticker reads as silence unless the sticker is there. The model is shown what a person
+ * would see at a glance: a sticker, a gif, a video, a voice message, a photograph.
+ */
+function kindOf(event: MatrixEvent): string | undefined {
+    if (event.getType() === "m.sticker") return "sticker";
+    const content = event.getContent();
+    const msgtype = typeof content.msgtype === "string" ? content.msgtype : undefined;
+    if (msgtype === "m.image") return content.info?.mimetype === "image/gif" ? "gif" : "picture";
+    if (msgtype === "m.video") return "video";
+    if (msgtype === "m.audio") return content["org.matrix.msc3245.voice"] ? "voice message" : "audio";
+    if (msgtype === "m.file") return "file";
+    if (msgtype === "m.emote") return "emote";
+    return undefined;
+}
+
+/** The message this one is a reply to, where it is one. */
+const replyOf = (event: MatrixEvent): string | undefined =>
+    event.getContent()["m.relates_to"]?.["m.in_reply_to"]?.event_id;
+
 /** What one event contributes, or nothing at all: its words, or what its picture says. */
 export async function sayable(client: MatrixClient, event: MatrixEvent): Promise<string | undefined> {
     const content = event.getContent();
     const body = typeof content.body === "string" ? content.body : "";
+    if (event.getType() === "m.sticker") return body.trim() || _t("tg_layout|ai_a_sticker");
     const media = typeof content.msgtype === "string" ? MEDIA[content.msgtype] : undefined;
     if (!media) return body.trim() || undefined;
 
@@ -72,7 +96,10 @@ export async function readable(
     const events = room
         .getLiveTimeline()
         .getEvents()
-        .filter((event) => event.getType() === "m.room.message" && !event.isRedacted())
+        // Stickers are their own event type and are half of what some chats are made of.
+        .filter(
+            (event) => (event.getType() === "m.room.message" || event.getType() === "m.sticker") && !event.isRedacted(),
+        )
         .slice(-most);
     const lines = await Promise.all(events.map((event) => sayable(client, event)));
     const from = newFrom ? events.findIndex((event) => event.getId() === newFrom) : -1;
@@ -90,6 +117,9 @@ export async function readable(
             body: body.slice(0, LONGEST),
             new: from >= 0 && at >= from,
             mine: event.getSender() === me,
+            replyTo: replyOf(event),
+            kind: kindOf(event),
+            edited: !!event.replacingEventId(),
         });
     }
     return out;

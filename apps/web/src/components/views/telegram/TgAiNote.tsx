@@ -166,6 +166,15 @@ export function TgAiNote({ client, roomId, note, streaming, onGone }: Props): JS
                         {note.sent.looked?.length
                             ? _t("tg_layout|ai_sent_looked", { tools: note.sent.looked.join(", ") })
                             : null}
+                        {note.sent.model
+                            ? _t("tg_layout|ai_sent_by", {
+                                  model: note.sent.model,
+                                  seconds: ((note.sent.ms ?? 0) / 1000).toFixed(1),
+                              })
+                            : null}
+                        {note.sent.asksLeft !== undefined
+                            ? _t("tg_layout|ai_asks_left", { count: note.sent.asksLeft })
+                            : null}
                     </p>
                     <ol className="mx_TgAiNote_sentList">
                         {whatWasSent(client.getRoom(roomId), note.sent)

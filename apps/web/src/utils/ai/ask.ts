@@ -44,6 +44,12 @@ export interface AskMessage {
     mine?: boolean;
     /** Which chat it came from, where several are being read at once: a digest is not one conversation. */
     chat?: string;
+    /** The message this one answers, where it answers one: a chat is not a flat list and never was. */
+    replyTo?: string;
+    /** What it is, where it is not words: a sticker, a gif, a photograph, a voice message, a file. */
+    kind?: string;
+    /** Whether it was edited after it was sent, which changes what "they said" means. */
+    edited?: boolean;
 }
 
 /** What comes back once it has finished. */
@@ -61,7 +67,16 @@ export interface Answer {
     confident: boolean;
     /** What it went and looked at on the way. */
     looked?: Array<{ tool: string; [key: string]: unknown }>;
-    usage?: { input: number; output: number; model: string; cost: number };
+    usage?: {
+        input: number;
+        output: number;
+        model: string;
+        cost: number;
+        /** How long it took, and what is left of today's allowance for this account. */
+        ms?: number;
+        today?: { requests: number; tokens: number; cost: number };
+        limits?: { requests: number; tokens: number; cost: number; atOnce: number };
+    };
 }
 
 /** What happens while it works. */

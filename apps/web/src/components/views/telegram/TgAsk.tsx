@@ -155,6 +155,12 @@ export function TgAsk({ room, anchor }: Props): JSX.Element | null {
                         first: sending[0]?.id,
                         last: sending[sending.length - 1]?.id,
                         looked: answer.looked?.map((what) => String(what.tool)),
+                        model: answer.usage?.model,
+                        ms: answer.usage?.ms,
+                        asksLeft:
+                            answer.usage?.limits && answer.usage.today
+                                ? answer.usage.limits.requests - answer.usage.today.requests
+                                : undefined,
                     },
                 };
                 await keepNote(client, room.roomId, note);

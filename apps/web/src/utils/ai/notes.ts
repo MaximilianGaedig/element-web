@@ -61,6 +61,10 @@ export interface AiNote {
         pictures?: number;
         /** What it went and looked at afterwards: searches, chats read, pages fetched. */
         looked?: string[];
+        /** Which model answered, how long it took, and how much of the day's allowance is left. */
+        model?: string;
+        ms?: number;
+        asksLeft?: number;
     };
 }
 

@@ -3437,11 +3437,16 @@
         "address": "Address",
         "ai_a_file": "a file",
         "ai_a_picture": "a picture",
+        "ai_a_sticker": "a sticker",
         "ai_a_video": "a video",
         "ai_a_voice_message": "a voice message",
         "ai_ask": "Ask about this chat",
         "ai_ask_hint": "Type what you are wondering in the composer, then press this instead of send",
         "ai_ask_this": "Ask the model: \"%(question)s\"",
+        "ai_asks_left": {
+            "one": ", 1 ask left today",
+            "other": ", %(count)s asks left today"
+        },
         "ai_catch_up": "What did I miss",
         "ai_cite": "Message %(number)s",
         "ai_digest": "What needs me",
@@ -3459,6 +3464,7 @@
         "ai_replies": "Suggested replies",
         "ai_send": "Send to chat",
         "ai_sent": "Sent",
+        "ai_sent_by": " — %(model)s, %(seconds)ss",
         "ai_sent_digest": {
             "one": "Sent 1 message from %(chats)s chats",
             "other": "Sent %(count)s messages from %(chats)s chats"
