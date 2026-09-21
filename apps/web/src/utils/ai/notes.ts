@@ -19,6 +19,8 @@ Please see LICENSE files in the repository root for full details.
 import { type MatrixClient, MsgType } from "matrix-js-sdk/src/matrix";
 import { logger } from "matrix-js-sdk/src/logger";
 
+import Markdown from "../../Markdown";
+
 export const AI_NOTES_EVENT_TYPE = "im.mxg.ai_notes";
 
 /** One answer, against the message it was asked about. */
@@ -94,20 +96,17 @@ export async function removeNote(client: MatrixClient, roomId: string, id: strin
  */
 export async function sendNote(client: MatrixClient, roomId: string, note: AiNote): Promise<void> {
     const preamble = note.question ? `${note.question}\n\n` : "";
+    // What is sent is what was shown: the same markdown, through the same converter the composer uses.
+    const markdown = new Markdown(`${preamble}${note.answer}`);
     // Cast because the extra key is ours: the SDK's message type knows only what the spec defines, and
     // a message that does not say a machine wrote it is the one thing this must never send.
     await client.sendMessage(roomId, {
         "msgtype": MsgType.Text,
         "body": `${preamble}${note.answer}`,
-        "format": "org.matrix.custom.html",
-        "formatted_body": `${preamble ? `<em>${escape(note.question ?? "")}</em><br/>` : ""}${escape(
-            note.answer,
-        ).replaceAll("\n", "<br/>")}`,
+        ...(markdown.isPlainText()
+            ? {}
+            : { format: "org.matrix.custom.html", formatted_body: markdown.toHTML({ externalLinks: true }) }),
         // So a client that cares can tell, and so this can never be mistaken for something written here.
         "im.mxg.ai": { generated: true, cites: note.cites },
     } as never);
-}
-
-function escape(text: string): string {
-    return text.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;");
 }

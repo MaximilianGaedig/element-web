@@ -17,7 +17,7 @@ Please see LICENSE files in the repository root for full details.
  * said out loud - "searching your chats" - because a wait you can see the shape of is a shorter wait.
  */
 
-import React, { type JSX, useState } from "react";
+import React, { type JSX, useMemo, useState } from "react";
 import { type MatrixClient } from "matrix-js-sdk/src/matrix";
 import SendIcon from "@vector-im/compound-design-tokens/assets/web/icons/send";
 import DeleteIcon from "@vector-im/compound-design-tokens/assets/web/icons/delete";
@@ -29,6 +29,8 @@ import { type AiNote, removeNote, sendNote } from "../../../utils/ai/notes";
 import dis from "../../../dispatcher/dispatcher";
 import { Action } from "../../../dispatcher/actions";
 import { type ViewRoomPayload } from "../../../dispatcher/payloads/ViewRoomPayload";
+import Markdown from "../../../Markdown";
+import { bodyToHtml } from "../../../HtmlUtils";
 
 interface Props {
     client: MatrixClient;
@@ -59,6 +61,26 @@ export function TgAiNote({ client, roomId, note, streaming, onGone }: Props): JS
     const [sent, setSent] = useState(false);
     const [busy, setBusy] = useState(false);
     const text = streaming ? streaming.text : note.answer;
+
+    /*
+     * Rendered the way a message is rendered: the model writes markdown - lists, emphasis, links - and
+     * this is the app's own pipeline for turning that into something to look at, sanitiser and all.
+     * Plain text stays plain, so a one-line answer does not go through a formatter to come out the same.
+     */
+    const html = useMemo(() => {
+        if (!text) return undefined;
+        const markdown = new Markdown(text);
+        if (markdown.isPlainText()) return undefined;
+        return bodyToHtml(
+            {
+                body: text,
+                format: "org.matrix.custom.html",
+                formatted_body: markdown.toHTML({ externalLinks: true }),
+            },
+            undefined,
+            { disableBigEmoji: true },
+        );
+    }, [text]);
 
     const jumpTo = (eventId: string): void => {
         dis.dispatch<ViewRoomPayload>({
@@ -108,7 +130,12 @@ export function TgAiNote({ client, roomId, note, streaming, onGone }: Props): JS
                 </p>
             )}
 
-            <p className="mx_TgAiNote_text">{text}</p>
+            {html === undefined ? (
+                <p className="mx_TgAiNote_text">{text}</p>
+            ) : (
+                // Sanitised by the same rules a message body is: see HtmlUtils.
+                <div className="mx_TgAiNote_text" dangerouslySetInnerHTML={{ __html: html }} />
+            )}
 
             {!streaming && note.confident === false && (
                 <p className="mx_TgAiNote_unsure">{_t("tg_layout|ai_unsure")}</p>
