@@ -155,6 +155,8 @@ interface TgPinnedPlateProps {
     listButton?: ReactNode;
     /** Accessible description of the jump button. */
     followLabel: string;
+    /** The pinned message's cover, for a photo, video or sticker (tweb's `.pinned-message-media`). */
+    thumbnail?: string | null;
 }
 
 export function TgPinnedPlate({
@@ -164,6 +166,7 @@ export function TgPinnedPlate({
     onFollow,
     listButton,
     followLabel,
+    thumbnail,
 }: TgPinnedPlateProps): JSX.Element {
     const pinnedIndex = toPinnedIndex(count, currentEventIndex);
     const counter = pinnedCounter(pinnedIndex, count);
@@ -174,6 +177,7 @@ export function TgPinnedPlate({
             role="region"
             className="mx_TgPinned"
             data-many={count > 1 || undefined}
+            data-media={!!thumbnail || undefined}
             aria-label={_t("room|pinned_message_banner|description")}
             data-testid="pinned-message-banner"
         >
@@ -185,6 +189,13 @@ export function TgPinnedPlate({
                 aria-describedby={id}
             >
                 <PinnedMessageBorder count={count} index={currentEventIndex} />
+                {/*
+                 * tweb keeps the cover mounted and scales it to nothing when the message has none, so
+                 * moving between a photo and a text message animates rather than reflowing the rows.
+                 */}
+                <span className="mx_TgPinned_media" aria-hidden>
+                    {thumbnail && <img src={thumbnail} alt="" draggable={false} />}
+                </span>
                 <div className="mx_TgPinned_content" id={id}>
                     <div className="mx_TgPinned_title">
                         {_t("tg_layout|pinned_message")}{" "}

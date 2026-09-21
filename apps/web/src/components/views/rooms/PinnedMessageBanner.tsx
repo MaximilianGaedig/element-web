@@ -30,6 +30,7 @@ import MatrixClientContext from "../../../contexts/MatrixClientContext";
 import { EventPreviewViewModel } from "../../../viewmodels/room/timeline/event-tile/EventPreviewViewModel";
 import { useSettingValue } from "../../../hooks/useSettings";
 import { TgPinnedPlate } from "../telegram/TgPinnedMessage";
+import { useMediaThumbnail } from "../../../utils/telegram/mediaThumbnail";
 
 /**
  * The props for the {@link PinnedMessageBanner} component.
@@ -67,6 +68,8 @@ export function PinnedMessageBanner({ room, permalinkCreator }: PinnedMessageBan
 
     const id = useId();
     const telegramLayout = useSettingValue("telegramStyleLayout");
+    // Telegram shows a cover beside the pinned message when it is a photo, a video or a sticker.
+    const pinnedThumbnail = useMediaThumbnail(telegramLayout ? pinnedEvent : undefined);
 
     if (!pinnedEvent) return null;
 
@@ -116,6 +119,7 @@ export function PinnedMessageBanner({ room, permalinkCreator }: PinnedMessageBan
                     )
                 }
                 listButton={<BannerButton room={room} compact />}
+                thumbnail={pinnedThumbnail}
             />
         );
     }

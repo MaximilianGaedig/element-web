@@ -12,13 +12,13 @@ Please see LICENSE files in the repository root for full details.
  * Used in bubbles and, as "Reply to <name>", in the composer's reply row.
  */
 
-import React, { type JSX, type ReactNode, useEffect, useState } from "react";
+import React, { type JSX, type ReactNode } from "react";
 import classNames from "classnames";
 import { type MatrixEvent, MsgType } from "matrix-js-sdk/src/matrix";
 
 import { _t } from "../../../languageHandler";
 import { getUserNameColorClass } from "../../../utils/FormattingUtils";
-import { MediaEventHelper } from "../../../utils/MediaEventHelper";
+import { useMediaThumbnail } from "../../../utils/telegram/mediaThumbnail";
 import { MessagePreviewStore } from "../../../stores/message-preview/MessagePreviewStore";
 import { MatrixClientPeg } from "../../../MatrixClientPeg";
 
@@ -39,36 +39,6 @@ export function replyPreviewText(ev: MatrixEvent): string {
     return MessagePreviewStore.instance.generatePreviewForEvent(ev) || content.body || "";
 }
 
-function hasThumbnail(ev: MatrixEvent): boolean {
-    const type = ev.getContent().msgtype;
-    return ev.getType() === "m.sticker" || type === MsgType.Image || type === MsgType.Video;
-}
-
-/** tweb wrapReplyMedia: a small cover thumbnail of the replied-to media. */
-function useReplyThumbnail(ev: MatrixEvent): string | null {
-    const [url, setUrl] = useState<string | null>(null);
-    useEffect(() => {
-        if (!hasThumbnail(ev)) return;
-        let cancelled = false;
-        const helper = new MediaEventHelper(ev);
-        const load = async (): Promise<string | null> => {
-            try {
-                return (await helper.thumbnailUrl.value) ?? (await helper.sourceUrl.value);
-            } catch {
-                return null;
-            }
-        };
-        void load().then((u) => {
-            if (!cancelled) setUrl(u);
-        });
-        return () => {
-            cancelled = true;
-            helper.destroy();
-        };
-    }, [ev]);
-    return url;
-}
-
 interface Props {
     /** The message replied to. */
     event: MatrixEvent;
@@ -87,7 +57,7 @@ export function senderName(ev: MatrixEvent): string {
 }
 
 export function TgReplyQuote({ event, title, variant, onClick, className }: Props): JSX.Element {
-    const thumb = useReplyThumbnail(event);
+    const thumb = useMediaThumbnail(event);
     const sender = event.getSender() ?? "";
     const text = replyPreviewText(event);
     const inner = (
