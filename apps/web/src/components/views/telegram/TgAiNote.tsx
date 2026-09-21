@@ -8,9 +8,10 @@ Please see LICENSE files in the repository root for full details.
 /*
  * What the model said, in the timeline where it was asked - and only you can see it.
  *
- * It sits under the message it is about, like a note somebody left in the margin. It is yours: nobody
- * else in the chat has it, and it stays there after a reload because it is kept as your own account data
- * for the room. Two things can be done with it and both are deliberate: send it to the others, which
+ * It sits under the message it is about and it is shaped like one: the same bubble, the same place on the
+ * page, so reading it is reading the chat rather than reading an advert in the middle of it. What sets it
+ * apart is a sparkle and a line saying only you can see it - which is true: nobody else in the chat has
+ * it, and it survives a reload because it is kept as your own account data for the room. Two things can be done with it and both are deliberate: send it to the others, which
  * writes an ordinary message that says where it came from, or take it away.
  *
  * While it is being written the words arrive as they are written and what the model is looking at is
@@ -22,6 +23,7 @@ import { type MatrixClient } from "matrix-js-sdk/src/matrix";
 import SendIcon from "@vector-im/compound-design-tokens/assets/web/icons/send";
 import DeleteIcon from "@vector-im/compound-design-tokens/assets/web/icons/delete";
 import SearchIcon from "@vector-im/compound-design-tokens/assets/web/icons/search";
+import SparkleIcon from "@vector-im/compound-design-tokens/assets/web/icons/extensions";
 
 import { _t } from "../../../languageHandler";
 import AccessibleButton from "../elements/AccessibleButton";
@@ -119,6 +121,7 @@ export function TgAiNote({ client, roomId, note, streaming, onGone }: Props): JS
     return (
         <div className={`mx_TgAiNote${streaming ? " mx_TgAiNote_writing" : ""}`} data-private="">
             <div className="mx_TgAiNote_head">
+                <SparkleIcon className="mx_TgAiNote_spark" />
                 <span className="mx_TgAiNote_who">{_t("tg_layout|ai_only_you")}</span>
                 {note.question && <span className="mx_TgAiNote_question">{note.question}</span>}
             </div>

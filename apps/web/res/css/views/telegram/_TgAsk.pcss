@@ -6,13 +6,12 @@ Please see LICENSE files in the repository root for full details.
 */
 
 /*
- * Asking about the chat: a pill floating over the conversation, which grows into the answer as it is
- * written and settles back into a pill when it is done (TgAsk.tsx).
+ * Asking about the chat: a pill floating over the conversation (TgAsk.tsx).
  *
- * One element throughout, three shapes. Nothing new appears out of nowhere and nothing jumps: the thing
- * that was pressed is the thing that answers, which is what makes it read as one gesture rather than
- * three. The shape is what moves - corner radius, width, the room it takes - and the words inside simply
- * arrive.
+ * It stays a pill. The answer does not appear in here - it arrives in the timeline, as a message, where
+ * an answer belongs; this only says what is happening while it happens. A floating card repeating the
+ * same words in a different shape was two things to read, and the one over the conversation was the one
+ * that looked like an advert.
  *
  * It floats rather than pushing the timeline down, because a conversation that jumps every time you ask
  * something is a conversation you stop asking about.
@@ -36,7 +35,6 @@ Please see LICENSE files in the repository root for full details.
     font: var(--cpd-font-body-sm-regular);
     /* The morph itself: the same curve the rest of the Telegram layout moves on. */
     transition:
-        border-radius var(--tg-transition-standard-out),
         max-width var(--tg-transition-standard-out),
         padding var(--tg-transition-standard-out),
         background-color var(--tg-transition-standard-out);
@@ -112,54 +110,21 @@ Please see LICENSE files in the repository root for full details.
     width: min(34rem, calc(100% - var(--cpd-space-8x)));
 }
 
-/*
- * Answering: the pill has become the answer. Square-ish corners, the full width it is allowed, and the
- * words filling it from the top as they arrive.
- */
-.mx_TgAsk_answering {
-    width: min(46rem, calc(100% - var(--cpd-space-4x)));
-    max-width: min(46rem, calc(100% - var(--cpd-space-4x)));
-    padding: var(--cpd-space-3x) var(--cpd-space-4x);
-    border-radius: 16px;
-    text-align: start;
+/* While it is working: the pill says what is happening, with the sparkle lit the way the answer's is. */
+.mx_TgAsk_doing {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--cpd-space-2x);
+    margin: 0;
+    padding: var(--cpd-space-1x) var(--cpd-space-2x);
+    font: var(--cpd-font-body-sm-medium);
+    color: var(--cpd-color-text-secondary);
 
-    .mx_TgAsk_card {
-        display: flex;
-        flex-direction: column;
-        gap: var(--cpd-space-1x);
-        width: 100%;
-        max-height: 40vh;
-        overflow-y: auto;
-    }
-
-    .mx_TgAsk_looking {
-        margin: 0;
-        font: var(--cpd-font-body-sm-regular);
-        color: var(--cpd-color-text-secondary);
-    }
-
-    .mx_TgAsk_answer {
-        margin: 0;
-        font: var(--cpd-font-body-md-regular);
-        white-space: pre-wrap;
-    }
-
-    /* While the words are still arriving, the edge travels - the same one the notes use. */
-    border-color: transparent;
-    background-image: linear-gradient(90deg, var(--cpd-color-bg-accent-rest), transparent 45%);
-    background-repeat: no-repeat;
-    background-size: 100% 2px;
-    background-position: 0 100%;
-    animation: mx_TgAsk_edge 1.8s ease-in-out infinite;
-}
-
-@keyframes mx_TgAsk_edge {
-    from {
-        background-position-x: -100%;
-    }
-
-    to {
-        background-position-x: 200%;
+    svg {
+        width: 1em;
+        height: 1em;
+        color: #7a5cff;
+        animation: mx_TgAiNote_spark 4s ease-in-out infinite;
     }
 }
 
@@ -168,9 +133,7 @@ Please see LICENSE files in the repository root for full details.
         transition: none;
     }
 
-    .mx_TgAsk_answering {
+    .mx_TgAsk_doing svg {
         animation: none;
-        border-color: var(--cpd-color-bg-accent-rest);
-        background-image: none;
     }
 }

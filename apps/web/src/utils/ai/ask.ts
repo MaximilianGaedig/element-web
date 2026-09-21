@@ -128,7 +128,12 @@ export async function ask(
             } catch {
                 continue;
             }
-            if (event.type === "delta" && typeof event.text === "string") {
+            if (event.type === "turn") {
+                // The model started again: what it wrote before was it thinking on the way to a tool,
+                // and showing that as the answer would be showing the reader the workings.
+                beginAnswer();
+                events.onText?.("");
+            } else if (event.type === "delta" && typeof event.text === "string") {
                 // The raw stream is the JSON the model is writing; the reader wants the words in it.
                 events.onText?.(readable(bufferOf(event.text)));
             } else if (event.type === "looking") {

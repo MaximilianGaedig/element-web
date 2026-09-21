@@ -3446,6 +3446,7 @@
         "ai_looking_chats": "Finding the right chat…",
         "ai_looking_messages": "Searching your chats…",
         "ai_looking_web": "Asking the web…",
+        "ai_no_answer": "It did not manage an answer this time.",
         "ai_only_you": "Only you can see this",
         "ai_send": "Send to chat",
         "ai_sent": "Sent",

@@ -12,13 +12,13 @@ Please see LICENSE files in the repository root for full details.
  * without being asked anything else, and a box for a question, which lets the model go and look through
  * the history for the answer.
  *
- * The shape of it: a pill floating over the conversation, which grows into the answer as it is written
- * and settles back into a pill when it is done. Nothing jumps about and nothing new appears out of
- * nowhere - the thing you pressed is the thing that answers, which is what makes it feel like one
- * gesture rather than three.
+ * The shape of it: a pill floating over the conversation, and the answer arriving where an answer belongs
+ * - in the timeline, as a message, under the thing it is about (TgAiNote). The pill does not grow into a
+ * card of its own: an answer shown twice in two shapes is two things to read and one of them is an advert.
+ * So the pill only ever says what is happening, and the words appear in the chat as they are written.
  *
- * The answer is *also* kept in the timeline, under the message it is about and visible only to you
- * (utils/ai/notes.ts), so it is still there tomorrow when the card is long gone.
+ * The answer is kept there afterwards, visible only to you (utils/ai/notes.ts), so it is still there
+ * tomorrow.
  */
 
 import React, { type JSX, useCallback, useRef, useState } from "react";
@@ -36,9 +36,6 @@ import { lookingWords } from "./TgAiNote";
 
 /** How much a summary is given at most: a day of a busy chat, not a year of one. */
 const READ_BACK = 200;
-
-/** How long the finished answer stays in the card before it settles back into the pill. */
-const SETTLE_MS = 2500;
 
 /**
  * What you actually missed: everything after the last message you have read.
@@ -84,8 +81,8 @@ export function TgAsk({ room, anchor }: Props): JSX.Element | null {
     const [busy, setBusy] = useState(false);
     const [open, setOpen] = useState(false);
     const [failed, setFailed] = useState<string>();
-    /** The answer as it is being written, shown in the card the pill grew into. */
-    const [answering, setAnswering] = useState<{ text: string; looking?: string }>();
+    /** What the model is doing right now, said in the pill while it does it. */
+    const [doing, setDoing] = useState<string>();
     const abort = useRef<AbortController>(undefined);
 
     const run = useCallback(
@@ -100,9 +97,8 @@ export function TgAsk({ room, anchor }: Props): JSX.Element | null {
             abort.current?.abort();
             abort.current = new AbortController();
 
-            let looking: string | undefined;
             let text = "";
-            setAnswering({ text: "", looking: _t("tg_layout|ai_thinking") });
+            setDoing(_t("tg_layout|ai_thinking"));
             setStreaming({ anchor: at, roomId: room.roomId, text: "", looking: _t("tg_layout|ai_thinking") });
 
             try {
@@ -120,17 +116,21 @@ export function TgAsk({ room, anchor }: Props): JSX.Element | null {
                     {
                         onText: (whole) => {
                             text = whole;
-                            setAnswering({ text });
+                            setDoing(undefined);
                             setStreaming({ anchor: at, roomId: room.roomId, text, looking: undefined });
                         },
                         onLooking: (what) => {
-                            looking = lookingWords(what.tool);
-                            setAnswering({ text, looking });
+                            const looking = lookingWords(what.tool);
+                            setDoing(looking);
                             setStreaming({ anchor: at, roomId: room.roomId, text, looking });
                         },
                     },
                     abort.current.signal,
                 );
+
+                // Nothing to keep is a failure, not an answer: a bubble holding only "this may not be
+                // the whole answer" is worse than being told it did not manage one.
+                if (!answer.answer.trim()) throw new Error(_t("tg_layout|ai_no_answer"));
 
                 const note: AiNote = {
                     id: `ai-${Date.now().toString(36)}`,
@@ -144,15 +144,10 @@ export function TgAsk({ room, anchor }: Props): JSX.Element | null {
                 await keepNote(client, room.roomId, note);
                 setQuestion("");
                 setOpen(false);
-                // Kept in the timeline now, so the card has said what it had to say: it shrinks back
-                // into the pill it grew from rather than sitting there being dismissed.
-                window.setTimeout(() => setAnswering(undefined), SETTLE_MS);
             } catch (error) {
                 setFailed(_t("tg_layout|ai_failed", { reason: String((error as Error).message).slice(0, 160) }));
-                // Nothing to show in the card, so it goes back to being a pill and the failure is said
-                // beside it rather than inside a container that never filled.
-                setAnswering(undefined);
             } finally {
+                setDoing(undefined);
                 setStreaming(undefined);
                 setBusy(false);
             }
@@ -162,17 +157,17 @@ export function TgAsk({ room, anchor }: Props): JSX.Element | null {
 
     if (!aiAvailable()) return null;
 
-    // One element throughout: a pill, a pill with a box in it, then the card it grew into. The class
-    // says which, and the shape moves between them rather than one thing replacing another.
-    const state = answering ? "answering" : open ? "asking" : "idle";
+    // One element throughout: a pill, and a pill with a box in it. The class says which, and the shape
+    // moves between them rather than one thing replacing another.
+    const state = doing ? "doing" : open ? "asking" : "idle";
 
     return (
         <div className={`mx_TgAsk mx_TgAsk_${state}`} data-state={state}>
-            {answering ? (
-                <div className="mx_TgAsk_card">
-                    {answering.looking && <p className="mx_TgAsk_looking">{answering.looking}</p>}
-                    <p className="mx_TgAsk_answer">{answering.text}</p>
-                </div>
+            {doing ? (
+                <p className="mx_TgAsk_doing">
+                    <SparkleIcon />
+                    {doing}
+                </p>
             ) : (
                 <>
                     <AccessibleButton

@@ -6,24 +6,27 @@ Please see LICENSE files in the repository root for full details.
 */
 
 /*
- * The model's answer in the timeline (TgAiNote.tsx): a note in the margin of a chat, which only the
- * reader has.
+ * The model's answer in the timeline (TgAiNote.tsx): an incoming message, because that is the shape a
+ * chat is read in and anything else in the middle of it reads as an advert.
  *
- * It has to look unlike a message, because it is not one and must never be mistaken for one: no bubble,
- * no tail, a hairline down its start edge and the secondary colour. While it is being written the edge
- * moves - the one piece of shine in the whole thing, and it stops the moment the answer is whole.
+ * So it takes the incoming bubble exactly - the same surface, the same corner radius, the same indent
+ * from the avatar column - and earns its difference with one thing instead of a frame: a sparkle, lit by
+ * a slow gradient, and a sheen that crosses the bubble only while the words are still arriving. The
+ * "only you" line is what says it is not a message everyone can see; the chrome does not need to shout it.
  */
 .mx_TgAiNote {
     position: relative;
-    margin: var(--cpd-space-2x) 0 var(--cpd-space-2x) var(--cpd-space-4x);
+    box-sizing: border-box;
+    width: fit-content;
+    max-width: min(30rem, 78%);
+    margin: var(--cpd-space-1x) 0 var(--cpd-space-1x) calc(var(--TgSenderRun-inset, 8px) + 2.875rem);
     padding: var(--cpd-space-2x) var(--cpd-space-3x);
-    border-inline-start: 2px solid var(--cpd-color-border-interactive-secondary);
-    border-radius: 0 12px 12px 0;
-    background: var(--cpd-color-bg-subtle-secondary);
+    border-radius: var(--event-tile-bubble-corner-radius, 12px);
+    background: var(--event-tile-bubble-other-background, var(--cpd-color-bg-subtle-secondary));
     color: var(--cpd-color-text-primary);
     font: var(--cpd-font-body-md-regular);
-    max-width: min(46rem, 100%);
-    box-sizing: border-box;
+    /* The sheen is painted over the bubble, so it has to be cut to the bubble's corners. */
+    overflow: hidden;
 
     .mx_TgAiNote_head {
         display: flex;
@@ -33,10 +36,20 @@ Please see LICENSE files in the repository root for full details.
         margin-block-end: var(--cpd-space-1x);
     }
 
+    /*
+     * The one magical thing: the sparkle is painted with the gradient rather than a flat accent, and it
+     * drifts. Everything else in here is an ordinary message.
+     */
+    .mx_TgAiNote_spark {
+        width: 1em;
+        height: 1em;
+        color: #7a5cff;
+        animation: mx_TgAiNote_spark 4s ease-in-out infinite;
+    }
+
     .mx_TgAiNote_who {
         font: var(--cpd-font-body-xs-medium);
         color: var(--cpd-color-text-secondary);
-        text-transform: none;
     }
 
     .mx_TgAiNote_question {
@@ -81,10 +94,11 @@ Please see LICENSE files in the repository root for full details.
         color: var(--cpd-color-text-action-accent);
     }
 
+    /* Below the words, the way a message's own footer sits: small, quiet, no buttons shouting. */
     .mx_TgAiNote_actions {
         display: flex;
         align-items: center;
-        gap: var(--cpd-space-2x);
+        gap: var(--cpd-space-3x);
         margin-block-start: var(--cpd-space-2x);
     }
 
@@ -92,6 +106,12 @@ Please see LICENSE files in the repository root for full details.
         display: inline-flex;
         align-items: center;
         gap: var(--cpd-space-1x);
+        font: var(--cpd-font-body-sm-medium);
+        color: var(--cpd-color-text-secondary);
+
+        &:hover {
+            color: var(--cpd-color-text-primary);
+        }
 
         svg {
             width: 1em;
@@ -100,35 +120,56 @@ Please see LICENSE files in the repository root for full details.
     }
 }
 
-/* Being written: the edge travels, once, slowly, and only while the words are still arriving. */
+/*
+ * Being written: a sheen crosses the bubble, once every pass, and stops the moment the answer is whole.
+ * It is the only motion, it is behind the words, and it never moves the layout.
+ */
 .mx_TgAiNote_writing {
-    border-inline-start-color: transparent;
-    background-image: linear-gradient(
-        var(--cpd-color-bg-accent-rest),
-        var(--cpd-color-bg-accent-rest) 40%,
-        transparent 40%
-    );
-    background-repeat: no-repeat;
-    background-size: 2px 250%;
-    background-position-y: -150%;
-    animation: mx_TgAiNote_edge 1.6s ease-in-out infinite;
+    &::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(110deg, transparent 30%, rgb(122 92 255 / 22%) 50%, transparent 70%);
+        background-size: 250% 100%;
+        animation: mx_TgAiNote_sheen 1.8s linear infinite;
+        pointer-events: none;
+    }
+
+    > * {
+        position: relative;
+        z-index: 1;
+    }
 }
 
-@keyframes mx_TgAiNote_edge {
+@keyframes mx_TgAiNote_sheen {
     from {
-        background-position-y: -150%;
+        background-position-x: 150%;
     }
 
     to {
-        background-position-y: 250%;
+        background-position-x: -150%;
     }
 }
 
-/* Somebody who has asked not to be moved should not be: the edge simply stays lit. */
+@keyframes mx_TgAiNote_spark {
+    0%,
+    100% {
+        color: #7a5cff;
+    }
+
+    35% {
+        color: #2bb3ff;
+    }
+
+    70% {
+        color: #ff7ac0;
+    }
+}
+
+/* Somebody who has asked not to be moved should not be: no sheen, no drift. */
 @media (prefers-reduced-motion: reduce) {
-    .mx_TgAiNote_writing {
+    .mx_TgAiNote_writing::after,
+    .mx_TgAiNote .mx_TgAiNote_spark {
         animation: none;
-        border-inline-start-color: var(--cpd-color-bg-accent-rest);
-        background-image: none;
     }
 }
