@@ -5,7 +5,7 @@ SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only OR LicenseRef-Element-Com
 Please see LICENSE files in the repository root for full details.
 */
 
-import React, { type JSX, type RefObject, useContext, useEffect, useRef } from "react";
+import React, { type JSX, type RefObject, useCallback, useContext, useEffect, useRef } from "react";
 import { type MatrixEvent, MsgType } from "matrix-js-sdk/src/matrix";
 import { type ImageContent } from "matrix-js-sdk/src/types";
 import {
@@ -20,6 +20,8 @@ import {
 
 import { type IBodyProps } from "./IBodyProps";
 import RoomContext, { TimelineRenderingType } from "../../../contexts/RoomContext";
+import { TgLiveText } from "../telegram/TgLiveText";
+import { isTelegramLayout } from "../../../utils/telegram/telegramLayout";
 import { LocalDeviceVerificationStateContext } from "../../../contexts/LocalDeviceVerificationStateContext";
 import { useMediaVisible } from "../../../hooks/useMediaVisible";
 import { useSettingValue } from "../../../hooks/useSettings";
@@ -262,6 +264,12 @@ export function ImageBodyFactory({
         vm.setSetMediaVisible(setMediaVisible);
     }, [setMediaVisible, shouldFallbackToFileBody, vm]);
 
+    // The picture itself, fetched only if something is going to read it.
+    const sourceOfPicture = useCallback(
+        async () => (await mediaEventHelper?.sourceBlob.value) ?? "",
+        [mediaEventHelper],
+    );
+
     const showFileBody =
         !forExport &&
         timelineRenderingType !== TimelineRenderingType.Room &&
@@ -281,6 +289,25 @@ export function ImageBodyFactory({
         );
     }
 
+    /*
+     * Fork: the text in the picture, laid over the picture (TgLiveText). Only in the timeline, only
+     * for a picture that is being shown, and only when its own size is known - the words are read in
+     * the picture's pixels, so without that they cannot be placed.
+     */
+    const info = mxEvent.getContent().info;
+    const liveText =
+        isTelegramLayout() && mediaVisible && !forExport && timelineRenderingType === TimelineRenderingType.Room ? (
+            <TgLiveText
+                eventId={mxEvent.getId()!}
+                source={sourceOfPicture}
+                size={
+                    typeof info?.w === "number" && typeof info?.h === "number"
+                        ? { width: info.w, height: info.h }
+                        : undefined
+                }
+            />
+        ) : null;
+
     return (
         <ImageBodyView
             vm={vm}
@@ -289,6 +316,7 @@ export function ImageBodyFactory({
             imageClassName="mx_ImageBody_image"
             imageRef={imageRef}
         >
+            {liveText}
             {showFileBody ? (
                 <FileBodyFactory
                     mxEvent={mxEvent}

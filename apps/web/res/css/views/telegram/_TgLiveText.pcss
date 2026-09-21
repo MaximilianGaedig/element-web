@@ -1,0 +1,50 @@
+/*
+Copyright 2026 New Vector Ltd.
+
+SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only OR LicenseRef-Element-Commercial
+Please see LICENSE files in the repository root for full details.
+*/
+
+/*
+ * The text a picture was read to hold (TgLiveText.tsx), laid over the picture where it was read from.
+ *
+ * Each word is transparent and stretched to its own box, so a selection highlights the words themselves
+ * and copies what they say, while the picture underneath is what is actually seen. A word that turned
+ * out to be part of a link or a number is underlined, the way iOS marks what it has recognised.
+ */
+.mx_TgLiveText {
+    position: absolute;
+    inset: 0;
+    /* Only the words take the pointer: the picture keeps its own click, which opens the viewer. */
+    pointer-events: none;
+
+    .mx_TgLiveText_word {
+        position: absolute;
+        display: block;
+        margin: 0;
+        padding: 0;
+        color: transparent;
+        /* The box is the word's own; the glyphs inside it are never shown, only selected. */
+        font-size: 1px;
+        line-height: 1;
+        white-space: pre;
+        user-select: text;
+        cursor: text;
+        pointer-events: auto;
+
+        &::selection {
+            /* A selection has to be visible over any picture, so it is the accent rather than a tint. */
+            background-color: color-mix(in srgb, var(--cpd-color-bg-accent-rest) 45%, transparent);
+        }
+    }
+
+    .mx_TgLiveText_word--link,
+    .mx_TgLiveText_word--marked {
+        border-bottom: 2px solid color-mix(in srgb, var(--cpd-color-text-action-accent) 70%, transparent);
+        border-radius: 1px;
+    }
+
+    .mx_TgLiveText_word--link {
+        cursor: pointer;
+    }
+}

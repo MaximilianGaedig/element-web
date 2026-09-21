@@ -19,13 +19,25 @@ Please see LICENSE files in the repository root for full details.
  */
 
 import { logger } from "matrix-js-sdk/src/logger";
-import type { createWorker as CreateWorker } from "tesseract.js";
+import type { createWorker as CreateWorker, Page } from "tesseract.js";
+
+/** One word, and where it sits in the picture, as a fraction of the picture's own size. */
+export interface OcrWord {
+    text: string;
+    /** 0-1 of the width and height, so the overlay follows the picture at whatever size it is drawn. */
+    left: number;
+    top: number;
+    width: number;
+    height: number;
+}
 
 /** What a picture said, and how sure the engine was of it. */
 export interface OcrResult {
     text: string;
     /** 0-100, the engine's own mean confidence: low means it read noise rather than words. */
     confidence: number;
+    /** The words with their places, for laying selectable text over the picture. */
+    words: OcrWord[];
 }
 
 /** Below this the engine is guessing at texture rather than reading letters. */
@@ -66,15 +78,85 @@ export async function stopOcr(): Promise<void> {
  * an empty result is far better than a confident wrong one, since everything downstream - links,
  * dates, search - takes what this says at face value.
  */
-export async function readImage(source: Blob | string): Promise<OcrResult | undefined> {
+export async function readImage(source: Blob | string, size?: ImageSize): Promise<OcrResult | undefined> {
     try {
         const tesseract = await getWorker();
-        const { data } = await tesseract.recognize(source);
+        // Blocks carry the word geometry the overlay needs; without them only the text comes back.
+        const { data } = await tesseract.recognize(source, undefined, { blocks: true, text: true });
         const text = data.text.trim();
         if (!text || data.confidence < MIN_CONFIDENCE) return undefined;
-        return { text, confidence: data.confidence };
+        return { text, confidence: data.confidence, words: size ? wordsOf(data, size) : [] };
     } catch (error) {
         logger.warn("Could not read the text in an image", error);
         return undefined;
     }
+}
+
+/** The picture's own pixel size. The engine reports word boxes in it, and does not report it back. */
+export interface ImageSize {
+    width: number;
+    height: number;
+}
+
+/**
+ * The words as fractions of the picture, which is what an overlay over a scaled one needs.
+ *
+ * The engine gives boxes in the picture's own pixels but never says how big it was, so the caller has
+ * to; without that the words are left out rather than laid somewhere wrong.
+ */
+function wordsOf(page: Page, { width, height }: ImageSize): OcrWord[] {
+    const words: OcrWord[] = [];
+    for (const block of page.blocks ?? []) {
+        for (const paragraph of block.paragraphs) {
+            for (const line of paragraph.lines) {
+                for (const word of line.words) {
+                    if (word.confidence < MIN_CONFIDENCE) continue;
+                    words.push({
+                        text: word.text,
+                        left: word.bbox.x0 / width,
+                        top: word.bbox.y0 / height,
+                        width: (word.bbox.x1 - word.bbox.x0) / width,
+                        height: (word.bbox.y1 - word.bbox.y0) / height,
+                    });
+                }
+            }
+        }
+    }
+    return words;
+}
+
+/*
+ * What has already been read, by event.
+ *
+ * Reading a picture costs real work, and the same pictures come back every time a chat is opened; a
+ * result is the same every time, so it is kept for the session. Promises are cached rather than
+ * results, so two things asking at once wait for one read.
+ */
+const cache = new Map<string, Promise<OcrResult | undefined>>();
+
+/** Reads a picture, or returns what an earlier read of the same event already found. */
+export function readImageForEvent(
+    eventId: string,
+    source: () => Promise<Blob | string>,
+    size?: ImageSize,
+): Promise<OcrResult | undefined> {
+    const existing = cache.get(eventId);
+    if (existing) return existing;
+    const reading = queued(async () => readImage(await source(), size));
+    cache.set(eventId, reading);
+    return reading;
+}
+
+/*
+ * One picture at a time.
+ *
+ * The engine is a worker with one thread; asking it to read a screenful of pictures at once would
+ * make each of them slower and leave the device warm for no reason.
+ */
+let queue: Promise<unknown> = Promise.resolve();
+
+function queued<T>(work: () => Promise<T>): Promise<T> {
+    const result = queue.then(work, work);
+    queue = result.catch(() => {});
+    return result;
 }
