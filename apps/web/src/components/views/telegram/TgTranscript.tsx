@@ -18,11 +18,13 @@ import React, { type JSX, useCallback, useEffect, useState } from "react";
 import { type MatrixEvent } from "matrix-js-sdk/src/matrix";
 import TranscriptIcon from "@vector-im/compound-design-tokens/assets/web/icons/threads";
 
+import { logger } from "matrix-js-sdk/src/logger";
+
 import { _t } from "../../../languageHandler";
 import AccessibleButton from "../elements/AccessibleButton";
 import { MatrixClientPeg } from "../../../MatrixClientPeg";
 import Spinner from "../elements/Spinner";
-import { mediaFromContent } from "../../../customisations/Media";
+import { MediaEventHelper } from "../../../utils/MediaEventHelper";
 
 interface Props {
     mxEvent: MatrixEvent;
@@ -31,6 +33,7 @@ interface Props {
 export function TgTranscript({ mxEvent }: Props): JSX.Element | null {
     const [text, setText] = useState<string>();
     const [working, setWorking] = useState(false);
+    const [failed, setFailed] = useState<string>();
     const roomId = mxEvent.getRoomId();
     const eventId = mxEvent.getId();
 
@@ -51,12 +54,19 @@ export function TgTranscript({ mxEvent }: Props): JSX.Element | null {
     const run = useCallback(async (): Promise<void> => {
         if (!roomId || !eventId) return;
         setWorking(true);
+        setFailed(undefined);
         try {
-            const media = mediaFromContent(mxEvent.getContent());
-            const response = await fetch(media.srcHttp ?? "");
+            /*
+             * Through the same helper the player and the download button use: it fetches with the
+             * account's credentials and decrypts an encrypted room's file. A plain fetch of the media
+             * URL gets a 404 on a server that authenticates media, and nothing at all in a room that
+             * encrypts it - which is how this failed silently.
+             */
+            const helper = new MediaEventHelper(mxEvent);
+            const blob = await helper.sourceBlob.value;
             const [{ transcribe }, audio] = await Promise.all([
                 import("../../../utils/detect/transcribe"),
-                response.arrayBuffer(),
+                blob.arrayBuffer(),
             ]);
             const said = await transcribe(audio);
             setText(said ?? _t("timeline|transcript|nothing_said"));
@@ -64,6 +74,11 @@ export function TgTranscript({ mxEvent }: Props): JSX.Element | null {
                 const { saveMediaText } = await import("../../../utils/detect/mediaText");
                 void saveMediaText(MatrixClientPeg.safeGet(), roomId, eventId, "transcript", said);
             }
+        } catch (error) {
+            // Said out loud: a transcript that quietly does not appear is indistinguishable from one
+            // that was never asked for, which is exactly how the last of these went unnoticed.
+            logger.warn("Could not transcribe a voice message", error);
+            setFailed(_t("timeline|transcript|failed", { reason: String((error as Error).message).slice(0, 120) }));
         } finally {
             setWorking(false);
         }
@@ -75,6 +90,17 @@ export function TgTranscript({ mxEvent }: Props): JSX.Element | null {
             <p className="mx_TgTranscript mx_TgTranscript_working">
                 <Spinner size={16} as="span" />
                 {_t("timeline|transcript|working")}
+            </p>
+        );
+    }
+
+    if (failed) {
+        return (
+            <p className="mx_TgTranscript mx_TgTranscript_failed">
+                {failed}
+                <AccessibleButton kind="link" onClick={run}>
+                    {_t("action|try_again")}
+                </AccessibleButton>
             </p>
         );
     }

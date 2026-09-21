@@ -4127,6 +4127,7 @@
         "thread_info_basic": "From a thread",
         "transcript": {
             "action": "Transcribe",
+            "failed": "Could not transcribe: %(reason)s",
             "nothing_said": "Nothing could be made out in this message.",
             "working": "Transcribing…"
         },
