@@ -1,0 +1,141 @@
+/*
+Copyright 2026 New Vector Ltd.
+
+SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only OR LicenseRef-Element-Commercial
+Please see LICENSE files in the repository root for full details.
+*/
+
+/*
+ * What your chats turned out to contain (FoundDialog.tsx).
+ *
+ * A list, not a dashboard: one row per thing, the thing itself first and where it came from under it in
+ * the small type, because the question being answered is "when is that appointment" and not "which chat
+ * was it in". The sections are the app's own buttons, pressed one at a time.
+ */
+.mx_FoundDialog {
+    width: min(38rem, 90vw);
+
+    .mx_FoundDialog_sections {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--cpd-space-2x);
+        margin-block-end: var(--cpd-space-3x);
+    }
+
+    .mx_FoundDialog_section {
+        flex: 0 0 auto;
+        white-space: nowrap;
+
+        svg {
+            width: 1em;
+            height: 1em;
+        }
+    }
+
+    .mx_FoundDialog_content {
+        max-height: min(60vh, 32rem);
+        overflow-y: auto;
+        overscroll-behavior: contain;
+    }
+
+    .mx_FoundDialog_list {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+    }
+
+    /* Below the ones that have not happened, and quieter, because they are there for reference only. */
+    .mx_FoundDialog_list_past {
+        opacity: 0.6;
+    }
+
+    .mx_FoundDialog_heading {
+        margin: var(--cpd-space-4x) 0 var(--cpd-space-2x);
+        font: var(--cpd-font-body-sm-medium);
+        color: var(--cpd-color-text-secondary);
+    }
+
+    .mx_FoundDialog_row {
+        display: flex;
+        align-items: center;
+        gap: var(--cpd-space-2x);
+        border-block-end: 1px solid var(--cpd-color-border-interactive-secondary);
+
+        &:last-child {
+            border-block-end: none;
+        }
+    }
+
+    /* The whole row is the way back to the message, because that is what anybody presses first. */
+    .mx_FoundDialog_what {
+        display: flex;
+        flex: 1 1 auto;
+        flex-direction: column;
+        gap: 2px;
+        min-width: 0;
+        padding: var(--cpd-space-2x) 0;
+        border: none;
+        background: none;
+        text-align: start;
+        cursor: pointer;
+
+        &:hover .mx_FoundDialog_label {
+            text-decoration: underline;
+        }
+    }
+
+    .mx_FoundDialog_label {
+        font: var(--cpd-font-body-md-medium);
+        color: var(--cpd-color-text-primary);
+        overflow-wrap: anywhere;
+    }
+
+    .mx_FoundDialog_from {
+        display: flex;
+        align-items: center;
+        gap: var(--cpd-space-1x);
+        min-width: 0;
+        font: var(--cpd-font-body-xs-regular);
+        color: var(--cpd-color-text-secondary);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    /* The words the date was written as: "tomorrow at six" is what was said, and it is worth seeing. */
+    .mx_FoundDialog_said {
+        font: var(--cpd-font-body-xs-regular);
+        color: var(--cpd-color-text-secondary);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    /* Where it goes: a map, a carrier, an airline, the link itself. */
+    .mx_FoundDialog_go {
+        display: inline-flex;
+        flex: 0 0 auto;
+        align-items: center;
+        justify-content: center;
+        width: 32px;
+        height: 32px;
+        border-radius: 99px;
+        color: var(--cpd-color-text-secondary);
+
+        svg {
+            width: 18px;
+            height: 18px;
+        }
+
+        &:hover {
+            background: var(--cpd-color-bg-subtle-secondary);
+            color: var(--cpd-color-text-primary);
+        }
+    }
+
+    .mx_FoundDialog_none {
+        margin: var(--cpd-space-6x) 0;
+        text-align: center;
+        color: var(--cpd-color-text-secondary);
+    }
+}

@@ -232,6 +232,8 @@ export default class MatrixChat extends React.PureComponent<IProps, IState> {
     private readonly loggedInView = createRef<LoggedInViewType>();
     private dispatcherRef?: string;
     private themeWatcher?: ThemeWatcher;
+    /** Stops the reading of what the chats contain (utils/detect/collect.ts), on logout or unmount. */
+    private stopCollecting?: () => void;
     private fontWatcher?: FontWatcher;
     private readonly stores: SDKContextClass;
     private loadSessionAbortController = new AbortController();
@@ -514,6 +516,7 @@ export default class MatrixChat extends React.PureComponent<IProps, IState> {
     }
 
     public componentWillUnmount(): void {
+        this.stopCollecting?.();
         Lifecycle.stopMatrixClient();
         dis.unregister(this.dispatcherRef);
         this.themeWatcher?.off(ThemeWatcherEvent.Change, setTheme);
@@ -1540,6 +1543,8 @@ export default class MatrixChat extends React.PureComponent<IProps, IState> {
      * Called when the session is logged out
      */
     private onLoggedOut(): void {
+        this.stopCollecting?.();
+        this.stopCollecting = undefined;
         this.viewWelcome({
             ready: false,
             currentRoomId: null,
@@ -1698,6 +1703,18 @@ export default class MatrixChat extends React.PureComponent<IProps, IState> {
         DecryptionFailureTracker.instance
             .start(cli)
             .catch((e) => logger.error("Unable to start DecryptionFailureTracker", e));
+
+        /*
+         * Read what the chats already contain - dates, numbers, addresses, parcels - and keep it where it
+         * can be looked at (utils/detect/collected.ts). It reads in idle time and never fetches anything.
+         *
+         * Imported when it runs rather than at the top of this file: the detectors are a megabyte of
+         * parsers, and nothing about the first screen needs them.
+         */
+        void import("../../utils/detect/collect").then(({ startCollecting }) => {
+            this.stopCollecting?.();
+            this.stopCollecting = startCollecting(cli);
+        });
 
         cli.on(ClientEvent.Room, (room) => {
             if (cli.getCrypto()) {
