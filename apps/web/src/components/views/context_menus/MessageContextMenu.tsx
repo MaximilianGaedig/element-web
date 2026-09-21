@@ -60,6 +60,8 @@ import { type RoomPermalinkCreator } from "../../../utils/permalinks/Permalinks"
 import { type ButtonEvent } from "../elements/AccessibleButton";
 import { copyPlaintext, getSelectedText } from "../../../utils/strings";
 import { type DetectedDateTime, detectDateTimes, icsForEvent } from "../../../utils/detect/entities";
+import { hasThumbnail } from "../../../utils/telegram/mediaThumbnail";
+import { MediaEventHelper } from "../../../utils/MediaEventHelper";
 import ContextMenu, { toRightOf, type MenuProps } from "../../structures/ContextMenu";
 import ReactionPicker from "../emojipicker/ReactionPicker";
 import ViewSource from "../../structures/ViewSource";
@@ -400,6 +402,27 @@ export default class MessageContextMenu extends React.Component<IProps, IState> 
         this.closeMenu();
     };
 
+    /*
+     * Reads the picture on the device and shows what it said. The engine and its language data are
+     * several megabytes, so both this and the dialog are fetched only once somebody asks for them -
+     * and a static import of either would put them on the startup path.
+     */
+    private onReadTextClick = (): void => {
+        const helper = new MediaEventHelper(this.props.mxEvent);
+        const read = (async () => {
+            const { readImage } = await import("../../../utils/detect/ocr");
+            try {
+                return await readImage(await helper.sourceBlob.value);
+            } finally {
+                helper.destroy();
+            }
+        })();
+        void import("../dialogs/ReadTextDialog").then(({ default: ReadTextDialog }) => {
+            Modal.createDialog(ReadTextDialog, { read });
+        });
+        this.closeMenu();
+    };
+
     private onSelectMessagesClick = (): void => {
         const roomId = this.props.mxEvent.getRoomId()!;
         MessageSelectionStore.instance.enterSelectionMode(roomId, this.props.mxEvent.getId());
@@ -535,6 +558,15 @@ export default class MessageContextMenu extends React.Component<IProps, IState> 
         // with an entry per date in a long message would be worse than none.
         const body = mxEvent.getContent().body;
         const [when] = typeof body === "string" ? detectDateTimes(body) : [];
+        // Text trapped in a picture is worth offering to read; a message's own text already is text.
+        const readTextButton = hasThumbnail(mxEvent) && (
+            <IconizedContextMenuOption
+                icon={<InlineCodeIcon />}
+                label={_t("timeline|read_text|action")}
+                onClick={this.onReadTextClick}
+            />
+        );
+
         const addToCalendarButton = when && (
             <IconizedContextMenuOption
                 icon={<CalendarIcon />}
@@ -815,6 +847,7 @@ export default class MessageContextMenu extends React.Component<IProps, IState> 
                 {viewInRoomButton}
                 {openInMapSiteButton}
                 {addToCalendarButton}
+                {readTextButton}
                 {endPollButton}
                 {forwardButton}
                 {selectMessagesButton}

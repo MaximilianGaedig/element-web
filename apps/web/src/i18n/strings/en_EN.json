@@ -1694,11 +1694,83 @@
         "description": "If you continue, some features may stop working and there is a risk that you may lose data in the future. Update your browser to continue using %(brand)s."
     },
     "timeline": {
+        "bridge_buttons": {
+            "reply_keyboard_label": "Bot keyboard",
+            "reply_keyboard_show": "Show bot keyboard",
+            "reply_keyboard_hide": "Hide bot keyboard",
+            "hint_url_auth": "Asks the bot for a login link",
+            "hint_game": "Opens a game: the bot replies with a link",
+            "hint_webview": "Opens a web app: the bot replies with a link",
+            "hint_request_geo": "Replies with how to share your location",
+            "hint_request_poll": "Replies with how to create a poll",
+            "hint_request_peer": "Sharing a chat needs the Telegram app: the bot replies with details",
+            "hint_request_phone": "Shares your phone number with the bot",
+            "requires_password": "This button needs your Telegram password and can't be used from Matrix",
+            "hint_copy": "Copy to clipboard",
+            "hint_switch_inline": "Inserts an inline query into the message composer",
+            "request_phone_title": "Share your phone number?",
+            "request_phone_description": "This shares your phone number with the bot.",
+            "request_phone_confirm": "Share phone number",
+            "unsupported": "This button type isn't supported yet"
+        },
+        "bulk_delete_confirm": {
+            "one": "Are you sure you want to delete this message?",
+            "other": "Are you sure you want to delete these %(count)s messages?"
+        },
+        "context_menu": {
+            "add_to_calendar": "Add to calendar",
+            "calendar_event": "Event",
+            "collapse_reply_thread": "Collapse reply thread",
+            "external_url": "Source URL",
+            "open_in_osm": "Open in OpenStreetMap",
+            "report": "Report",
+            "resent_unsent_reactions": "Resend %(unsentCount)s reaction(s)",
+            "show_url_preview": "Show preview",
+            "view_related_event": "View related event",
+            "view_source": "View source"
+        },
+        "creation_summary_dm": "%(creator)s created this DM.",
+        "creation_summary_room": "%(creator)s created and configured the room.",
+        "decryption_failure": {
+            "sender_identity_previously_verified": "Sender's verified digital identity was reset",
+            "unable_to_decrypt": "Unable to decrypt message"
+        },
+        "disambiguated_profile": "%(displayName)s (%(matrixId)s)",
+        "download_action_downloading": "Downloading",
+        "download_failed": "Download failed",
+        "download_failed_description": "An error occurred while downloading this file",
+        "edits": {
+            "tooltip_label": "Edited at %(date)s. Click to view edits.",
+            "tooltip_title": "Edited at %(date)s",
+            "tooltip_sub": "Click to view edits"
+        },
+        "error_no_renderer": "This event could not be displayed",
+        "error_rendering_message": "Can't load this message",
+        "historical_messages_unavailable": "You can't see earlier messages",
+        "in_room_name": " in <strong>%(room)s</strong>",
+        "io.element.widgets.layout": "%(senderName)s has updated the room layout",
+        "late_event_separator": "Originally sent %(dateTime)s",
+        "load_error": {
+            "no_permission": "Tried to load a specific point in this room's timeline, but you do not have permission to view the message in question.",
+            "unable_to_find": "Tried to load a specific point in this room's timeline, but was unable to find it.",
+            "title": "Failed to load timeline position"
+        },
+        "m.audio": {
+            "error_processing_audio": "Error processing audio message",
+            "error_processing_voice_message": "Error processing voice message",
+            "error_downloading_audio": "Error downloading audio"
+        },
+        "m.beacon_info": {
+            "view_live_location": "View live location"
+        },
         "m.call": {
             "video_call_started": "Video call started in %(roomName)s.",
             "video_call_started_unsupported": "Video call started in %(roomName)s. (not supported by this browser)",
             "video_call_started_text": "%(name)s started a video call",
             "video_call_ended": "Video call ended"
+        },
+        "m.call.hangup": {
+            "dm": "Call ended"
         },
         "m.call.invite": {
             "voice_call": "%(senderName)s placed a voice call.",
@@ -1716,6 +1788,81 @@
             "unknown_error": "An unknown error occurred",
             "unknown_failure": "Unknown failure: %(reason)s",
             "unknown_state": "The call is in an unknown state!"
+        },
+        "m.file": {
+            "error_decrypting": "Error decrypting attachment",
+            "size_unknown": "Size unknown"
+        },
+        "m.image": {
+            "sent": "%(senderDisplayName)s sent an image.",
+            "error_decrypting": "Error decrypting image",
+            "error_downloading": "Error downloading image",
+            "error": "Unable to show image due to error",
+            "show_image": "Show image"
+        },
+        "m.key.verification.request": {
+            "you_started": "You sent a verification request",
+            "user_wants_to_verify": "%(name)s wants to verify"
+        },
+        "m.location": {
+            "full": "%(senderName)s has shared their location",
+            "self_location": "Shared their location: ",
+            "location": "Shared a location: "
+        },
+        "m.poll": {
+            "count_of_votes": {
+                "one": "%(count)s vote",
+                "other": "%(count)s votes"
+            }
+        },
+        "m.poll.end": {
+            "sender_ended": "%(senderName)s has ended a poll"
+        },
+        "m.poll.start": "%(senderName)s has started a poll - %(pollQuestion)s",
+        "m.room.avatar": {
+            "changed": "%(senderDisplayName)s changed the room avatar.",
+            "lightbox_title": "%(senderDisplayName)s changed the avatar for %(roomName)s"
+        },
+        "m.room.canonical_alias": {
+            "set": "%(senderName)s set the main address for this room to %(address)s.",
+            "removed": "%(senderName)s removed the main address for this room.",
+            "alt_added": {
+                "one": "%(senderName)s added alternative address %(addresses)s for this room.",
+                "other": "%(senderName)s added the alternative addresses %(addresses)s for this room."
+            },
+            "alt_removed": {
+                "one": "%(senderName)s removed alternative address %(addresses)s for this room.",
+                "other": "%(senderName)s removed the alternative addresses %(addresses)s for this room."
+            },
+            "changed_alternative": "%(senderName)s changed the alternative addresses for this room.",
+            "changed_main_and_alternative": "%(senderName)s changed the main and alternative addresses for this room.",
+            "changed": "%(senderName)s changed the addresses for this room."
+        },
+        "m.room.create": {
+            "continuation": "This room is a continuation of another conversation.",
+            "unknown_predecessor_guess_server": "Can't find the old version of this room (room ID: %(roomId)s), and we have not been provided with 'via_servers' to look for it. It's possible that guessing the server from the room ID will work. If you want to try, click this link:",
+            "unknown_predecessor": "Can't find the old version of this room (room ID: %(roomId)s), and we have not been provided with 'via_servers' to look for it.",
+            "see_older_messages": "Click here to see older messages."
+        },
+        "m.room.guest_access": {
+            "can_join": "%(senderDisplayName)s has allowed guests to join the room.",
+            "forbidden": "%(senderDisplayName)s has prevented guests from joining the room.",
+            "unknown": "%(senderDisplayName)s changed guest access to %(rule)s"
+        },
+        "m.room.history_visibility": {
+            "invited": "%(senderName)s made future room history visible to all room members, from the point they are invited.",
+            "joined": "%(senderName)s made future room history visible to all room members, from the point they joined.",
+            "shared": "%(senderName)s made future room history visible to all room members.",
+            "world_readable": "%(senderName)s made future room history visible to anyone.",
+            "unknown": "%(senderName)s made future room history visible to unknown (%(visibility)s)."
+        },
+        "m.room.join_rules": {
+            "public": "%(senderDisplayName)s made the room public to whoever knows the link.",
+            "invite": "%(senderDisplayName)s made the room invite only.",
+            "knock": "%(senderDisplayName)s changed the join rule to ask to join.",
+            "restricted_settings": "%(senderDisplayName)s changed who can join this room. <a>View settings</a>.",
+            "restricted": "%(senderDisplayName)s changed who can join this room.",
+            "unknown": "%(senderDisplayName)s changed the join rule to %(rule)s"
         },
         "m.room.member": {
             "accepted_3pid_invite": "%(targetName)s accepted the invitation for %(displayName)s",
@@ -1749,70 +1896,10 @@
             "kick": "%(senderName)s removed %(targetName)s",
             "knock_denied": "%(senderName)s rejected %(targetName)s's request to join"
         },
-        "m.room.topic": {
-            "changed": "%(senderDisplayName)s changed the topic to \"%(topic)s\".",
-            "removed": "%(senderDisplayName)s removed the topic."
-        },
-        "m.room.avatar": {
-            "changed": "%(senderDisplayName)s changed the room avatar.",
-            "lightbox_title": "%(senderDisplayName)s changed the avatar for %(roomName)s"
-        },
         "m.room.name": {
             "remove": "%(senderDisplayName)s removed the room name.",
             "change": "%(senderDisplayName)s changed the room name from %(oldRoomName)s to %(newRoomName)s.",
             "set": "%(senderDisplayName)s changed the room name to %(roomName)s."
-        },
-        "m.room.tombstone": "%(senderDisplayName)s upgraded this room.",
-        "m.room.join_rules": {
-            "public": "%(senderDisplayName)s made the room public to whoever knows the link.",
-            "invite": "%(senderDisplayName)s made the room invite only.",
-            "knock": "%(senderDisplayName)s changed the join rule to ask to join.",
-            "restricted_settings": "%(senderDisplayName)s changed who can join this room. <a>View settings</a>.",
-            "restricted": "%(senderDisplayName)s changed who can join this room.",
-            "unknown": "%(senderDisplayName)s changed the join rule to %(rule)s"
-        },
-        "m.room.guest_access": {
-            "can_join": "%(senderDisplayName)s has allowed guests to join the room.",
-            "forbidden": "%(senderDisplayName)s has prevented guests from joining the room.",
-            "unknown": "%(senderDisplayName)s changed guest access to %(rule)s"
-        },
-        "m.image": {
-            "sent": "%(senderDisplayName)s sent an image.",
-            "error_decrypting": "Error decrypting image",
-            "error_downloading": "Error downloading image",
-            "error": "Unable to show image due to error",
-            "show_image": "Show image"
-        },
-        "m.sticker": "%(senderDisplayName)s sent a sticker.",
-        "m.room.canonical_alias": {
-            "set": "%(senderName)s set the main address for this room to %(address)s.",
-            "removed": "%(senderName)s removed the main address for this room.",
-            "alt_added": {
-                "one": "%(senderName)s added alternative address %(addresses)s for this room.",
-                "other": "%(senderName)s added the alternative addresses %(addresses)s for this room."
-            },
-            "alt_removed": {
-                "one": "%(senderName)s removed alternative address %(addresses)s for this room.",
-                "other": "%(senderName)s removed the alternative addresses %(addresses)s for this room."
-            },
-            "changed_alternative": "%(senderName)s changed the alternative addresses for this room.",
-            "changed_main_and_alternative": "%(senderName)s changed the main and alternative addresses for this room.",
-            "changed": "%(senderName)s changed the addresses for this room."
-        },
-        "m.room.third_party_invite": {
-            "revoked": "%(senderName)s revoked the invitation for %(targetDisplayName)s to join the room.",
-            "sent": "%(senderName)s sent an invitation to %(targetDisplayName)s to join the room."
-        },
-        "m.room.history_visibility": {
-            "invited": "%(senderName)s made future room history visible to all room members, from the point they are invited.",
-            "joined": "%(senderName)s made future room history visible to all room members, from the point they joined.",
-            "shared": "%(senderName)s made future room history visible to all room members.",
-            "world_readable": "%(senderName)s made future room history visible to anyone.",
-            "unknown": "%(senderName)s made future room history visible to unknown (%(visibility)s)."
-        },
-        "m.room.power_levels": {
-            "changed": "%(senderName)s changed the power level of %(powerLevelDiffText)s.",
-            "user_from_to": "%(userId)s from %(fromPowerLevel)s to %(toPowerLevel)s"
         },
         "m.room.pinned_events": {
             "pinned_link": "%(senderName)s pinned <a>a message</a> to this room. See all <b>pinned messages</b>.",
@@ -1821,6 +1908,24 @@
             "unpinned": "%(senderName)s unpinned a message from this room. See all pinned messages.",
             "changed_link": "%(senderName)s changed the <a>pinned messages</a> for the room.",
             "changed": "%(senderName)s changed the pinned messages for the room."
+        },
+        "m.room.power_levels": {
+            "changed": "%(senderName)s changed the power level of %(powerLevelDiffText)s.",
+            "user_from_to": "%(userId)s from %(fromPowerLevel)s to %(toPowerLevel)s"
+        },
+        "m.room.third_party_invite": {
+            "revoked": "%(senderName)s revoked the invitation for %(targetDisplayName)s to join the room.",
+            "sent": "%(senderName)s sent an invitation to %(targetDisplayName)s to join the room."
+        },
+        "m.room.tombstone": "%(senderDisplayName)s upgraded this room.",
+        "m.room.topic": {
+            "changed": "%(senderDisplayName)s changed the topic to \"%(topic)s\".",
+            "removed": "%(senderDisplayName)s removed the topic."
+        },
+        "m.sticker": "%(senderDisplayName)s sent a sticker.",
+        "m.video": {
+            "error_decrypting": "Error decrypting video",
+            "show_video": "Show video"
         },
         "m.widget": {
             "modified": "%(widgetName)s widget modified by %(senderName)s",
@@ -1832,7 +1937,24 @@
             "jitsi_updated": "Video conference updated by %(senderName)s",
             "jitsi_started": "Video conference started by %(senderName)s"
         },
-        "io.element.widgets.layout": "%(senderName)s has updated the room layout",
+        "mab": {
+            "view_in_room": "View in room",
+            "copy_link_thread": "Copy link to thread"
+        },
+        "media_album": {
+            "item_label": "Item %(index)s of %(count)s: %(name)s",
+            "label": {
+                "one": "Album with %(count)s item",
+                "other": "Album with %(count)s items"
+            },
+            "show_media": "Show media",
+            "previous": "Previous",
+            "position": "%(index)s / %(count)s"
+        },
+        "messages_selected": {
+            "one": "1 message selected",
+            "other": "%(count)s messages selected"
+        },
         "mjolnir": {
             "removed_rule_users": "%(senderName)s removed the rule banning users matching %(glob)s",
             "removed_rule_rooms": "%(senderName)s removed the rule banning rooms matching %(glob)s",
@@ -1852,148 +1974,45 @@
             "changed_rule_servers": "%(senderName)s changed a rule that was banning servers matching %(oldGlob)s to matching %(newGlob)s for %(reason)s",
             "changed_rule_glob": "%(senderName)s updated a ban rule that was matching %(oldGlob)s to matching %(newGlob)s for %(reason)s"
         },
-        "m.location": {
-            "full": "%(senderName)s has shared their location",
-            "self_location": "Shared their location: ",
-            "location": "Shared a location: "
-        },
-        "self_redaction": "Message deleted",
-        "redaction": "Message deleted by %(name)s",
-        "m.poll.start": "%(senderName)s has started a poll - %(pollQuestion)s",
-        "m.poll.end": {
-            "sender_ended": "%(senderName)s has ended a poll"
-        },
-        "typing_indicator": {
-            "one_user": "%(displayName)s is typing …",
-            "more_users": {
-                "one": "%(names)s and one other is typing …",
-                "other": "%(names)s and %(count)s others are typing …"
-            },
-            "two_users": "%(names)s and %(lastPerson)s are typing …"
-        },
-        "download_failed": "Download failed",
-        "download_failed_description": "An error occurred while downloading this file",
-        "disambiguated_profile": "%(displayName)s (%(matrixId)s)",
-        "decryption_failure": {
-            "sender_identity_previously_verified": "Sender's verified digital identity was reset",
-            "unable_to_decrypt": "Unable to decrypt message"
-        },
-        "undecryptable_tooltip": "This message could not be decrypted",
-        "redacted": {
-            "tooltip": "Message deleted on %(date)s"
-        },
-        "m.key.verification.request": {
-            "you_started": "You sent a verification request",
-            "user_wants_to_verify": "%(name)s wants to verify"
-        },
-        "error_no_renderer": "This event could not be displayed",
+        "no_permission_messages_before_invite": "You don't have permission to view messages from before you were invited.",
+        "no_permission_messages_before_join": "You don't have permission to view messages from before you joined.",
+        "pending_moderation": "Message pending moderation",
+        "pending_moderation_reason": "Message pending moderation: %(reason)s",
         "reactions": {
             "tooltip_caption": "reacted with %(shortName)s",
             "label": "%(reactors)s reacted with %(content)s",
             "custom_reaction_fallback_label": "Custom reaction",
             "add_reaction_prompt": "Add reaction"
         },
-        "edits": {
-            "tooltip_label": "Edited at %(date)s. Click to view edits.",
-            "tooltip_title": "Edited at %(date)s",
-            "tooltip_sub": "Click to view edits"
-        },
-        "pending_moderation_reason": "Message pending moderation: %(reason)s",
-        "pending_moderation": "Message pending moderation",
-        "scalar_starter_link": {
-            "dialog_title": "Add an Integration",
-            "dialog_description": "You are about to be taken to a third-party site so you can authenticate your account for use with %(integrationsUrl)s. Do you wish to continue?"
-        },
-        "m.file": {
-            "error_decrypting": "Error decrypting attachment",
-            "size_unknown": "Size unknown"
-        },
-        "error_rendering_message": "Can't load this message",
-        "m.video": {
-            "error_decrypting": "Error decrypting video",
-            "show_video": "Show video"
-        },
-        "m.call.hangup": {
-            "dm": "Call ended"
-        },
-        "send_state_sending": "Sending your message…",
-        "send_state_failed": "Failed to send",
-        "send_state_sent": "Your message was sent",
-        "url_preview": {
-            "show_n_more": {
-                "other": "timeline|url_preview|show_n_more",
-                "one": "timeline|url_preview|show_n_more"
-            },
-            "open_link": "Open link"
-        },
-        "bridge_buttons": {
-            "reply_keyboard_label": "Bot keyboard",
-            "reply_keyboard_show": "Show bot keyboard",
-            "reply_keyboard_hide": "Hide bot keyboard",
-            "hint_url_auth": "Asks the bot for a login link",
-            "hint_game": "Opens a game: the bot replies with a link",
-            "hint_webview": "Opens a web app: the bot replies with a link",
-            "hint_request_geo": "Replies with how to share your location",
-            "hint_request_poll": "Replies with how to create a poll",
-            "hint_request_peer": "Sharing a chat needs the Telegram app: the bot replies with details",
-            "hint_request_phone": "Shares your phone number with the bot",
-            "requires_password": "This button needs your Telegram password and can't be used from Matrix",
-            "hint_copy": "Copy to clipboard",
-            "hint_switch_inline": "Inserts an inline query into the message composer",
-            "request_phone_title": "Share your phone number?",
-            "request_phone_description": "This shares your phone number with the bot.",
-            "request_phone_confirm": "Share phone number",
-            "unsupported": "This button type isn't supported yet"
-        },
-        "bulk_delete_confirm": {
-            "one": "Are you sure you want to delete this message?",
-            "other": "Are you sure you want to delete these %(count)s messages?"
-        },
-        "messages_selected": {
-            "one": "1 message selected",
-            "other": "%(count)s messages selected"
-        },
-        "in_room_name": " in <strong>%(room)s</strong>",
-        "no_permission_messages_before_invite": "You don't have permission to view messages from before you were invited.",
-        "no_permission_messages_before_join": "You don't have permission to view messages from before you joined.",
-        "historical_messages_unavailable": "You can't see earlier messages",
+        "read_marker_new": "New",
         "read_receipt_title": {
             "one": "Seen by %(count)s person",
             "other": "Seen by %(count)s people"
         },
         "read_receipts_label": "Read receipts",
-        "thread_info_basic": "From a thread",
+        "read_text": {
+            "action": "Read text in picture",
+            "nothing_found": "No text could be read from this picture.",
+            "title": "Text in picture"
+        },
+        "redacted": {
+            "tooltip": "Message deleted on %(date)s"
+        },
+        "redaction": "Message deleted by %(name)s",
+        "reply": {
+            "error_loading": "Unable to load event that was replied to; either it does not exist or you do not have permission to view it.",
+            "in_reply_to": "<a>In reply to</a> <pill>",
+            "in_reply_to_for_export": "In reply to <a>this message</a>"
+        },
+        "scalar_starter_link": {
+            "dialog_title": "Add an Integration",
+            "dialog_description": "You are about to be taken to a third-party site so you can authenticate your account for use with %(integrationsUrl)s. Do you wish to continue?"
+        },
+        "self_redaction": "Message deleted",
         "send_state_encrypting": "Encrypting your message…",
-        "m.poll": {
-            "count_of_votes": {
-                "one": "%(count)s vote",
-                "other": "%(count)s votes"
-            }
-        },
-        "media_album": {
-            "item_label": "Item %(index)s of %(count)s: %(name)s",
-            "label": {
-                "one": "Album with %(count)s item",
-                "other": "Album with %(count)s items"
-            },
-            "show_media": "Show media",
-            "previous": "Previous",
-            "position": "%(index)s / %(count)s"
-        },
-        "m.audio": {
-            "error_processing_audio": "Error processing audio message",
-            "error_processing_voice_message": "Error processing voice message",
-            "error_downloading_audio": "Error downloading audio"
-        },
-        "m.beacon_info": {
-            "view_live_location": "View live location"
-        },
-        "m.room.create": {
-            "continuation": "This room is a continuation of another conversation.",
-            "unknown_predecessor_guess_server": "Can't find the old version of this room (room ID: %(roomId)s), and we have not been provided with 'via_servers' to look for it. It's possible that guessing the server from the room ID will work. If you want to try, click this link:",
-            "unknown_predecessor": "Can't find the old version of this room (room ID: %(roomId)s), and we have not been provided with 'via_servers' to look for it.",
-            "see_older_messages": "Click here to see older messages."
-        },
+        "send_state_failed": "Failed to send",
+        "send_state_sending": "Sending your message…",
+        "send_state_sent": "Your message was sent",
         "summary": {
             "format": "%(nameList)s %(transitionList)s",
             "joined_multiple": {
@@ -2157,37 +2176,23 @@
                 "other": "%(oneUser)ssent %(count)s hidden messages"
             }
         },
-        "download_action_downloading": "Downloading",
-        "reply": {
-            "error_loading": "Unable to load event that was replied to; either it does not exist or you do not have permission to view it.",
-            "in_reply_to": "<a>In reply to</a> <pill>",
-            "in_reply_to_for_export": "In reply to <a>this message</a>"
+        "thread_info_basic": "From a thread",
+        "typing_indicator": {
+            "one_user": "%(displayName)s is typing …",
+            "more_users": {
+                "one": "%(names)s and one other is typing …",
+                "other": "%(names)s and %(count)s others are typing …"
+            },
+            "two_users": "%(names)s and %(lastPerson)s are typing …"
         },
-        "context_menu": {
-            "add_to_calendar": "Add to calendar",
-            "calendar_event": "Event",
-            "collapse_reply_thread": "Collapse reply thread",
-            "external_url": "Source URL",
-            "open_in_osm": "Open in OpenStreetMap",
-            "report": "Report",
-            "resent_unsent_reactions": "Resend %(unsentCount)s reaction(s)",
-            "show_url_preview": "Show preview",
-            "view_related_event": "View related event",
-            "view_source": "View source"
-        },
-        "mab": {
-            "view_in_room": "View in room",
-            "copy_link_thread": "Copy link to thread"
-        },
-        "late_event_separator": "Originally sent %(dateTime)s",
-        "read_marker_new": "New",
-        "load_error": {
-            "no_permission": "Tried to load a specific point in this room's timeline, but you do not have permission to view the message in question.",
-            "unable_to_find": "Tried to load a specific point in this room's timeline, but was unable to find it.",
-            "title": "Failed to load timeline position"
-        },
-        "creation_summary_dm": "%(creator)s created this DM.",
-        "creation_summary_room": "%(creator)s created and configured the room."
+        "undecryptable_tooltip": "This message could not be decrypted",
+        "url_preview": {
+            "show_n_more": {
+                "other": "timeline|url_preview|show_n_more",
+                "one": "timeline|url_preview|show_n_more"
+            },
+            "open_link": "Open link"
+        }
     },
     "theme": {
         "light_high_contrast": "Light high contrast",

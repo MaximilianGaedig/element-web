@@ -1,0 +1,35 @@
+/*
+Copyright 2026 New Vector Ltd.
+
+SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only OR LicenseRef-Element-Commercial
+Please see LICENSE files in the repository root for full details.
+*/
+
+/* What a picture said (ReadTextDialog): the text as it was read, then what can be done with it. */
+.mx_ReadTextDialog {
+    max-width: 32rem;
+
+    .mx_ReadTextDialog_text {
+        /* Kept as it was read: a receipt or a poster loses its sense when its lines are reflowed. */
+        max-height: 40dvh;
+        overflow-y: auto;
+        margin: 0 0 var(--cpd-space-4x);
+        padding: var(--cpd-space-3x);
+        border-radius: var(--cpd-space-2x);
+        background-color: var(--cpd-color-bg-subtle-secondary);
+        font: var(--cpd-font-body-md-regular);
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+    }
+
+    .mx_ReadTextDialog_actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--cpd-space-2x);
+
+        /* A link found in a picture can be long; it wraps rather than pushing the dialog wider. */
+        a {
+            overflow-wrap: anywhere;
+        }
+    }
+}
