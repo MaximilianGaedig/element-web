@@ -62,6 +62,8 @@ declare module "matrix-js-sdk/src/types" {
         };
     }
     export interface AccountDataEvents {
+        // Which accounts on different networks are one person, where no identifier says so (utils/contacts)
+        "im.mxg.contact_links": { links: string[][] };
         // Analytics account data event
         "im.vector.analytics": {
             id: string;

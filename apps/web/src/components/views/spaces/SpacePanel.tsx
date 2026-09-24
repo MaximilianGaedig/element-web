@@ -58,6 +58,7 @@ import SettingsStore from "../../../settings/SettingsStore";
 import { SettingLevel } from "../../../settings/SettingLevel";
 import UIStore from "../../../stores/UIStore";
 import QuickSettingsButton from "./QuickSettingsButton";
+import ContactsButton from "../contacts/ContactsButton";
 import { useSettingValue } from "../../../hooks/useSettings";
 import IndicatorScrollbar from "../../structures/IndicatorScrollbar";
 import { useDispatcher } from "../../../hooks/useDispatcher";
@@ -468,6 +469,8 @@ const SpacePanel: React.FC = () => {
                         </Droppable>
 
                         <ThreadsActivityCentre displayButtonLabel={!isPanelCollapsed} />
+
+                        <ContactsButton isPanelCollapsed={isPanelCollapsed} />
 
                         <QuickSettingsButton isPanelCollapsed={isPanelCollapsed} />
                     </nav>

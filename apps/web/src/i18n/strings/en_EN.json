@@ -833,6 +833,18 @@
     "console_dev_note": "If you know what you're doing, Element is open-source, be sure to check out our GitHub (https://github.com/vector-im/element-web/) and contribute!",
     "console_scam_warning": "If someone told you to copy/paste something here, there is a high likelihood you're being scammed!",
     "console_wait": "Wait!",
+    "contacts": {
+        "call_declined": "Declined",
+        "call_incoming": "Incoming",
+        "call_missed": "Missed",
+        "call_outgoing": "Outgoing",
+        "calls": "Calls",
+        "no_calls": "No calls yet",
+        "no_people": "Nobody here yet",
+        "people": "People",
+        "search_people": "Search people",
+        "title": "People and calls"
+    },
     "create_room": {
         "action_create_room": "Create room",
         "action_create_video_room": "Create video room",

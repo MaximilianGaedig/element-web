@@ -1,0 +1,113 @@
+/*
+Copyright 2026 New Vector Ltd.
+
+SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only OR LicenseRef-Element-Commercial
+Please see LICENSE files in the repository root for full details.
+*/
+
+/* Element's own list shapes, not a new set: a row is an avatar, two lines of text and a trailing note. */
+.mx_ContactsDialog {
+    .mx_ContactsDialog_tabs {
+        display: flex;
+        gap: var(--cpd-space-2x);
+        margin-bottom: var(--cpd-space-3x);
+    }
+
+    .mx_ContactsDialog_search {
+        width: 100%;
+        box-sizing: border-box;
+        padding: var(--cpd-space-2x) var(--cpd-space-3x);
+        margin-bottom: var(--cpd-space-2x);
+        border: 1px solid var(--cpd-color-border-interactive-primary);
+        border-radius: var(--cpd-radius-pill-effect);
+        background: var(--cpd-color-bg-canvas-default);
+        color: var(--cpd-color-text-primary);
+        font: var(--cpd-font-body-md-regular);
+    }
+
+    /* Its own scroller, so a long list cannot push the tabs or the search off the dialog. */
+    .mx_ContactsDialog_list {
+        display: flex;
+        flex-direction: column;
+        max-height: 60vh;
+        overflow-y: auto;
+    }
+
+    .mx_ContactsDialog_row {
+        display: flex;
+        align-items: center;
+        gap: var(--cpd-space-3x);
+        width: 100%;
+        padding: var(--cpd-space-2x);
+        border: none;
+        border-radius: var(--cpd-radius-pill-effect);
+        background: transparent;
+        color: var(--cpd-color-text-primary);
+        text-align: start;
+        cursor: pointer;
+
+        &:hover,
+        &:focus-visible {
+            background: var(--cpd-color-bg-subtle-secondary);
+        }
+    }
+
+    /* A missed call is the one row people open this list to find. */
+    .mx_ContactsDialog_row_missed .mx_ContactsDialog_name {
+        color: var(--cpd-color-text-critical-primary);
+    }
+
+    .mx_ContactsDialog_rowText {
+        display: flex;
+        flex-direction: column;
+        flex: 1;
+        min-width: 0;
+    }
+
+    .mx_ContactsDialog_name {
+        font: var(--cpd-font-body-md-medium);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .mx_ContactsDialog_detail,
+    .mx_ContactsDialog_when {
+        color: var(--cpd-color-text-secondary);
+        font: var(--cpd-font-body-sm-regular);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .mx_ContactsDialog_networks {
+        display: flex;
+        gap: var(--cpd-space-1x);
+        flex-shrink: 0;
+    }
+
+    .mx_ContactsDialog_network {
+        padding: 0 var(--cpd-space-2x);
+        border-radius: var(--cpd-radius-pill-effect);
+        background: var(--cpd-color-bg-subtle-primary);
+        color: var(--cpd-color-text-secondary);
+        font: var(--cpd-font-body-xs-medium);
+        line-height: 20px;
+    }
+
+    .mx_ContactsDialog_empty {
+        padding: var(--cpd-space-6x) 0;
+        color: var(--cpd-color-text-secondary);
+        text-align: center;
+    }
+}
+
+/* Sits with the other rail buttons, so it reads as one of them rather than as something bolted on. */
+.mx_ContactsButton {
+    margin: 0 auto var(--cpd-space-2x);
+
+    .mx_ContactsButton_label {
+        margin-left: var(--cpd-space-2x);
+        color: var(--cpd-color-text-secondary);
+    }
+}
