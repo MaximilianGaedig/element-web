@@ -58,6 +58,7 @@ import { useProfileInfo } from "../../../../hooks/useProfileInfo";
 import { usePublicRoomDirectory } from "../../../../hooks/usePublicRoomDirectory";
 import { useSpaceResults } from "../../../../hooks/useSpaceResults";
 import { useUserDirectory } from "../../../../hooks/useUserDirectory";
+import { useNetworkPeople } from "../../../../hooks/useNetworkPeople";
 import { getKeyBindingsManager } from "../../../../KeyBindingsManager";
 import { _t } from "../../../../languageHandler";
 import { MatrixClientPeg } from "../../../../MatrixClientPeg";
@@ -363,6 +364,8 @@ const SpotlightDialog: React.FC<IProps> = ({ initialText = "", initialFilter = n
         error: publicRoomsError,
     } = usePublicRoomDirectory();
     const { loading: peopleLoading, users: userDirectorySearchResults, search: searchPeople } = useUserDirectory();
+    // The bridged networks searched directly, so somebody never bridged can still be found (useNetworkPeople).
+    const { loading: networkPeopleLoading, users: networkPeople, search: searchNetworks } = useNetworkPeople();
     const { loading: profileLoading, profile, search: searchProfileInfo } = useProfileInfo();
     const searchParams: [IDirectoryOpts] = useMemo(
         () => [
@@ -379,8 +382,18 @@ const SpotlightDialog: React.FC<IProps> = ({ initialText = "", initialFilter = n
         searchPublicRooms,
         searchParams,
     );
-    useDebouncedCallback(filter === Filter.People, searchPeople, searchParams);
-    useDebouncedCallback(filter === Filter.People, searchProfileInfo, searchParams);
+    /*
+     * People are looked up whether or not the search is filtered to people.
+     *
+     * Somebody typing a name into search is looking for that person, and needing to pick a filter first to be
+     * shown anyone you have not already got a chat with is a step nobody takes: the results looked complete
+     * without it. The bridged networks are asked at the same time (utils/bridge/networkPeople.ts), so a
+     * Signal, WhatsApp or Messenger contact you have never messaged is findable by name too.
+     */
+    const lookingForPeople = filter === Filter.People || filter === null;
+    useDebouncedCallback(lookingForPeople, searchPeople, searchParams);
+    useDebouncedCallback(lookingForPeople, searchProfileInfo, searchParams);
+    useDebouncedCallback(lookingForPeople, searchNetworks, searchParams);
 
     const possibleResults = useMemo<Result[]>(() => {
         const visibleRooms = findVisibleRooms(cli, msc3946ProcessDynamicPredecessor);
@@ -415,6 +428,7 @@ const SpotlightDialog: React.FC<IProps> = ({ initialText = "", initialFilter = n
         }
         addUserResults(findVisibleRoomMembers(visibleRooms, cli), false);
         addUserResults(userDirectorySearchResults, true);
+        addUserResults(networkPeople, true);
         if (profile) {
             addUserResults([new DirectoryMember(profile)], true);
         }
@@ -433,7 +447,15 @@ const SpotlightDialog: React.FC<IProps> = ({ initialText = "", initialFilter = n
             ...userResults,
             ...publicRooms.map(toPublicRoomResult),
         ].filter((result) => filter === null || result.filter.includes(filter));
-    }, [cli, userDirectorySearchResults, profile, publicRooms, filter, msc3946ProcessDynamicPredecessor]);
+    }, [
+        cli,
+        userDirectorySearchResults,
+        networkPeople,
+        profile,
+        publicRooms,
+        filter,
+        msc3946ProcessDynamicPredecessor,
+    ]);
 
     const results = useMemo<Record<Section, Result[]>>(() => {
         const results: Record<Section, Result[]> = {
@@ -1334,7 +1356,9 @@ const SpotlightDialog: React.FC<IProps> = ({ initialText = "", initialFilter = n
                         aria-label={_t("action|search")}
                         aria-describedby="mx_SpotlightDialog_keyboardPrompt"
                     />
-                    {(publicRoomsLoading || peopleLoading || profileLoading) && <Spinner size={24} />}
+                    {(publicRoomsLoading || peopleLoading || networkPeopleLoading || profileLoading) && (
+                        <Spinner size={24} />
+                    )}
                 </div>
 
                 <div
