@@ -52,7 +52,30 @@ interface Found {
     name?: string;
     avatar_url?: string;
     mxid?: string;
+    /** The network's own disambiguating line: mutual friends, a location, a username. */
+    context?: string;
 }
+
+/**
+ * A person found on a network, carrying the line the network uses to tell them apart.
+ *
+ * Three people called Max Müller are three identical rows, and a ghost's Matrix ID
+ * (`@facebook_100000000000001:…`) tells the reader nothing at all - so what Messenger shows under the
+ * name, "12 mutual friends" or "Lives in Warsaw", is the only thing that makes the list pickable. A
+ * DirectoryMember in every other respect, so everything that takes a member still takes this.
+ */
+export class NetworkMember extends DirectoryMember {
+    public constructor(
+        found: { user_id: string; display_name?: string; avatar_url?: string },
+        public readonly context?: string,
+    ) {
+        super(found);
+    }
+}
+
+/** What to show under a result's name: what the network said, else the Matrix ID. */
+export const contextOf = (member: object): string | undefined =>
+    member instanceof NetworkMember ? member.context : undefined;
 
 /**
  * The logins that can be searched: logged in, reachable, and saying so themselves.
@@ -104,7 +127,10 @@ async function askBridge(
             .filter((one) => !!one.mxid)
             .map(
                 (one) =>
-                    new DirectoryMember({ user_id: one.mxid!, display_name: one.name, avatar_url: one.avatar_url }),
+                    new NetworkMember(
+                        { user_id: one.mxid!, display_name: one.name, avatar_url: one.avatar_url },
+                        one.context,
+                    ),
             )
     );
 }

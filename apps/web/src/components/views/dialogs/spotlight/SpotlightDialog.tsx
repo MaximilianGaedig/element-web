@@ -59,6 +59,7 @@ import { usePublicRoomDirectory } from "../../../../hooks/usePublicRoomDirectory
 import { useSpaceResults } from "../../../../hooks/useSpaceResults";
 import { useUserDirectory } from "../../../../hooks/useUserDirectory";
 import { useNetworkPeople } from "../../../../hooks/useNetworkPeople";
+import { contextOf } from "../../../../utils/bridge/networkPeople";
 import { getKeyBindingsManager } from "../../../../KeyBindingsManager";
 import { _t } from "../../../../languageHandler";
 import { MatrixClientPeg } from "../../../../MatrixClientPeg";
@@ -729,7 +730,7 @@ const SpotlightDialog: React.FC<IProps> = ({ initialText = "", initialFilter = n
                             id={`mx_SpotlightDialog_button_result_${result.member.userId}_details`}
                             className="mx_SpotlightDialog_result_details"
                         >
-                            {result.member.userId}
+                            {contextOf(result.member) ?? result.member.userId}
                         </div>
                     </Option>
                 );
