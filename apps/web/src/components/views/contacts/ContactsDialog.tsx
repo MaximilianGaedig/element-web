@@ -25,6 +25,7 @@ import VideoCallIcon from "@vector-im/compound-design-tokens/assets/web/icons/vi
 import { _t } from "../../../languageHandler";
 import BaseDialog from "../dialogs/BaseDialog";
 import { type Call, callHistory } from "../../../utils/contacts/calls";
+import { fuzzyMatch } from "../../../utils/search/fuzzy";
 import { type Person, allPeople } from "../../../utils/contacts/people";
 import { readKey } from "../../../utils/contacts/identity";
 import { useMatrixClientContext } from "../../../contexts/MatrixClientContext";
@@ -42,7 +43,7 @@ const AVATAR_SIZE = "32px";
 interface Props {
     /** Which list to open on: people, or the calls with them. */
     initialTab?: "people" | "calls";
-    onFinished(): void;
+    onFinished: () => void;
 }
 
 /** A face for a row, from whatever the network gave us. */
@@ -57,7 +58,7 @@ function readDuration(seconds: number): string {
     return minutes ? `${minutes}m ${seconds % 60}s` : `${seconds}s`;
 }
 
-function PersonRow({ person, onOpen }: { person: Person; onOpen(person: Person): void }): JSX.Element {
+function PersonRow({ person, onOpen }: { person: Person; onOpen: (person: Person) => void }): JSX.Element {
     /*
      * What to say under the name: their number when a network published one - that is the thing that made
      * these accounts one person - and otherwise which networks they are on, which is the next most useful
@@ -84,7 +85,7 @@ function PersonRow({ person, onOpen }: { person: Person; onOpen(person: Person):
     );
 }
 
-function CallRow({ call, onOpen }: { call: Call; onOpen(call: Call): void }): JSX.Element {
+function CallRow({ call, onOpen }: { call: Call; onOpen: (call: Call) => void }): JSX.Element {
     const what = call.outgoing
         ? _t("contacts|call_outgoing")
         : call.outcome === "missed"
@@ -132,16 +133,24 @@ export function ContactsDialog({ initialTab = "people", onFinished }: Props): JS
 
     const calls = useMemo(() => callHistory(client), [client]);
 
-    const shown = useMemo(() => {
-        const term = query.trim().toLowerCase();
-        if (!term) return people ?? [];
-        return (people ?? []).filter(
-            (person) =>
-                person.name.toLowerCase().includes(term) ||
-                person.keys.some((key) => key.includes(term)) ||
-                person.accounts.some((account) => account.network.toLowerCase().includes(term)),
-        );
-    }, [people, query]);
+    /*
+     * Best match first, not alphabetical.
+     *
+     * A contact list is searched by name, by number and by network ("everyone on Signal"), and all
+     * three go into the same ranked pass (utils/search/fuzzy.ts) so a typo or a missing accent still
+     * finds the person. Without a query the list stays as it was built: by name.
+     */
+    const shown = useMemo(
+        () =>
+            fuzzyMatch(
+                (people ?? []).map((person) => ({
+                    item: person,
+                    keys: [person.name, ...person.keys, ...person.accounts.map((account) => account.network)],
+                })),
+                query,
+            ).map((match) => match.item),
+        [people, query],
+    );
 
     /** A person is somewhere to go: the chat that exists, else a new one with whichever account can. */
     const openPerson = useCallback(

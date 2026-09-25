@@ -114,13 +114,18 @@ describe("QueryMatcher", function () {
     });
 
     it("Returns numeric results in correct order (input pos)", function () {
-        // regression test for depending on object iteration order
-        const qm = new QueryMatcher([{ name: "123456badger" }, { name: "123456" }], { keys: ["name"] });
-        const results = qm.match("123456");
+        // regression test for depending on object iteration order: the exact match comes first
+        // whichever order the objects were given in.
+        for (const objects of [
+            [{ name: "123456badger" }, { name: "123456" }],
+            [{ name: "123456" }, { name: "123456badger" }],
+        ]) {
+            const results = new QueryMatcher(objects, { keys: ["name"] }).match("123456");
 
-        expect(results.length).toBe(2);
-        expect(results[0].name).toBe("123456badger");
-        expect(results[1].name).toBe("123456");
+            expect(results.length).toBe(2);
+            expect(results[0].name).toBe("123456");
+            expect(results[1].name).toBe("123456badger");
+        }
     });
 
     it("Returns numeric results in correct order (query pos)", function () {

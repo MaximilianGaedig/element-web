@@ -18,7 +18,6 @@ import {
     RoomType,
 } from "matrix-js-sdk/src/matrix";
 import { KnownMembership } from "matrix-js-sdk/src/types";
-import { normalize } from "matrix-js-sdk/src/utils";
 import React, {
     type ChangeEvent,
     type JSX,
@@ -76,6 +75,7 @@ import { SDKContextClass } from "../../../../contexts/SDKContextClass";
 import { getMetaSpaceName, MetaSpace } from "../../../../stores/spaces";
 import { DirectoryMember, type Member, startDmOnFirstMessage } from "../../../../utils/direct-messages";
 import DMRoomMap from "../../../../utils/DMRoomMap";
+import { fuzzyMatch } from "../../../../utils/search/fuzzy";
 import { makeUserPermalink } from "../../../../utils/permalinks/Permalinks";
 import { buildActivityScores, buildMemberScores, compareMembers } from "../../../../utils/SortMembers";
 import { copyPlaintext } from "../../../../utils/strings";
@@ -469,31 +469,47 @@ const SpotlightDialog: React.FC<IProps> = ({ initialText = "", initialFilter = n
 
         // Group results in their respective sections
         if (trimmedQuery) {
-            const lcQuery = trimmedQuery.toLowerCase();
-            const normalizedQuery = normalize(trimmedQuery);
+            /*
+             * Every candidate is matched in one pass (utils/search/fuzzy.ts), which is what makes a
+             * typo, an accent or two words in the wrong order still find the thing: a per-entry
+             * substring test can do none of those, and compiling the query once per entry instead of
+             * once is the difference between instant and not.
+             *
+             * What each kind of result offers to match against is what it already carried: a room its
+             * name and alias, everything else its `query` strings. Only membership is decided here -
+             * the sections are sorted by activity below, the way they always were.
+             */
+            const keysOf = (entry: Result): (string | undefined)[] => {
+                if (isRoomResult(entry)) {
+                    return [entry.room.name, entry.room.getCanonicalAlias() ?? undefined, ...(entry.query ?? [])];
+                }
+                if (isMemberResult(entry) || isPublicRoomResult(entry)) return entry.query ?? [];
+                return [entry.name, ...(entry.query ?? [])];
+            };
+            const matched = new Set(
+                fuzzyMatch(
+                    possibleResults.map((entry) => ({ item: entry, keys: keysOf(entry) })),
+                    trimmedQuery,
+                ).map((match) => match.item),
+            );
 
             possibleResults.forEach((entry) => {
                 if (isRoomResult(entry)) {
                     // If the room is a DM with a user that is part of the user directory search results,
                     // we can assume the user is a relevant result, so include the DM with them too.
                     const userId = DMRoomMap.shared().getUserIdForRoomId(entry.room.roomId);
-                    if (!userDirectorySearchResults.some((user) => user.userId === userId)) {
-                        if (
-                            !entry.room.normalizedName?.includes(normalizedQuery) &&
-                            !entry.room.getCanonicalAlias()?.toLowerCase().includes(lcQuery) &&
-                            !entry.query?.some((q) => q.includes(lcQuery))
-                        ) {
-                            return; // bail, does not match query
-                        }
+                    if (userDirectorySearchResults.some((user) => user.userId === userId)) {
+                        results[entry.section].push(entry);
+                        return;
                     }
-                } else if (isMemberResult(entry)) {
-                    if (!entry.alreadyFiltered && !entry.query?.some((q) => q.includes(lcQuery))) return; // bail, does not match query
-                } else if (isPublicRoomResult(entry)) {
-                    if (!entry.query?.some((q) => q.includes(lcQuery))) return; // bail, does not match query
-                } else {
-                    if (!entry.name.toLowerCase().includes(lcQuery) && !entry.query?.some((q) => q.includes(lcQuery)))
-                        return; // bail, does not match query
+                } else if (isMemberResult(entry) && entry.alreadyFiltered) {
+                    // The server already decided this one matches; second-guessing it would drop
+                    // people it found on a network and we have nothing here to match them by.
+                    results[entry.section].push(entry);
+                    return;
                 }
+
+                if (!matched.has(entry)) return; // bail, does not match query
 
                 results[entry.section].push(entry);
             });

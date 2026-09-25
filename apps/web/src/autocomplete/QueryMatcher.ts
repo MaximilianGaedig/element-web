@@ -13,6 +13,7 @@ import { removeHiddenChars } from "matrix-js-sdk/src/utils";
 
 import { type TimelineRenderingType } from "../contexts/RoomContext";
 import { type Leaves } from "../@types/common";
+import { fuzzyMatch } from "../utils/search/fuzzy";
 
 interface IOptions<T extends object> {
     keys: Array<Leaves<T>>;
@@ -24,11 +25,11 @@ interface IOptions<T extends object> {
 }
 
 /**
- * Simple search matcher that matches any results with the query string anywhere
- * in the search string. Returns matches in the order the query string appears
- * in the search key, earliest first, then in the order the search key appears
- * in the provided array of keys, then in the order the items appeared in the
- * source array.
+ * Search matcher that ranks results by how well the query matches their search
+ * keys (see utils/search/fuzzy.ts): accents are folded, the typed words may come
+ * in any order, and one typo per word is forgiven. Ties are broken by which of
+ * the keys matched - so a display name beats a user ID - and then by the order
+ * the items appeared in the source array.
  *
  * @param {Object[]} objects Initial list of objects. Equivalent to calling
  *     setObjects() after construction
@@ -96,40 +97,26 @@ export default class QueryMatcher<T extends object> {
         if (query.length === 0) {
             return [];
         }
-        const matches: {
-            index: number;
-            object: T;
-            keyWeight: number;
-        }[] = [];
-        // Iterate through the map & check each key.
-        // ES6 Map iteration order is defined to be insertion order, so results
-        // here will come out in the order they were put in.
-        for (const [key, candidates] of this._items.entries()) {
-            let resultKey = key;
-            if (this._options.shouldMatchWordsOnly) {
-                resultKey = resultKey.replace(/[^\w]/g, "");
-            }
-            const index = resultKey.indexOf(query);
-            if (index !== -1) {
-                matches.push(...candidates.map((candidate) => ({ index, ...candidate })));
-            }
-        }
 
-        // Sort matches by where the query appeared in the search key, then by
-        // where the matched key appeared in the provided array of keys.
-        matches.sort((a, b) => {
-            if (a.index < b.index) {
-                return -1;
-            } else if (a.index === b.index) {
-                if (a.keyWeight < b.keyWeight) {
-                    return -1;
-                } else if (a.keyWeight === b.keyWeight) {
-                    return 0;
-                }
-            }
+        /*
+         * One pass over every key, ranked together.
+         *
+         * The keys are one flat haystack so that the matcher can rank them against each other -
+         * ranking each key separately and merging afterwards loses the comparison that matters. An
+         * item can own several keys, and `keyWeight` (its position in `options.keys`) is what makes
+         * the display name win over the ID when both match.
+         */
+        const searchable = [...this._items.entries()].map(([key, candidates]) => ({
+            item: candidates,
+            keys: [this._options.shouldMatchWordsOnly ? key.replace(/[^\w]/g, "") : key],
+        }));
 
-            return 1;
-        });
+        const matches = fuzzyMatch(searchable, query, { mode: "completion" }).flatMap(({ item, rank }) =>
+            item.map((candidate) => ({ rank, ...candidate })),
+        );
+
+        // Best match first; within one key, the earliest key of the object it came from.
+        matches.sort((a, b) => a.rank - b.rank || a.keyWeight - b.keyWeight);
 
         // Now map the keys to the result objects. Also remove any duplicates.
         const dedupped = uniq(matches.map((match) => match.object));

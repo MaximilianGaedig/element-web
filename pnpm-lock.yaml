@@ -546,6 +546,9 @@ importers:
       '@huggingface/transformers':
         specifier: ^4.3.0
         version: 4.3.0(@types/node@25.9.3)
+      '@leeoniya/ufuzzy':
+        specifier: 1.0.19
+        version: 1.0.19
       '@matrix-org/analytics-events':
         specifier: ^0.38.0
         version: 0.38.0
@@ -3529,6 +3532,9 @@ packages:
 
   '@kwsites/file-exists@1.1.1':
     resolution: {integrity: sha512-m9/5YGR18lIwxSFDwfE3oA7bWuq9kdau6ugN4H2rJeyhFQZcG9AgSHkQtSD15a8WvTgfz9aikZMrKPHvbpqFiw==}
+
+  '@leeoniya/ufuzzy@1.0.19':
+    resolution: {integrity: sha512-0pikDeYt0IHEUPza5RTCDXc/17S1pTrYnReEMp8Aa6k1ovzw5QdZLwicW8TjljwEZRb6oYag0xmALohrcq/yOQ==}
 
   '@leichtgewicht/ip-codec@2.0.5':
     resolution: {integrity: sha512-Vo+PSpZG2/fmgmiNzYK9qWRh8h/CHrwD0mo1h1DzL4yzHNSfWYujGTYsWGreD000gcgmZ7K4Ys6Tx9TxtsKdDw==}
@@ -15880,6 +15886,8 @@ snapshots:
       debug: 4.4.3(supports-color@10.2.2)
     transitivePeerDependencies:
       - supports-color
+
+  '@leeoniya/ufuzzy@1.0.19': {}
 
   '@leichtgewicht/ip-codec@2.0.5': {}
 
