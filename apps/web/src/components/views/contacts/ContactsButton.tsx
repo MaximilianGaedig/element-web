@@ -34,12 +34,16 @@ export function ContactsButton({ isPanelCollapsed = false }: { isPanelCollapsed?
             onClick={() => void openContacts()}
             indicator={undefined}
         >
-            <UserProfileIcon />
-            {!isPanelCollapsed && (
-                <Text className="mx_ContactsButton_label" as="span" size="md" title={_t("contacts|title")}>
-                    {_t("contacts|people")}
-                </Text>
-            )}
+            {/* One child only: Compound's IconButton passes it through React.Children.only, so an icon
+                plus a label has to arrive as a single fragment - the same thing QuickSettingsButton does. */}
+            <>
+                <UserProfileIcon />
+                {!isPanelCollapsed && (
+                    <Text className="mx_ContactsButton_label" as="span" size="md" title={_t("contacts|title")}>
+                        {_t("contacts|people")}
+                    </Text>
+                )}
+            </>
         </IconButton>
     );
 
