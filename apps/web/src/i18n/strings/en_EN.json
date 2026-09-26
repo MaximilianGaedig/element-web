@@ -2284,7 +2284,10 @@
         "room_is_low_priority": "This is a low priority room",
         "search": {
             "all_rooms_button": "Search all rooms",
+            "next": "Next result",
             "placeholder": "Search messages…",
+            "position": "%(position)s of %(count)s",
+            "previous": "Previous result",
             "summary": {
                 "one": "1 result found for “<query/>”",
                 "other": "%(count)s results found for “<query/>”"

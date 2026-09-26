@@ -15,6 +15,9 @@ import {
 } from "matrix-js-sdk/src/matrix";
 import { logger } from "matrix-js-sdk/src/logger";
 import { SearchIcon } from "@vector-im/compound-design-tokens/assets/web/icons";
+import ChevronUpIcon from "@vector-im/compound-design-tokens/assets/web/icons/chevron-up";
+import ChevronDownIcon from "@vector-im/compound-design-tokens/assets/web/icons/chevron-down";
+import { IconButton, Text } from "@vector-im/compound-web";
 
 import ScrollPanel from "./ScrollPanel";
 import Spinner from "../views/elements/Spinner";
@@ -48,6 +51,11 @@ interface Props {
 // XXX: todo: merge overlapping results somehow?
 // XXX: why doesn't searching on name work?
 export const RoomSearchView = ({ term, scope, promise, className, onUpdate, inProgress, ref }: Props): JSX.Element => {
+    // Which result the arrows are on. Reset whenever the search itself changes.
+    const [at, setAt] = useState(0);
+    useEffect(() => {
+        setAt(0);
+    }, [term, scope]);
     const client = useContext(MatrixClientContext);
     const roomContext = useScopedRoomContext("showHiddenEvents");
     const [highlights, setHighlights] = useState<string[] | null>(null);
@@ -174,6 +182,18 @@ export const RoomSearchView = ({ term, scope, promise, className, onUpdate, inPr
 
     const ret: JSX.Element[] = [];
 
+    /*
+     * The results, in the order they are drawn, so they can be stepped through.
+     *
+     * Searching a conversation is a way of moving around it: you want the next hit, not a list to
+     * read. Other chat apps answer with "3 of 47" and a pair of arrows, and that needs two things -
+     * a total, which the server sends (`results.count`), and the id of each result in display
+     * order, which is collected here as the list is built. The ids double as ScrollPanel's scroll
+     * tokens (SearchResultTile renders `data-scroll-tokens={eventId}`), so stepping is a matter of
+     * asking the panel to scroll to one rather than fighting it with scrollIntoView.
+     */
+    const shown: string[] = [];
+
     if (inProgress) {
         ret.push(
             <li key="search-spinner">
@@ -246,6 +266,8 @@ export const RoomSearchView = ({ term, scope, promise, className, onUpdate, inPr
         }
 
         const resultLink = "#/room/" + roomId + "/" + mxEv.getId();
+        const shownId = mxEv.getId();
+        if (shownId) shown.push(shownId);
 
         // merging two successive search result if the query is present in both of them
         const currentTimeline = result.context.getTimeline();
@@ -302,14 +324,57 @@ export const RoomSearchView = ({ term, scope, promise, className, onUpdate, inPr
         mergedTimeline = [];
     }
 
+    /*
+     * `results.count` is what the server matched, not what is drawn: results whose room is unknown
+     * or unrenderable are skipped above, and paging has usually only fetched the first few. So the
+     * position counts within what is on screen while the total speaks for the whole search, and the
+     * total is the honest one to show - it is the answer to "is it in here at all".
+     */
+    const total = results.count ?? shown.length;
+
+    const stepTo = (next: number): void => {
+        if (!shown.length) return;
+        const wrapped = ((next % shown.length) + shown.length) % shown.length;
+        setAt(wrapped);
+        innerRef.current?.scrollToToken(shown[wrapped], 0, 0.5);
+    };
+
     return (
-        <ScrollPanel
-            ref={onRef}
-            className={"mx_RoomView_searchResultsPanel " + className}
-            onFillRequest={onSearchResultsFillRequest}
-        >
-            <li className="mx_RoomView_scrollheader" />
-            {ret}
-        </ScrollPanel>
+        <>
+            {total > 0 && (
+                <div className="mx_RoomSearchView_count">
+                    <Text size="sm" weight="medium">
+                        {_t("room|search|position", {
+                            position: shown.length ? at + 1 : 0,
+                            count: total,
+                        })}
+                    </Text>
+                    <IconButton
+                        size="24px"
+                        aria-label={_t("room|search|previous")}
+                        disabled={shown.length < 2}
+                        onClick={() => stepTo(at - 1)}
+                    >
+                        <ChevronUpIcon />
+                    </IconButton>
+                    <IconButton
+                        size="24px"
+                        aria-label={_t("room|search|next")}
+                        disabled={shown.length < 2}
+                        onClick={() => stepTo(at + 1)}
+                    >
+                        <ChevronDownIcon />
+                    </IconButton>
+                </div>
+            )}
+            <ScrollPanel
+                ref={onRef}
+                className={"mx_RoomView_searchResultsPanel " + className}
+                onFillRequest={onSearchResultsFillRequest}
+            >
+                <li className="mx_RoomView_scrollheader" />
+                {ret}
+            </ScrollPanel>
+        </>
     );
 };

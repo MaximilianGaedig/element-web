@@ -175,6 +175,45 @@ describe("<RoomSearchView/>", () => {
         expect(text).toHaveClass("mx_EventTile_searchHighlight");
     });
 
+    it("says how many results there are, so you can tell whether it is in there at all", async () => {
+        // The number that matters is the server's total, not how many happen to be drawn: the first
+        // page of a long search is not the answer to "did you find it".
+        render(
+            <RoomSearchView
+                inProgress={false}
+                term="test"
+                scope={SearchScope.Room}
+                promise={Promise.resolve<ISearchResults>({
+                    results: [
+                        SearchResult.fromJson(
+                            {
+                                rank: 1,
+                                result: {
+                                    room_id: room.roomId,
+                                    event_id: "$2",
+                                    sender: client.getSafeUserId(),
+                                    origin_server_ts: 1,
+                                    content: { body: "Foo Test Bar", msgtype: "m.text" },
+                                    type: EventType.RoomMessage,
+                                },
+                                context: { profile_info: {}, events_before: [], events_after: [] },
+                            },
+                            eventMapper,
+                        ),
+                    ],
+                    highlights: [],
+                    count: 47,
+                })}
+                className="someClass"
+                onUpdate={vi.fn()}
+            />,
+            clientAndSDKContextRenderOptions(client, sdkContext),
+        );
+
+        await expect(screen.findByText("1 of 47")).resolves.toBeVisible();
+        expect(screen.getByLabelText("Next result")).toBeInTheDocument();
+    });
+
     it("should show spinner above results when backpaginating", async () => {
         const searchResults: ISearchResults = {
             results: [

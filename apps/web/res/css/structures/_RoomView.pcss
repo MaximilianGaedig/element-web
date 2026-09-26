@@ -148,6 +148,20 @@ Please see LICENSE files in the repository root for full details.
     position: relative;
 }
 
+/* "3 of 47" and the arrows, above the results. Fixed above the scrolling panel, because it is the
+   one control that has to stay reachable however far down the list you are. */
+.mx_RoomSearchView_count {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: var(--cpd-space-1x);
+    padding: var(--cpd-space-2x) var(--cpd-space-4x);
+    border-bottom: 1px solid var(--cpd-color-border-interactive-secondary);
+    background-color: var(--cpd-color-bg-canvas-default);
+    color: var(--cpd-color-text-secondary);
+    flex: 0 0 auto;
+}
+
 .mx_RoomView_searchResultsPanel {
     .mx_RoomView_messageListWrapper {
         justify-content: flex-start;
