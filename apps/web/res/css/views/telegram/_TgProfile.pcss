@@ -712,7 +712,7 @@ html[data-tg-screen="mobile"] .mx_HistoryCard {
 }
 
 /* Telegram layout: a floating glass plate under the pinned one, like tweb's topbar plates. */
-html[data-tg-screen] .mx_RoomView_body[data-telegram-layout="true"] > .mx_TgImport {
+html[data-floating-bars] .mx_RoomView_body > .mx_TgImport {
     position: absolute;
     top: calc(var(--tg-plates-bottom, var(--tg-header-bottom, 64px)) + var(--tg-plates-gap));
     left: 0;
@@ -747,6 +747,37 @@ html[data-tg-screen] .mx_RoomView_body[data-telegram-layout="true"] > .mx_TgImpo
 
     &:hover {
         background: var(--cpd-color-bg-subtle-primary);
+    }
+
+    &:focus-visible {
+        outline: 2px solid var(--cpd-color-border-focused);
+    }
+}
+
+/*
+ * What the chip shrinks to once the bridges are done: a tick in the search row, beside Explore.
+ * Sized like the buttons it sits with rather than like the chip it came from.
+ */
+.mx_TgHistoryChip_mini {
+    all: unset;
+    box-sizing: border-box;
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    border-radius: 50%;
+    color: var(--cpd-color-icon-success-primary, var(--cpd-color-icon-secondary));
+    cursor: pointer;
+
+    svg {
+        width: 20px;
+        height: 20px;
+    }
+
+    &:hover {
+        background: var(--cpd-color-bg-subtle-secondary);
     }
 
     &:focus-visible {

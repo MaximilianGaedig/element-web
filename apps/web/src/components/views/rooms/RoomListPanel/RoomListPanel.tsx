@@ -11,7 +11,10 @@ import { Flex, RoomListHeaderView, useCreateAutoDisposedViewModel } from "@eleme
 import { shouldShowComponent } from "../../../../customisations/helpers/UIComponents";
 import { UIComponent } from "../../../../settings/UIFeature";
 import { RoomListSearch } from "./RoomListSearch";
+import { HistoryStatusMini } from "../../telegram/TgHistoryChip";
 import { AiDigest } from "../../ai/AiDigest";
+import FoundIcon from "@vector-im/compound-design-tokens/assets/web/icons/search";
+import { Button } from "@vector-im/compound-web";
 import { RoomListView } from "./RoomListView";
 import { _t } from "../../../../languageHandler";
 import { getKeyBindingsManager } from "../../../../KeyBindingsManager";
@@ -78,12 +81,36 @@ export const RoomListPanel: React.FC<RoomListPanelProps> = ({ activeSpace }) => 
             onBlur={onBlur}
             onKeyDown={onKeyDown}
         >
-            {displayRoomSearch && <RoomListSearch activeSpace={activeSpace} />}
+            {displayRoomSearch && (
+                /* Fork: the search row also carries what is left of the bridge status once the
+                   imports are done - a tick, rather than the full chip taking a row of its own. */
+                <div className="mx_RoomListPanel_searchRow">
+                    <RoomListSearch activeSpace={activeSpace} />
+                    <HistoryStatusMini />
+                </div>
+            )}
             <RoomListHeaderView vm={vm} />
-            {/* Fork: what is waiting for you across every chat, in one press - asked for, never
-                automatic. Opening forty unread chats to find the two that need answering is the thing
-                worth handing to a machine. */}
-            <AiDigest />
+            {/* Fork: the two things that are about every chat rather than about one of them. What is
+                waiting for you, asked for and never automatic; and what the chats turned out to contain,
+                which was read here in idle time and never left the device. */}
+            <div className="mx_RoomListPanel_tools">
+                <AiDigest />
+                <Button
+                    kind="tertiary"
+                    size="md"
+                    className="mx_RoomListPanel_found"
+                    Icon={FoundIcon}
+                    onClick={() => {
+                        // The room list is part of the startup graph. Keep both the dialog and Modal out
+                        // of it: they only matter after the reader asks to see what was found.
+                        void Promise.all([import("../../dialogs/FoundDialog"), import("../../../../Modal")]).then(
+                            ([{ default: FoundDialog }, { default: Modal }]) => Modal.createDialog(FoundDialog),
+                        );
+                    }}
+                >
+                    {_t("found|open_it")}
+                </Button>
+            </div>
             <RoomListView />
         </Flex>
     );

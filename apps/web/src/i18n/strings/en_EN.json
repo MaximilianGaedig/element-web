@@ -1468,6 +1468,19 @@
         "sent": "Sent",
         "title_multiple": "Forward %(count)s messages"
     },
+    "found": {
+        "already_happened": "Already happened",
+        "go_to_message": "Go to the message this came from",
+        "links": "Links",
+        "nothing_yet": "Nothing found yet. Your chats are read in the background, so check again in a minute.",
+        "onway": "On the way",
+        "open": "Open",
+        "open_it": "What's in my chats",
+        "title": "Found in your chats",
+        "when": "When",
+        "where": "Where",
+        "who": "Who"
+    },
     "identity_server": {
         "change": "Change identity server",
         "change_prompt": "Disconnect from the identity server <current /> and connect to <new /> instead?",
@@ -2681,8 +2694,14 @@
         "bubble_tail_imessage": "iMessage",
         "bubble_tail_none": "None",
         "bubble_tail_telegram": "Telegram",
+        "bubble_timeline": "Message bubbles",
+        "bubble_timeline_description": "Messages in bubbles, with the time and delivery ticks inside them and quoted replies drawn as Telegram does.",
+        "chat_columns": "Narrow, centred timeline",
+        "chat_columns_description": "Hold the messages to a readable width in the middle of the window, with a chat list you can drag narrower or collapse. On a phone, one pane at a time.",
         "code_block_expand_default": "Expand code blocks by default",
         "code_block_line_numbers": "Show line numbers in code blocks",
+        "compact_media": "Messenger-sized media",
+        "compact_media_description": "Size pictures, videos and stickers as the messengers do, rather than to Element's own image setting.",
         "disable_historical_profile": "Show current profile picture and name for users in message history",
         "discovery": {
             "title": "How to find you"
@@ -2759,6 +2778,8 @@
             },
             "title": "Encryption"
         },
+        "floating_bars": "Floating bars",
+        "floating_bars_description": "The room header, the composer and the scroll-down button float over the timeline instead of sitting in fixed strips.",
         "general": {
             "account_management_section": "Account management",
             "account_section": "Account",
@@ -2852,6 +2873,8 @@
         "glass_effects_description": "Blurs what is behind the header, the composer and menus. It costs a lot of graphics work while scrolling, so it is off by default and the panels are drawn plain instead.",
         "group_consecutive_images": "Group consecutive images",
         "group_consecutive_images_description": "Show images and videos sent in quick succession by the same person as one album",
+        "handheld_sheets": "Sheets on a phone",
+        "handheld_sheets_description": "On a handheld, dialogs slide up from the bottom and menus become action sheets.",
         "inline_url_previews_default": "Enable previews",
         "inline_url_previews_encrypted": "Enable previews in encrypted rooms",
         "inline_url_previews_encrypted_bundled_only": "Only show bundled previews in encrypted rooms",
@@ -3227,8 +3250,6 @@
             "unsupported": "This server doesn't report storage use."
         },
         "tac_only_notifications": "Only show notifications in the thread activity centre",
-        "telegram_style_layout": "Telegram-style layout",
-        "telegram_style_layout_description": "A narrower, centred timeline, Telegram-sized media and compact bubbles. Hides avatars and names in direct messages when using the message bubbles layout.",
         "use_12_hour_format": "Show timestamps in 12 hour format (e.g. 2:30pm)",
         "use_command_enter_send_message": "Use Command + Enter to send a message",
         "use_command_f_search": "Use Command + F to search timeline",
@@ -3543,6 +3564,7 @@
         },
         "bridges_summary": "%(connected)s of %(total)s connected",
         "bridges_tab": "Bridges",
+        "chip_all_imported": "All %(count)s chats imported",
         "chip_importing": "Importing history · %(done)s of %(total)s chats",
         "chip_login_problem": {
             "one": "%(names)s is not connected",
