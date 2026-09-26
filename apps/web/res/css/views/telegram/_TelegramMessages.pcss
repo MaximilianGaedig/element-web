@@ -331,17 +331,17 @@ html[data-tg-screen] [data-telegram-layout="true"][data-layout="bubble"] {
     /*
      * The picture is the bubble: give the line the bubble's surface back and clip the media to it.
      *
-     * Clipping here also hides the hover menu of every picture, because the action bar is positioned
-     * against this line and sits above its top edge (EventTileView.module.css .slotActionBar). That
-     * is a real bug (MEO-62) and needs fixing without un-clipping the line, which additionally hides
-     * the bubble tail (an ::after on this same line) and the line's own background below the media.
+     * The clipping belongs on the media and never on the line, because the line is also what the
+     * action bar is positioned against - absolutely, above its top edge (EventTileView.module.css
+     * .slotActionBar) - so a line that clips its overflow hides the hover menu of every picture
+     * completely, with nothing to hover back into.
      */
     .mx_EventTile_tgBubble > .mx_EventTile_tgMediaLine {
-        overflow: hidden;
         background: var(--event-tile-bubble-other-background);
 
         :is(.mx_MediaBody, .mx_MImageBody, .mx_MVideoBody) {
             border-radius: inherit;
+            overflow: hidden;
         }
     }
 
