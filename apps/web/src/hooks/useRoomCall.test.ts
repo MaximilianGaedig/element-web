@@ -27,6 +27,17 @@ import { CallStore } from "../stores/CallStore";
 import { SDKContextClass } from "../contexts/SDKContextClass";
 import { ClientEvent } from "matrix-js-sdk/src/matrix";
 import { act } from "react";
+import { useWidgets } from "../utils/WidgetUtils";
+import { placeCall } from "../utils/room/placeCall";
+import { WidgetLayoutStore } from "../stores/widgets/WidgetLayoutStore";
+import type { IApp } from "../stores/WidgetStore";
+
+vi.mock("../utils/WidgetUtils", async (importOriginal) => ({
+    ...(await importOriginal<typeof import("../utils/WidgetUtils")>()),
+    useWidgets: vi.fn(),
+}));
+
+vi.mock("../utils/room/placeCall", () => ({ placeCall: vi.fn() }));
 
 describe("useRoomCall", () => {
     const client = getMockClientWithEventEmitter({
@@ -53,6 +64,7 @@ describe("useRoomCall", () => {
     } as unknown as RoomContextType;
 
     beforeEach(() => {
+        vi.mocked(useWidgets).mockReturnValue([]);
         const callHandler = {
             getCallForRoom: vi.fn().mockReturnValue(null),
             isCallSidebarShown: vi.fn().mockReturnValue(true),
@@ -138,5 +150,25 @@ describe("useRoomCall", () => {
             await setupAsyncStoreWithClient(CallStore.instance, client);
             await waitFor(() => expect(result.current.callOptions).toEqual([PlatformCallType.ElementCall]));
         });
+    });
+
+    it("starts a legacy call instead of pinning a stale Jitsi widget", async () => {
+        const staleJitsiWidget = { id: "stale-jitsi", type: "m.jitsi" } as IApp;
+        vi.mocked(useWidgets).mockReturnValue([staleJitsiWidget]);
+        vi.mocked(client.cachedRtcTransports.get).mockReturnValue([]);
+        await setupAsyncStoreWithClient(CallStore.instance, client);
+        vi.spyOn(WidgetLayoutStore.instance, "canAddToContainer").mockReturnValue(true);
+        vi.spyOn(WidgetLayoutStore.instance, "isInContainer").mockReturnValue(false);
+        const moveToContainer = vi
+            .spyOn(WidgetLayoutStore.instance, "moveToContainer")
+            .mockImplementation(() => {});
+
+        const { result } = render();
+        await waitFor(() => expect(result.current.callOptions).toEqual([PlatformCallType.LegacyCall]));
+
+        act(() => result.current.voiceCallClick(undefined, PlatformCallType.LegacyCall));
+
+        expect(moveToContainer).not.toHaveBeenCalled();
+        expect(placeCall).toHaveBeenCalledOnce();
     });
 });

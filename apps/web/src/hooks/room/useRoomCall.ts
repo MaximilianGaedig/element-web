@@ -282,7 +282,10 @@ export const useRoomCall = (
     const voiceCallClick = useCallback(
         (evt: React.MouseEvent | undefined, callPlatformType: PlatformCallType): void => {
             evt?.stopPropagation();
-            if (widget && promptPinWidget) {
+            // A bridged DM can retain an old Jitsi widget while still only
+            // offering legacy 1:1 calls. That widget must not intercept the
+            // first press of the legacy call button.
+            if (callPlatformType !== PlatformCallType.LegacyCall && widget && promptPinWidget) {
                 sdkContext.widgetLayoutStore.moveToContainer(room, widget, "top");
             } else {
                 void placeCall(
@@ -300,7 +303,7 @@ export const useRoomCall = (
     const videoCallClick = useCallback(
         (evt: React.MouseEvent | undefined, callPlatformType: PlatformCallType): void => {
             evt?.stopPropagation();
-            if (widget && promptPinWidget) {
+            if (callPlatformType !== PlatformCallType.LegacyCall && widget && promptPinWidget) {
                 sdkContext.widgetLayoutStore.moveToContainer(room, widget, "top");
             } else {
                 // If we have pressed shift then always skip the lobby, otherwise `undefined` will defer
