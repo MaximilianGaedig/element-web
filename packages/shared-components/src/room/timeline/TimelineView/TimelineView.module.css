@@ -56,3 +56,29 @@
     align-items: center;
     justify-content: center;
 }
+
+/* The date of the day being read, floating over the top of the list. Held clear of the
+   messages' own inset because it is centred, and never in the way of them: it is a label,
+   not a control, so clicks and scrolls pass straight through to the messages underneath.
+
+   Telegram's timings, which the behaviour is taken from: it fades over .3s, and the view
+   stops showing it 1350ms after the last scroll event (SCROLL_IDLE_MS in TimelineView). */
+.stickyDate {
+    position: absolute;
+    inset-block-start: 0;
+    inset-inline: 0;
+    z-index: 1;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.stickyDateVisible {
+    opacity: 1;
+}
+
+@media (prefers-reduced-motion) {
+    .stickyDate {
+        transition: none;
+    }
+}

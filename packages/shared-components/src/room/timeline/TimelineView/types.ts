@@ -198,4 +198,11 @@ export interface TimelineViewProps {
      * The shared container calls this for every visible item.
      */
     renderItem: (item: TimelineItem) => ReactNode;
+
+    /**
+     * Render callback for the date of the day being read, shown floating at the top of the
+     * list while the reader scrolls. Given the timestamp of that day; the view decides when
+     * it is shown, so this only has to draw the label. Omit it to have no floating date.
+     */
+    renderStickyDate?: (ts: number) => ReactNode;
 }

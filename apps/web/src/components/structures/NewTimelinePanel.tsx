@@ -188,6 +188,16 @@ export function NewTimelinePanel({
     const snapshot = useViewModel(vm);
     const { highlightedEventId: highlightedId } = snapshot;
 
+    // The date of the day being read, shown at the top of the timeline while scrolling.
+    // The timeline's own separator, so the label reads exactly as the one in the list does;
+    // TimelineView decides when it is shown.
+    const renderStickyDate = useCallback(
+        (ts: number): ReactNode => (
+            <DateSeparatorWrapper roomId={room.roomId} ts={ts} labelOnly className="mx_NewTimelinePanel_stickyDate" />
+        ),
+        [room.roomId],
+    );
+
     const renderItem = useCallback(
         (item: TimelineItem): ReactNode =>
             renderTimelineItem(item, {
@@ -222,7 +232,7 @@ export function NewTimelinePanel({
                 mx_NewTimelinePanel_hidden: hidden,
             })}
         >
-            <TimelineView vm={vm} renderItem={renderItem} />
+            <TimelineView vm={vm} renderItem={renderItem} renderStickyDate={renderStickyDate} />
         </div>
     );
 }

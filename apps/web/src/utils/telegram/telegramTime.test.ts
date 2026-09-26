@@ -37,8 +37,11 @@ describe("getTelegramSendState", () => {
 
     it("uses the bridge's message send status", () => {
         expect(getTelegramSendState({ bridgeStatus: "PENDING" })).toBe("sending");
-        expect(getTelegramSendState({ bridgeStatus: "SUCCESS" })).toBe("delivered");
+        // Accepted by the network is not delivered to the recipient: only the network's own
+        // delivery report earns the second tick.
+        expect(getTelegramSendState({ bridgeStatus: "SUCCESS" })).toBe("sent");
         expect(getTelegramSendState({ bridgeDelivered: true })).toBe("delivered");
+        expect(getTelegramSendState({ bridgeStatus: "SUCCESS", bridgeDelivered: true })).toBe("delivered");
         expect(getTelegramSendState({ bridgeStatus: "FAIL_RETRIABLE" })).toBe("error");
         expect(getTelegramSendState({ bridgeStatus: "FAIL_PERMANENT", readByOthers: true })).toBe("error");
     });

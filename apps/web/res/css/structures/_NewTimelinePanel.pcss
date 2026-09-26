@@ -36,6 +36,31 @@ Please see LICENSE files in the repository root for full details.
         padding-inline: var(--RoomView_MessageList-padding);
     }
 
+    /* The date of the day being read, floating over the top of the list while scrolling
+       (TimelineView positions and fades it; this is only how it looks). It is the same
+       separator the list draws, so the wording matches, but standing on its own over the
+       messages it has to read as a label above them rather than as a divider between
+       them — hence no rules, and the pill that Element's other floating timeline chrome
+       uses. The inner element is the separator's own label row. */
+    .mx_NewTimelinePanel_stickyDate {
+        justify-content: center;
+        margin-block: var(--cpd-space-2x);
+
+        hr {
+            display: none;
+        }
+
+        > div {
+            padding: var(--cpd-space-1x) var(--cpd-space-4x);
+            /* A pill, as Element's other rounded chrome writes it. */
+            border-radius: 99px;
+            background: var(--cpd-color-bg-subtle-secondary);
+            color: var(--cpd-color-text-secondary);
+            /* The same lift the pinned-message banner floats over the timeline with. */
+            box-shadow: 0 var(--cpd-space-2x) var(--cpd-space-6x) calc(var(--cpd-space-2x) * -1) rgb(27, 29, 34, 0.1);
+        }
+    }
+
     /* The row holding the spinner shown while more history is fetched. Its height is
        fixed so the row always measures the same. */
     .mx_NewTimelinePanel_loading {

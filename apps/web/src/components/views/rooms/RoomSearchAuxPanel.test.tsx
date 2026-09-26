@@ -14,6 +14,18 @@ import { render, screen } from "test-utils-rtl";
 
 import RoomSearchAuxPanel from "./RoomSearchAuxPanel";
 import { SearchScope } from "../../../Searching";
+import SettingsStore from "../../../settings/SettingsStore";
+import { SDKContext } from "../../../contexts/SDKContext";
+import { SDKContextClass } from "../../../contexts/SDKContextClass";
+
+const roomSearchInfo = {
+    searchId: 1234,
+    count: 5,
+    term: "abcd",
+    roomId: "!room:example.org",
+    scope: SearchScope.Room,
+    promise: new Promise<never>(() => {}),
+};
 
 describe("RoomSearchAuxPanel", () => {
     it("should render the count of results", () => {
@@ -35,6 +47,57 @@ describe("RoomSearchAuxPanel", () => {
         expect(screen.getByText("5 results found for", { exact: false })).toHaveTextContent(
             "5 results found for “abcd”",
         );
+    });
+
+    describe("the jump-to-date button", () => {
+        function renderWithStores(ui: React.ReactElement): void {
+            render(<SDKContext.Provider value={new SDKContextClass()}>{ui}</SDKContext.Provider>);
+        }
+
+        function withJumpToDate(enabled: boolean): void {
+            vi.spyOn(SettingsStore, "getValue").mockImplementation(
+                (name) => name === "feature_jump_to_date" && enabled,
+            );
+        }
+
+        it("is offered for a single room's results", () => {
+            withJumpToDate(true);
+            renderWithStores(
+                <RoomSearchAuxPanel
+                    searchInfo={roomSearchInfo}
+                    isRoomEncrypted={false}
+                    onSearchScopeChange={vi.fn()}
+                    onCancelClick={vi.fn()}
+                />,
+            );
+            expect(screen.getByRole("button", { name: "Jump to date" })).toBeInTheDocument();
+        });
+
+        it("is not offered across all rooms, where a date has no one history to look in", () => {
+            withJumpToDate(true);
+            renderWithStores(
+                <RoomSearchAuxPanel
+                    searchInfo={{ ...roomSearchInfo, scope: SearchScope.All }}
+                    isRoomEncrypted={false}
+                    onSearchScopeChange={vi.fn()}
+                    onCancelClick={vi.fn()}
+                />,
+            );
+            expect(screen.queryByRole("button", { name: "Jump to date" })).not.toBeInTheDocument();
+        });
+
+        it("is not offered when the homeserver cannot look an event up by date", () => {
+            withJumpToDate(false);
+            renderWithStores(
+                <RoomSearchAuxPanel
+                    searchInfo={roomSearchInfo}
+                    isRoomEncrypted={false}
+                    onSearchScopeChange={vi.fn()}
+                    onCancelClick={vi.fn()}
+                />,
+            );
+            expect(screen.queryByRole("button", { name: "Jump to date" })).not.toBeInTheDocument();
+        });
     });
 
     it("should allow the user to toggle to all rooms search", async () => {

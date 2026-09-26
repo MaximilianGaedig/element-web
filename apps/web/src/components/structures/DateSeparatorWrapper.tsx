@@ -16,6 +16,8 @@ interface DateSeparatorWrapperProps {
     /** Timestamp of the day the separator introduces. */
     ts: number;
     className?: string;
+    /** Draw the label alone, with no jump-to-date menu. See the view model's prop. */
+    labelOnly?: boolean;
 }
 
 /**
@@ -23,10 +25,15 @@ interface DateSeparatorWrapperProps {
  * so the label ("Today", "Yesterday", …) and jump-to-date menu match wherever the
  * separator is drawn. Shared by the old MessagePanel and the new timeline panel.
  */
-export function DateSeparatorWrapper({ roomId, ts, className }: Readonly<DateSeparatorWrapperProps>): JSX.Element {
+export function DateSeparatorWrapper({
+    roomId,
+    ts,
+    className,
+    labelOnly,
+}: Readonly<DateSeparatorWrapperProps>): JSX.Element {
     const sdkContext = useContext(SDKContext);
     const vm = useCreateAutoDisposedViewModel(
-        () => new DateSeparatorViewModel({ roomId, ts, roomViewStore: sdkContext.roomViewStore }),
+        () => new DateSeparatorViewModel({ roomId, ts, labelOnly, roomViewStore: sdkContext.roomViewStore }),
     );
     return <DateSeparatorView vm={vm} className={className} />;
 }

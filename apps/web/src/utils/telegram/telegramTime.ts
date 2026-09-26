@@ -16,8 +16,9 @@ import { EventStatus, EventType, type MatrixEvent, MsgType } from "matrix-js-sdk
 /**
  * The delivery state tweb shows next to the time of an outgoing message
  * (bubbles.ts setBubbleSendingStatus: 'sending' | 'error' | 'sent' | 'read').
- * Telegram has no separate "delivered" state; bridges report one (com.beeper.message_send_status),
- * and it is drawn with tweb's double tick like "read".
+ * Telegram has no separate "delivered" state, so tweb's double tick means read. Networks that
+ * do report delivery to the recipient's device (WhatsApp, via com.beeper.message_send_status'
+ * delivered_to_users) get that double tick too, and read is then told apart by its colour.
  */
 export type TelegramSendState = "sending" | "error" | "sent" | "delivered" | "read";
 
@@ -44,7 +45,11 @@ export function getTelegramSendState({
     if (bridgeStatus === "FAIL_PERMANENT" || bridgeStatus === "FAIL_RETRIABLE") return "error";
     if (readByOthers) return "read";
     if (bridgeStatus === "PENDING") return "sending";
-    if (bridgeStatus === "SUCCESS" || bridgeDelivered) return "delivered";
+    // A bridge's SUCCESS only says the remote network accepted the message, which is what
+    // "sent" already claims. Delivery to the recipient's own device is a separate report
+    // (delivered_to_users, from the network's delivery receipt) and the only thing that
+    // earns the second tick — as in WhatsApp, where those are two different marks.
+    if (bridgeDelivered) return "delivered";
     return "sent";
 }
 

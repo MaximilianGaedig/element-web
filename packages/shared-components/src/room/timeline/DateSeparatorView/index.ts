@@ -6,3 +6,6 @@
  */
 
 export { DateSeparatorView, type DateSeparatorViewModel, type DateSeparatorViewSnapshot } from "./DateSeparatorView";
+// Exported on its own so the jump-to-date menu can also be opened from outside a
+// separator — room search offers it from a calendar button.
+export { DateSeparatorContextMenuView } from "./DateSeparatorContextMenuView";

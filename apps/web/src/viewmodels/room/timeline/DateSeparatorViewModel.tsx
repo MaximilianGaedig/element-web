@@ -44,6 +44,20 @@ export interface DateSeparatorViewModelProps {
      */
     forExport?: boolean;
     /**
+     * Called once a jump has been asked for and the room has been told to show that event.
+     * Room search uses it to close the results, which are covering the timeline the jump
+     * just landed in. Not called when the lookup failed, so the results — and the error
+     * explaining why — stay where the reader can see them.
+     */
+    onJumped?: () => void;
+    /**
+     * Set where the separator is only a label: the date floating at the top of the
+     * timeline while scrolling. It offers no jump-to menu, because it is a transient copy
+     * of a separator that is already in the list — and being inert, it cannot be reached
+     * to open one anyway.
+     */
+    labelOnly?: boolean;
+    /**
      * The room view store instance to use
      */
     roomViewStore: RoomViewStore;
@@ -105,7 +119,7 @@ export class DateSeparatorViewModel
         const label = DateSeparatorViewModel.computeLabel(this.props, this.relativeDatesEnabled);
         return {
             label,
-            jumpToEnabled: this.jumpToDateEnabled && !this.props.forExport,
+            jumpToEnabled: this.jumpToDateEnabled && !this.props.forExport && !this.props.labelOnly,
             jumpFromDate: formatDateForInput(new Date(this.props.ts)),
         };
     }
@@ -172,6 +186,7 @@ export class DateSeparatorViewModel
                     room_id: roomIdForJumpRequest,
                     metricsTrigger: undefined, // room doesn't change
                 });
+                this.props.onJumped?.();
             } else {
                 logger.debug(
                     `No longer navigating to date in room (jump to date) because the user already switched ` +

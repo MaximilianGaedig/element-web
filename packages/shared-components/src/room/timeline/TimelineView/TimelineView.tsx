@@ -85,6 +85,17 @@ const AT_BOTTOM_THRESHOLD_PX = 4;
 const REVEAL_TIMEOUT_MS = 1000;
 
 /**
+ * How long the floating date keeps showing after the last scroll event, in milliseconds.
+ *
+ * Telegram Web's value: its timeline carries an `is-scrolling` class that it drops 1350ms
+ * after scrolling stops, and that class is the only thing that makes the pinned date
+ * visible (`components/chat/bubbles.ts`, and the `.is-sticky` opacity rules in
+ * `scss/partials/_chat.scss`). So the date appears as soon as the list moves and fades out
+ * shortly after it settles, rather than sitting over the messages permanently.
+ */
+const SCROLL_IDLE_MS = 1350;
+
+/**
  * How far the view has got through its first load:
  *  - "init"    — nothing rendered yet; waiting for the first batch of messages.
  *  - "placing" — rows are laid out but still hidden while we scroll to the right spot.
@@ -92,7 +103,7 @@ const REVEAL_TIMEOUT_MS = 1000;
  */
 type Phase = "init" | "placing" | "live";
 
-export function TimelineView({ vm, renderItem }: TimelineViewProps): JSX.Element {
+export function TimelineView({ vm, renderItem, renderStickyDate }: TimelineViewProps): JSX.Element {
     const snapshot = useViewModel(vm);
 
     // The effects and callbacks below run outside React's render — from scroll events and
@@ -118,6 +129,22 @@ export function TimelineView({ vm, renderItem }: TimelineViewProps): JSX.Element
     // happens once per room, as the panel is recreated when the room changes.
     const [revealed, setRevealed] = useState(false);
     const revealedRef = useRef(false);
+
+    // ─── The floating date ─────────────────────────────────────────────────────
+    // Which day the reader is currently looking at, shown at the top of the list while
+    // they scroll, as Telegram, WhatsApp and iMessage all do. Telegram's mechanism, which
+    // this follows: the date that has scrolled off the top edge is pinned there
+    // (`is-sticky`), and it is only actually shown while the list is moving — see
+    // SCROLL_IDLE_MS above and `components/stickyIntersector.ts` for how it decides a
+    // date has gone past the edge.
+    //
+    // `stickyTs` is deliberately never cleared: the label has to stay put while it fades
+    // out. `stickyPinned` is the part that goes false once the day's own separator is back
+    // on screen, because that separator is then already saying the same thing.
+    const [stickyTs, setStickyTs] = useState<number | null>(null);
+    const [stickyPinned, setStickyPinned] = useState(false);
+    const [scrolling, setScrolling] = useState(false);
+    const stickyTsRef = useRef<number | null>(null);
 
     // Gives each row a stable identity (its event id). TanStack uses these to recognise the
     // same row from one update to the next, which is what makes the scroll anchoring
@@ -187,6 +214,29 @@ export function TimelineView({ vm, renderItem }: TimelineViewProps): JSX.Element
                 lastAtBottomRef.current = atBottom;
                 vm.onAtBottomStateChange(atBottom);
             }
+
+            // Which day the topmost visible row belongs to: walk back from it to the
+            // separator that introduces that day. Whether to show the date floating is
+            // Telegram's test — has that separator itself scrolled above the top edge?
+            // While it is still on screen it is already doing the job, and showing the
+            // floating copy too would put the same date on screen twice.
+            const startIndex = visibleRange?.startIndex ?? 0;
+            const rendered = v.getVirtualItems();
+            let pinned = false;
+            for (let i = startIndex; i >= 0; i--) {
+                const item = itemsRef.current[i];
+                if (item?.kind !== "date-separator") continue;
+                // Only rows near the viewport are rendered at all, so a separator that is
+                // not among them is far above it and certainly scrolled past.
+                const row = rendered.find((r) => r.index === i);
+                pinned = !row || row.start < scrollOffset;
+                if (pinned && stickyTsRef.current !== item.ts) {
+                    stickyTsRef.current = item.ts;
+                    setStickyTs(item.ts);
+                }
+                break;
+            }
+            setStickyPinned(pinned);
 
             // Have we reached either end of the loaded messages? True once the very first or
             // very last row is among those being rendered, which tells the view model it may
@@ -316,6 +366,26 @@ export function TimelineView({ vm, renderItem }: TimelineViewProps): JSX.Element
         coldRafRef.current = requestAnimationFrame(tick);
     }, [items.length, virtualizer, vm]);
 
+    // Tracks whether the list is moving, which is what decides if the floating date is
+    // shown. TanStack has an `isScrolling` of its own, but it drops it 150ms after the
+    // last scroll event and that timing is load-bearing for how it measures rows, so this
+    // watches the scroll events directly and keeps Telegram's much longer linger instead.
+    useEffect(() => {
+        const scroller = scrollerRef.current;
+        if (!scroller) return;
+        let idleTimeout: number | undefined;
+        const onScroll = (): void => {
+            setScrolling(true);
+            window.clearTimeout(idleTimeout);
+            idleTimeout = window.setTimeout(() => setScrolling(false), SCROLL_IDLE_MS);
+        };
+        scroller.addEventListener("scroll", onScroll, { passive: true });
+        return () => {
+            scroller.removeEventListener("scroll", onScroll);
+            window.clearTimeout(idleTimeout);
+        };
+    }, []);
+
     // ─── Later jumps: scroll to a message the view model has asked for ─────────
     // Once the first load is done, the view model can ask us to jump somewhere by setting
     // `pendingAnchor`. This is used by "jump to the latest message" and "jump to the first
@@ -398,6 +468,19 @@ export function TimelineView({ vm, renderItem }: TimelineViewProps): JSX.Element
             {!revealed && (
                 <div className={styles.cover}>
                     <InlineSpinner size={32} />
+                </div>
+            )}
+            {renderStickyDate && stickyTs !== null && (
+                <div
+                    className={classNames(styles.stickyDate, {
+                        [styles.stickyDateVisible]: revealed && stickyPinned && scrolling,
+                    })}
+                    // A copy of a date the list already states in place, shown for as long
+                    // as the reader is moving through it. Announcing it again on every
+                    // scroll would be noise, and nothing in it can be interacted with.
+                    aria-hidden="true"
+                >
+                    {renderStickyDate(stickyTs)}
                 </div>
             )}
             {revealed && <TimelineOverlayButtons snapshot={snapshot} vm={vm} scrollNow={scrollNow} />}

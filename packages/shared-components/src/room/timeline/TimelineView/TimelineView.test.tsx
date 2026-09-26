@@ -11,6 +11,7 @@ import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi } from "vitest";
 
 import { TimelineView } from "./TimelineView";
+import styles from "./TimelineView.module.css";
 import type { TimelineItem, TimelineViewModel, TimelineViewSnapshot } from "./types";
 
 const baseSnapshot: TimelineViewSnapshot = {
@@ -93,12 +94,25 @@ const renderItem = (item: TimelineItem): React.ReactNode => (
     </div>
 );
 
+const DAY_ONE = Date.UTC(2026, 0, 1);
+const DAY_TWO = Date.UTC(2026, 0, 2);
+/** Two days of messages, each introduced by its own date separator. */
+function twoDayItems(): TimelineItem[] {
+    return [
+        { key: "sep-1", kind: "date-separator" as const, ts: DAY_ONE },
+        ...eventItems(20),
+        { key: "sep-2", kind: "date-separator" as const, ts: DAY_TWO },
+        ...eventItems(20, 20),
+    ];
+}
+const renderStickyDate = (ts: number): React.ReactNode => <div data-testid="sticky-date">{String(ts)}</div>;
+
 // Fixed-height viewport: the TimelineView is height:100%, so its parent must size it.
 const VIEWPORT_HEIGHT = 300;
 function renderTimeline(vm: TimelineViewModel): RenderResult {
     return render(
         <div style={{ height: VIEWPORT_HEIGHT, width: 320 }}>
-            <TimelineView vm={vm} renderItem={renderItem} />
+            <TimelineView vm={vm} renderItem={renderItem} renderStickyDate={renderStickyDate} />
         </div>,
     );
 }
@@ -165,5 +179,49 @@ describe("<TimelineView />", () => {
         expect(actions.onJumpToLive).toHaveBeenCalledTimes(1);
         // The View hands the VM its imperative scroll handle.
         expect(actions.onJumpToLive.mock.calls[0][0]).toBeTypeOf("function");
+    });
+
+    describe("the floating date", () => {
+        /** The floating date's wrapper, which carries the class that shows or hides it. */
+        function floatingDate(): HTMLElement {
+            return screen.getByTestId("sticky-date").parentElement!;
+        }
+
+        it("names the day the topmost visible message belongs to, and only while scrolling", async () => {
+            const { vm, actions } = makeFakeVm({ items: twoDayItems() });
+            renderTimeline(vm);
+            await waitFor(() => expect(actions.onAnchorReached).toHaveBeenCalled(), { timeout: 5000 });
+
+            // Starts at the newest message, so the second day's separator is above the
+            // viewport and that is the day being read.
+            await waitFor(() => expect(screen.getByTestId("sticky-date")).toHaveTextContent(String(DAY_TWO)));
+            // Nothing has moved yet, so it is not shown.
+            expect(floatingDate()).not.toHaveClass(styles.stickyDateVisible);
+
+            const scroller = screen.getByTestId("timeline-scroller");
+            act(() => {
+                scroller.scrollTop = scroller.scrollHeight;
+                scroller.dispatchEvent(new Event("scroll"));
+            });
+            await waitFor(() => expect(floatingDate()).toHaveClass(styles.stickyDateVisible));
+        });
+
+        it("says nothing while the day's own separator is still on screen", async () => {
+            // One day, few enough messages that its separator stays in view.
+            const { vm, actions } = makeFakeVm({
+                items: [{ key: "sep-1", kind: "date-separator", ts: DAY_ONE }, ...eventItems(3)],
+            });
+            renderTimeline(vm);
+            await waitFor(() => expect(actions.onAnchorReached).toHaveBeenCalled(), { timeout: 5000 });
+
+            const scroller = screen.getByTestId("timeline-scroller");
+            act(() => {
+                scroller.dispatchEvent(new Event("scroll"));
+            });
+            // Either nothing is rendered at all, or it is rendered but not shown — both mean
+            // the same date is never on screen twice.
+            const rendered = screen.queryByTestId("sticky-date");
+            if (rendered) expect(rendered.parentElement!).not.toHaveClass(styles.stickyDateVisible);
+        });
     });
 });
