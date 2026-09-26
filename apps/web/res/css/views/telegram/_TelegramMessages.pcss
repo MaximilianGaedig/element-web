@@ -39,8 +39,13 @@ Please see LICENSE files in the repository root for full details.
     --TgTime-color: var(--cpd-color-text-secondary);
     --TgTime-status-color: var(--cpd-color-text-secondary);
     /* tweb $message-padding-bottom - 6px below the text box, which is the bubble padding in from the edge. */
-    --TgTime-inset-block-end: calc(var(--event-tile-bubble-gutter, 5px) - 1px);
-    --TgTime-inset-inline-end: var(--event-tile-bubble-gutter, 5px);
+    --TgTime-inset-block-end: var(
+        --event-tile-bubble-padding-block-end,
+        calc(var(--event-tile-bubble-gutter, 5px) - 1px)
+    );
+    --TgTime-inset-inline-end: calc(
+        var(--event-tile-bubble-padding-inline, calc(var(--event-tile-bubble-gutter, 5px) - 1px)) + 1px
+    );
 
     /*
      * Read receipts without the 60px gutter: the tile becomes a wrapping flex row, so the avatars sit
@@ -74,7 +79,7 @@ Please see LICENSE files in the repository root for full details.
 
     /* The hover-only timestamp kept 60px free at the end of every bubble. */
     > [data-testid="event-tile-line"]:not(.mx_EventTile_tgMediaLine) {
-        padding-inline-end: calc(var(--event-tile-bubble-gutter, 5px) - 1px);
+        padding-inline-end: var(--event-tile-bubble-padding-inline, calc(var(--event-tile-bubble-gutter, 5px) - 1px));
     }
 
     /* tweb `.time` (the in-flow copy): floated to the end of the last line, invisible. */
@@ -189,6 +194,13 @@ Please see LICENSE files in the repository root for full details.
 
     .mx_TelegramTime[data-send-state="error"] {
         --TgTime-status-color: var(--cpd-color-icon-critical-primary);
+    }
+
+    /* Delivered and read are both double ticks, so the colour is what tells them apart —
+       as in WhatsApp. Delivered keeps the outgoing tick colour; read goes accent. Telegram
+       itself has no delivered state, so on Telegram chats this stays the read mark only. */
+    .mx_TelegramTime[data-send-state="read"] {
+        --TgTime-status-color: var(--cpd-color-icon-accent-primary);
     }
 }
 
@@ -316,13 +328,20 @@ html[data-tg-screen] [data-telegram-layout="true"][data-layout="bubble"] {
         border-radius: var(--tg-bubble-radius);
     }
 
-    /* The picture is the bubble: give the line the bubble's surface back and clip the media to it. */
+    /*
+     * The picture is the bubble: give the line the bubble's surface back and clip the media to it.
+     *
+     * The clipping belongs on the media and never on the line, because the line is also what the
+     * action bar is positioned against - absolutely, above its top edge (EventTileView.module.css
+     * .slotActionBar) - so a line that clips its overflow hides the hover menu of every picture
+     * completely, with nothing to hover back into.
+     */
     .mx_EventTile_tgBubble > .mx_EventTile_tgMediaLine {
-        overflow: hidden;
         background: var(--event-tile-bubble-other-background);
 
         :is(.mx_MediaBody, .mx_MImageBody, .mx_MVideoBody) {
             border-radius: inherit;
+            overflow: hidden;
         }
     }
 
