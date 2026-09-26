@@ -190,6 +190,24 @@ describe("SharedMediaLoader", () => {
         expect(loader.state("files").items.map((e) => e.getContent().body)).toEqual(["new"]);
         expect(listener).toHaveBeenCalledTimes(2);
     });
+
+    it("puts an event where its timestamp says, not where it arrived", async () => {
+        // What an encrypted room does: a page is decrypted all at once and each decryption arrives on
+        // its own, in whatever order the crypto worker finished, through MatrixEventEvent.Decrypted.
+        // Taking an arrival for the newest item left the whole page sitting above the live messages.
+        const newest = msg({ msgtype: "m.file", body: "newest", url: "mxc://x/n" }, 500);
+        const { loader } = setup([newest], []);
+        for (const ts of [100, 300, 50, 200]) {
+            loader.addLive(msg({ msgtype: "m.file", body: `t${ts}`, url: `mxc://x/${ts}` }, ts));
+        }
+        expect(loader.state("files").items.map((e) => e.getContent().body)).toEqual([
+            "newest",
+            "t300",
+            "t200",
+            "t100",
+            "t50",
+        ]);
+    });
 });
 
 describe("SharedMediaLoader without a pagination token", () => {

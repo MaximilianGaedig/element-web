@@ -153,7 +153,7 @@ export class SharedMediaLoader {
     ) {
         const timeline = room.getLiveTimeline();
         const events = timeline.getEvents();
-        for (let i = events.length - 1; i >= 0; i--) this.add(events[i], false);
+        for (let i = events.length - 1; i >= 0; i--) this.add(events[i]);
         // The live timeline's backward token, if the client has one. With sliding sync it often has none
         // yet; that doesn't mean the room has no history, so paging then starts from the latest event
         // (/messages without `from`) and the seen-set drops the overlap. A source is only done once the
@@ -180,7 +180,7 @@ export class SharedMediaLoader {
         await Promise.all(events.filter((ev) => ev.isEncrypted()).map((ev) => this.client.decryptEventIfNeeded(ev)));
         if (this.destroyed) return;
         let added = false;
-        for (const event of events) added = this.add(event, false) || added;
+        for (const event of events) added = this.add(event) || added;
         const state = await getRoomHistoryState(this.room.roomId);
         for (const source of ["url", "all"] as const) {
             if (state?.mediaTokens?.[source]) this.tokens.set(source, state.mediaTokens[source]);
@@ -226,9 +226,9 @@ export class SharedMediaLoader {
         return this.indexSupported === false && this.doneFor.has(this.sourceFor(tab));
     }
 
-    /** A live (or newly decrypted) event: newest, so it goes first. */
+    /** An event from outside a page: a live one, or one that has just been decrypted. */
     public addLive(event: MatrixEvent): void {
-        if (this.add(event, true)) this.emit();
+        if (this.add(event)) this.emit();
     }
 
     public remove(eventId: string): void {
@@ -319,7 +319,7 @@ export class SharedMediaLoader {
         if (this.destroyed) return;
         const mapper = this.client.getEventMapper();
         const events = res.chunk.map((raw) => mapper(raw));
-        for (const ev of events) this.add(ev, false);
+        for (const ev of events) this.add(ev);
         historyIndexer.add(events); // keep them, so the tab fills even without the server
         this.indexTokens.set(tab, res.end);
         if (!res.end || res.chunk.length === 0) this.indexDone.add(tab);
@@ -362,7 +362,7 @@ export class SharedMediaLoader {
         const mapper = this.client.getEventMapper();
         const events = res.chunk.map((raw: IRoomEvent) => mapper(raw));
         await Promise.all(events.filter((ev) => ev.isEncrypted()).map((ev) => this.client.decryptEventIfNeeded(ev)));
-        for (const ev of events) this.add(ev, false);
+        for (const ev of events) this.add(ev);
         historyIndexer.add(events); // keep them, so the next visit doesn't scan again
         this.tokens.set(source, res.end ?? undefined);
         if (!res.end || res.chunk.length === 0) this.doneFor.add(source);
@@ -370,22 +370,28 @@ export class SharedMediaLoader {
         this.emit();
     }
 
-    private add(event: MatrixEvent, newest: boolean): boolean {
+    /**
+     * Puts an event in its tab, newest first.
+     *
+     * Where it goes is decided by its timestamp and never by when it turned up, because "it just
+     * arrived" does not mean "it is the newest". A page of an encrypted room is decrypted all at
+     * once, and every one of those decryptions reaches the loader through
+     * `MatrixEventEvent.Decrypted` - so treating an arrival as the newest item put the whole page at
+     * the top of the list in whatever order the crypto worker happened to finish in.
+     */
+    private add(event: MatrixEvent): boolean {
         const id = event.getId();
         if (!id || this.seen.has(id)) return false;
         const tab = sharedMediaTab(event);
         if (!tab) return false;
         this.seen.add(id);
         const list = this.items.get(tab)!;
-        if (newest) {
-            list.unshift(event);
-        } else {
-            // Pages arrive newest→oldest, but live-timeline seeding may overlap; keep newest first.
-            const ts = event.getTs();
-            let i = list.length;
-            while (i > 0 && list[i - 1].getTs() < ts) i--;
-            list.splice(i, 0, event);
-        }
+        // Pages arrive newest→oldest, so this stops at once for them; only an event that turns up out
+        // of order walks any distance.
+        const ts = event.getTs();
+        let i = list.length;
+        while (i > 0 && list[i - 1].getTs() < ts) i--;
+        list.splice(i, 0, event);
         this.dirty.add(tab);
         return true;
     }
