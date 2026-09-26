@@ -7,6 +7,8 @@ Please see LICENSE files in the repository root for full details.
 
 import { type RefObject, useEffect, useRef, useState } from "react";
 
+import { scrollParentOf } from "../utils/scrollParent";
+
 /**
  * Whether a `position: sticky` element is currently holding its edge rather than sitting in the flow.
  *
@@ -26,8 +28,7 @@ export function useStuck<T extends HTMLElement = HTMLDivElement>(): [RefObject<T
         // ordinary appearance rather than a broken one.
         if (!el || typeof IntersectionObserver === "undefined") return;
         // The panel scrolls, not the page, so the observer has to watch inside whatever box scrolls.
-        let root: HTMLElement | null = el.parentElement;
-        while (root && !/(auto|scroll)/.test(getComputedStyle(root).overflowY)) root = root.parentElement;
+        const root = scrollParentOf(el);
         const observer = new IntersectionObserver(([entry]) => setStuck(!entry.isIntersecting), {
             root,
             threshold: 0,

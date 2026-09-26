@@ -15,9 +15,8 @@ Please see LICENSE files in the repository root for full details.
     --SharedMedia-radius-big: 24px;
     --SharedMedia-tabs-transition: 0.2s ease-in-out;
 
-    /* What the strip gives up when it is holding the top rather than sitting in the list. */
-    --SharedMedia-tabs-height: 3rem;
-    --SharedMedia-tabs-height-stuck: 2.5rem;
+    /* The strip keeps this height wherever it is: it is a row of labels, not a banner. */
+    --SharedMedia-tabs-height: 2.5rem;
     --SharedMedia-tabs-inset: var(--cpd-space-2x);
 
     /* Marks where the strip starts, so the strip can tell when it has been scrolled against the top. */
@@ -39,12 +38,13 @@ Please see LICENSE files in the repository root for full details.
     }
 
     /*
-     * Holding the top: the strip takes less height, and the media scrolling underneath is blurred
-     * behind it instead of being covered by a solid bar - so the list stays visibly continuous.
+     * Holding the top: the media scrolling underneath is blurred behind the strip instead of being
+     * covered by a solid bar, so the list stays visibly continuous. The strip's size does not change
+     * with it - a row that grows and shrinks as you scroll is a distraction, and on a narrow panel
+     * the tabs already scroll sideways within it (overflow-x below), which a height change would
+     * interrupt.
      */
     .mx_SharedMedia_tabsRow_stuck .mx_SharedMedia_tabs {
-        height: var(--SharedMedia-tabs-height-stuck);
-        padding-block: 0.125rem;
         background-color: color-mix(in srgb, var(--cpd-color-bg-canvas-default) 72%, transparent);
         backdrop-filter: blur(16px) saturate(180%);
         box-shadow: 0 2px 10px 0 rgb(0 0 0 / 12%);
@@ -57,11 +57,8 @@ Please see LICENSE files in the repository root for full details.
         flex: 1 1 auto;
         min-width: 0;
         height: var(--SharedMedia-tabs-height);
-        padding: 0.25rem 0;
-        transition:
-            height var(--SharedMedia-tabs-transition),
-            padding var(--SharedMedia-tabs-transition),
-            background-color var(--SharedMedia-tabs-transition);
+        padding: 0.125rem 0;
+        transition: background-color var(--SharedMedia-tabs-transition);
         overflow-x: auto;
         overscroll-behavior-x: contain;
         scrollbar-width: none;
@@ -152,14 +149,52 @@ Please see LICENSE files in the repository root for full details.
         animation: mx_SharedMedia_in var(--SharedMedia-tabs-transition) both;
     }
 
+    /*
+     * The column is positioned, not laid out: every row is placed at the offset the layout worked
+     * out for it (sharedMediaLayout.ts), and only the rows on screen exist. The three columns and
+     * the hairline between them live on the row, so a cell is styled exactly as it was.
+     */
     .mx_SharedMedia_grid {
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        grid-auto-rows: 1fr;
-        gap: 1px;
+        position: relative;
         width: 100%;
         border-radius: var(--SharedMedia-radius-big);
         overflow: hidden;
+    }
+
+    .mx_SharedMedia_gridRow {
+        position: absolute;
+        inset-inline: 0;
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 1px;
+    }
+
+    /* The month a run of pictures belongs to, as Telegram cuts shared media. */
+    .mx_SharedMedia_month {
+        position: absolute;
+        inset-inline: 0;
+        display: flex;
+        align-items: center;
+        margin: 0;
+        padding-inline: var(--cpd-space-1x);
+        font: var(--cpd-font-body-sm-semibold);
+        color: var(--cpd-color-text-secondary);
+    }
+
+    /* The same month, kept legible while its heading scrolls away above the column. */
+    .mx_SharedMedia_monthPill {
+        position: sticky;
+        inset-block-start: var(--cpd-space-1x);
+        z-index: 2;
+        float: inline-end;
+        margin-inline-end: var(--cpd-space-2x);
+        padding: 0.125rem 0.625rem;
+        border-radius: 1rem;
+        background-color: color-mix(in srgb, var(--cpd-color-bg-canvas-default) 72%, transparent);
+        backdrop-filter: blur(16px);
+        font: var(--cpd-font-body-sm-semibold);
+        color: var(--cpd-color-text-secondary);
+        pointer-events: none;
     }
 
     .mx_SharedMedia_gridItem {

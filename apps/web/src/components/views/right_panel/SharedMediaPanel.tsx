@@ -29,6 +29,8 @@ import PlayIcon from "@vector-im/compound-design-tokens/assets/web/icons/play-so
 
 import { _t } from "../../../languageHandler";
 import { useStuck } from "../../../hooks/useStuck";
+import { scrollParentOf } from "../../../utils/scrollParent";
+import { mediaRows, type MediaRow, type MediaSection, sectionAt, visibleRows } from "../../../utils/sharedMediaLayout";
 import BaseCard from "./BaseCard";
 import AccessibleButton from "../elements/AccessibleButton";
 import IconizedContextMenu, {
@@ -611,6 +613,70 @@ function useDragSelect(items: MatrixEvent[], selection: Selection): DragSelect {
     };
 }
 
+/* Must match the grid's CSS: three equal columns, a hairline between them, and a month heading. */
+const GRID_COLUMNS = 3;
+const GRID_GAP = 1;
+const MONTH_HEADER = 32;
+
+/** "September 2026", in the reader's own language. */
+function monthLabel(time: number): string {
+    return new Intl.DateTimeFormat(undefined, { month: "long", year: "numeric" }).format(new Date(time));
+}
+
+/**
+ * Lays the grid out and keeps only what is on screen in the DOM.
+ *
+ * A chat with twenty thousand photos is an ordinary chat, and a cell for each of them is tens of
+ * thousands of elements and decoded images - enough to make scrolling stutter and the tab take
+ * seconds to appear. The cells are square and the columns equal, so every row's position follows
+ * from the container's width (sharedMediaLayout.ts) and the rest is a window onto that.
+ */
+function useGridLayout(items: MatrixEvent[]): {
+    ref: React.RefObject<HTMLDivElement | null>;
+    rows: MediaRow[];
+    height: number;
+    window: [number, number];
+    month?: MediaSection;
+} {
+    const ref = useRef<HTMLDivElement>(null);
+    const [width, setWidth] = useState(0);
+    const [scroll, setScroll] = useState({ top: 0, viewport: 0 });
+
+    // Measured before the first paint: the column's width sets every row's height, so measuring
+    // after it would show one frame of rows piled on top of each other.
+    useLayoutEffect(() => {
+        const el = ref.current;
+        if (!el) return;
+        const box = scrollParentOf(el);
+        const measure = (): void => {
+            setWidth(el.clientWidth);
+            if (box) setScroll({ top: Math.max(0, box.scrollTop - el.offsetTop), viewport: box.clientHeight });
+        };
+        measure();
+        box?.addEventListener("scroll", measure, { passive: true });
+        // Both matter: the panel is resizable, and the column's width sets every row's height.
+        const observer = typeof ResizeObserver === "undefined" ? undefined : new ResizeObserver(measure);
+        observer?.observe(el);
+        if (box) observer?.observe(box);
+        return () => {
+            box?.removeEventListener("scroll", measure);
+            observer?.disconnect();
+        };
+    }, []);
+
+    const cell = width ? (width - GRID_GAP * (GRID_COLUMNS - 1)) / GRID_COLUMNS : 0;
+    const { rows, height } = useMemo(
+        () => mediaRows(items, GRID_COLUMNS, { header: MONTH_HEADER, cell, gap: GRID_GAP }),
+        [items, cell],
+    );
+    // Before the first measurement there is no height to window against, so show the first screenful
+    // rather than nothing: the measurement lands on the same frame and the window takes over.
+    const shown = cell
+        ? visibleRows(rows, scroll.top, scroll.viewport || 800)
+        : ([0, Math.min(rows.length, 12)] as [number, number]);
+    return { ref, rows, height, window: shown, month: sectionAt(rows, scroll.top) };
+}
+
 function MediaGrid({ items, selection }: { items: MatrixEvent[]; selection: Selection }): JSX.Element {
     const drag = useDragSelect(items, selection);
     const open = useCallback(
@@ -632,18 +698,39 @@ function MediaGrid({ items, selection }: { items: MatrixEvent[]; selection: Sele
         },
         [items],
     );
+    const { ref, rows, height, window: shown, month } = useGridLayout(items);
     return (
-        <div className="mx_SharedMedia_grid">
-            {items.map((ev, i) => (
-                <GridThumb
-                    key={ev.getId()}
-                    event={ev}
-                    selection={selection}
-                    onOpen={() => open(i)}
-                    index={i}
-                    drag={drag}
-                />
-            ))}
+        <div className="mx_SharedMedia_grid" ref={ref} style={{ height }}>
+            {/* The month the top of the column is in, kept in view while it scrolls past. */}
+            {month && <div className="mx_SharedMedia_monthPill">{monthLabel(month.time)}</div>}
+            {rows.slice(shown[0], shown[1]).map((row) =>
+                row.kind === "header" ? (
+                    <h4
+                        key={`h-${row.section.key}`}
+                        className="mx_SharedMedia_month"
+                        style={{ top: row.top, height: row.height }}
+                    >
+                        {monthLabel(row.section.time)}
+                    </h4>
+                ) : (
+                    <div
+                        key={`r-${row.indices[0]}`}
+                        className="mx_SharedMedia_gridRow"
+                        style={{ top: row.top, height: row.height }}
+                    >
+                        {row.indices.map((i) => (
+                            <GridThumb
+                                key={items[i].getId()}
+                                event={items[i]}
+                                selection={selection}
+                                onOpen={() => open(i)}
+                                index={i}
+                                drag={drag}
+                            />
+                        ))}
+                    </div>
+                ),
+            )}
         </div>
     );
 }
