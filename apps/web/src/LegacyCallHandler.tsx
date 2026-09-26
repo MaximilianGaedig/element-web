@@ -741,7 +741,12 @@ export default class LegacyCallHandler extends TypedEventEmitter<LegacyCallHandl
         }
     }
 
-    public async placeCall(roomId: string, type: CallType, transferee?: MatrixCall): Promise<void> {
+    public async placeCall(
+        roomId: string,
+        type: CallType,
+        transferee?: MatrixCall,
+        forceMatrixCall = false,
+    ): Promise<void> {
         const cli = MatrixClientPeg.safeGet();
         const room = cli.getRoom(roomId);
         if (!room) {
@@ -789,7 +794,7 @@ export default class LegacyCallHandler extends TypedEventEmitter<LegacyCallHandl
             Modal.createDialog(ErrorDialog, {
                 description: _t("voip|cannot_call_yourself_description"),
             });
-        } else if (members.length === 2 && !Jitsi.getInstance().useFor1To1Calls) {
+        } else if (forceMatrixCall || (members.length === 2 && !Jitsi.getInstance().useFor1To1Calls)) {
             logger.info(`Place ${type} call in ${roomId}`);
 
             await this.placeMatrixCall(roomId, type, transferee);

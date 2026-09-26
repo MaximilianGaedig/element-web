@@ -35,7 +35,15 @@ export const placeCall = async (
     PosthogTrackers.trackInteraction(analyticsName);
 
     if (platformCallType == PlatformCallType.LegacyCall || platformCallType == PlatformCallType.JitsiCall) {
-        await legacyCallHandler.placeCall(room.roomId, callType);
+        // The room header has already resolved whether this is a legacy Matrix call or Jitsi.
+        // Bridged DMs may contain extra functional members which the lower-level handler cannot
+        // reliably distinguish from a real group, so preserve the explicit legacy selection.
+        await legacyCallHandler.placeCall(
+            room.roomId,
+            callType,
+            undefined,
+            platformCallType === PlatformCallType.LegacyCall,
+        );
     } else if (platformCallType == PlatformCallType.ElementCall) {
         defaultDispatcher.dispatch<ViewRoomPayload>({
             action: Action.ViewRoom,
