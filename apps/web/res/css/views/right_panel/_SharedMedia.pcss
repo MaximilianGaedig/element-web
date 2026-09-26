@@ -15,15 +15,39 @@ Please see LICENSE files in the repository root for full details.
     --SharedMedia-radius-big: 24px;
     --SharedMedia-tabs-transition: 0.2s ease-in-out;
 
+    /* What the strip gives up when it is holding the top rather than sitting in the list. */
+    --SharedMedia-tabs-height: 3rem;
+    --SharedMedia-tabs-height-stuck: 2.5rem;
+    --SharedMedia-tabs-inset: var(--cpd-space-2x);
+
+    /* Marks where the strip starts, so the strip can tell when it has been scrolled against the top. */
+    .mx_SharedMedia_tabsSentinel {
+        height: 0;
+    }
+
     /* The strip and the media filter button stay on top while the content scrolls. */
     .mx_SharedMedia_tabsRow {
         position: sticky;
-        inset-block-start: 0;
+        /* Held a little below the top, so the strip reads as floating over the list rather than
+           welded to its edge. */
+        inset-block-start: var(--SharedMedia-tabs-inset);
         z-index: 3;
         display: flex;
         align-items: center;
         gap: var(--cpd-space-1x);
         margin-block-end: var(--cpd-space-2x);
+    }
+
+    /*
+     * Holding the top: the strip takes less height, and the media scrolling underneath is blurred
+     * behind it instead of being covered by a solid bar - so the list stays visibly continuous.
+     */
+    .mx_SharedMedia_tabsRow_stuck .mx_SharedMedia_tabs {
+        height: var(--SharedMedia-tabs-height-stuck);
+        padding-block: 0.125rem;
+        background-color: color-mix(in srgb, var(--cpd-color-bg-canvas-default) 72%, transparent);
+        backdrop-filter: blur(16px) saturate(180%);
+        box-shadow: 0 2px 10px 0 rgb(0 0 0 / 12%);
     }
 
     /* tweb .menu-horizontal-scrollable: tabs keep their width and the strip scrolls sideways. */
@@ -32,8 +56,12 @@ Please see LICENSE files in the repository root for full details.
         display: flex;
         flex: 1 1 auto;
         min-width: 0;
-        height: 3rem;
+        height: var(--SharedMedia-tabs-height);
         padding: 0.25rem 0;
+        transition:
+            height var(--SharedMedia-tabs-transition),
+            padding var(--SharedMedia-tabs-transition),
+            background-color var(--SharedMedia-tabs-transition);
         overflow-x: auto;
         overscroll-behavior-x: contain;
         scrollbar-width: none;

@@ -7,6 +7,7 @@ Please see LICENSE files in the repository root for full details.
 
 import React, { type JSX, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import classNames from "classnames";
+
 import { type AudioInfo, type FileContent, type MediaEventContent } from "matrix-js-sdk/src/types";
 import {
     MatrixEventEvent,
@@ -27,6 +28,7 @@ import ForwardIcon from "@vector-im/compound-design-tokens/assets/web/icons/forw
 import PlayIcon from "@vector-im/compound-design-tokens/assets/web/icons/play-solid";
 
 import { _t } from "../../../languageHandler";
+import { useStuck } from "../../../hooks/useStuck";
 import BaseCard from "./BaseCard";
 import AccessibleButton from "../elements/AccessibleButton";
 import IconizedContextMenu, {
@@ -40,7 +42,7 @@ import { scrollStripTo } from "../telegram/TgStickersPanel";
 import Spinner from "../elements/Spinner";
 import Modal from "../../../Modal";
 import AlbumLightbox from "../elements/AlbumLightbox";
-import { isTelegramLayout } from "../../../utils/telegram/telegramLayout";
+import { chatColumnsEnabled } from "../../../utils/telegram/telegramLayout";
 import MessageEvent from "../messages/MessageEvent";
 import dis from "../../../dispatcher/dispatcher";
 import { Action } from "../../../dispatcher/actions";
@@ -484,7 +486,7 @@ function GridThumb({
 function MediaGrid({ items, selection }: { items: MatrixEvent[]; selection: Selection }): JSX.Element {
     const open = useCallback(
         (index: number) => {
-            if (isTelegramLayout()) {
+            if (chatColumnsEnabled()) {
                 // Shared media lists newest first; the viewer wants oldest first.
                 const ordered = [...items].reverse();
                 const event = items[index];
@@ -785,12 +787,18 @@ export const SHARED_MEDIA_TAB_LABELS: Array<{ id: SharedMediaTab; label: () => s
 export default function SharedMediaPanel({ room, onClose }: Props): JSX.Element {
     const loader = useLoader(room);
     const [tab, setTab] = useState<SharedMediaTab>("media");
+    const [sentinel, stuck] = useStuck();
     const [filter, setFilter] = useState<MediaFilter>({ photos: true, videos: true });
     const roomContext = useContext(RoomContext);
     return (
         <ScopedRoomContextProvider {...roomContext} timelineRenderingType={TimelineRenderingType.File}>
             <BaseCard className="mx_SharedMedia" onClose={onClose} header={_t("bridge|shared_media|title")}>
-                <div className="mx_SharedMedia_tabsRow">
+                <div ref={sentinel} className="mx_SharedMedia_tabsSentinel" aria-hidden />
+                <div
+                    className={classNames("mx_SharedMedia_tabsRow", {
+                        mx_SharedMedia_tabsRow_stuck: stuck,
+                    })}
+                >
                     <Tabs active={tab} onChange={setTab} />
                 </div>
                 <SharedMediaTabBody key={tab} loader={loader} tab={tab} filter={filter} setFilter={setFilter} />
