@@ -271,6 +271,8 @@ interface Selection {
     active: boolean;
     start: () => void;
     toggle: (event: MatrixEvent) => void;
+    /** Sets a whole run at once, as dragging across the grid does; `on` picks selecting or clearing. */
+    setMany: (events: MatrixEvent[], on: boolean) => void;
     clear: () => void;
 }
 
@@ -289,6 +291,19 @@ function useSelection(): Selection {
                 setIds((prev) => {
                     const next = new Set(prev);
                     if (!next.delete(id)) next.add(id);
+                    return next;
+                });
+            },
+            setMany: (events: MatrixEvent[], on: boolean) => {
+                const changing = events.map((e) => e.getId()).filter((id): id is string => !!id);
+                if (!changing.length) return;
+                setActive(true);
+                setIds((prev) => {
+                    const next = new Set(prev);
+                    for (const id of changing) {
+                        if (on) next.add(id);
+                        else next.delete(id);
+                    }
                     return next;
                 });
             },
@@ -425,10 +440,14 @@ function GridThumb({
     event,
     selection,
     onOpen,
+    index,
+    drag,
 }: {
     event: MatrixEvent;
     selection: Selection;
     onOpen: () => void;
+    index: number;
+    drag: DragSelect;
 }): JSX.Element {
     const content = event.getContent<MediaEventContent>();
     const encrypted = !!content.file;
@@ -472,8 +491,16 @@ function GridThumb({
             className={classNames("mx_SharedMedia_gridItem", { mx_SharedMedia_item_selected: selected })}
             data-tg-media-id={event.getId()}
             aria-pressed={selection.active ? selected : undefined}
+            onPointerDown={(e) => drag.onPointerDown(index, e)}
+            onPointerEnter={() => drag.onPointerEnter(index)}
             // Ctrl/⌘-click starts a selection without going through the menu, as elsewhere in Element.
-            onClick={(e) => (selection.active || e.ctrlKey || e.metaKey ? selection.toggle(event) : onOpen())}
+            onClick={(e) => {
+                // The press that just finished a drag, or started a selection by being held, must
+                // not also count as a tap on the picture.
+                if (drag.swallowedClick()) return;
+                if (selection.active || e.ctrlKey || e.metaKey) selection.toggle(event);
+                else onOpen();
+            }}
             aria-label={typeof content.body === "string" ? content.body : undefined}
         >
             {src ? <img src={src} alt="" loading="lazy" decoding="async" draggable={false} /> : null}
@@ -483,7 +510,109 @@ function GridThumb({
     );
 }
 
+/** How long a press has to be held, with nothing selected yet, before it starts a selection. */
+const LONG_PRESS_MS = 450;
+
+interface DragSelect {
+    onPointerDown: (index: number, e: React.PointerEvent<HTMLElement>) => void;
+    onPointerEnter: (index: number) => void;
+    /** True once a drag has done something, so the click that ends it must not open the picture. */
+    swallowedClick: () => boolean;
+}
+
+/**
+ * Selecting a run of items by dragging across them, as Telegram and Photos do.
+ *
+ * Two ways in, matching the platform: with a selection already going, a press starts dragging
+ * immediately; with nothing selected, holding still for {@link LONG_PRESS_MS} starts one. Dragging
+ * back over what was just covered puts it back the way it was, so overshooting is recoverable
+ * rather than something to undo by hand afterwards.
+ */
+function useDragSelect(items: MatrixEvent[], selection: Selection): DragSelect {
+    const drag = useRef<{ from: number; last: number; on: boolean; before: Set<string> } | null>(null);
+    const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+    const swallow = useRef(false);
+
+    const idsOf = useCallback((from: number, to: number) => items.slice(from, to + 1), [items]);
+
+    const reach = useCallback(
+        (index: number) => {
+            const d = drag.current;
+            if (!d || index === d.last) return;
+            const [lo, hi] = [Math.min(d.from, index), Math.max(d.from, index)];
+            const [was, wasTo] = [Math.min(d.from, d.last), Math.max(d.from, d.last)];
+            selection.setMany(idsOf(lo, hi), d.on);
+            // Anything the drag had reached and no longer covers goes back to how it started, so a
+            // drag that went too far can simply be pulled back.
+            const dropped = [...idsOf(was, lo - 1), ...idsOf(hi + 1, wasTo)];
+            const restore = (on: boolean): void =>
+                selection.setMany(
+                    dropped.filter((e) => d.before.has(e.getId() ?? "") === on),
+                    on,
+                );
+            if (dropped.length) {
+                restore(true);
+                restore(false);
+            }
+            d.last = index;
+            swallow.current = true;
+        },
+        [idsOf, selection],
+    );
+
+    const begin = useCallback(
+        (index: number, on: boolean) => {
+            drag.current = { from: index, last: index, on, before: new Set(selection.ids) };
+            selection.setMany(idsOf(index, index), on);
+        },
+        [idsOf, selection],
+    );
+
+    useEffect(() => {
+        const end = (): void => {
+            clearTimeout(timer.current);
+            drag.current = null;
+        };
+        window.addEventListener("pointerup", end);
+        window.addEventListener("pointercancel", end);
+        return () => {
+            window.removeEventListener("pointerup", end);
+            window.removeEventListener("pointercancel", end);
+            clearTimeout(timer.current);
+        };
+    }, []);
+
+    return {
+        onPointerDown: (index, e) => {
+            // A touch captures the pointer to the element it started on, so without releasing it the
+            // drag would never enter the neighbours and could only ever select the one item.
+            e.currentTarget.releasePointerCapture?.(e.pointerId);
+            swallow.current = false;
+            if (selection.active) {
+                begin(index, !selection.ids.has(items[index]?.getId() ?? ""));
+                return;
+            }
+            timer.current = setTimeout(() => {
+                selection.start();
+                begin(index, true);
+                swallow.current = true;
+            }, LONG_PRESS_MS);
+        },
+        onPointerEnter: (index) => {
+            // Moving off the item before the hold finished means it was a drag, not a long press.
+            clearTimeout(timer.current);
+            reach(index);
+        },
+        swallowedClick: () => {
+            const swallowed = swallow.current;
+            swallow.current = false;
+            return swallowed;
+        },
+    };
+}
+
 function MediaGrid({ items, selection }: { items: MatrixEvent[]; selection: Selection }): JSX.Element {
+    const drag = useDragSelect(items, selection);
     const open = useCallback(
         (index: number) => {
             if (chatColumnsEnabled()) {
@@ -506,7 +635,14 @@ function MediaGrid({ items, selection }: { items: MatrixEvent[]; selection: Sele
     return (
         <div className="mx_SharedMedia_grid">
             {items.map((ev, i) => (
-                <GridThumb key={ev.getId()} event={ev} selection={selection} onOpen={() => open(i)} />
+                <GridThumb
+                    key={ev.getId()}
+                    event={ev}
+                    selection={selection}
+                    onOpen={() => open(i)}
+                    index={i}
+                    drag={drag}
+                />
             ))}
         </div>
     );
