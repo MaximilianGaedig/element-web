@@ -110,10 +110,17 @@ describe("jumping to a date", () => {
         expect(rowAtTime(rows, items, new Date(2000, 0, 1).getTime())).toBe(rows.length - 1);
     });
 
-    it("says which month the top of the viewport is in, for a heading that stays put", () => {
-        expect(sectionAt(rows, 0)?.key).toBe("2026-05");
+    it("says which month the top of the viewport is in", () => {
+        expect(sectionAt(rows, 0)?.section.key).toBe("2026-05");
         const march = rows.find((r) => r.kind === "header" && r.section.key === "2026-03")!;
-        expect(sectionAt(rows, march.top)?.key).toBe("2026-03");
-        expect(sectionAt(rows, march.top - 1)?.key).toBe("2026-05");
+        expect(sectionAt(rows, march.top)?.section.key).toBe("2026-03");
+        expect(sectionAt(rows, march.top - 1)?.section.key).toBe("2026-05");
+    });
+
+    it("only asks for a floating month once the heading it would repeat is gone", () => {
+        // Sitting on a heading: it says the month itself, so nothing needs to float over it.
+        expect(sectionAt(rows, 0)?.headingVisible).toBe(true);
+        const may = rows[0];
+        expect(sectionAt(rows, may.top + may.height)?.headingVisible).toBe(false);
     });
 });

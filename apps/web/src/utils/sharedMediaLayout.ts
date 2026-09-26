@@ -136,12 +136,26 @@ export function rowAtTime(rows: readonly MediaRow[], items: readonly MatrixEvent
     return rows.length ? rows.length - 1 : 0;
 }
 
-/** The month heading that belongs over the top of the viewport, for a heading that stays put. */
-export function sectionAt(rows: readonly MediaRow[], scrollTop: number): MediaSection | undefined {
-    let current: MediaSection | undefined;
+/**
+ * The month over the top of the viewport, and whether its own heading has scrolled away.
+ *
+ * Both are needed to avoid saying the same thing twice: a floating month is worth showing exactly
+ * when the heading it repeats is no longer on screen.
+ */
+export function sectionAt(
+    rows: readonly MediaRow[],
+    scrollTop: number,
+): { section: MediaSection; headingVisible: boolean } | undefined {
+    let current: MediaRow | undefined;
+    let heading: MediaRow | undefined;
     for (const row of rows) {
         if (row.top > scrollTop) break;
-        current = row.section;
+        current = row;
+        if (row.kind === "header") heading = row;
     }
-    return current ?? rows[0]?.section;
+    const row = current ?? rows[0];
+    if (!row) return undefined;
+    // The heading is still doing its job while any part of it is above the fold.
+    const visible = !heading || heading.top + heading.height > scrollTop;
+    return { section: row.section, headingVisible: visible };
 }

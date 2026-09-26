@@ -181,6 +181,58 @@ Please see LICENSE files in the repository root for full details.
         color: var(--cpd-color-text-secondary);
     }
 
+    /*
+     * Telegram's date scrubber: a handle down the edge carrying the whole history, so a date can be
+     * aimed at rather than scrolled to. Wide enough to grab with a thumb, drawn narrow.
+     */
+    .mx_SharedMedia_scrubber {
+        position: sticky;
+        inset-block-start: 0;
+        z-index: 4;
+        float: inline-end;
+        width: 1.5rem;
+        height: 100%;
+        max-height: 100vh;
+        margin-inline-end: calc(-1 * var(--cpd-space-1x));
+        touch-action: none;
+        cursor: grab;
+
+        &[data-dragging] {
+            cursor: grabbing;
+        }
+    }
+
+    .mx_SharedMedia_scrubberHandle {
+        position: absolute;
+        inset-inline-end: var(--cpd-space-1x);
+        width: 0.25rem;
+        height: 2.5rem;
+        border-radius: 0.125rem;
+        background-color: var(--cpd-color-bg-action-primary-rest);
+        opacity: 0.35;
+        transition: opacity var(--SharedMedia-tabs-transition);
+
+        .mx_SharedMedia_scrubber:hover &,
+        .mx_SharedMedia_scrubber[data-dragging] & {
+            opacity: 0.9;
+        }
+    }
+
+    /* The month under the handle, said while it is being dragged. */
+    .mx_SharedMedia_scrubberDate {
+        position: absolute;
+        inset-inline-end: 1rem;
+        inset-block-start: 50%;
+        transform: translateY(-50%);
+        padding: 0.25rem 0.625rem;
+        border-radius: 1rem;
+        background-color: var(--cpd-color-bg-action-primary-rest);
+        font: var(--cpd-font-body-sm-semibold);
+        color: var(--cpd-color-text-on-solid-primary);
+        white-space: nowrap;
+        pointer-events: none;
+    }
+
     /* The same month, kept legible while its heading scrolls away above the column. */
     .mx_SharedMedia_monthPill {
         position: sticky;

@@ -636,7 +636,9 @@ function useGridLayout(items: MatrixEvent[]): {
     rows: MediaRow[];
     height: number;
     window: [number, number];
-    month?: MediaSection;
+    month?: { section: MediaSection; headingVisible: boolean };
+    scroll: { top: number; viewport: number };
+    seek: (top: number) => void;
 } {
     const ref = useRef<HTMLDivElement>(null);
     const [width, setWidth] = useState(0);
@@ -674,7 +676,81 @@ function useGridLayout(items: MatrixEvent[]): {
     const shown = cell
         ? visibleRows(rows, scroll.top, scroll.viewport || 800)
         : ([0, Math.min(rows.length, 12)] as [number, number]);
-    return { ref, rows, height, window: shown, month: sectionAt(rows, scroll.top) };
+    const seek = useCallback((top: number) => {
+        const el = ref.current;
+        const box = scrollParentOf(el);
+        if (el && box) box.scrollTop = el.offsetTop + top;
+    }, []);
+
+    return { ref, rows, height, window: shown, month: sectionAt(rows, scroll.top), scroll, seek };
+}
+
+/**
+ * Telegram's date scrubber: a handle down the edge of the grid that carries the whole history.
+ *
+ * The scrollbar can only say "somewhere in the middle of twenty thousand photos", which is no help
+ * when the question is "last August". Dragging this moves through the column by position and names
+ * the month under the handle as it goes, so a date can be found by aiming at it.
+ */
+function DateScrubber({
+    rows,
+    height,
+    scroll,
+    seek,
+}: {
+    rows: MediaRow[];
+    height: number;
+    scroll: { top: number; viewport: number };
+    seek: (top: number) => void;
+}): JSX.Element | null {
+    const track = useRef<HTMLDivElement>(null);
+    const [dragging, setDragging] = useState(false);
+    const span = height - scroll.viewport;
+
+    const to = useCallback(
+        (clientY: number) => {
+            const box = track.current?.getBoundingClientRect();
+            if (!box || box.height <= 0) return;
+            const at = Math.min(1, Math.max(0, (clientY - box.top) / box.height));
+            seek(at * span);
+        },
+        [seek, span],
+    );
+
+    useEffect(() => {
+        if (!dragging) return;
+        const move = (e: PointerEvent): void => to(e.clientY);
+        const up = (): void => setDragging(false);
+        window.addEventListener("pointermove", move);
+        window.addEventListener("pointerup", up);
+        window.addEventListener("pointercancel", up);
+        return () => {
+            window.removeEventListener("pointermove", move);
+            window.removeEventListener("pointerup", up);
+            window.removeEventListener("pointercancel", up);
+        };
+    }, [dragging, to]);
+
+    // Nothing to scrub when the whole column already fits.
+    if (span <= 0) return null;
+    const at = Math.min(1, Math.max(0, scroll.top / span));
+    const under = sectionAt(rows, scroll.top)?.section;
+    return (
+        <div
+            ref={track}
+            className="mx_SharedMedia_scrubber"
+            data-dragging={dragging || undefined}
+            onPointerDown={(e) => {
+                e.preventDefault();
+                setDragging(true);
+                to(e.clientY);
+            }}
+        >
+            <div className="mx_SharedMedia_scrubberHandle" style={{ insetBlockStart: `${at * 100}%` }}>
+                {dragging && under && <span className="mx_SharedMedia_scrubberDate">{monthLabel(under.time)}</span>}
+            </div>
+        </div>
+    );
 }
 
 function MediaGrid({ items, selection }: { items: MatrixEvent[]; selection: Selection }): JSX.Element {
@@ -698,11 +774,15 @@ function MediaGrid({ items, selection }: { items: MatrixEvent[]; selection: Sele
         },
         [items],
     );
-    const { ref, rows, height, window: shown, month } = useGridLayout(items);
+    const { ref, rows, height, window: shown, month, scroll, seek } = useGridLayout(items);
     return (
         <div className="mx_SharedMedia_grid" ref={ref} style={{ height }}>
-            {/* The month the top of the column is in, kept in view while it scrolls past. */}
-            {month && <div className="mx_SharedMedia_monthPill">{monthLabel(month.time)}</div>}
+            {/* The month at the top, but only once its own heading has scrolled away - otherwise the
+                two of them say the same thing one under the other. */}
+            {month && !month.headingVisible && (
+                <div className="mx_SharedMedia_monthPill">{monthLabel(month.section.time)}</div>
+            )}
+            <DateScrubber rows={rows} height={height} scroll={scroll} seek={seek} />
             {rows.slice(shown[0], shown[1]).map((row) =>
                 row.kind === "header" ? (
                     <h4
