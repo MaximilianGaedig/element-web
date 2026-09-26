@@ -28,12 +28,12 @@ Please see LICENSE files in the repository root for full details.
  * EventTileView takes its hover colour from a variable on the tile, so it is switched off there instead of
  * re-stating that module's selectors; selection, highlight and editing keep their own colours.
  */
-[data-telegram-layout="true"] .mx_EventTile {
+[data-bubble-timeline="true"] .mx_EventTile {
     --event-tile-state-hover-background: transparent;
     --event-tile-bubble-hover-background: transparent;
 }
 
-[data-telegram-layout="true"] .mx_EventTile[data-testid="event-tile"].mx_EventTile_tgTime {
+[data-bubble-timeline="true"] .mx_EventTile[data-testid="event-tile"].mx_EventTile_tgTime {
     --TgTime-text-size: calc(var(--cpd-font-size-body-md) - 4px);
     --TgTime-status-size: calc(var(--cpd-font-size-body-md) + 3px);
     --TgTime-color: var(--cpd-color-text-secondary);
@@ -116,7 +116,7 @@ Please see LICENSE files in the repository root for full details.
 }
 
 /* tweb `.time-inner`: the visible time, in the bubble's bottom inline-end corner. */
-[data-telegram-layout="true"] .mx_EventTile[data-testid="event-tile"].mx_EventTile_tgTime .mx_TelegramTime {
+[data-bubble-timeline="true"] .mx_EventTile[data-testid="event-tile"].mx_EventTile_tgTime .mx_TelegramTime {
     position: absolute;
     z-index: 3;
     inset-block-end: var(--TgTime-inset-block-end);
@@ -174,7 +174,7 @@ Please see LICENSE files in the repository root for full details.
 }
 
 /* tweb `.bubble.is-out`: time and ticks in the outgoing accent, the glyph nudged 2px outwards. */
-[data-telegram-layout="true"] .mx_EventTile[data-testid="event-tile"].mx_EventTile_tgOwn {
+[data-bubble-timeline="true"] .mx_EventTile[data-testid="event-tile"].mx_EventTile_tgOwn {
     --TgTime-color: var(--cpd-color-text-success-primary);
     --TgTime-status-color: var(--cpd-color-icon-success-primary);
 
@@ -208,8 +208,8 @@ Please see LICENSE files in the repository root for full details.
  * tweb `.time.is-floating`: media without a caption, stickers and big emoji show the time as a pill
  * over the bottom inline-end corner.
  */
-[data-telegram-layout="true"] .mx_EventTile[data-testid="event-tile"].mx_EventTile_tgTimeFloating,
-[data-telegram-layout="true"] .mx_EventTile[data-testid="event-tile"].mx_EventTile_tgTime:has(.mx_EventTile_bigEmoji) {
+[data-bubble-timeline="true"] .mx_EventTile[data-testid="event-tile"].mx_EventTile_tgTimeFloating,
+[data-bubble-timeline="true"] .mx_EventTile[data-testid="event-tile"].mx_EventTile_tgTime:has(.mx_EventTile_bigEmoji) {
     --TgTime-status-color: #fff;
 
     .mx_TelegramTime {
@@ -229,7 +229,7 @@ Please see LICENSE files in the repository root for full details.
 }
 
 /* tweb `.emoji-big`: no bubble behind a message that is only a few emoji. */
-[data-telegram-layout="true"]
+[data-bubble-timeline="true"]
     .mx_EventTile[data-testid="event-tile"].mx_EventTile_tgTime:has(.mx_EventTile_bigEmoji)
     > [data-testid="event-tile-line"] {
     padding-block-end: calc(var(--TgTime-text-size) + 0.5rem);
@@ -237,7 +237,7 @@ Please see LICENSE files in the repository root for full details.
 }
 
 /* No receipt gutter at the end of the rows (see the flex row above). */
-[data-telegram-layout="true"][data-layout="bubble"] [data-testid="event-tile"] {
+[data-bubble-timeline="true"][data-layout="bubble"] [data-testid="event-tile"] {
     /* With the line's -12px end margin, outgoing bubbles end 1px out like incoming ones start (_TelegramLayout.pcss). */
     --event-tile-bubble-margin-inline-end: 11px;
     --event-tile-read-receipt-inset-inline-end: 0;
@@ -319,7 +319,7 @@ Please see LICENSE files in the repository root for full details.
  * Element's own bubble layout leaves a media line transparent and rounds only its top, because it hangs
  * the timestamp underneath; the Telegram layout puts the time over the picture instead.
  */
-html[data-tg-screen] [data-telegram-layout="true"][data-layout="bubble"] {
+[data-bubble-timeline="true"][data-layout="bubble"] {
     --tg-bubble-radius: var(--event-tile-bubble-corner-radius, 12px);
     /* tweb's small radius, for the corners where a bubble meets the next one of the same sender. */
     --tg-bubble-radius-join: 0.375rem;
@@ -342,6 +342,21 @@ html[data-tg-screen] [data-telegram-layout="true"][data-layout="bubble"] {
         :is(.mx_MediaBody, .mx_MImageBody, .mx_MVideoBody) {
             border-radius: inherit;
             overflow: hidden;
+        }
+
+        /*
+         * The picture is the bubble, so nothing may sit between it and the bubble's edge.
+         * ImageBodyView keeps a margin under its root for the file-info row it can show beneath a
+         * picture (ImageBodyView.module.css .root), and in a bubble that is nothing but the picture
+         * that margin reads as a strip of bubble background under the image.
+         */
+        .mx_ImageBody {
+            margin-bottom: 0;
+        }
+
+        /* And it takes the bubble's corners rather than its own flat 8px inside them. */
+        .mx_ImageBody_container {
+            border-radius: var(--tg-bubble-radius);
         }
     }
 
