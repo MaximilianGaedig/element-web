@@ -16,10 +16,13 @@ import {
 import { InlineSpinner } from "@vector-im/compound-web";
 import classNames from "classnames";
 
-import type { EventType, MatrixClient, RelationType, Relations, Room } from "matrix-js-sdk/src/matrix";
+import { EventType, type MatrixClient, type RelationType, type Relations, type Room } from "matrix-js-sdk/src/matrix";
 import { RoomTimelineViewModel } from "../../viewmodels/room/timeline/RoomTimelineViewModel";
 import { useMatrixClientContext } from "../../contexts/MatrixClientContext";
 import { LegacyEventTileAdapter } from "../views/rooms/LegacyEventTileAdapter";
+import { isOneToOneRoom, bubbleTimelineEnabled } from "../../utils/telegram/telegramLayout";
+import MemberAvatar from "../views/avatars/MemberAvatar";
+import PerMessageProfileAvatar from "../views/bridge/PerMessageProfileAvatar";
 import type { GetRelationsForEvent } from "../views/rooms/EventTile";
 import { Layout } from "../../settings/enums/Layout";
 import { useSettingValue } from "../../hooks/useSettings";
@@ -60,6 +63,13 @@ interface RenderItemContext {
     alwaysShowTimestamps: boolean;
     editState?: EditorStateTransfer;
     getRelationsForEvent: GetRelationsForEvent;
+    /** A one-to-one bubble chat needs no sender name over every message. */
+    hideSender: boolean;
+    /** Nor an avatar beside each one, when there is only one other person in the room. */
+    hideAvatar: boolean;
+    /** Whether the tiles are being drawn as Telegram bubbles; the tile cannot tell on its own. */
+    telegramBubbles: boolean;
+    myUserId: string;
 }
 
 /** Draws one timeline row. Kept outside the component so it isn't redefined per render. */
@@ -102,7 +112,20 @@ function renderTimelineItem(item: TimelineItem, ctx: RenderItemContext): ReactNo
             // For now, all events go through the legacy adapter.
             // As tiles are migrated to MVVM, this switch will
             // send migrated types to their shared views instead.
-            return (
+            /*
+             * One avatar for a run of messages, at the end of the run, as Telegram places it. The
+             * tile is shared with the old timeline, but being in a bubble timeline is something the
+             * timeline has to tell it - and which message of a run carries the avatar is a decision
+             * only the timeline can make.
+             */
+            const type = mxEvent.getType();
+            const groupAvatar =
+                ctx.telegramBubbles &&
+                !ctx.hideAvatar &&
+                mxEvent.getSender() !== ctx.myUserId &&
+                !mxEvent.isState() &&
+                (type === EventType.RoomMessage || type === EventType.Sticker || type.endsWith("poll.start"));
+            const tile = (
                 <LegacyEventTileAdapter
                     key={item.key}
                     mxEvent={mxEvent}
@@ -119,7 +142,29 @@ function renderTimelineItem(item: TimelineItem, ctx: RenderItemContext): ReactNo
                     showReactions={ctx.showReactions}
                     isTwelveHour={ctx.isTwelveHour}
                     alwaysShowTimestamps={ctx.alwaysShowTimestamps}
+                    hideSender={ctx.hideSender}
+                    hideAvatar={ctx.hideAvatar || groupAvatar}
+                    telegramBubbles={ctx.telegramBubbles}
+                    telegramTicks={ctx.hideAvatar}
                 />
+            );
+            if (!groupAvatar) return tile;
+            return (
+                <div key={item.key} className="mx_NewTimelinePanel_senderMessage">
+                    {tile}
+                    {item.lastInSection && (
+                        <div className="mx_NewTimelinePanel_senderAvatar">
+                            <PerMessageProfileAvatar mxEvent={mxEvent} size="40px">
+                                <MemberAvatar
+                                    member={ctx.room.getMember(mxEvent.getSender() ?? "")}
+                                    fallbackUserId={mxEvent.getSender()}
+                                    size="40px"
+                                    viewUserOnClick
+                                />
+                            </PerMessageProfileAvatar>
+                        </div>
+                    )}
+                </div>
             );
         }
         default:
@@ -151,6 +196,14 @@ export function NewTimelinePanel({
     // needs the draggable name column the old timeline provides, so fall back to
     // Modern for now (a known follow-up, listed on the tracking issue).
     const effectiveLayout = layout === Layout.IRC ? Layout.Group : (layout ?? Layout.Group);
+    /*
+     * Telegram bubbles, and what they imply about a one-to-one chat: no sender name over every
+     * message, and no avatar beside each one, because there is only one other person in the room -
+     * their ticks go where the avatar would have been instead.
+     */
+    const telegramBubbles = effectiveLayout === Layout.Bubble && bubbleTimelineEnabled();
+    const isDirectBubbleChat = effectiveLayout === Layout.Bubble && isOneToOneRoom(room);
+    const hideAvatar = isDirectBubbleChat && telegramBubbles;
 
     // Creating the view model does nothing on its own — it starts listening only
     // when start() is called in the effect below. React can build one of these and
@@ -216,7 +269,16 @@ export function NewTimelinePanel({
     // TimelineView decides when it is shown.
     const renderStickyDate = useCallback(
         (ts: number): ReactNode => (
-            <DateSeparatorWrapper roomId={room.roomId} ts={ts} labelOnly className="mx_NewTimelinePanel_stickyDate" />
+            // Keyed by the day: the separator builds its view model once, from the timestamp it
+            // was given, so without a new element per day the floating date keeps saying whatever
+            // day it first mounted on — "Today", however far back the reader scrolls.
+            <DateSeparatorWrapper
+                key={ts}
+                roomId={room.roomId}
+                ts={ts}
+                labelOnly
+                className="mx_NewTimelinePanel_stickyDate"
+            />
         ),
         [room.roomId],
     );
@@ -234,6 +296,10 @@ export function NewTimelinePanel({
                 alwaysShowTimestamps,
                 editState,
                 getRelationsForEvent,
+                hideSender: isDirectBubbleChat,
+                hideAvatar,
+                telegramBubbles,
+                myUserId: client.getSafeUserId(),
             }),
         [
             room,
@@ -246,6 +312,10 @@ export function NewTimelinePanel({
             alwaysShowTimestamps,
             editState,
             getRelationsForEvent,
+            isDirectBubbleChat,
+            hideAvatar,
+            telegramBubbles,
+            client,
         ],
     );
 
@@ -254,6 +324,9 @@ export function NewTimelinePanel({
             ref={panelRef}
             className={classNames("mx_NewTimelinePanel mx_RoomView_messagePanel mx_RoomView_messageListWrapper", {
                 mx_NewTimelinePanel_hidden: hidden,
+                // The same hook the old timeline uses, so a one-to-one bubble chat is styled by the
+                // rules that already exist rather than by a second set for this panel.
+                mx_MessagePanel_noAvatars: hideAvatar,
             })}
         >
             <TimelineView
