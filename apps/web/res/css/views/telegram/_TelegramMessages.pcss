@@ -115,6 +115,32 @@ Please see LICENSE files in the repository root for full details.
     }
 }
 
+/*
+ * Link previews the way iMessage draws them: a card the width of the message, tinted a shade of the
+ * bubble it sits in rather than a panel colour of its own, and clipped to the bubble's own corners
+ * instead of carrying a smaller radius and a border inside them.
+ *
+ * The tint is a wash of black rather than a named colour, so it darkens whichever bubble it lands
+ * on - the blue of one's own messages and the grey of everyone else's - the way iMessage's does,
+ * without having to know which one it is.
+ */
+[data-telegram-layout="true"] .mx_EventTile.mx_EventTile_tgBubble {
+    .mx_MediaPreviewGroup {
+        --MediaPreview-width: 100%;
+
+        margin-block-end: 0;
+    }
+
+    .mx_MediaPreviewTile {
+        border: 0;
+        /* The card holds an image that would otherwise square off its corners. */
+        overflow: clip;
+        border-radius: calc(var(--tg-bubble-radius, 12px) - 2px);
+        background: rgb(0 0 0 / 12%);
+    }
+}
+
+
 /* tweb `.time-inner`: the visible time, in the bubble's bottom inline-end corner. */
 [data-bubble-timeline="true"] .mx_EventTile[data-testid="event-tile"].mx_EventTile_tgTime .mx_TelegramTime {
     position: absolute;

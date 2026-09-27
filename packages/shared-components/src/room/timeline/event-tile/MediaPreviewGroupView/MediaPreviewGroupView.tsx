@@ -9,6 +9,8 @@ import React, { type JSX } from "react";
 import { Button } from "@vector-im/compound-web";
 import { useViewModel, type ViewModel } from "../../../../core/viewmodel";
 import { useI18n } from "../../../../core/i18n/i18nContext";
+import classNames from "classnames";
+
 import styles from "./MediaPreviewGroupView.module.css";
 import {
     AudioPreviewTile,
@@ -181,7 +183,9 @@ export function MediaPreviewGroupPreview({ vm }: MediaPreviewGroupPreviewProps):
     if (entries.length === 0) return null;
 
     return (
-        <div className={styles.container}>
+        // Keep mx_MediaPreviewGroup as a stable hook, as MediaBody does: a layout cannot theme a
+        // class whose name is hashed at build time.
+        <div className={classNames("mx_MediaPreviewGroup", styles.container)}>
             {entries.map((entry) => {
                 switch (entry.type) {
                     case "text":

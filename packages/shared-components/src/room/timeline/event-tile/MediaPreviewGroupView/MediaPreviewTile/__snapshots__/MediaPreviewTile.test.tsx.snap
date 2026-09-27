@@ -3,7 +3,7 @@
 exports[`ImagePreviewTile > renders the default story with its image 1`] = `
 <div>
   <div
-    class="MediaPreviewTile-module_tile"
+    class="mx_MediaPreviewTile MediaPreviewTile-module_tile"
   >
     <div
       class="MediaPreviewComponents-module_image MediaPreviewComponents-module_bannerImage"
@@ -101,7 +101,7 @@ exports[`ImagePreviewTile > renders the default story with its image 1`] = `
 exports[`MediaPreviewTile > renders the icon and text content without any media above 1`] = `
 <div>
   <div
-    class="MediaPreviewTile-module_tile"
+    class="mx_MediaPreviewTile MediaPreviewTile-module_tile"
   >
     <div
       class="MediaPreviewTile-module_below"
@@ -142,7 +142,7 @@ exports[`MediaPreviewTile > renders the icon and text content without any media 
 exports[`TextPreviewTile > renders the default story 1`] = `
 <div>
   <div
-    class="MediaPreviewTile-module_tile"
+    class="mx_MediaPreviewTile MediaPreviewTile-module_tile"
   >
     <div
       class="MediaPreviewTile-module_below"

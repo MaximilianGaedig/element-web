@@ -3,10 +3,10 @@
 exports[`MediaPreviewGroupPreview > stories > renders the single text story 1`] = `
 <div>
   <div
-    class="MediaPreviewGroupView-module_container"
+    class="mx_MediaPreviewGroup MediaPreviewGroupView-module_container"
   >
     <div
-      class="MediaPreviewTile-module_tile"
+      class="mx_MediaPreviewTile MediaPreviewTile-module_tile"
     >
       <div
         class="MediaPreviewTile-module_below"

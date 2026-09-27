@@ -326,6 +326,17 @@ Please see LICENSE files in the repository root for full details.
         flex-direction: column;
         gap: var(--cpd-space-1x);
         padding-inline: var(--cpd-space-2x);
+
+        /* The same card as the timeline, so it takes the width of the row here too. */
+        .mx_MediaPreviewGroup {
+            --MediaPreview-width: 100%;
+        }
+
+        .mx_MediaPreviewTile {
+            /* It holds an image that would otherwise square off its corners. */
+            overflow: clip;
+            border-radius: var(--SharedMedia-radius-big);
+        }
     }
 
     .mx_SharedMedia_linkText {

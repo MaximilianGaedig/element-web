@@ -31,7 +31,14 @@ export interface MediaPreviewTileProps extends MediaPreviewGroupEntryBase {
 
 export function MediaPreviewTile(props: MediaPreviewTileProps): JSX.Element {
     return (
-        <div className={classNames(styles.tile, props.children ? styles.tileWithAbove : styles.tileWithoutAbove)}>
+        <div
+            className={classNames(
+                // A stable hook for layouts to theme, as MediaBody has.
+                "mx_MediaPreviewTile",
+                styles.tile,
+                props.children ? styles.tileWithAbove : styles.tileWithoutAbove,
+            )}
+        >
             {props.children}
             <div className={styles.below}>
                 <LeftGroup>
