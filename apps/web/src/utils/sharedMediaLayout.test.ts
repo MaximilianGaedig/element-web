@@ -124,3 +124,34 @@ describe("jumping to a date", () => {
         expect(sectionAt(rows, may.top + may.height)?.headingVisible).toBe(false);
     });
 });
+
+describe("what has not loaded yet", () => {
+    const items = [at(2026, 3, 9), at(2026, 3, 4)];
+
+    it("holds room for the rest of the history, as rows to draw rather than blank space", () => {
+        const { rows, height } = mediaRows(items, 3, METRICS, 9);
+        const pending = rows.filter((r) => r.kind === "pending");
+        // Seven missing: a row of three, then three, then one.
+        expect(pending.map((r) => (r.kind === "pending" ? r.count : 0))).toEqual([3, 3, 1]);
+        // Header, the loaded row, then three more rows of placeholders.
+        expect(height).toBe(30 + 100 + 1 + 3 * (100 + 1) - 1);
+    });
+
+    it("lays them below what is loaded, since they are older", () => {
+        const { rows } = mediaRows(items, 3, METRICS, 9);
+        const lastReal = rows.findLastIndex((r) => r.kind === "cells");
+        const firstPending = rows.findIndex((r) => r.kind === "pending");
+        expect(firstPending).toBeGreaterThan(lastReal);
+    });
+
+    it("adds nothing when everything the room holds is already here", () => {
+        expect(mediaRows(items, 3, METRICS, 2).rows.some((r) => r.kind === "pending")).toBe(false);
+        expect(mediaRows(items, 3, METRICS).rows.some((r) => r.kind === "pending")).toBe(false);
+    });
+
+    it("sends a date older than anything loaded into the pending rows", () => {
+        const { rows } = mediaRows(items, 3, METRICS, 9);
+        const landed = rowAtTime(rows, items, new Date(2020, 0, 1).getTime());
+        expect(rows[landed].kind).toBe("pending");
+    });
+});

@@ -30,7 +30,9 @@ export interface MediaSection {
 
 export type MediaRow =
     | { kind: "header"; section: MediaSection; top: number; height: number }
-    | { kind: "cells"; indices: number[]; section: MediaSection; top: number; height: number };
+    | { kind: "cells"; indices: number[]; section: MediaSection; top: number; height: number }
+    /** Room held for what has not been fetched yet, drawn as placeholders. */
+    | { kind: "pending"; count: number; section?: MediaSection; top: number; height: number };
 
 export interface RowMetrics {
     /** The height of a month heading. */
@@ -63,6 +65,8 @@ export function mediaRows(
     items: readonly MatrixEvent[],
     columns: number,
     metrics: RowMetrics,
+    /** How many the room holds in all, so the rest can be held room for and drawn as placeholders. */
+    total = 0,
 ): { rows: MediaRow[]; height: number } {
     const rows: MediaRow[] = [];
     let top = 0;
@@ -89,6 +93,18 @@ export function mediaRows(
         if (pending.length === columns) flush();
     }
     flush();
+
+    /*
+     * What has not arrived yet is older than everything here, so it belongs below - as rows of
+     * placeholders rather than as blank space, which would read as the end of the list.
+     */
+    let missing = Math.max(0, total - items.length);
+    while (missing > 0) {
+        const count = Math.min(columns, missing);
+        rows.push({ kind: "pending", count, section, top, height: metrics.cell });
+        top += metrics.cell + metrics.gap;
+        missing -= count;
+    }
 
     // The gap after the final row is not part of the column's height.
     return { rows, height: Math.max(0, top - (rows.length ? metrics.gap : 0)) };
@@ -132,6 +148,8 @@ export function rowAtTime(rows: readonly MediaRow[], items: readonly MatrixEvent
         const row = rows[i];
         if (row.kind === "header" && row.section.time <= time) return i;
         if (row.kind === "cells" && row.indices.some((index) => items[index].getTs() <= time)) return i;
+        // A pending row stands for events older than everything loaded, so any earlier date is in it.
+        if (row.kind === "pending") return i;
     }
     return rows.length ? rows.length - 1 : 0;
 }
@@ -150,11 +168,11 @@ export function sectionAt(
     let heading: MediaRow | undefined;
     for (const row of rows) {
         if (row.top > scrollTop) break;
-        current = row;
+        if (row.section) current = row;
         if (row.kind === "header") heading = row;
     }
     const row = current ?? rows[0];
-    if (!row) return undefined;
+    if (!row?.section) return undefined;
     // The heading is still doing its job while any part of it is above the fold.
     const visible = !heading || heading.top + heading.height > scrollTop;
     return { section: row.section, headingVisible: visible };

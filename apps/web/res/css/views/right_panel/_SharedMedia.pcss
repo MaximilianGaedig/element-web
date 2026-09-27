@@ -264,6 +264,26 @@ Please see LICENSE files in the repository root for full details.
         }
     }
 
+    /*
+     * A cell that has not been fetched yet. The column already knows how many there are, so the
+     * space is held and drawn rather than left blank - blank space at the bottom of a list reads as
+     * the end of it.
+     */
+    .mx_SharedMedia_pending {
+        display: block;
+        /* The row sets the height; this only has to fill the cell it is given. */
+        width: 100%;
+        height: 100%;
+        background-color: var(--cpd-color-bg-subtle-secondary);
+        animation: mx_SharedMedia_pendingPulse 1.4s ease-in-out infinite;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .mx_SharedMedia_pending {
+            animation: none;
+        }
+    }
+
     /* tweb .video-time */
     .mx_SharedMedia_videoTime {
         position: absolute;
@@ -504,5 +524,26 @@ Please see LICENSE files in the repository root for full details.
 
     to {
         opacity: 1;
+    }
+}
+
+/* Where a date scrubber is doing the job, the scrollbar is a second handle on the same edge. */
+[data-mx-scrubbed] {
+    scrollbar-width: none;
+
+    &::-webkit-scrollbar {
+        display: none;
+    }
+}
+
+/* The breath of a placeholder waiting for its picture. */
+@keyframes mx_SharedMedia_pendingPulse {
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.45;
     }
 }

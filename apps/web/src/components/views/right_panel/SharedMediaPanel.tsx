@@ -740,32 +740,36 @@ function useGridLayout(
             if (box) setScroll({ top: Math.max(0, box.scrollTop - el.offsetTop), viewport: box.clientHeight });
         };
         measure();
+        /*
+         * The scrubber replaces the scrollbar rather than joining it: two things to drag down the
+         * same edge, one of which names the month and one of which does not, is a choice nobody
+         * wants to make. Marked on the box itself rather than by naming a container, because which
+         * element scrolls depends on where the grid is being shown.
+         */
+        box?.setAttribute("data-mx-scrubbed", "");
         box?.addEventListener("scroll", measure, { passive: true });
         // Both matter: the panel is resizable, and the column's width sets every row's height.
         const observer = typeof ResizeObserver === "undefined" ? undefined : new ResizeObserver(measure);
         observer?.observe(el);
         if (box) observer?.observe(box);
         return () => {
+            box?.removeAttribute("data-mx-scrubbed");
             box?.removeEventListener("scroll", measure);
             observer?.disconnect();
         };
     }, []);
 
     const cell = width ? (width - GRID_GAP * (GRID_COLUMNS - 1)) / GRID_COLUMNS : 0;
-    const { rows, height } = useMemo(() => {
-        const laid = mediaRows(items, GRID_COLUMNS, { header: MONTH_HEADER, cell, gap: GRID_GAP });
-        /*
-         * The column stands for the whole history, not the part of it that has loaded.
-         *
-         * The loader holds the newest ones, so what is missing is older and belongs below: the rows
-         * it would take are left as room at the bottom. Without this the column grows under the
-         * reader as pages arrive, the scrollbar lies about how much there is, and the scrubber can
-         * only reach what has already been fetched - which is the opposite of what it is for.
-         */
-        const missing = Math.max(0, (total ?? 0) - items.length);
-        const reserved = Math.ceil(missing / GRID_COLUMNS) * (cell + GRID_GAP);
-        return { rows: laid.rows, height: laid.height + reserved };
-    }, [items, cell, total]);
+    /*
+     * The column stands for the whole history, not the part of it that has loaded: what is missing
+     * is older, so it is laid out below as rows of placeholders. Without it the column grows under
+     * the reader as pages arrive, the scrollbar misreports how much there is, and the scrubber can
+     * only reach what has already been fetched - the opposite of what it is for.
+     */
+    const { rows, height } = useMemo(
+        () => mediaRows(items, GRID_COLUMNS, { header: MONTH_HEADER, cell, gap: GRID_GAP }, total),
+        [items, cell, total],
+    );
     // Before the first measurement there is no height to window against, so show the first screenful
     // rather than nothing: the measurement lands on the same frame and the window takes over.
     const shown = cell
@@ -799,7 +803,10 @@ function DateScrubber({
     seek: (top: number) => void;
 }): JSX.Element | null {
     const track = useRef<HTMLDivElement>(null);
-    const [dragging, setDragging] = useState(false);
+    // Where the finger is, while it is down. The handle follows this rather than the scroll
+    // position: at either end the column stops moving before the finger does, and a handle that
+    // stopped with it would be left behind by the thing dragging it.
+    const [held, setHeld] = useState<number | null>(null);
     const span = height - scroll.viewport;
 
     const to = useCallback(
@@ -807,15 +814,16 @@ function DateScrubber({
             const box = track.current?.getBoundingClientRect();
             if (!box || box.height <= 0) return;
             const at = Math.min(1, Math.max(0, (clientY - box.top) / box.height));
+            setHeld(at);
             seek(at * span);
         },
         [seek, span],
     );
 
     useEffect(() => {
-        if (!dragging) return;
+        if (held === null) return;
         const move = (e: PointerEvent): void => to(e.clientY);
-        const up = (): void => setDragging(false);
+        const up = (): void => setHeld(null);
         window.addEventListener("pointermove", move);
         window.addEventListener("pointerup", up);
         window.addEventListener("pointercancel", up);
@@ -824,12 +832,12 @@ function DateScrubber({
             window.removeEventListener("pointerup", up);
             window.removeEventListener("pointercancel", up);
         };
-    }, [dragging, to]);
+    }, [held, to]);
 
     // Nothing to scrub when the whole column already fits.
     if (span <= 0) return null;
-    const at = Math.min(1, Math.max(0, scroll.top / span));
-    const under = sectionAt(rows, scroll.top)?.section;
+    const at = held ?? Math.min(1, Math.max(0, scroll.top / span));
+    const under = sectionAt(rows, at * span)?.section;
     return (
         <div
             ref={track}
@@ -838,15 +846,16 @@ function DateScrubber({
             // track to the other then covers the whole column, however tall it is. Sized to the
             // column instead, most of it would be off screen and only part of the history reachable.
             style={{ height: scroll.viewport }}
-            data-dragging={dragging || undefined}
+            data-dragging={held !== null || undefined}
             onPointerDown={(e) => {
                 e.preventDefault();
-                setDragging(true);
                 to(e.clientY);
             }}
         >
             <div className="mx_SharedMedia_scrubberHandle" style={{ insetBlockStart: `${at * 100}%` }}>
-                {dragging && under && <span className="mx_SharedMedia_scrubberDate">{monthLabel(under.time)}</span>}
+                {held !== null && under && (
+                    <span className="mx_SharedMedia_scrubberDate">{monthLabel(under.time)}</span>
+                )}
             </div>
         </div>
     );
@@ -870,14 +879,15 @@ function MediaGrid({
      * near the end of the rows - so reaching the last row is what asks for the next page, rather
      * than something at the very bottom that a reader would have to scroll past the gap to meet.
      */
-    const atEnd = shown[1] >= rows.length && rows.length > 0;
+    const lastReal = rows.reduce((last, row, i) => (row.kind === "pending" ? last : i), -1);
+    const atEnd = lastReal >= 0 && shown[1] > lastReal;
     // Through a ref, and keyed on how much there is rather than on the callback: an identity that
     // changes each render would ask for the next page on every render, for ever.
     const nearEnd = useRef(onNearEnd);
     nearEnd.current = onNearEnd;
     useEffect(() => {
         if (atEnd) nearEnd.current();
-    }, [atEnd, rows.length]);
+    }, [atEnd, lastReal]);
     const drag = useDragSelect(items, selection, ref);
     const range = useCallback(
         (from: number, to: number) => selection.setMany(items.slice(Math.min(from, to), Math.max(from, to) + 1), true),
@@ -919,6 +929,18 @@ function MediaGrid({
                     >
                         {monthLabel(row.section.time)}
                     </h4>
+                ) : row.kind === "pending" ? (
+                    <div
+                        key={`p-${row.top}`}
+                        className="mx_SharedMedia_gridRow"
+                        style={{ top: row.top, height: row.height }}
+                        aria-hidden
+                    >
+                        {Array.from({ length: row.count }, (_, i) => (
+                            // Not a grid item: there is nothing here to open, select or describe.
+                            <span key={i} className="mx_SharedMedia_pending" />
+                        ))}
+                    </div>
                 ) : (
                     <div
                         key={`r-${row.indices[0]}`}
