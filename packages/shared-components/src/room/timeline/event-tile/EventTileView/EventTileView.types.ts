@@ -88,6 +88,8 @@ export interface EventTileViewRoot {
     shape: EventTileRenderingMode;
     /** Conditional state classes and styling state. */
     state: EventTileViewRootState;
+    /** Inline style for the root, for values the application computes rather than the theme. */
+    style?: React.CSSProperties;
 }
 
 /** Optional application CSS class overrides for shell-owned structural elements and slot boundaries. */

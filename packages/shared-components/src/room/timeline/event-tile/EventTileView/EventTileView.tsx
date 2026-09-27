@@ -95,6 +95,7 @@ export function EventTileView({
     ): JSX.Element => (
         <Root
             ref={refs?.root}
+            style={root.style}
             className={classNames(styles.root, classNameOverrides?.root, {
                 [styles.stateOwnEvent]: root.state.isOwnEvent,
                 [styles.hasReceiptSlot]: hasReceiptSlot,

@@ -73,6 +73,7 @@ import TelegramTimeSlot from "../telegram/TelegramTimeSlot";
 import { getTelegramTimePlacement } from "../../../utils/telegram/telegramTime";
 import { attachLongPress, isAppleTouch } from "../../../utils/telegram/telegramMenu";
 import { isDisappeared } from "../../../utils/bridge/shouldHideBridgeEvent";
+import { mediaTailStyle } from "../../../utils/telegram/mediaTail";
 import { isAnimatedSticker } from "../../../utils/bridge/animatedMedia";
 import { getPerMessageProfile } from "../../../utils/bridge/perMessageProfile";
 import { MessageSelectionStore } from "../../../stores/MessageSelectionStore";
@@ -1426,6 +1427,12 @@ export class UnwrappedEventTile extends React.Component<EventTileProps, IState> 
                     as: this.props.as,
                     permalink,
                     scrollToken: this.props.scrollTokens ?? eventTileRenderState.root.scrollToken,
+                    // The picture its tail is filled with, where the bubble is a picture
+                    // (utils/telegram/mediaTail.ts).
+                    style:
+                        telegramTime && eventTileRenderState.line.media
+                            ? mediaTailStyle(this.props.mxEvent)
+                            : undefined,
                 }}
                 line={{
                     ...eventTileRenderState.line,
