@@ -189,6 +189,8 @@ Please see LICENSE files in the repository root for full details.
         position: sticky;
         inset-block-start: 0;
         z-index: 4;
+        /* Floated so the column keeps its full width behind it, and given no height of its own:
+           the height on show is measured and set, so the track stands for the whole column. */
         float: inline-end;
         width: 1.5rem;
         margin-inline-end: calc(-1 * var(--cpd-space-1x));
