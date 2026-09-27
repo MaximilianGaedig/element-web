@@ -668,17 +668,9 @@ function useDragSelect(
         anchorAt: () => anchor.current,
         setAnchor: (index) => void (anchor.current = index),
         onPointerDown: (index, e) => {
-            /*
-             * A touch captures the pointer to the element it started on, so without releasing it
-             * the drag would never enter the neighbours and could only ever select one item. A
-             * mouse has no implicit capture to release, and asking anyway throws - which would take
-             * the rest of this handler, and the press, down with it.
-             */
-            try {
-                e.currentTarget.releasePointerCapture(e.pointerId);
-            } catch {
-                // Nothing had captured it, which is the ordinary case for a mouse.
-            }
+            // A touch captures the pointer to the element it started on, so without releasing it the
+            // drag would never enter the neighbours and could only ever select the one item.
+            e.currentTarget.releasePointerCapture?.(e.pointerId);
             swallow.current = false;
             if (selection.active) {
                 begin(index, !selection.ids.has(items[index]?.getId() ?? ""));
@@ -745,10 +737,7 @@ function useGridLayout(
         const box = scrollParentOf(el);
         const measure = (): void => {
             setWidth(el.clientWidth);
-            // Without a scrolling ancestor there is no scroll position to speak of, but the height
-            // on show is still what the scrubber's track has to stand for.
-            const viewport = box ? box.clientHeight : (el.parentElement?.clientHeight ?? 0);
-            setScroll({ top: box ? Math.max(0, box.scrollTop - el.offsetTop) : 0, viewport });
+            if (box) setScroll({ top: Math.max(0, box.scrollTop - el.offsetTop), viewport: box.clientHeight });
         };
         measure();
         /*
@@ -845,9 +834,8 @@ function DateScrubber({
         };
     }, [held, to]);
 
-    // Nothing to scrub when the whole column already fits, and nothing to scrub *with* until the
-    // height on show is known - a track of no height is a handle that cannot be seen or caught.
-    if (span <= 0 || scroll.viewport <= 0) return null;
+    // Nothing to scrub when the whole column already fits.
+    if (span <= 0) return null;
     const at = held ?? Math.min(1, Math.max(0, scroll.top / span));
     const under = sectionAt(rows, at * span)?.section;
     return (
@@ -925,16 +913,21 @@ function MediaGrid({
         [items],
     );
     return (
-        <>
-            {/*
-             * Outside the column, not in it: the column clips its overflow to keep its rounded
-             * corners, which makes it the box a sticky child sticks within - and since the column
-             * does not scroll, the handle simply scrolled away with the pictures.
-             */}
+        /*
+         * A plain block around the two of them.
+         *
+         * The handle floats beside the column rather than sitting inside it: inside, the
+         * column clips its overflow to keep its corners, which makes it the box a sticky child
+         * sticks within - so the handle scrolled away with the pictures. A float has no effect
+         * on a flex item either, and the tab's content is a flex column, so dropped straight in
+         * there it stops floating and becomes a bar in the flow. This block is neither flex nor
+         * clipping, which is what the float and the stickiness each need.
+         */
+        <div className="mx_SharedMedia_column">
             <DateScrubber rows={rows} height={height} scroll={scroll} seek={seek} />
             <div className="mx_SharedMedia_grid" ref={ref} style={{ height }}>
                 {/* The month at the top, but only once its own heading has scrolled away - otherwise the
-                two of them say the same thing one under the other. */}
+                    two of them say the same thing one under the other. */}
                 {month && !month.headingVisible && (
                     <div className="mx_SharedMedia_monthPill">{monthLabel(month.section.time)}</div>
                 )}
@@ -980,7 +973,7 @@ function MediaGrid({
                     ),
                 )}
             </div>
-        </>
+        </div>
     );
 }
 
