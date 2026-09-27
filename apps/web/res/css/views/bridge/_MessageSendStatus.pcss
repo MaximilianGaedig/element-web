@@ -5,10 +5,20 @@ SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only OR LicenseRef-Element-Com
 Please see LICENSE files in the repository root for full details.
 */
 
+/*
+ * The mark rides at the end of the message's last line, the way a messenger puts its ticks, rather
+ * than starting a line of its own underneath: it is a property of the message, not a remark about it.
+ * Floated because the body is drawn before it and may be several lines long — the float settles onto
+ * whichever line ends up last. The Telegram-style bubbles have their own slot for this (TelegramTime)
+ * and never render it here.
+ */
 .mx_SendStatus {
     display: inline-flex;
     align-items: center;
     gap: var(--cpd-space-1x);
+    float: inline-end;
+    margin-block-start: 2px;
+    margin-inline-start: var(--cpd-space-2x);
     vertical-align: middle;
     color: var(--cpd-color-icon-tertiary);
 }
@@ -19,6 +29,7 @@ Please see LICENSE files in the repository root for full details.
 
 .mx_SendStatus_failed {
     display: flex;
+    float: none;
     margin-block-start: var(--cpd-space-1x);
     font: var(--cpd-font-body-sm-regular);
     color: var(--cpd-color-text-critical-primary);
