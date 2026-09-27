@@ -726,11 +726,13 @@ function VirtualRows({
         const el = ref.current;
         if (!el) return;
         const box = scrollParentOf(el);
-        const measure = (): void =>
-            setScroll({
-                top: box ? Math.max(0, box.scrollTop - el.offsetTop) : 0,
-                viewport: box ? box.clientHeight : (el.parentElement?.clientHeight ?? 0),
-            });
+        const measure = (): void => {
+            if (!box) return;
+            // Taken from the boxes, for the same reason as the grid's: offsetTop answers about a
+            // positioned ancestor rather than about the box that scrolls.
+            const top = box.getBoundingClientRect().top - el.getBoundingClientRect().top;
+            setScroll({ top: Math.max(0, top), viewport: box.clientHeight });
+        };
         measure();
         box?.addEventListener("scroll", measure, { passive: true });
         const observer = typeof ResizeObserver === "undefined" ? undefined : new ResizeObserver(measure);
@@ -847,7 +849,15 @@ function useGridLayout(
         const box = scrollParentOf(el);
         const measure = (): void => {
             setWidth(el.clientWidth);
-            if (box) setScroll({ top: Math.max(0, box.scrollTop - el.offsetTop), viewport: box.clientHeight });
+            if (!box) return;
+            /*
+             * How far the column has gone past the top of the box that scrolls, taken from the two
+             * boxes rather than from offsetTop: offsetTop is measured against whichever ancestor
+             * happens to be positioned, and the wrapper the handle floats in is one - so it reads
+             * zero however far the column has actually scrolled.
+             */
+            const top = box.getBoundingClientRect().top - el.getBoundingClientRect().top;
+            setScroll({ top: Math.max(0, top), viewport: box.clientHeight });
         };
         measure();
         /*

@@ -20,6 +20,33 @@ import ToastStore from "../../stores/ToastStore.ts";
 import defaultDispatcher from "../../dispatcher/dispatcher.ts";
 import { Action } from "../../dispatcher/actions.ts";
 
+describe("WebPlatform in development", () => {
+    it("registers no service worker, and clears out one left from before", async () => {
+        const unregister = vi.fn().mockResolvedValue(true);
+        const register = vi.fn();
+        vi.spyOn(global, "navigator", "get").mockReturnValue({
+            ...navigator,
+            // @ts-expect-error - mocking readonly object
+            serviceWorker: {
+                register,
+                addEventListener: vi.fn(),
+                getRegistrations: vi.fn().mockResolvedValue([{ unregister }]),
+            },
+        });
+        // @ts-expect-error - private, and baked in by webpack in a real build
+        const development = vi.spyOn(WebPlatform, "DEVELOPMENT", "get").mockReturnValue(true);
+        try {
+            const platform = new WebPlatform();
+            await vi.waitFor(() => expect(unregister).toHaveBeenCalled());
+            expect(register).not.toHaveBeenCalled();
+            expect(platform).toBeTruthy();
+        } finally {
+            // Left in place it would put every later test in this file into a development build.
+            development.mockRestore();
+        }
+    });
+});
+
 describe("WebPlatform", () => {
     beforeEach(() => {
         vi.spyOn(global, "navigator", "get").mockReturnValue({

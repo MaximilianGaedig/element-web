@@ -37,16 +37,44 @@ function getNormalizedAppVersion(version: string): string {
 export default class WebPlatform extends BasePlatform {
     // oxlint-disable-next-line node/no-process-env
     private static readonly VERSION = process.env.VERSION!; // baked in by Webpack
+    /** Whether this is the development build, which has neither offline mode nor updates. */
+    private static get DEVELOPMENT(): boolean {
+        // oxlint-disable-next-line node/no-process-env
+        return process.env.NODE_ENV === "development";
+    }
     private readonly registerServiceWorkerPromise: Promise<void>;
 
     public constructor() {
         super();
 
-        // Register the service worker in the background
-        this.registerServiceWorkerPromise = this.registerServiceWorker();
+        /*
+         * The development build has no offline mode, and no worker either.
+         *
+         * The worker already declines to cache anything in development, so registering one only
+         * leaves a thing sitting between the dev server and the page that does nothing - and it is
+         * the first thing anybody suspects when a change does not appear. Nor is there any update
+         * to offer: the dev build's version never changes, so the check that would raise the
+         * "update and reload" toast can never find a newer one. A reload gets the new build.
+         *
+         * Any worker left over from before is unregistered, so a page that has one stops being
+         * served by it rather than keeping it until somebody clears it by hand.
+         */
+        this.registerServiceWorkerPromise = WebPlatform.DEVELOPMENT
+            ? WebPlatform.unregisterServiceWorkers()
+            : this.registerServiceWorker();
         this.registerServiceWorkerPromise.catch((e) => {
             console.error("Error registering/updating service worker:", e);
         });
+    }
+
+    /** Removes any worker registered for this origin, and anything it had cached. */
+    private static async unregisterServiceWorkers(): Promise<void> {
+        if (!navigator.serviceWorker) return;
+        const registrations = await navigator.serviceWorker.getRegistrations();
+        await Promise.all(registrations.map((registration) => registration.unregister()));
+        if (registrations.length) {
+            console.log("Development build: unregistered a leftover service worker");
+        }
     }
 
     protected onAction(payload: ActionPayload): void {
