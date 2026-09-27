@@ -74,9 +74,10 @@ allowBuilds:
     # Needed to make the git dependency in layered.sh happy
     "matrix-js-sdk@git+https://github.com/matrix-org/matrix-js-sdk.git": true
     "matrix-js-sdk@file:matrix-js-sdk/matrix-js-sdk.tgz": true
-    # Same again for the patched copy (patches/matrix-js-sdk@42.3.0.patch): patching gives the package a
-    # new id, which this list is keyed by. The hash changes whenever that patch does.
-    "matrix-js-sdk@file:matrix-js-sdk/matrix-js-sdk.tgz(patch_hash=afab48f125dd40f70fefa0ccfdc18bf43b4a505f1d0ff66d1b20cf60b9a2d14e)": true
+    # Our own branch of the SDK, which carries the offline-start changes that used to be a patch here
+    # (see the fork's "Start from the cache without waiting on the network"). Keyed by the exact commit,
+    # which is also what apps/web/package.json pins, so both move together and a build stays reproducible.
+    "matrix-js-sdk@https://codeload.github.com/MaximilianGaedig/matrix-js-sdk/tar.gz/0f694bc969d81a02d08e6600d44c3025a9190394": true
     # Installs the CLI, which we do not need
     "@sentry/cli": false
     # Installs nx cloud client, which we do not need
@@ -119,9 +120,6 @@ patchedDependencies:
     "@types/auto-launch": patches/@types__auto-launch.patch
     # Workaround for missing return types
     postcss-mixins: patches/postcss-mixins.patch
-    # Start from cache without waiting on the network: cached /versions, no parent fetches while replaying
-    # the cached sync, and a replay of only each room's latest events (older ones are read back from the store)
-    matrix-js-sdk@42.3.0: patches/matrix-js-sdk@42.3.0.patch
     # Tooltips kept recalculating their position while closed: one layout per tooltip per scrolled frame
     "@vector-im/compound-web@10.0.1": patches/@vector-im__compound-web@10.0.1.patch
     # Workaround for some babel rules being false positively flagged
