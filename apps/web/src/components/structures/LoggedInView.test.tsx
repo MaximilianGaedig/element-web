@@ -542,7 +542,7 @@ describe("<LoggedInView />", () => {
             getValueSpy = vi
                 .spyOn(SettingsStore, "getValue")
                 .mockImplementation(((name: string, ...rest: any[]) =>
-                    name === "telegramStyleLayout" ? telegram : (original as any)(name, ...rest)) as any);
+                    name === "chatColumns" ? telegram : (original as any)(name, ...rest)) as any);
         });
 
         afterEach(() => {

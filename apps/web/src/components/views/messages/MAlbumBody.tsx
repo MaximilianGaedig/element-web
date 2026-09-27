@@ -21,7 +21,7 @@ import { useMediaVisible } from "../../../hooks/useMediaVisible";
 import { _t } from "../../../languageHandler";
 import Modal from "../../../Modal";
 import AlbumLightbox from "../elements/AlbumLightbox";
-import { isTelegramLayout } from "../../../utils/telegram/telegramLayout";
+import { compactMediaEnabled } from "../../../utils/telegram/telegramLayout";
 import { MatrixClientPeg } from "../../../MatrixClientPeg";
 import MessageContextMenu from "../context_menus/MessageContextMenu";
 import { aboveRightOf } from "../../structures/ContextMenu";
@@ -186,7 +186,7 @@ export default function MAlbumBody({ album, bodyProps, ItemBody }: Props): JSX.E
 
     const openLightbox = useCallback(
         (event: MatrixEvent): void => {
-            if (isTelegramLayout()) {
+            if (compactMediaEnabled()) {
                 const room = MatrixClientPeg.get()?.getRoom(event.getRoomId());
                 const source = document.querySelector<HTMLElement>(
                     `[data-tg-media-id="${CSS.escape(event.getId() ?? "")}"] img`,

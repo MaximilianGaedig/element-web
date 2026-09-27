@@ -24,7 +24,7 @@ import { mediaFromContent } from "../../customisations/Media";
 import { TimelineRenderingType } from "../../contexts/RoomContext";
 import SettingsStore from "../../settings/SettingsStore";
 import { type ImageSize, suggestedSize as suggestedImageSize } from "../../settings/enums/ImageSize";
-import { effectiveImageSize, isTelegramLayout } from "../../utils/telegram/telegramLayout";
+import { effectiveImageSize, compactMediaEnabled } from "../../utils/telegram/telegramLayout";
 import { presentableTextForFile } from "../../utils/FileUtils";
 import { type MediaEventHelper } from "../../utils/MediaEventHelper";
 import { blobIsAnimated, mayBeAnimated } from "../../utils/Image";
@@ -123,10 +123,10 @@ export class ImageBodyViewModel
         this.state = initialState;
 
         const imageSizeWatcherRef = SettingsStore.watchSetting("Images.size", null, (_s, _r, _l, _nvl, value) => {
-            this.setImageSize(isTelegramLayout() ? effectiveImageSize() : value!);
+            this.setImageSize(compactMediaEnabled() ? effectiveImageSize() : value!);
         });
         this.disposables.track(() => SettingsStore.unwatchSetting(imageSizeWatcherRef));
-        const telegramLayoutWatcherRef = SettingsStore.watchSetting("telegramStyleLayout", null, () => {
+        const telegramLayoutWatcherRef = SettingsStore.watchSetting("compactMedia", null, () => {
             this.setImageSize(effectiveImageSize());
         });
         this.disposables.track(() => SettingsStore.unwatchSetting(telegramLayoutWatcherRef));
@@ -468,7 +468,7 @@ export class ImageBodyViewModel
         }
 
         // Fork: the Telegram layout opens tweb's viewer (morph from the bubble, prev/next through the room's media).
-        if (isTelegramLayout()) {
+        if (compactMediaEnabled()) {
             const room = MatrixClientPeg.get()?.getRoom(this.props.mxEvent.getRoomId());
             const source = this.props.imageRef.current;
             const event = this.props.mxEvent;

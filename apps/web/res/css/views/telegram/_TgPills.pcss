@@ -17,10 +17,10 @@ Please see LICENSE files in the repository root for full details.
  *   helpers/updateColumnWidths.ts       --page-chats-padding: 16px desktop, 8px handheld
  */
 
-html[data-tg-screen] .mx_RoomHeader {
+html[data-floating-bars] .mx_RoomHeader {
     box-sizing: border-box;
     width: calc(100% - 2 * var(--tg-page-chats-padding));
-    max-width: var(--tg-chat-width);
+    max-width: var(--tg-chat-width, 100%);
     height: var(--tg-chat-topbar-height);
     /*
      * Below the status bar, not against it: where the page draws under it (a PWA), the header keeps its
@@ -71,11 +71,11 @@ html[data-tg-screen] .mx_RoomHeader {
 }
 
 /* The composer: a floating pill above the bottom edge. */
-html[data-tg-screen] .mx_RoomView_body[data-telegram-layout="true"] {
+html[data-floating-bars] .mx_RoomView_body {
     .mx_MessageComposer {
         box-sizing: border-box;
         width: calc(100% - 2 * var(--tg-page-chats-padding));
-        max-width: var(--tg-chat-width);
+        max-width: var(--tg-chat-width, 100%);
         /* Above the home indicator where the page draws under it (a PWA), except while the keyboard is up. */
         margin: 0 auto calc(var(--tg-safe-bottom) + var(--tg-page-chats-padding));
         /* Element pads the composer's bottom by 15px; the page padding alone matches the header's gap. */
@@ -93,23 +93,31 @@ html[data-tg-screen] .mx_RoomView_body[data-telegram-layout="true"] {
     }
 
     /*
-     * tweb .rows-wrapper-row: attach (and "more") at the start, the input, then the smiley that opens the
-     * emoticons dropdown and the send capsule. The composer's own input layout is left alone; only the
-     * buttons are ordered (the actions container dissolves into the row). Buttons sit at the bottom as
-     * the input grows, with tweb's .25rem gap.
-     */
-    /*
      * Telegram iOS composer: the + island, the input pill and the microphone island side by side,
-     * bottom-aligned, .5rem apart. The islands are 3rem circles in the pill's colour and shadow.
+     * bottom-aligned, 8px apart. Each island matches the single-line input height as the font changes.
      */
     .mx_MessageComposer.mx_MessageComposer_tg {
+        --tg-composer-font-size: var(--cpd-font-size-body-md);
+        --tg-composer-height: max(48px, calc(var(--tg-composer-font-size) * 1.25 + 18px));
+        --tg-composer-control-size: calc(var(--tg-composer-height) - 4px);
+        --tg-composer-gap: 8px;
+        --tg-composer-motion: 260ms cubic-bezier(0.22, 0.8, 0.25, 1);
+
         display: flex;
         align-items: flex-end;
-        gap: 0.5rem;
+        gap: var(--tg-composer-gap);
+        font-size: var(--tg-composer-font-size);
+        line-height: 1.25;
 
         > .mx_MessageComposer_wrapper {
             flex: 1 1 auto;
             min-width: 0;
+            min-height: var(--tg-composer-height);
+            margin: 0;
+            border-radius: calc(var(--tg-composer-height) / 2);
+            /* Keep Send anchored to the composer, not the expanding input surface. */
+            position: static;
+            transition: border-radius 160ms ease;
         }
     }
 
@@ -118,21 +126,23 @@ html[data-tg-screen] .mx_RoomView_body[data-telegram-layout="true"] {
         flex: 0 0 auto;
         align-items: center;
         justify-content: center;
-        width: var(--tg-chat-input-height);
-        height: var(--tg-chat-input-height);
+        width: var(--tg-composer-height);
+        height: var(--tg-composer-height);
         overflow: hidden;
         border-radius: 50%;
         background-color: var(--tg-glass-background);
         backdrop-filter: var(--tg-glass-backdrop);
         box-shadow: var(--tg-chat-input-box-shadow);
         transition:
-            width var(--tg-transition-standard-in),
-            margin var(--tg-transition-standard-in),
-            opacity var(--tg-transition-standard-in),
-            transform var(--tg-transition-standard-in);
+            width var(--tg-composer-motion),
+            margin var(--tg-composer-motion),
+            opacity var(--tg-composer-motion),
+            transform var(--tg-composer-motion),
+            border-radius var(--tg-composer-motion);
 
         .mx_TgAttachButton,
         .mx_TgSendButton {
+            min-width: 0;
             width: 100%;
             height: 100%;
             margin: 0;
@@ -147,61 +157,129 @@ html[data-tg-screen] .mx_RoomView_body[data-telegram-layout="true"] {
         }
     }
 
-    /* The in-input sticker button morphs into the emoji button (and back) with tweb's grow-icon. */
+    /* The two shapes share a centre throughout the transition, including when typing is reversed. */
     .mx_TgEmoticonsButton_icon {
-        display: flex;
-        animation: mx_TgSendButton_grow 0.4s ease-in-out;
+        display: grid;
+        place-items: center;
+
+        svg {
+            grid-area: 1 / 1;
+            transition:
+                opacity var(--tg-composer-motion),
+                transform var(--tg-composer-motion);
+        }
+
+        .mx_TgEmoticonsButton_emoji {
+            opacity: 0;
+            transform: scale(0.7) rotate(-35deg);
+        }
+
+        &[data-has-text="true"] {
+            .mx_TgEmoticonsButton_sticker {
+                opacity: 0;
+                transform: scale(0.7) rotate(35deg);
+            }
+
+            .mx_TgEmoticonsButton_emoji {
+                opacity: 1;
+                transform: none;
+            }
+        }
     }
 
     /* The microphone slides away (and gives its gap back) while the input has text. */
     .mx_TgComposerIsland_hidden {
         width: 0;
-        margin-inline-start: -0.5rem;
+        margin-inline-start: calc(-1 * var(--tg-composer-gap));
         opacity: 0;
         transform: scale(0.1);
         pointer-events: none;
     }
 
     .mx_MessageComposer_tg {
-        /* tweb .rows-wrapper: 3rem tall with .25rem padding (Element reserves 42px for the encryption badge). */
+        /* One sizing model for the plain and rich-text editors; no inherited 55px minimum. */
         .mx_MessageComposer_wrapper {
             box-sizing: border-box;
-            padding: 0.25rem;
+            padding: 2px;
         }
 
         .mx_MessageComposer_row {
             align-items: flex-end;
-            gap: 0.25rem;
+            gap: 0;
         }
 
-        /* tweb .input-message-container: at least 2.5rem, text padded .5rem vertically. */
-        .mx_SendMessageComposer {
+        /* Both editors inherit the same font metrics and grow naturally for multiline drafts. */
+        .mx_SendMessageComposer,
+        .mx_SendWysiwygComposer {
             order: 0;
             margin: 0;
+            min-width: 0;
+            font-size: inherit;
+            line-height: inherit;
         }
 
         .mx_BasicMessageComposer {
             justify-content: center;
-            min-height: 2.5rem;
+            min-height: var(--tg-composer-control-size);
         }
 
         /* No button left of the text inside the pill any more (the + is its own island): inset the text like iOS. */
         .mx_BasicMessageComposer_input {
+            box-sizing: border-box;
             min-height: 0;
             margin: 0;
-            padding: 0.5rem 0 0.5rem 0.5rem;
+            padding: 7px 0 7px 10px;
+            max-height: min(10lh, 35dvh);
+            line-height: inherit;
+            font-size: inherit;
         }
 
-        /* tweb .btn-icon: 2.5rem round buttons; icons a little bigger than tweb's 1.5rem (asked for). */
+        .mx_SendWysiwygComposer .mx_WysiwygComposer_Editor {
+            min-height: var(--tg-composer-control-size);
+            box-sizing: border-box;
+            padding: 7px 0 7px 10px;
+            border: 0;
+            border-radius: 0;
+
+            .mx_WysiwygComposer_Editor_container {
+                min-height: 0;
+                margin: auto 0;
+
+                .mx_WysiwygComposer_Editor_content {
+                    line-height: inherit;
+                    font-size: inherit;
+                    max-height: min(10lh, 35dvh);
+
+                    p {
+                        min-height: 1lh;
+                    }
+                }
+            }
+        }
+
+        .mx_SendWysiwygComposer .mx_FormattingButtons {
+            min-width: 0;
+            max-width: 100%;
+            overflow-x: auto;
+
+            .mx_FormattingButtons_Button {
+                flex: 0 0 auto;
+            }
+        }
+
+        /* Controls fit inside the pill's 2px inset and remain bottom-aligned for multiline drafts. */
         .mx_MessageComposer_button {
             box-sizing: border-box;
             display: flex;
             flex: 0 0 auto;
             align-items: center;
             justify-content: center;
-            width: 2.5rem;
-            height: 2.5rem;
-            padding: 0.375rem;
+            width: var(--tg-composer-control-size);
+            height: var(--tg-composer-control-size);
+            min-width: 0;
+            min-height: 0;
+            padding: 6px;
+            margin: 0;
             border-radius: 50%;
 
             svg {
@@ -216,10 +294,41 @@ html[data-tg-screen] .mx_RoomView_body[data-telegram-layout="true"] {
 
         .mx_TgEmoticonsButton {
             order: 1;
+            margin-inline-start: 4px;
         }
 
-        .mx_TgSendButton {
+        /* This reservation grows by EXACTLY the width the mic and its gap give back. The editor
+           and sticker/emoji button therefore keep their positions for every animation frame. */
+        .mx_TgSendSlot {
             order: 2;
+            flex: 0 0 auto;
+            width: 0;
+            pointer-events: none;
+            transition: width var(--tg-composer-motion);
+
+            .mx_TgSendButton {
+                position: absolute;
+                inset-inline-end: 2px;
+                bottom: 2px;
+                width: var(--tg-composer-control-size);
+                min-width: 0;
+                height: var(--tg-composer-control-size);
+                opacity: 0;
+                transform: scale(0.35);
+                transition:
+                    opacity var(--tg-composer-motion),
+                    transform var(--tg-composer-motion);
+            }
+        }
+
+        &.mx_MessageComposer_tgSend .mx_TgSendSlot {
+            width: calc(var(--tg-composer-height) + var(--tg-composer-gap));
+            pointer-events: auto;
+
+            .mx_TgSendButton {
+                opacity: 1;
+                transform: scale(1);
+            }
         }
     }
 
@@ -242,7 +351,6 @@ html[data-tg-screen] .mx_RoomView_body[data-telegram-layout="true"] {
 
         .mx_TgSendButton_icon {
             display: flex;
-            animation: mx_TgSendButton_grow 0.4s ease-in-out forwards;
         }
 
         svg {
@@ -257,11 +365,18 @@ html[data-tg-screen] .mx_RoomView_body[data-telegram-layout="true"] {
     }
 }
 
-/* .bubbles-go-down: a round 3rem button in the corner above the composer. */
-html[data-tg-screen] {
+/*
+ * How wide the chat is allowed to get. It belongs to the columns rather than to the plates: with the
+ * columns off the timeline fills the window, and plates capped at the column width would float in
+ * the middle of nothing. Every use falls back to 100% for exactly that case.
+ */
+html[data-chat-columns] {
     /* helpers/updateColumnWidths.ts CHAT_WIDTH_MAX */
     --tg-chat-width: 696px;
+}
 
+/* .bubbles-go-down: a round 3rem button in the corner above the composer. */
+html[data-floating-bars] {
     .mx_JumpToBottomButton {
         width: var(--tg-chat-input-height);
         height: var(--tg-chat-input-height);
@@ -342,6 +457,74 @@ html[data-tg-screen] {
 html[data-tg-screen="mobile"] {
     --tg-page-chats-padding: 8px;
     --tg-chat-width: 100%;
+
+    .mx_RoomView_body[data-bubble-timeline="true"] .mx_MessageComposer.mx_MessageComposer_tg {
+        --tg-page-chats-padding: 8px;
+        /* 40px at the normal text size, growing with the font rather than clipping it.
+           16px is Safari's minimum editable font size before it zooms the viewport. */
+        --tg-composer-font-size: max(16px, 1.0625rem);
+        --tg-composer-height: max(40px, calc(var(--tg-composer-font-size) * 1.25 + 18px));
+
+        .mx_TgAttachButton {
+            width: 100%;
+            height: 100%;
+        }
+
+        .mx_TgComposerIsland_attach {
+            transform-origin: left center;
+        }
+
+        .mx_TgComposerIsland_mic {
+            transform-origin: right center;
+        }
+
+        .mx_TgComposerIsland:not(.mx_TgComposerIsland_hidden):has([role="button"]:active) {
+            transform: scale(1.12, 1.06);
+            border-radius: 44%;
+        }
+
+        &:has(.mx_TgComposerIsland_attach [role="button"]:active) > .mx_MessageComposer_wrapper {
+            border-start-start-radius: calc(var(--tg-composer-height) * 0.4);
+            border-end-start-radius: calc(var(--tg-composer-height) * 0.4);
+        }
+
+        &:has(.mx_TgComposerIsland_mic [role="button"]:active) > .mx_MessageComposer_wrapper {
+            border-start-end-radius: calc(var(--tg-composer-height) * 0.4);
+            border-end-end-radius: calc(var(--tg-composer-height) * 0.4);
+        }
+
+        .mx_TgEmoticonsButton_icon,
+        .mx_TgSendButton_icon {
+            transition: transform 160ms ease;
+        }
+
+        .mx_TgEmoticonsButton:active .mx_TgEmoticonsButton_icon,
+        .mx_TgSendButton:active .mx_TgSendButton_icon {
+            transform: scale(1.12);
+        }
+
+        &:dir(rtl) {
+            .mx_TgComposerIsland_attach {
+                transform-origin: right center;
+            }
+
+            .mx_TgComposerIsland_mic {
+                transform-origin: left center;
+            }
+        }
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    html[data-floating-bars] .mx_RoomView_body .mx_MessageComposer.mx_MessageComposer_tg {
+        --tg-composer-motion: 0s linear;
+
+        .mx_MessageComposer_wrapper,
+        .mx_TgEmoticonsButton_icon,
+        .mx_TgSendButton_icon {
+            transition: none;
+        }
+    }
 }
 
 @keyframes mx_TgFade_in {
@@ -351,23 +534,6 @@ html[data-tg-screen="mobile"] {
 
     to {
         opacity: 1;
-    }
-}
-
-/* tweb base.scss @keyframes grow-icon. */
-@keyframes mx_TgSendButton_grow {
-    0% {
-        transform: scale(0.5);
-        opacity: 0.8;
-    }
-
-    50% {
-        transform: scale(1.1);
-        opacity: 1;
-    }
-
-    100% {
-        transform: scale(1);
     }
 }
 

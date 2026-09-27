@@ -153,7 +153,7 @@ describe("ImageBodyViewModel", () => {
             if (setting === "Images.size") {
                 return ImageSize.Normal;
             }
-            if (setting === "telegramStyleLayout") {
+            if (setting === "compactMedia") {
                 return telegramLayout;
             }
             if (setting === "autoplayGifs") {
@@ -164,7 +164,7 @@ describe("ImageBodyViewModel", () => {
         vi.spyOn(SettingsStore, "watchSetting").mockImplementation((name, _roomId, callback) => {
             if (name === "Images.size") {
                 imageSizeWatcher = callback as (...args: [unknown, unknown, unknown, unknown, ImageSize]) => void;
-            } else if (name === "telegramStyleLayout") {
+            } else if (name === "compactMedia") {
                 telegramLayoutWatcher = callback as () => void;
             }
             return "image-body-test-watch";

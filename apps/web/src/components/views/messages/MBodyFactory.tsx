@@ -21,7 +21,7 @@ import {
 import { type IBodyProps } from "./IBodyProps";
 import RoomContext, { TimelineRenderingType } from "../../../contexts/RoomContext";
 import { TgLiveText, TgLiveTextVideo } from "../telegram/TgLiveText";
-import { isTelegramLayout } from "../../../utils/telegram/telegramLayout";
+import { compactMediaEnabled } from "../../../utils/telegram/telegramLayout";
 import { LocalDeviceVerificationStateContext } from "../../../contexts/LocalDeviceVerificationStateContext";
 import { useMediaVisible } from "../../../hooks/useMediaVisible";
 import { useSettingValue } from "../../../hooks/useSettings";
@@ -173,7 +173,7 @@ export function VideoBodyFactory({
      * reading a picture gets, at the moment there is something still enough to read.
      */
     const liveText =
-        isTelegramLayout() && mediaVisible && !forExport && timelineRenderingType === TimelineRenderingType.Room ? (
+        compactMediaEnabled() && mediaVisible && !forExport && timelineRenderingType === TimelineRenderingType.Room ? (
             <TgLiveTextVideo eventId={mxEvent.getId()!} video={videoRef} />
         ) : null;
 
@@ -306,7 +306,7 @@ export function ImageBodyFactory({
      */
     const info = mxEvent.getContent().info;
     const liveText =
-        isTelegramLayout() && mediaVisible && !forExport && timelineRenderingType === TimelineRenderingType.Room ? (
+        compactMediaEnabled() && mediaVisible && !forExport && timelineRenderingType === TimelineRenderingType.Room ? (
             <TgLiveText
                 eventId={mxEvent.getId()!}
                 roomId={mxEvent.getRoomId()!}

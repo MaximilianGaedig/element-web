@@ -46,7 +46,7 @@ import { SDKContextClass } from "../../../contexts/SDKContextClass.ts";
 // These tests cover Element's own composer; the Telegram-style one is tested separately.
 vi.mock("../../../utils/telegram/telegramLayout", async (importOriginal) => ({
     ...(await importOriginal<typeof import("../../../utils/telegram/telegramLayout")>()),
-    isTelegramLayout: () => false,
+    floatingBarsEnabled: () => false,
 }));
 
 const openStickerPicker = async (): Promise<void> => {

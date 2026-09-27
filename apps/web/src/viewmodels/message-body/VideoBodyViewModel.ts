@@ -22,7 +22,7 @@ import SettingsStore from "../../settings/SettingsStore";
 import { mediaFromContent } from "../../customisations/Media";
 import { BLURHASH_FIELD } from "../../utils/image-media";
 import { type ImageSize, suggestedSize as suggestedVideoSize } from "../../settings/enums/ImageSize";
-import { effectiveImageSize, isTelegramLayout } from "../../utils/telegram/telegramLayout";
+import { effectiveImageSize, compactMediaEnabled } from "../../utils/telegram/telegramLayout";
 import { type MediaEventHelper } from "../../utils/MediaEventHelper";
 
 export interface VideoBodyViewModelProps {
@@ -110,10 +110,10 @@ export class VideoBodyViewModel
         this.state = initialState;
 
         const imageSizeWatcherRef = SettingsStore.watchSetting("Images.size", null, (_s, _r, _l, _nvl, value) => {
-            this.setImageSize(isTelegramLayout() ? effectiveImageSize() : value!);
+            this.setImageSize(compactMediaEnabled() ? effectiveImageSize() : value!);
         });
         this.disposables.track(() => SettingsStore.unwatchSetting(imageSizeWatcherRef));
-        const telegramLayoutWatcherRef = SettingsStore.watchSetting("telegramStyleLayout", null, () => {
+        const telegramLayoutWatcherRef = SettingsStore.watchSetting("compactMedia", null, () => {
             this.setImageSize(effectiveImageSize());
         });
         this.disposables.track(() => SettingsStore.unwatchSetting(telegramLayoutWatcherRef));

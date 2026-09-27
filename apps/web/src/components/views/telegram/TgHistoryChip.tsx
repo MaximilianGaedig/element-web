@@ -16,7 +16,12 @@ import { Action } from "../../../dispatcher/actions";
 import { UserTab } from "../dialogs/UserTab";
 import { onBridgeStatusChange } from "../../../utils/chatHistory";
 import { bridgeLoginsIn, type BridgeLogin, bridgesWithoutLoginState } from "../../../utils/bridgeLogins";
-import { collectImports, importHeadline, type ImportOverview } from "../../../utils/importOverview";
+import {
+    collectImports,
+    importHeadline,
+    type ImportHeadline,
+    type ImportOverview,
+} from "../../../utils/importOverview";
 
 /** What the bridges are up to, polled in one place so both chips read the same numbers. */
 function useHistoryStatus(): ImportHeadline | undefined {
@@ -114,8 +119,8 @@ export function HistoryStatusMini(): JSX.Element | null {
         <button
             type="button"
             className="mx_TgHistoryChip_mini"
-            title={_t("tg_layout|chip_all_imported", { count: headline.total.toLocaleString() })}
-            aria-label={_t("tg_layout|chip_all_imported", { count: headline.total.toLocaleString() })}
+            title={_t("tg_layout|chip_all_imported", { count: headline.total })}
+            aria-label={_t("tg_layout|chip_all_imported", { count: headline.total })}
             onClick={(): void => dis.dispatch({ action: Action.ViewUserSettings, initialTabId: UserTab.Bridges })}
         >
             <CheckIcon aria-hidden />

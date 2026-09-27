@@ -1143,8 +1143,8 @@ exports[`RoomView > should hide the composer when hideComposer=true 1`] = `
     >
       <div
         class="mx_RoomView_body mx_MainSplit_timeline"
+        data-bubble-timeline="true"
         data-layout="group"
-        data-telegram-layout="true"
         style="--tg-header-bottom: 0px; --tg-plates-bottom: 0px; --tg-header-block: 0px; --tg-composer-height: 0px; --tg-composer-block: 0px;"
       >
         <header
@@ -1325,17 +1325,41 @@ exports[`RoomView > should hide the composer when hideComposer=true 1`] = `
           data-testid="timeline"
         >
           <div
-            class="_scrollbar_1d5jg_8 mx_AutoHideScrollbar mx_ScrollPanel mx_RoomView_messagePanel"
-            tabindex="-1"
+            class="mx_NewTimelinePanel mx_RoomView_messagePanel mx_RoomView_messageListWrapper"
           >
             <div
-              class="mx_RoomView_messageListWrapper"
+              class="_root_ou8ka_8"
             >
-              <ol
-                aria-live="polite"
-                class="mx_RoomView_MessageList"
-                style="height: 400px;"
-              />
+              <div
+                class="_scroller_ou8ka_14 _hidden_ou8ka_26"
+                data-testid="timeline-scroller"
+                tabindex="0"
+              >
+                <ol
+                  class="mx_TimelineView_list _list_ou8ka_30"
+                  role="list"
+                  style="height: 0px;"
+                />
+              </div>
+              <div
+                class="_cover_ou8ka_52"
+              >
+                <svg
+                  class="_icon_1855a_18"
+                  fill="currentColor"
+                  height="1em"
+                  style="width: 32px; height: 32px;"
+                  viewBox="0 0 24 24"
+                  width="1em"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    clip-rule="evenodd"
+                    d="M12 4.031a8 8 0 1 0 8 8 1 1 0 0 1 2 0c0 5.523-4.477 10-10 10s-10-4.477-10-10 4.477-10 10-10a1 1 0 1 1 0 2"
+                    fill-rule="evenodd"
+                  />
+                </svg>
+              </div>
             </div>
           </div>
         </main>
@@ -1389,8 +1413,8 @@ exports[`RoomView > should hide the header when hideHeader=true 1`] = `
     >
       <div
         class="mx_RoomView_body mx_MainSplit_timeline"
+        data-bubble-timeline="true"
         data-layout="group"
-        data-telegram-layout="true"
         style="--tg-header-bottom: 0px; --tg-plates-bottom: 0px; --tg-header-block: 0px; --tg-composer-height: 0px; --tg-composer-block: 0px;"
       >
         <div
@@ -1405,17 +1429,41 @@ exports[`RoomView > should hide the header when hideHeader=true 1`] = `
           data-testid="timeline"
         >
           <div
-            class="_scrollbar_1d5jg_8 mx_AutoHideScrollbar mx_ScrollPanel mx_RoomView_messagePanel"
-            tabindex="-1"
+            class="mx_NewTimelinePanel mx_RoomView_messagePanel mx_RoomView_messageListWrapper"
           >
             <div
-              class="mx_RoomView_messageListWrapper"
+              class="_root_ou8ka_8"
             >
-              <ol
-                aria-live="polite"
-                class="mx_RoomView_MessageList"
-                style="height: 400px;"
-              />
+              <div
+                class="_scroller_ou8ka_14 _hidden_ou8ka_26"
+                data-testid="timeline-scroller"
+                tabindex="0"
+              >
+                <ol
+                  class="mx_TimelineView_list _list_ou8ka_30"
+                  role="list"
+                  style="height: 0px;"
+                />
+              </div>
+              <div
+                class="_cover_ou8ka_52"
+              >
+                <svg
+                  class="_icon_1855a_18"
+                  fill="currentColor"
+                  height="1em"
+                  style="width: 32px; height: 32px;"
+                  viewBox="0 0 24 24"
+                  width="1em"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    clip-rule="evenodd"
+                    d="M12 4.031a8 8 0 1 0 8 8 1 1 0 0 1 2 0c0 5.523-4.477 10-10 10s-10-4.477-10-10 4.477-10 10-10a1 1 0 1 1 0 2"
+                    fill-rule="evenodd"
+                  />
+                </svg>
+              </div>
             </div>
           </div>
         </main>
@@ -1434,45 +1482,7 @@ exports[`RoomView > should hide the header when hideHeader=true 1`] = `
         </div>
         <div
           class="mx_TgComposerAbove"
-        >
-          <div
-            class="mx_AiBar"
-          >
-            <svg
-              aria-hidden="true"
-              class="mx_Ai_mark"
-              fill="currentColor"
-              height="1em"
-              viewBox="0 0 24 24"
-              width="1em"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                d="M9.5 2 11 6.5 15.5 8 11 9.5 9.5 14 8 9.5 3.5 8 8 6.5zm9.5 9 1 3 3 1-3 1-1 3-1-3-3-1 3-1zm-7 6 .75 2.25L15 20l-2.25.75L12 23l-.75-2.25L9 20l2.25-.75z"
-              />
-            </svg>
-            <button
-              aria-disabled="false"
-              class="_button_1nw83_8 mx_AiBar_button"
-              data-kind="secondary"
-              data-size="md"
-              role="button"
-              tabindex="0"
-            >
-              What did I miss
-            </button>
-            <button
-              aria-disabled="false"
-              class="_button_1nw83_8 mx_AiBar_button"
-              data-kind="secondary"
-              data-size="md"
-              role="button"
-              tabindex="0"
-            >
-              Answer open questions
-            </button>
-          </div>
-        </div>
+        />
         <div
           aria-label="Message composer"
           class="mx_MessageComposer mx_MessageComposer_tg"
@@ -1752,8 +1762,8 @@ exports[`RoomView > should hide the pinned message banner when hidePinnedMessage
     >
       <div
         class="mx_RoomView_body mx_MainSplit_timeline"
+        data-bubble-timeline="true"
         data-layout="group"
-        data-telegram-layout="true"
         style="--tg-header-bottom: 0px; --tg-plates-bottom: 0px; --tg-header-block: 0px; --tg-composer-height: 0px; --tg-composer-block: 0px;"
       >
         <header
@@ -1934,17 +1944,41 @@ exports[`RoomView > should hide the pinned message banner when hidePinnedMessage
           data-testid="timeline"
         >
           <div
-            class="_scrollbar_1d5jg_8 mx_AutoHideScrollbar mx_ScrollPanel mx_RoomView_messagePanel"
-            tabindex="-1"
+            class="mx_NewTimelinePanel mx_RoomView_messagePanel mx_RoomView_messageListWrapper"
           >
             <div
-              class="mx_RoomView_messageListWrapper"
+              class="_root_ou8ka_8"
             >
-              <ol
-                aria-live="polite"
-                class="mx_RoomView_MessageList"
-                style="height: 400px;"
-              />
+              <div
+                class="_scroller_ou8ka_14 _hidden_ou8ka_26"
+                data-testid="timeline-scroller"
+                tabindex="0"
+              >
+                <ol
+                  class="mx_TimelineView_list _list_ou8ka_30"
+                  role="list"
+                  style="height: 0px;"
+                />
+              </div>
+              <div
+                class="_cover_ou8ka_52"
+              >
+                <svg
+                  class="_icon_1855a_18"
+                  fill="currentColor"
+                  height="1em"
+                  style="width: 32px; height: 32px;"
+                  viewBox="0 0 24 24"
+                  width="1em"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    clip-rule="evenodd"
+                    d="M12 4.031a8 8 0 1 0 8 8 1 1 0 0 1 2 0c0 5.523-4.477 10-10 10s-10-4.477-10-10 4.477-10 10-10a1 1 0 1 1 0 2"
+                    fill-rule="evenodd"
+                  />
+                </svg>
+              </div>
             </div>
           </div>
         </main>
@@ -1963,45 +1997,7 @@ exports[`RoomView > should hide the pinned message banner when hidePinnedMessage
         </div>
         <div
           class="mx_TgComposerAbove"
-        >
-          <div
-            class="mx_AiBar"
-          >
-            <svg
-              aria-hidden="true"
-              class="mx_Ai_mark"
-              fill="currentColor"
-              height="1em"
-              viewBox="0 0 24 24"
-              width="1em"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                d="M9.5 2 11 6.5 15.5 8 11 9.5 9.5 14 8 9.5 3.5 8 8 6.5zm9.5 9 1 3 3 1-3 1-1 3-1-3-3-1 3-1zm-7 6 .75 2.25L15 20l-2.25.75L12 23l-.75-2.25L9 20l2.25-.75z"
-              />
-            </svg>
-            <button
-              aria-disabled="false"
-              class="_button_1nw83_8 mx_AiBar_button"
-              data-kind="secondary"
-              data-size="md"
-              role="button"
-              tabindex="0"
-            >
-              What did I miss
-            </button>
-            <button
-              aria-disabled="false"
-              class="_button_1nw83_8 mx_AiBar_button"
-              data-kind="secondary"
-              data-size="md"
-              role="button"
-              tabindex="0"
-            >
-              Answer open questions
-            </button>
-          </div>
-        </div>
+        />
         <div
           aria-label="Message composer"
           class="mx_MessageComposer mx_MessageComposer_tg"
@@ -2281,8 +2277,8 @@ exports[`RoomView > should not display the timeline when the room encryption is 
     >
       <div
         class="mx_RoomView_body mx_MainSplit_timeline"
+        data-bubble-timeline="true"
         data-layout="group"
-        data-telegram-layout="true"
         style="--tg-header-bottom: 0px; --tg-plates-bottom: 0px; --tg-header-block: 0px; --tg-composer-height: 0px; --tg-composer-block: 0px;"
       >
         <header
@@ -2512,8 +2508,8 @@ exports[`RoomView > should not display the timeline when the room encryption is 
     >
       <div
         class="mx_RoomView_body mx_MainSplit_timeline"
+        data-bubble-timeline="true"
         data-layout="group"
-        data-telegram-layout="true"
         style="--tg-header-bottom: 0px; --tg-plates-bottom: 0px; --tg-header-block: 0px; --tg-composer-height: 0px; --tg-composer-block: 0px;"
       >
         <header
@@ -2712,17 +2708,41 @@ exports[`RoomView > should not display the timeline when the room encryption is 
           data-testid="timeline"
         >
           <div
-            class="_scrollbar_1d5jg_8 mx_AutoHideScrollbar mx_ScrollPanel mx_RoomView_messagePanel"
-            tabindex="-1"
+            class="mx_NewTimelinePanel mx_RoomView_messagePanel mx_RoomView_messageListWrapper"
           >
             <div
-              class="mx_RoomView_messageListWrapper"
+              class="_root_ou8ka_8"
             >
-              <ol
-                aria-live="polite"
-                class="mx_RoomView_MessageList"
-                style="height: 400px;"
-              />
+              <div
+                class="_scroller_ou8ka_14 _hidden_ou8ka_26"
+                data-testid="timeline-scroller"
+                tabindex="0"
+              >
+                <ol
+                  class="mx_TimelineView_list _list_ou8ka_30"
+                  role="list"
+                  style="height: 0px;"
+                />
+              </div>
+              <div
+                class="_cover_ou8ka_52"
+              >
+                <svg
+                  class="_icon_1855a_18"
+                  fill="currentColor"
+                  height="1em"
+                  style="width: 32px; height: 32px;"
+                  viewBox="0 0 24 24"
+                  width="1em"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    clip-rule="evenodd"
+                    d="M12 4.031a8 8 0 1 0 8 8 1 1 0 0 1 2 0c0 5.523-4.477 10-10 10s-10-4.477-10-10 4.477-10 10-10a1 1 0 1 1 0 2"
+                    fill-rule="evenodd"
+                  />
+                </svg>
+              </div>
             </div>
           </div>
         </main>
@@ -2741,45 +2761,7 @@ exports[`RoomView > should not display the timeline when the room encryption is 
         </div>
         <div
           class="mx_TgComposerAbove"
-        >
-          <div
-            class="mx_AiBar"
-          >
-            <svg
-              aria-hidden="true"
-              class="mx_Ai_mark"
-              fill="currentColor"
-              height="1em"
-              viewBox="0 0 24 24"
-              width="1em"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                d="M9.5 2 11 6.5 15.5 8 11 9.5 9.5 14 8 9.5 3.5 8 8 6.5zm9.5 9 1 3 3 1-3 1-1 3-1-3-3-1 3-1zm-7 6 .75 2.25L15 20l-2.25.75L12 23l-.75-2.25L9 20l2.25-.75z"
-              />
-            </svg>
-            <button
-              aria-disabled="false"
-              class="_button_1nw83_8 mx_AiBar_button"
-              data-kind="secondary"
-              data-size="md"
-              role="button"
-              tabindex="0"
-            >
-              What did I miss
-            </button>
-            <button
-              aria-disabled="false"
-              class="_button_1nw83_8 mx_AiBar_button"
-              data-kind="secondary"
-              data-size="md"
-              role="button"
-              tabindex="0"
-            >
-              Answer open questions
-            </button>
-          </div>
-        </div>
+        />
         <div
           aria-label="Message composer"
           class="mx_MessageComposer mx_MessageComposer_tg"
@@ -3089,8 +3071,8 @@ exports[`RoomView > video rooms > should render joined video room view 1`] = `
     >
       <div
         class="mx_RoomView_body mx_MainSplit_call"
+        data-bubble-timeline="true"
         data-layout="group"
-        data-telegram-layout="true"
         style="--tg-header-bottom: 0px; --tg-plates-bottom: 0px; --tg-header-block: 0px; --tg-composer-height: 0px; --tg-composer-block: 0px;"
       >
         <header

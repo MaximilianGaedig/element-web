@@ -9,7 +9,7 @@ Please see LICENSE files in the repository root for full details.
 import React, { type JSX, createRef, type ReactNode, useEffect } from "react";
 import classNames from "classnames";
 
-import { isTelegramLayout } from "../../../utils/telegram/telegramLayout";
+import { floatingBarsEnabled } from "../../../utils/telegram/telegramLayout";
 import {
     type IEventRelation,
     type MatrixEvent,
@@ -418,7 +418,7 @@ export class MessageComposer extends React.Component<IProps, IState> {
             return this.state.bridgePlaceholder;
         }
         // tweb's input placeholder is just "Message" (or "Reply" while replying), encrypted or not.
-        if (isTelegramLayout()) {
+        if (floatingBarsEnabled()) {
             return this.props.replyToEvent
                 ? _t("bridge|telegram_composer_reply")
                 : _t("bridge|telegram_composer_message");
@@ -604,7 +604,7 @@ export class MessageComposer extends React.Component<IProps, IState> {
 
     public render(): React.ReactNode {
         // Telegram-style composer: no encryption badge, send/record capsule inside the pill.
-        const telegram = isTelegramLayout();
+        const telegram = floatingBarsEnabled();
         let leftIcon: false | JSX.Element = false;
         if (!this.state.isWysiwygLabEnabled && !telegram) {
             if (!this.props.e2eStatus) {

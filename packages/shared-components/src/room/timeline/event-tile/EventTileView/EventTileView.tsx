@@ -130,6 +130,14 @@ export function EventTileView({
             aria-atomic={true}
             data-scroll-tokens={root.scrollToken}
             data-event-id={root.eventId}
+            /*
+             * Whether this message closes its sender's run, as a stable hook for styling that has
+             * to know. It cannot be read off the DOM: the virtualised timeline gives every message
+             * its own list row, so no two messages are siblings and "nothing of the same kind after
+             * me" is always true there.
+             */
+            data-last-in-section={root.state?.lastInSection ? "true" : undefined}
+            data-continuation={root.state?.continuation ? "true" : undefined}
             data-testid="event-tile"
             tabIndex={rootTabIndex}
             onMouseEnter={onMouseEnter}

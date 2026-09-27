@@ -54,7 +54,7 @@ import {
 } from "@element-hq/web-shared-components";
 
 import shouldHideEvent from "../../shouldHideEvent";
-import { isTelegramLayout } from "../../utils/telegram/telegramLayout";
+import { bubbleTimelineEnabled } from "../../utils/telegram/telegramLayout";
 import { reactionsBlockedReason } from "../../utils/bridge/roomFeatures";
 import { _t } from "../../languageHandler";
 import * as TimezoneHandler from "../../TimezoneHandler";
@@ -266,7 +266,10 @@ export interface IRoomState {
     tombstone?: MatrixEvent;
     resizing: boolean;
     layout: Layout;
-    telegramLayout?: boolean;
+    /** Messages drawn as bubbles, with the time and ticks inside them. */
+    bubbleTimeline?: boolean;
+    /** The header and composer floating over the timeline, which needs the room to measure them. */
+    floatingBars?: boolean;
     lowBandwidth: boolean;
     alwaysShowTimestamps: boolean;
     showTwelveHourTimestamps: boolean;
@@ -409,7 +412,7 @@ function RoomStatusBarWrappedView(props: ConstructorParameters<typeof RoomStatus
         const { state } = vm.getSnapshot();
         if (state === null) return false;
         const tgHandled = state === RoomStatusBarState.UnsentMessages || state === RoomStatusBarState.ConnectionLost;
-        return !(tgHandled && isTelegramLayout());
+        return !(tgHandled && bubbleTimelineEnabled());
     };
     const shown = useSyncExternalStore(
         (cb) => vm.subscribe(cb),
@@ -503,7 +506,8 @@ export class RoomView extends React.Component<IRoomProps, IRoomState> {
             canSendMessages: false,
             resizing: false,
             layout: SettingsStore.getValue("layout"),
-            telegramLayout: SettingsStore.getValue("telegramStyleLayout"),
+            bubbleTimeline: SettingsStore.getValue("bubbleTimeline"),
+            floatingBars: SettingsStore.getValue("floatingBars"),
             lowBandwidth: SettingsStore.getValue("lowBandwidth"),
             alwaysShowTimestamps: SettingsStore.getValue("alwaysShowTimestamps"),
             showTwelveHourTimestamps: SettingsStore.getValue("showTwelveHourTimestamps"),
@@ -1009,8 +1013,11 @@ export class RoomView extends React.Component<IRoomProps, IRoomState> {
 
         this.settingWatchers = [
             SettingsStore.watchSetting("layout", null, (...[, , , value]) => this.setState({ layout: value! })),
-            SettingsStore.watchSetting("telegramStyleLayout", null, (...[, , , value]) =>
-                this.setState({ telegramLayout: value! }),
+            SettingsStore.watchSetting("bubbleTimeline", null, (...[, , , value]) =>
+                this.setState({ bubbleTimeline: value! }),
+            ),
+            SettingsStore.watchSetting("floatingBars", null, (...[, , , value]) =>
+                this.setState({ floatingBars: value! }),
             ),
             SettingsStore.watchSetting("lowBandwidth", null, (...[, , , value]) =>
                 this.setState({ lowBandwidth: value! }),
@@ -2805,13 +2812,13 @@ export class RoomView extends React.Component<IRoomProps, IRoomState> {
                                 className={mainSplitContentClasses}
                                 ref={this.roomViewBody}
                                 data-layout={this.state.layout}
-                                data-telegram-layout={this.state.telegramLayout || undefined}
+                                data-bubble-timeline={this.state.bubbleTimeline || undefined}
                             >
                                 {!this.props.hideHeader && (
                                     <RoomHeader room={this.state.room} extraButtons={<>{extraButtons}</>} />
                                 )}
                                 {mainSplitBody}
-                                {this.state.telegramLayout && <TgChatChrome body={this.roomViewBody} />}
+                                {this.state.floatingBars && <TgChatChrome body={this.roomViewBody} />}
                                 {this.state.room && (
                                     <BulkActionsBar room={this.state.room} permalinkCreator={this.permalinkCreator} />
                                 )}

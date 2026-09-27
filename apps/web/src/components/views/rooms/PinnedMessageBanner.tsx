@@ -68,7 +68,7 @@ export function PinnedMessageBanner({ room, permalinkCreator }: PinnedMessageBan
     useNotifyTimeline(pinnedEvent);
 
     const id = useId();
-    const telegramLayout = useSettingValue("telegramStyleLayout");
+    const telegramLayout = useSettingValue("floatingBars");
     // Telegram shows a cover beside the pinned message when it is a photo, a video or a sticker.
     const pinnedThumbnail = useMediaThumbnail(telegramLayout ? pinnedEvent : undefined);
 

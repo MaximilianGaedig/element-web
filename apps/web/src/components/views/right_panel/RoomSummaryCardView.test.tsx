@@ -98,7 +98,7 @@ describe("<RoomSummaryCard />", () => {
         telegram = false;
         const getValue = SettingsStore.getValue.bind(SettingsStore);
         vi.spyOn(SettingsStore, "getValue").mockImplementation(((name: string, ...rest: any[]) =>
-            name === "telegramStyleLayout" ? telegram : (getValue as any)(name, ...rest)) as any);
+            name === "chatProfilePanel" ? telegram : (getValue as any)(name, ...rest)) as any);
         DMRoomMap.makeShared(mockClient);
 
         mockClient.getRoom.mockReturnValue(room);

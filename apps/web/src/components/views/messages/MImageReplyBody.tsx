@@ -335,7 +335,7 @@ export class ImageBodyBaseInner extends React.Component<ImageBodyBaseProps, ISta
         this.sizeWatcher = SettingsStore.watchSetting("Images.size", null, () => {
             this.forceUpdate();
         });
-        this.telegramLayoutWatcher = SettingsStore.watchSetting("telegramStyleLayout", null, () => {
+        this.telegramLayoutWatcher = SettingsStore.watchSetting("compactMedia", null, () => {
             this.forceUpdate();
         });
     }

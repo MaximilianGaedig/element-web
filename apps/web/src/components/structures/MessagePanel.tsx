@@ -52,7 +52,7 @@ import { type IReadReceiptPosition } from "../views/rooms/ReadReceiptMarker";
 import { haveRendererForEvent } from "../../events/EventTileFactory";
 import { editorRoomKey } from "../../Editing";
 import { hasThreadSummary } from "../../utils/EventUtils";
-import { isOneToOneRoom, isTelegramLayout } from "../../utils/telegram/telegramLayout";
+import { isOneToOneRoom, bubbleTimelineEnabled } from "../../utils/telegram/telegramLayout";
 import { getBridgeBots } from "../../utils/bridge/bridgeInfo";
 import { getEventIdsReadByOthers, type ReadReceiptsStyle } from "../../utils/telegram/telegramTime";
 import { type BaseGrouper } from "./grouper/BaseGrouper";
@@ -304,7 +304,7 @@ export default class MessagePanel extends React.Component<IProps, IState> {
             showTypingNotifications: SettingsStore.getValue("showTypingNotifications"),
             hideSender: this.shouldHideSender(),
             hideAvatar: this.isTelegramOneToOne(),
-            telegramLayout: isTelegramLayout(),
+            telegramLayout: bubbleTimelineEnabled(),
             readReceiptsStyle: SettingsStore.getValue("readReceiptsStyle"),
             isSelecting: props.room ? MessageSelectionStore.instance.isSelecting(props.room.roomId) : false,
         };
@@ -324,7 +324,7 @@ export default class MessagePanel extends React.Component<IProps, IState> {
             this.onShowTypingNotificationsChange,
         );
         this.telegramLayoutWatcherRef = SettingsStore.watchSetting(
-            "telegramStyleLayout",
+            "bubbleTimeline",
             null,
             this.calculateRoomMembersCount,
         );
@@ -413,7 +413,7 @@ export default class MessagePanel extends React.Component<IProps, IState> {
         return (
             !!this.props.room &&
             this.props.layout === Layout.Bubble &&
-            isTelegramLayout() &&
+            bubbleTimelineEnabled() &&
             isOneToOneRoom(this.props.room)
         );
     }
@@ -422,7 +422,7 @@ export default class MessagePanel extends React.Component<IProps, IState> {
         this.setState({
             hideSender: this.shouldHideSender(),
             hideAvatar: this.isTelegramOneToOne(),
-            telegramLayout: isTelegramLayout(),
+            telegramLayout: bubbleTimelineEnabled(),
         });
     };
 

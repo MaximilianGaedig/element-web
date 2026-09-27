@@ -13,17 +13,41 @@ import UIStore from "../../stores/UIStore";
 import { getBridgeBots, getBridgeInfo } from "../bridge/bridgeInfo";
 import { BACKFILL_EVENT_TYPE } from "../chatHistory";
 
-/** Whether the Telegram-style layout (narrow timeline, Telegram media sizes, compact bubbles) is on. */
-export function isTelegramLayout(): boolean {
-    return !!SettingsStore.getValue("telegramStyleLayout");
+/*
+ * The messenger-style refinements, each asked about on its own.
+ *
+ * These were one switch, which made them one look to take or leave and left two layouts to keep
+ * working. They are now separate changes to the app's own layout, so each has to stand up whether
+ * or not the others are on — hence a function per concern rather than one "is it on" that
+ * everything hangs off.
+ */
+
+/** Whether messages are drawn as bubbles, with the time and ticks inside them. */
+export function bubbleTimelineEnabled(): boolean {
+    return !!SettingsStore.getValue("bubbleTimeline");
+}
+
+/** Whether the timeline is held to a readable width, with a chat list that collapses beside it. */
+export function chatColumnsEnabled(): boolean {
+    return !!SettingsStore.getValue("chatColumns");
+}
+
+/** Whether the header, composer and scroll-down button float over the timeline. */
+export function floatingBarsEnabled(): boolean {
+    return !!SettingsStore.getValue("floatingBars");
+}
+
+/** Whether media is sized as the messengers size it, rather than by Element's image setting. */
+export function compactMediaEnabled(): boolean {
+    return !!SettingsStore.getValue("compactMedia");
 }
 
 /** Telegram Web's handheld breakpoint (helpers/mediaSizes.ts MOBILE_SIZE). */
 const TELEGRAM_HANDHELD_MAX_WIDTH = 600;
 
-/** The image size to lay media out with: Telegram's while the Telegram-style layout is on. */
+/** The image size to lay media out with: the messengers' while messenger-sized media is on. */
 export function effectiveImageSize(sticker = false): ImageSize {
-    if (!isTelegramLayout()) return SettingsStore.getValue("Images.size");
+    if (!compactMediaEnabled()) return SettingsStore.getValue("Images.size");
     const handheld = UIStore.instance.windowWidth <= TELEGRAM_HANDHELD_MAX_WIDTH;
     if (sticker) return handheld ? ImageSize.TelegramStickerHandheld : ImageSize.TelegramSticker;
     return handheld ? ImageSize.TelegramHandheld : ImageSize.Telegram;

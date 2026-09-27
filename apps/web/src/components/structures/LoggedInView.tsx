@@ -66,6 +66,7 @@ import { ModuleApi } from "../../modules/Api.ts";
 import { SDKContext } from "../../contexts/SDKContext.ts";
 import { ResizerViewModel } from "../../viewmodels/structures/ResizerViewModel.ts";
 import { TgColumns } from "../views/telegram/TgColumns";
+import { AppearanceAttributes } from "../../utils/telegram/tgLayout/appearance";
 import { TgTweaksPanel } from "../views/telegram/TgTweaksPanel";
 import { TgMetricsPanel } from "../views/telegram/TgMetricsPanel";
 
@@ -104,8 +105,8 @@ interface IState {
     usageLimitEventContent?: IUsageLimit;
     usageLimitEventTs?: number;
     useCompactLayout: boolean;
-    /** Fork: the Telegram-style layout (setting "telegramStyleLayout"). */
-    telegramLayout: boolean;
+    /** Fork: the timeline is held to a readable width, with the chat list beside it ("chatColumns"). */
+    chatColumns: boolean;
     activeCalls: Array<MatrixCall>;
     backgroundImage?: string;
 }
@@ -127,7 +128,7 @@ class LoggedInView extends React.Component<IProps, IState> {
     protected layoutWatcherRef?: string;
     protected compactLayoutWatcherRef?: string;
     protected backgroundImageWatcherRef?: string;
-    protected telegramLayoutWatcherRef?: string;
+    protected chatColumnsWatcherRef?: string;
     protected timezoneProfileUpdateRef?: string[];
 
     private resizerViewModel?: ResizerViewModel;
@@ -142,7 +143,7 @@ class LoggedInView extends React.Component<IProps, IState> {
             syncErrorData: undefined,
             // use compact timeline view
             useCompactLayout: SettingsStore.getValue("useCompactLayout"),
-            telegramLayout: !!SettingsStore.getValue("telegramStyleLayout"),
+            chatColumns: !!SettingsStore.getValue("chatColumns"),
             usageLimitDismissed: false,
             activeCalls: context.legacyCallHandler.getAllActiveCalls(),
         };
@@ -175,8 +176,8 @@ class LoggedInView extends React.Component<IProps, IState> {
             null,
             this.onCompactLayoutChanged,
         );
-        this.telegramLayoutWatcherRef = SettingsStore.watchSetting("telegramStyleLayout", null, () =>
-            this.setState({ telegramLayout: !!SettingsStore.getValue("telegramStyleLayout") }),
+        this.chatColumnsWatcherRef = SettingsStore.watchSetting("chatColumns", null, () =>
+            this.setState({ chatColumns: !!SettingsStore.getValue("chatColumns") }),
         );
         this.backgroundImageWatcherRef = SettingsStore.watchSetting(
             "RoomList.backgroundImage",
@@ -246,7 +247,7 @@ class LoggedInView extends React.Component<IProps, IState> {
         SettingsStore.unwatchSetting(this.layoutWatcherRef);
         SettingsStore.unwatchSetting(this.compactLayoutWatcherRef);
         SettingsStore.unwatchSetting(this.backgroundImageWatcherRef);
-        SettingsStore.unwatchSetting(this.telegramLayoutWatcherRef);
+        SettingsStore.unwatchSetting(this.chatColumnsWatcherRef);
         this.timezoneProfileUpdateRef?.forEach((s) => SettingsStore.unwatchSetting(s));
         this.disposeResizerViewModel();
     }
@@ -708,8 +709,8 @@ class LoggedInView extends React.Component<IProps, IState> {
         const roomView = <div className="mx_RoomView_wrapper">{pageElement}</div>;
 
         let content: React.ReactNode;
-        const resizerViewModel = !moduleRenderer && !this.state.telegramLayout ? this.getResizerViewModel() : undefined;
-        if (!moduleRenderer && this.state.telegramLayout) {
+        const resizerViewModel = !moduleRenderer && !this.state.chatColumns ? this.getResizerViewModel() : undefined;
+        if (!moduleRenderer && this.state.chatColumns) {
             // Fork: Telegram Web K's columns (draggable chat-list edge, collapsed avatars column,
             // single-pane handheld navigation) replace the resizable panel group.
             content = (
@@ -768,6 +769,7 @@ class LoggedInView extends React.Component<IProps, IState> {
                     className={wrapperClasses}
                     aria-hidden={this.props.hideToSRUsers}
                 >
+                    <AppearanceAttributes />
                     <ToastContainer />
                     <div className={bodyClasses}>{content}</div>
                 </div>

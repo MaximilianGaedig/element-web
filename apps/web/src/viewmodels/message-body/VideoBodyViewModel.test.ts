@@ -119,7 +119,7 @@ describe("VideoBodyViewModel", () => {
             if (setting === "Images.size") {
                 return ImageSize.Normal;
             }
-            if (setting === "telegramStyleLayout") {
+            if (setting === "compactMedia") {
                 return telegramLayout;
             }
             if (setting === "autoplayVideo") {
@@ -130,7 +130,7 @@ describe("VideoBodyViewModel", () => {
         vi.spyOn(SettingsStore, "watchSetting").mockImplementation((name, _roomId, callback) => {
             if (name === "Images.size") {
                 imageSizeWatcher = callback as (...args: [unknown, unknown, unknown, unknown, ImageSize]) => void;
-            } else if (name === "telegramStyleLayout") {
+            } else if (name === "compactMedia") {
                 telegramLayoutWatcher = callback as () => void;
             }
             return "video-body-test-watch";
@@ -213,7 +213,7 @@ describe("VideoBodyViewModel", () => {
         const originalGetValue = SettingsStore.getValue;
         vi.spyOn(SettingsStore, "getValue").mockImplementation((setting, ...args) => {
             if (setting === "Images.size") return ImageSize.Normal;
-            if (setting === "telegramStyleLayout") return false;
+            if (setting === "compactMedia") return false;
             if (setting === "autoplayVideo") return true;
             return originalGetValue(setting, ...args);
         });

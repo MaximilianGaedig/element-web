@@ -18,7 +18,7 @@ import RoomContext, { type TimelineRenderingType } from "../../../contexts/RoomC
 import AccessibleButton from "../elements/AccessibleButton";
 import { useMatrixClientContext } from "../../../contexts/MatrixClientContext";
 import { ReplyTileViewModel } from "../../../viewmodels/room/timeline/event-tile/ReplyTileViewModel";
-import { isTelegramLayout } from "../../../utils/telegram/telegramLayout";
+import { floatingBarsEnabled } from "../../../utils/telegram/telegramLayout";
 import { senderName, TgReplyQuote } from "../telegram/TgReplyQuote";
 import { getUserNameColorClass } from "../../../utils/FormattingUtils";
 import { Action } from "../../../dispatcher/actions";
@@ -75,7 +75,7 @@ export default class ReplyPreview extends React.Component<IProps> {
     public render(): JSX.Element | null {
         if (!this.props.replyToEvent) return null;
 
-        if (isTelegramLayout()) {
+        if (floatingBarsEnabled()) {
             // Fork: tweb's .reply-wrapper: [reply icon] [Reply to <name> / the message] [cancel], in the
             // replied-to sender's colour; clicking the block shows the message.
             const ev = this.props.replyToEvent;

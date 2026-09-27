@@ -44,7 +44,7 @@ import { EditMessageComposerWrapper } from "../rooms/EditMessageComposerWrapper"
 import { ModuleApi } from "../../../modules/Api";
 import BridgeButtons from "./BridgeButtons";
 import { DetectedActions } from "./DetectedActions";
-import { isTelegramLayout } from "../../../utils/telegram/telegramLayout";
+import { bubbleTimelineEnabled } from "../../../utils/telegram/telegramLayout";
 import { TgWebPage } from "../telegram/TgWebPage";
 
 const logger = rootLogger.getChild("TextualBodyFactory");
@@ -339,7 +339,7 @@ export function TextualBodyFactory(props: Readonly<IBodyProps>): JSX.Element {
                 <>
                     {/* Fork: Telegram draws the preview as part of the message rather than as a card
                         below it, from the same previews this view model resolved. */}
-                    {isTelegramLayout() ? (
+                    {bubbleTimelineEnabled() ? (
                         <TgWebPage previews={previews} sender={props.mxEvent.getSender() ?? ""} collapse={collapse} />
                     ) : (
                         <MediaPreviewGroupPreview vm={mediaPreviewVm} />

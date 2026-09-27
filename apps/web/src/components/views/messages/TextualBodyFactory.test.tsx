@@ -618,7 +618,7 @@ describe("<TextualBody />", () => {
                 // tweb box tested below.
                 const original = SettingsStore.getValue;
                 vi.spyOn(SettingsStore, "getValue").mockImplementation((setting, ...rest) =>
-                    setting === "telegramStyleLayout" ? false : original(setting, ...rest),
+                    setting === "bubbleTimeline" ? false : original(setting, ...rest),
                 );
             });
 

@@ -21,9 +21,7 @@ describe("ReplyPreview (Telegram layout)", () => {
     it("is tweb's reply row: 'Reply to <name>', the message, a cancel button", async () => {
         const realGetValue = SettingsStore.getValue.bind(SettingsStore);
         vi.spyOn(SettingsStore, "getValue").mockImplementation(((name: string, ...rest: unknown[]) =>
-            name === "telegramStyleLayout"
-                ? true
-                : (realGetValue as any)(name, ...rest)) as typeof SettingsStore.getValue);
+            name === "floatingBars" ? true : (realGetValue as any)(name, ...rest)) as typeof SettingsStore.getValue);
         const cli = stubClient();
         const { room_id: roomId } = await cli.createRoom({});
         const ev = mkEvent({

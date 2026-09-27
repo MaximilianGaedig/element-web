@@ -22,7 +22,7 @@ import { Action } from "../../../dispatcher/actions";
 const realGetValue = SettingsStore.getValue.bind(SettingsStore);
 function useTelegramLayout(on: boolean): void {
     vi.spyOn(SettingsStore, "getValue").mockImplementation(((name: string, ...rest: unknown[]) =>
-        name === "telegramStyleLayout" ? on : (realGetValue as any)(name, ...rest)) as typeof SettingsStore.getValue);
+        name === "bubbleTimeline" ? on : (realGetValue as any)(name, ...rest)) as typeof SettingsStore.getValue);
 }
 
 describe("ReplyChain", () => {

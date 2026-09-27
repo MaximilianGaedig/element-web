@@ -373,25 +373,29 @@ Please see LICENSE files in the repository root for full details.
         background: var(--event-tile-bubble-self-background);
     }
 
-    /* Not the first of its sender's run: tuck in the corner facing the message above. */
-    .mx_EventTile_tgBubble:not(.mx_EventTile_tgOwn) + .mx_EventTile_tgBubble:not(.mx_EventTile_tgOwn) {
+    /*
+     * Not the first of its sender's run: tuck in the corner facing the message above. Read from the
+     * tile's own state rather than from the message before it in the DOM - see _TgBubbleTail.pcss
+     * for why nothing is anything's sibling in the virtualised timeline.
+     */
+    .mx_EventTile_tgBubble:not(.mx_EventTile_tgOwn)[data-continuation="true"] {
         > [data-testid="event-tile-line"] {
             border-start-start-radius: var(--tg-bubble-radius-join);
         }
     }
 
-    .mx_EventTile_tgOwn + .mx_EventTile_tgOwn > [data-testid="event-tile-line"] {
+    .mx_EventTile_tgOwn[data-continuation="true"] > [data-testid="event-tile-line"] {
         border-start-end-radius: var(--tg-bubble-radius-join);
     }
 
     /* Not the last of its run: tuck in the corner facing the message below. */
-    .mx_EventTile_tgBubble:not(.mx_EventTile_tgOwn):has(+ .mx_EventTile_tgBubble:not(.mx_EventTile_tgOwn)) {
+    .mx_EventTile_tgBubble:not(.mx_EventTile_tgOwn):not([data-last-in-section="true"]) {
         > [data-testid="event-tile-line"] {
             border-end-start-radius: var(--tg-bubble-radius-join);
         }
     }
 
-    .mx_EventTile_tgOwn:has(+ .mx_EventTile_tgOwn) > [data-testid="event-tile-line"] {
+    .mx_EventTile_tgOwn:not([data-last-in-section="true"]) > [data-testid="event-tile-line"] {
         border-end-end-radius: var(--tg-bubble-radius-join);
     }
 }

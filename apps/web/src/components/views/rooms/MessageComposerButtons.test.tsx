@@ -20,10 +20,16 @@ import { ScopedRoomContextProvider } from "../../../contexts/ScopedRoomContext.t
 import { type RoomContextType } from "../../../contexts/RoomContext.ts";
 import { RoomUploadContextProvider } from "../../../viewmodels/room/RoomUploadViewModel.tsx";
 
-// These tests cover Element's own composer; the Telegram-style one is tested separately.
+// These tests cover the composer without the floating-bar treatment, which is tested separately.
 vi.mock("../../../utils/telegram/telegramLayout", async (importOriginal) => ({
     ...(await importOriginal<typeof import("../../../utils/telegram/telegramLayout")>()),
-    isTelegramLayout: () => false,
+    floatingBarsEnabled: () => false,
+}));
+
+// These cases exercise composer controls independently of the account's AI configuration.
+vi.mock("../../../utils/ai/asking", async (importOriginal) => ({
+    ...(await importOriginal<typeof import("../../../utils/ai/asking")>()),
+    canAsk: () => false,
 }));
 
 describe("MessageComposerButtons", () => {

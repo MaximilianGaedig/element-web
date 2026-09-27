@@ -12,7 +12,12 @@ Please see LICENSE files in the repository root for full details.
  * (scss/partials/_chatVariables.scss, _chatBubble.scss). Media sizes live in ImageSize.ts.
  * The IRC layout is left alone.
  */
-.mx_RoomView_body[data-telegram-layout="true"]:not([data-layout="irc"]) {
+/*
+ * How wide the chat gets and where it sits belongs to the columns, not to the bubbles: someone who
+ * turns the bubbles off still wants the readable column, and someone who turns the columns off wants
+ * the messages to fill the window whatever shape they are drawn in.
+ */
+html[data-chat-columns] .mx_RoomView_body:not([data-layout="irc"]) {
     --TelegramLayout-chat-width: 696px;
 
     /* Let the scroll panel span the room (scrollbar at the edge) and centre its content instead. */
@@ -45,21 +50,60 @@ Please see LICENSE files in the repository root for full details.
  * The gutter drives the bubble padding (gutter - 1px, plus 1px around the content), so 5px gives
  * Telegram's ~5px text inset and a 2.5px gap between bubbles.
  */
-.mx_RoomView_body[data-telegram-layout="true"] [data-testid="event-tile"] {
+.mx_RoomView_body[data-bubble-timeline="true"] [data-testid="event-tile"] {
     --event-tile-bubble-corner-radius: 15px;
     --event-tile-bubble-line-max-width: 85%;
     --event-tile-bubble-gutter: 5px;
 }
 
+/* Native iOS ChatMessageItemCommon.compact.text.bubbleInsets: 6±UIScreenPixel vertically, 11px
+   horizontally. Subtract the text body's existing 1px anti-zalgo padding. These insets do not change
+   grouping gaps or media padding. Web K uses _chatVariables.scss's 4px / 8px / 5px message margins. */
+html[data-tg-screen="mobile"] .mx_RoomView_body[data-bubble-timeline="true"] [data-testid="event-tile"] {
+    --tg-message-pixel: 1px;
+    --event-tile-bubble-padding-block-start: calc(5px + var(--tg-message-pixel));
+    --event-tile-bubble-padding-block-end: calc(5px - var(--tg-message-pixel));
+    --event-tile-bubble-padding-inline: 10px;
+}
+
+@media (min-resolution: 2dppx) {
+    html[data-tg-screen="mobile"] .mx_RoomView_body[data-bubble-timeline="true"] [data-testid="event-tile"] {
+        --tg-message-pixel: 0.5px;
+    }
+}
+
+@media (min-resolution: 3dppx) {
+    html[data-tg-screen="mobile"] .mx_RoomView_body[data-bubble-timeline="true"] [data-testid="event-tile"] {
+        --tg-message-pixel: calc(1px / 3);
+    }
+}
+
+html[data-tg-screen="mobile"][data-tg-message-padding="telegram-web"]
+    .mx_RoomView_body[data-bubble-timeline="true"]
+    [data-testid="event-tile"] {
+    --event-tile-bubble-padding-block-start: 3px;
+    --event-tile-bubble-padding-block-end: 4px;
+    --event-tile-bubble-padding-inline: 7px;
+}
+
+html[data-tg-screen="mobile"][data-tg-message-padding="element"]
+    .mx_RoomView_body[data-bubble-timeline="true"]
+    [data-testid="event-tile"] {
+    /* Element's default 11px gutter, minus the same 1px body padding. */
+    --event-tile-bubble-padding-block-start: 10px;
+    --event-tile-bubble-padding-block-end: 10px;
+    --event-tile-bubble-padding-inline: 10px;
+}
+
 /* One-to-one chats: no avatars (and no names), so the bubbles start at the edge like Telegram. */
-.mx_RoomView_body[data-telegram-layout="true"]
+.mx_RoomView_body[data-bubble-timeline="true"]
     .mx_MessagePanel_noAvatars
     :is(.mx_RoomView_MessageList, .mx_TimelineView_list)
-    > [data-testid="event-tile"] {
+    [data-testid="event-tile"] {
     --event-tile-bubble-margin-inline-start: 8px;
 }
 
-.mx_RoomView_body[data-telegram-layout="true"] .mx_GenericEventListSummary[data-layout="bubble"] {
+.mx_RoomView_body[data-bubble-timeline="true"] .mx_GenericEventListSummary[data-layout="bubble"] {
     --maxWidth: 85%;
 }
 
@@ -69,7 +113,7 @@ Please see LICENSE files in the repository root for full details.
  * `.bubble.just-media` (stickers) drops both the background and the shadow. Element's media roots clip
  * their overflow, so the edge is drawn inside the media box as an overlay.
  */
-.mx_RoomView_body[data-telegram-layout="true"] {
+.mx_RoomView_body[data-bubble-timeline="true"] {
     --TelegramLayout-media-edge: rgb(16 35 47 / 15%);
 
     :is(
@@ -104,7 +148,7 @@ Please see LICENSE files in the repository root for full details.
     }
 }
 
-.cpd-theme-dark .mx_RoomView_body[data-telegram-layout="true"] {
+.cpd-theme-dark .mx_RoomView_body[data-bubble-timeline="true"] {
     --TelegramLayout-media-edge: rgb(255 255 255 / 10%);
 }
 
@@ -114,7 +158,7 @@ Please see LICENSE files in the repository root for full details.
  * out into the chat background (see .mx_TgFadeEdge below).
  * TgChatChrome keeps --tg-header-block / --tg-composer-block (the space the floating parts take).
  */
-html[data-tg-screen] .mx_RoomView_body[data-telegram-layout="true"] {
+html[data-floating-bars] .mx_RoomView_body {
     position: relative;
 
     > .mx_RoomHeader {
@@ -185,7 +229,34 @@ html[data-tg-screen] .mx_RoomView_body[data-telegram-layout="true"] {
         min-height: 0;
     }
 
-    :is(.mx_RoomView_MessageList, .mx_TimelineView_list) {
+    /*
+     * The floating date hangs just below the top bar. The header's own bottom edge, not the whole
+     * top block: the pinned and import plates float over the timeline too, and the date belongs
+     * under the bar rather than under everything stacked beneath it.
+     */
+    --mx-timeline-top-inset: calc(var(--tg-header-bottom, 0px) + 8px);
+
+    /*
+     * Only the timeline is meant to run under the floating header - that is the whole point of the
+     * glass. Everything else in the room (widgets, the call view, the aux panel) is ordinary content
+     * and has to start below it, or the header sits on top of it.
+     */
+    > :is(.mx_AuxPanel, .mx_AppsDrawer, .mx_CallView) {
+        margin-block-start: var(--tg-header-block, 0px);
+    }
+
+    /* A widget or call filling the room: the whole body starts clear of the header. */
+    &:is(.mx_MainSplit_maximisedWidget, .mx_MainSplit_call) {
+        padding-block-start: var(--tg-header-block, 0px);
+    }
+
+    /*
+     * The old timeline is padded clear of the floating chrome here. The virtualised one is not:
+     * padding on its list is space its own measurements know nothing about, so it would stop
+     * scrolling that far short of the bottom and strand the last message above the composer.
+     * NewTimelinePanel hands it the same numbers as paddingStart/paddingEnd instead.
+     */
+    .mx_RoomView_MessageList {
         padding-top: calc(var(--tg-header-block, 0px) + 8px);
         padding-bottom: calc(var(--tg-composer-block, 0px) + 8px);
     }
@@ -220,14 +291,16 @@ html[data-tg-screen] .mx_RoomView_body[data-telegram-layout="true"] {
     }
 
     .mx_TgFadeEdge_top {
-        --tg-fade-to: top;
+        /* Opaque at the header, transparent where messages begin. */
+        --tg-fade-to: bottom;
 
         top: 0;
         height: var(--tg-header-block, 0px);
     }
 
     .mx_TgFadeEdge_bottom {
-        --tg-fade-to: bottom;
+        /* Transparent above the composer, opaque at its bottom edge. */
+        --tg-fade-to: top;
 
         bottom: 0;
         height: var(--tg-composer-block, 0px);

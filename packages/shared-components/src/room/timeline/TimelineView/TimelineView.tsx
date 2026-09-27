@@ -14,6 +14,7 @@ import { useViewModel } from "../../../core/viewmodel/useViewModel";
 import type { AnchorAlign, ImmediateScroll, TimelineItem, TimelineViewProps } from "./types";
 import { BACKWARD_LOADING_KEY, FORWARD_LOADING_KEY } from "./types";
 import { TimelineOverlayButtons } from "./TimelineOverlayButtons";
+import { StickyDate, type StickyDateHandle } from "./StickyDate";
 import styles from "./TimelineView.module.css";
 
 /**
@@ -103,7 +104,13 @@ const SCROLL_IDLE_MS = 1350;
  */
 type Phase = "init" | "placing" | "live";
 
-export function TimelineView({ vm, renderItem, renderStickyDate }: TimelineViewProps): JSX.Element {
+export function TimelineView({
+    vm,
+    renderItem,
+    renderStickyDate,
+    paddingStart = 0,
+    paddingEnd = 0,
+}: TimelineViewProps): JSX.Element {
     const snapshot = useViewModel(vm);
 
     // The effects and callbacks below run outside React's render — from scroll events and
@@ -141,10 +148,14 @@ export function TimelineView({ vm, renderItem, renderStickyDate }: TimelineViewP
     // `stickyTs` is deliberately never cleared: the label has to stay put while it fades
     // out. `stickyPinned` is the part that goes false once the day's own separator is back
     // on screen, because that separator is then already saying the same thing.
-    const [stickyTs, setStickyTs] = useState<number | null>(null);
-    const [stickyPinned, setStickyPinned] = useState(false);
-    const [scrolling, setScrolling] = useState(false);
+    const stickyDateRef = useRef<StickyDateHandle | null>(null);
     const stickyTsRef = useRef<number | null>(null);
+    const stickyPinnedRef = useRef(false);
+    const scrollingRef = useRef(false);
+    /** Tells the floating date what to show, from whatever last changed. */
+    const updateStickyDate = useCallback((): void => {
+        stickyDateRef.current?.set(stickyTsRef.current, stickyPinnedRef.current && scrollingRef.current);
+    }, []);
 
     // Gives each row a stable identity (its event id). TanStack uses these to recognise the
     // same row from one update to the next, which is what makes the scroll anchoring
@@ -230,13 +241,11 @@ export function TimelineView({ vm, renderItem, renderStickyDate }: TimelineViewP
                 // not among them is far above it and certainly scrolled past.
                 const row = rendered.find((r) => r.index === i);
                 pinned = !row || row.start < scrollOffset;
-                if (pinned && stickyTsRef.current !== item.ts) {
-                    stickyTsRef.current = item.ts;
-                    setStickyTs(item.ts);
-                }
+                if (pinned) stickyTsRef.current = item.ts;
                 break;
             }
-            setStickyPinned(pinned);
+            stickyPinnedRef.current = pinned;
+            updateStickyDate();
 
             // Have we reached either end of the loaded messages? True once the very first or
             // very last row is among those being rendered, which tells the view model it may
@@ -263,7 +272,7 @@ export function TimelineView({ vm, renderItem, renderStickyDate }: TimelineViewP
                 endEdgeTokenRef.current = "";
             }
         },
-        [vm],
+        [vm, updateStickyDate],
     );
 
     const virtualizer = useVirtualizer({
@@ -274,6 +283,10 @@ export function TimelineView({ vm, renderItem, renderStickyDate }: TimelineViewP
         // trimmed or reloaded, so we do not need a size cache of our own.
         estimateSize: () => ESTIMATED_ITEM_HEIGHT,
         getItemKey,
+        // Room kept clear for whatever floats over the list; part of its extent, so scrolling to
+        // the bottom really reaches the bottom.
+        paddingStart,
+        paddingEnd,
         overscan: OVERSCAN,
         // Keep whatever the user is looking at visually still when rows are added or
         // removed, correcting the scroll position before the browser paints. This is the
@@ -375,16 +388,20 @@ export function TimelineView({ vm, renderItem, renderStickyDate }: TimelineViewP
         if (!scroller) return;
         let idleTimeout: number | undefined;
         const onScroll = (): void => {
-            setScrolling(true);
+            scrollingRef.current = true;
+            updateStickyDate();
             window.clearTimeout(idleTimeout);
-            idleTimeout = window.setTimeout(() => setScrolling(false), SCROLL_IDLE_MS);
+            idleTimeout = window.setTimeout(() => {
+                scrollingRef.current = false;
+                updateStickyDate();
+            }, SCROLL_IDLE_MS);
         };
         scroller.addEventListener("scroll", onScroll, { passive: true });
         return () => {
             scroller.removeEventListener("scroll", onScroll);
             window.clearTimeout(idleTimeout);
         };
-    }, []);
+    }, [updateStickyDate]);
 
     // ─── Later jumps: scroll to a message the view model has asked for ─────────
     // Once the first load is done, the view model can ask us to jump somewhere by setting
@@ -470,19 +487,7 @@ export function TimelineView({ vm, renderItem, renderStickyDate }: TimelineViewP
                     <InlineSpinner size={32} />
                 </div>
             )}
-            {renderStickyDate && stickyTs !== null && (
-                <div
-                    className={classNames(styles.stickyDate, {
-                        [styles.stickyDateVisible]: revealed && stickyPinned && scrolling,
-                    })}
-                    // A copy of a date the list already states in place, shown for as long
-                    // as the reader is moving through it. Announcing it again on every
-                    // scroll would be noise, and nothing in it can be interacted with.
-                    aria-hidden="true"
-                >
-                    {renderStickyDate(stickyTs)}
-                </div>
-            )}
+            {renderStickyDate && <StickyDate ref={stickyDateRef} render={renderStickyDate} />}
             {revealed && <TimelineOverlayButtons snapshot={snapshot} vm={vm} scrollNow={scrollNow} />}
         </div>
     );

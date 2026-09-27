@@ -37,20 +37,16 @@ html[data-tg-tail="imessage"] {
 }
 
 /*
- * The last bubble of a run carries the tail: one with no bubble from the same side straight after it.
- * That covers a group's sender runs, whose bubbles are siblings within the run, and a one-to-one chat,
- * which has no runs at all. A message that is only big emoji has no bubble to hang a tail on.
+ * The last bubble of a run carries the tail. Which message that is, is a fact the timeline already
+ * works out (TimelineItem.lastInSection) and the tile states as data-last-in-section; reading it
+ * from the DOM instead - "no bubble from the same side straight after me" - held only while the
+ * messages were siblings. The virtualised timeline gives each one its own list row, so nothing is
+ * anything's sibling and every bubble looked like the last of its run.
+ *
+ * A message that is only big emoji has no bubble to hang a tail on.
  */
 html:is([data-tg-tail="telegram"], [data-tg-tail="imessage"]) .mx_RoomView_body[data-layout="bubble"] {
-    /* The last bubble of each side's run, and only those, carry the tail. */
-    :is(
-            .mx_EventTile_tgBubble:not(.mx_EventTile_tgOwn, :has(.mx_EventTile_bigEmoji)):not(
-                    :has(+ .mx_EventTile_tgBubble:not(.mx_EventTile_tgOwn))
-                ),
-            .mx_EventTile_tgBubble.mx_EventTile_tgOwn:not(:has(.mx_EventTile_bigEmoji)):not(
-                    :has(+ .mx_EventTile_tgBubble.mx_EventTile_tgOwn)
-                )
-        )
+    .mx_EventTile_tgBubble[data-last-in-section="true"]:not(:has(.mx_EventTile_bigEmoji))
         > [data-testid="event-tile-line"] {
         position: relative;
 
@@ -69,9 +65,7 @@ html:is([data-tg-tail="telegram"], [data-tg-tail="imessage"]) .mx_RoomView_body[
     }
 
     /* Incoming hangs off the start edge, mirrored; our own off the end. */
-    .mx_EventTile_tgBubble:not(.mx_EventTile_tgOwn, :has(.mx_EventTile_bigEmoji)):not(
-            :has(+ .mx_EventTile_tgBubble:not(.mx_EventTile_tgOwn))
-        )
+    .mx_EventTile_tgBubble:not(.mx_EventTile_tgOwn, :has(.mx_EventTile_bigEmoji))[data-last-in-section="true"]
         > [data-testid="event-tile-line"] {
         border-end-start-radius: var(--tg-tail-corner);
 
@@ -81,9 +75,7 @@ html:is([data-tg-tail="telegram"], [data-tg-tail="imessage"]) .mx_RoomView_body[
         }
     }
 
-    .mx_EventTile_tgBubble.mx_EventTile_tgOwn:not(:has(.mx_EventTile_bigEmoji)):not(
-            :has(+ .mx_EventTile_tgBubble.mx_EventTile_tgOwn)
-        )
+    .mx_EventTile_tgBubble.mx_EventTile_tgOwn:not(:has(.mx_EventTile_bigEmoji))[data-last-in-section="true"]
         > [data-testid="event-tile-line"] {
         border-end-end-radius: var(--tg-tail-corner);
 

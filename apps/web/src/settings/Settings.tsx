@@ -268,7 +268,13 @@ export interface Settings {
     "autoplayVideo": IBaseSetting<boolean>;
     "groupConsecutiveImages": IBaseSetting<boolean>;
     "glassEffects": IBaseSetting<boolean>;
-    "telegramStyleLayout": IBaseSetting<boolean>;
+    "floatingBars": IBaseSetting<boolean>;
+    "chatColumns": IBaseSetting<boolean>;
+    "bubbleTimeline": IBaseSetting<boolean>;
+    "compactMedia": IBaseSetting<boolean>;
+    "handheldSheets": IBaseSetting<boolean>;
+    "chatProfilePanel": IBaseSetting<boolean>;
+    "mobileMessagePadding": IBaseSetting<"telegram-ios" | "telegram-web" | "element">;
     "readReceiptsStyle": IBaseSetting<"avatars" | "ticks">;
     "bubbleTail": IBaseSetting<"none" | "telegram" | "imessage">;
     "enableSyntaxHighlightLanguageDetection": IBaseSetting<boolean>;
@@ -649,7 +655,7 @@ export const SETTINGS: Settings = {
         displayName: _td("labs|new_timeline"),
         description: _td("labs|currently_experimental"),
         isFeature: true,
-        default: false,
+        default: true,
         controller: new ReloadOnChangeController(),
     },
     "feature_pdf_viewer": {
@@ -903,11 +909,57 @@ export const SETTINGS: Settings = {
         // which measured about twenty points of a core while scrolling, whatever the blur radius.
         default: false,
     },
-    "telegramStyleLayout": {
+    /*
+     * The messenger-style refinements to the app's own layout. These were once a single
+     * "Telegram-style layout" switch that replaced the layout wholesale; they are separate
+     * because they are separate things, and each has to look right whether or not the others
+     * are on. All default on, which is the look the switch used to give.
+     */
+    "floatingBars": {
         supportedLevels: LEVELS_ACCOUNT_SETTINGS,
-        displayName: _td("settings|telegram_style_layout"),
-        description: _td("settings|telegram_style_layout_description"),
+        displayName: _td("settings|floating_bars"),
+        description: _td("settings|floating_bars_description"),
         default: true,
+    },
+    "chatColumns": {
+        supportedLevels: LEVELS_ACCOUNT_SETTINGS,
+        displayName: _td("settings|chat_columns"),
+        description: _td("settings|chat_columns_description"),
+        default: true,
+    },
+    "bubbleTimeline": {
+        supportedLevels: LEVELS_ACCOUNT_SETTINGS,
+        displayName: _td("settings|bubble_timeline"),
+        description: _td("settings|bubble_timeline_description"),
+        default: true,
+    },
+    "compactMedia": {
+        supportedLevels: LEVELS_ACCOUNT_SETTINGS,
+        displayName: _td("settings|compact_media"),
+        description: _td("settings|compact_media_description"),
+        default: true,
+    },
+    "handheldSheets": {
+        supportedLevels: LEVELS_ACCOUNT_SETTINGS,
+        displayName: _td("settings|handheld_sheets"),
+        description: _td("settings|handheld_sheets_description"),
+        default: true,
+    },
+    "chatProfilePanel": {
+        supportedLevels: LEVELS_ACCOUNT_SETTINGS,
+        displayName: _td("settings|chat_profile_panel"),
+        description: _td("settings|chat_profile_panel_description"),
+        default: true,
+    },
+    "mobileMessagePadding": {
+        supportedLevels: [SettingLevel.DEVICE],
+        displayName: _td("settings|mobile_message_padding"),
+        default: "telegram-ios",
+        options: [
+            { value: "telegram-ios", label: _td("settings|mobile_message_padding_ios") },
+            { value: "telegram-web", label: _td("settings|mobile_message_padding_web") },
+            { value: "element", label: _td("settings|mobile_message_padding_element") },
+        ],
     },
     "bubbleTail": {
         supportedLevels: LEVELS_ACCOUNT_SETTINGS,

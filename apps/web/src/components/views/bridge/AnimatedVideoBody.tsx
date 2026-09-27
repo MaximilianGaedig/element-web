@@ -17,7 +17,7 @@ import Modal from "../../../Modal";
 import AccessibleButton from "../elements/AccessibleButton";
 import { _t } from "../../../languageHandler";
 import { fitSize, getAnimatedVideoHints } from "../../../utils/bridge/animatedMedia";
-import { isTelegramLayout } from "../../../utils/telegram/telegramLayout";
+import { compactMediaEnabled } from "../../../utils/telegram/telegramLayout";
 
 const STICKER_MAX = 256;
 /** Telegram Web's animated sticker box (mediaSizes.animatedSticker). */
@@ -145,7 +145,7 @@ export default function AnimatedVideoBody(props: IBodyProps): JSX.Element {
         Modal.createDialog(AnimatedVideoLightbox, { src, poster, label }, "mx_Dialog_lightbox", undefined, true);
     }, [src, poster, label]);
 
-    const stickerMax = isTelegramLayout() ? TELEGRAM_STICKER_MAX : STICKER_MAX;
+    const stickerMax = compactMediaEnabled() ? TELEGRAM_STICKER_MAX : STICKER_MAX;
     const { width, height } = fitSize(hints.width, hints.height, hints.sticker ? stickerMax : GIF_MAX);
     const className = classNames("mx_AnimatedVideo", {
         mx_AnimatedVideo_sticker: hints.sticker,

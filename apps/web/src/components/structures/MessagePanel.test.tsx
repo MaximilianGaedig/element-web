@@ -340,7 +340,7 @@ describe("MessagePanel", function () {
 
         // Typing shows in the room header there, like Telegram Web.
         it("hides it in the Telegram-style layout", () => {
-            const container = renderWithSettings(["showTypingNotifications", "telegramStyleLayout"]);
+            const container = renderWithSettings(["showTypingNotifications", "bubbleTimeline"]);
             expect(within(container).queryByTestId("typing-tile")).toBeNull();
         });
     });

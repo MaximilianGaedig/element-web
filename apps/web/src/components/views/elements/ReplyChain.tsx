@@ -29,7 +29,7 @@ import { useMatrixClientContext } from "../../../contexts/MatrixClientContext";
 import { type GetRelationsForEvent } from "../rooms/EventTile";
 import { ReplyTileViewModel } from "../../../viewmodels/room/timeline/event-tile/ReplyTileViewModel";
 import { useUserStatus } from "../../../hooks/useUserStatus";
-import { isTelegramLayout } from "../../../utils/telegram/telegramLayout";
+import { bubbleTimelineEnabled } from "../../../utils/telegram/telegramLayout";
 import { TgReplyQuote } from "../telegram/TgReplyQuote";
 import { type ViewRoomPayload } from "../../../dispatcher/payloads/ViewRoomPayload";
 
@@ -306,7 +306,7 @@ export default class ReplyChain extends React.Component<IProps, IState> {
         // Fork: tweb's reply block (sender colour, bar, name + one line, media thumbnail) for the
         // direct parent; the loading and error states below still hold its place.
         const parent = this.state.events[this.state.events.length - 1];
-        if (isTelegramLayout() && !this.props.forExport && parent) {
+        if (bubbleTimelineEnabled() && !this.props.forExport && parent) {
             return (
                 <ReplyChainPresentationWrapper>
                     <TgReplyQuote variant="bubble" event={parent} onClick={() => this.viewEvent(parent)} />

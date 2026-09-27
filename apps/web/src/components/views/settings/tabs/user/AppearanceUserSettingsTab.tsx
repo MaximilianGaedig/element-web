@@ -111,7 +111,17 @@ export default class AppearanceUserSettingsTab extends React.Component<EmptyObje
                     <LayoutSwitcher />
                     <SettingsSubsection>
                         <Form.Root onSubmit={(evt) => evt.preventDefault()}>
-                            <SettingsFlag name="telegramStyleLayout" level={SettingLevel.ACCOUNT} />
+                            <SettingsFlag name="floatingBars" level={SettingLevel.ACCOUNT} />
+                            <SettingsFlag name="chatColumns" level={SettingLevel.ACCOUNT} />
+                            <SettingsFlag name="bubbleTimeline" level={SettingLevel.ACCOUNT} />
+                            <SettingsFlag name="compactMedia" level={SettingLevel.ACCOUNT} />
+                            <SettingsFlag name="handheldSheets" level={SettingLevel.ACCOUNT} />
+                            <SettingsFlag name="chatProfilePanel" level={SettingLevel.ACCOUNT} />
+                            <SettingsDropdown
+                                settingKey="mobileMessagePadding"
+                                label={_t("settings|mobile_message_padding")}
+                                level={SettingLevel.DEVICE}
+                            />
                             <SettingsFlag name="glassEffects" level={SettingLevel.ACCOUNT} />
                             <SettingsDropdown
                                 settingKey="bubbleTail"

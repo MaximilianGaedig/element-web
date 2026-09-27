@@ -50,8 +50,8 @@ interface IState {
     paneAnimation?: PaneAnimation;
 }
 
-function isTelegramLayout(): boolean {
-    return !!SettingsStore.getValue("telegramStyleLayout");
+function chatColumnsEnabled(): boolean {
+    return !!SettingsStore.getValue("chatColumns");
 }
 
 export default class MainSplit extends React.Component<IProps, IState> {
@@ -76,7 +76,7 @@ export default class MainSplit extends React.Component<IProps, IState> {
     public componentDidUpdate(prevProps: IProps): void {
         const wasShown = MainSplit.isPanelShown(prevProps);
         const isShown = MainSplit.isPanelShown(this.props);
-        if (wasShown === isShown || !isTelegramLayout()) return;
+        if (wasShown === isShown || !chatColumnsEnabled()) return;
 
         window.clearTimeout(this.paneTimer);
         if (isShown) {
@@ -178,7 +178,7 @@ export default class MainSplit extends React.Component<IProps, IState> {
                     handleClasses={{ left: "mx_ResizeHandle--horizontal" }}
                     data-tg-pane={this.state.paneAnimation}
                     style={
-                        isTelegramLayout()
+                        chatColumnsEnabled()
                             ? ({ "--MainSplit-panel-width": `${size.width}px` } as React.CSSProperties)
                             : undefined
                     }

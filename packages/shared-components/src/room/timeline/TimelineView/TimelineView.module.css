@@ -65,7 +65,9 @@
    stops showing it 1350ms after the last scroll event (SCROLL_IDLE_MS in TimelineView). */
 .stickyDate {
     position: absolute;
-    inset-block-start: 0;
+    /* Below whatever floats over the top of the timeline; the app sets this where it has a
+       floating header, since the pill would otherwise be drawn behind it. */
+    inset-block-start: var(--mx-timeline-top-inset, 0);
     inset-inline: 0;
     z-index: 1;
     pointer-events: none;

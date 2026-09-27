@@ -37,7 +37,7 @@ Please see LICENSE files in the repository root for full details.
 }
 
 /* The reply helper sits inside the composer plate and opens like tweb's .reply-wrapper. */
-html[data-tg-screen] .mx_RoomView_body[data-telegram-layout="true"] .mx_ReplyPreview {
+html[data-floating-bars] .mx_RoomView_body .mx_ReplyPreview {
     display: grid;
     grid-template-rows: 1fr;
     border: none;
@@ -54,7 +54,7 @@ html[data-tg-screen] .mx_RoomView_body[data-telegram-layout="true"] .mx_ReplyPre
 }
 
 /* Editing happens in the message itself in Element; the editor fades in over the helper's timing. */
-html[data-tg-screen] .mx_EditMessageComposer {
+html[data-floating-bars] .mx_EditMessageComposer {
     animation: mx_TgFade_in var(--tg-transition-standard-out);
 }
 

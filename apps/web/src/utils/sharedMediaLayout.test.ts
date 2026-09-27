@@ -30,12 +30,12 @@ describe("mediaRows", () => {
         // Newest first, as the loader keeps them: three in March, two in February.
         const items = [at(2026, 3, 9), at(2026, 3, 4), at(2026, 3, 1), at(2026, 2, 27), at(2026, 2, 2)];
         const { rows } = mediaRows(items, 3, METRICS);
-        expect(rows.map((r) => (r.kind === "header" ? `# ${r.section.key}` : r.indices.join(",")))).toEqual([
-            "# 2026-03",
-            "0,1,2",
-            "# 2026-02",
-            "3,4",
-        ]);
+        expect(
+            rows.map((r) => {
+                if (r.kind === "header") return `# ${r.section.key}`;
+                return r.kind === "cells" ? r.indices.join(",") : `pending ${r.count}`;
+            }),
+        ).toEqual(["# 2026-03", "0,1,2", "# 2026-02", "3,4"]);
     });
 
     it("stacks every row where it belongs, with no gap left hanging at the end", () => {
@@ -139,7 +139,7 @@ describe("what has not loaded yet", () => {
 
     it("lays them below what is loaded, since they are older", () => {
         const { rows } = mediaRows(items, 3, METRICS, 9);
-        const lastReal = rows.findLastIndex((r) => r.kind === "cells");
+        const lastReal = rows.map((r) => r.kind).lastIndexOf("cells");
         const firstPending = rows.findIndex((r) => r.kind === "pending");
         expect(firstPending).toBeGreaterThan(lastReal);
     });

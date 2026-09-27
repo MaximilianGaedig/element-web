@@ -13,17 +13,18 @@ import { PendingEventOrdering, Room } from "matrix-js-sdk/src/matrix";
 import SettingsStore from "../../settings/SettingsStore";
 import UIStore from "../../stores/UIStore";
 import { ImageSize, suggestedSize } from "../../settings/enums/ImageSize";
-import { effectiveImageSize, isOneToOneRoom, isTelegramLayout } from "./telegramLayout";
+import { effectiveImageSize, isOneToOneRoom, bubbleTimelineEnabled } from "./telegramLayout";
 import { mkEvent, mkMembership, stubClient } from "test-utils";
 
-describe("Telegram-style layout", () => {
+describe("messenger-style layout settings", () => {
     let telegram: boolean;
 
     beforeEach(() => {
         telegram = true;
         const original = SettingsStore.getValue.bind(SettingsStore);
         vi.spyOn(SettingsStore, "getValue").mockImplementation(((name: string, ...rest: any[]) => {
-            if (name === "telegramStyleLayout") return telegram;
+            // One flag stands for the messenger-style settings this file covers.
+            if (name === "bubbleTimeline" || name === "compactMedia") return telegram;
             if (name === "Images.size") return ImageSize.Large;
             return (original as any)(name, ...rest);
         }) as any);
@@ -36,7 +37,7 @@ describe("Telegram-style layout", () => {
 
     it("is on by default", () => {
         vi.restoreAllMocks();
-        expect(isTelegramLayout()).toBe(true);
+        expect(bubbleTimelineEnabled()).toBe(true);
     });
 
     it("uses Telegram Web's media boxes instead of the image-size setting", () => {

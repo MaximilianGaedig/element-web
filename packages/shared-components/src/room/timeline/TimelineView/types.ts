@@ -200,6 +200,18 @@ export interface TimelineViewProps {
     renderItem: (item: TimelineItem) => ReactNode;
 
     /**
+     * Space to keep clear at the top and bottom of the list, in pixels — for chrome that floats
+     * over the timeline, such as a header or composer the messages scroll behind.
+     *
+     * It has to come through here rather than as padding on the list: the virtualizer works the
+     * timeline's extent out from the row sizes it knows about, so padding it cannot see leaves
+     * "scrolled to the bottom" short by exactly that much, stranding the last message above the
+     * thing it was meant to clear.
+     */
+    paddingStart?: number;
+    paddingEnd?: number;
+
+    /**
      * Render callback for the date of the day being read, shown floating at the top of the
      * list while the reader scrolls. Given the timestamp of that day; the view decides when
      * it is shown, so this only has to draw the label. Omit it to have no floating date.

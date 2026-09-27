@@ -5,7 +5,7 @@ SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only OR LicenseRef-Element-Com
 Please see LICENSE files in the repository root for full details.
 */
 
-import React, { useCallback, useEffect, type JSX, type ReactNode } from "react";
+import React, { useCallback, useEffect, useRef, useState, type JSX, type ReactNode } from "react";
 import {
     TimelineView,
     useCreateAutoDisposedViewModel,
@@ -186,6 +186,29 @@ export function NewTimelinePanel({
     );
 
     const snapshot = useViewModel(vm);
+
+    // How much the floating header and composer cover at each end. TgChatChrome measures them and
+    // writes them onto the room body as custom properties; the virtualizer needs them as numbers,
+    // because space it does not know about is space it will not scroll through — the last message
+    // ends up stranded that far above the composer.
+    const panelRef = useRef<HTMLDivElement | null>(null);
+    const [clearance, setClearance] = useState({ start: 0, end: 0 });
+    useEffect(() => {
+        const el = panelRef.current;
+        if (!el) return;
+        const read = (): void => {
+            const style = getComputedStyle(el);
+            const px = (name: string): number => Math.round(parseFloat(style.getPropertyValue(name)) || 0);
+            const next = { start: px("--tg-header-block"), end: px("--tg-composer-block") };
+            setClearance((prev) => (prev.start === next.start && prev.end === next.end ? prev : next));
+        };
+        read();
+        // The properties are written to the body's style attribute as the chrome is measured.
+        const observer = new MutationObserver(read);
+        const body = el.closest(".mx_RoomView_body");
+        if (body) observer.observe(body, { attributes: true, attributeFilter: ["style"] });
+        return () => observer.disconnect();
+    }, []);
     const { highlightedEventId: highlightedId } = snapshot;
 
     // The date of the day being read, shown at the top of the timeline while scrolling.
@@ -228,11 +251,18 @@ export function NewTimelinePanel({
 
     return (
         <div
+            ref={panelRef}
             className={classNames("mx_NewTimelinePanel mx_RoomView_messagePanel mx_RoomView_messageListWrapper", {
                 mx_NewTimelinePanel_hidden: hidden,
             })}
         >
-            <TimelineView vm={vm} renderItem={renderItem} renderStickyDate={renderStickyDate} />
+            <TimelineView
+                vm={vm}
+                renderItem={renderItem}
+                renderStickyDate={renderStickyDate}
+                paddingStart={clearance.start}
+                paddingEnd={clearance.end}
+            />
         </div>
     );
 }

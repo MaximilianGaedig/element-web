@@ -104,11 +104,6 @@ function closeInfo(): void {
 /** The attribute on <html> that lets overlays (dialogs, menus) follow the tier. */
 export const SCREEN_ATTRIBUTE = "data-tg-screen";
 
-/** The attribute on <html> that turns the frosted-glass panels into plain ones. */
-export const NO_GLASS_ATTRIBUTE = "data-no-glass";
-/** Which app's bubble tail the timeline draws (see _TgBubbleTail.pcss). */
-export const TAIL_ATTRIBUTE = "data-tg-tail";
-
 /** The attribute on <html> while something is being scrolled; the glass drops its blur meanwhile. */
 export const SCROLLING_ATTRIBUTE = "data-scrolling";
 
@@ -271,13 +266,9 @@ export function TgColumns({
     // Overlays rendered outside this tree (dialogs) follow the tier too.
     useDocumentAttribute(SCREEN_ATTRIBUTE, screen);
 
-    // The bubble tail is drawn in CSS, so the choice just has to reach the document.
-    useDocumentAttribute(TAIL_ATTRIBUTE, useSettingValue("bubbleTail"));
-
-    // The frosted panels are drawn by the GPU on every frame behind them, which is most of the
-    // graphics work while scrolling; turning them off leaves plain panels (see _TgBase.pcss).
+    // The appearance settings themselves are written by AppearanceAttributes, which the logged-in
+    // view mounts whatever layout it draws — they are changes to the standard view, not to this one.
     const glass = useSettingValue("glassEffects");
-    useDocumentAttribute(NO_GLASS_ATTRIBUTE, glass ? undefined : "true");
 
     // A blurred panel forces everything moving beneath it to be drawn again each frame, which is
     // most of the cost of a scroll. So the blur pauses while anything scrolls and returns once it

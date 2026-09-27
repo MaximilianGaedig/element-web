@@ -33,7 +33,7 @@ describe("<MainSplit/>", () => {
         // Element's layout unless a test opts into the fork's Telegram-style one (on by default).
         const getValue = SettingsStore.getValue.bind(SettingsStore);
         vi.spyOn(SettingsStore, "getValue").mockImplementation(((name: string, ...rest: any[]) =>
-            name === "telegramStyleLayout" ? false : (getValue as any)(name, ...rest)) as any);
+            name === "chatColumns" ? false : (getValue as any)(name, ...rest)) as any);
     });
 
     afterEach(() => {
@@ -104,7 +104,7 @@ describe("<MainSplit/>", () => {
         beforeEach(() => {
             vi.useFakeTimers();
             vi.mocked(SettingsStore.getValue).mockImplementation(((name: string) =>
-                name === "telegramStyleLayout" ? true : undefined) as any);
+                name === "chatColumns" ? true : undefined) as any);
         });
 
         afterEach(() => {

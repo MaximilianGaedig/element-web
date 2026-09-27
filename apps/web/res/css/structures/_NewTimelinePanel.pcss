@@ -14,6 +14,27 @@ Please see LICENSE files in the repository root for full details.
     /* Fill the room view body, like the old message panel does. */
     height: 100%;
 
+    /* Each message keeps its virtual row; the sender avatar closes the run. */
+    .mx_NewTimelinePanel_senderMessage {
+        position: relative;
+
+        [data-testid="event-tile"] {
+            --event-tile-bubble-margin-inline-start: calc(8px + 2.875rem);
+        }
+
+        [data-testid="event-tile-slot-avatar"] {
+            display: none;
+        }
+    }
+
+    .mx_NewTimelinePanel_senderAvatar {
+        /* Out of flow so extending a sender run never changes the previous row's height. */
+        position: absolute;
+        inset-inline-start: 8px;
+        inset-block-end: 2.5px;
+        z-index: 2;
+    }
+
     /* Kept mounted but invisible, e.g. while search results are shown, so the
        timeline keeps its scroll position and loaded window. */
     &.mx_NewTimelinePanel_hidden {

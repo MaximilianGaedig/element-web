@@ -47,7 +47,7 @@ export function readMetrics(win: Window = window): Metric[] {
     const appHeight = readCustomProperty("--tg-app-height");
     return [
         { name: "screen tier", value: root.getAttribute("data-tg-screen") ?? "(unset)" },
-        { name: "layout", value: win.document.querySelector("[data-telegram-layout]") ? "telegram" : "(none)" },
+        { name: "bubbles", value: win.document.querySelector("[data-bubble-timeline]") ? "on" : "off" },
         { name: "standalone", value: String(win.matchMedia("(display-mode: standalone)").matches) },
         { name: "innerHeight", value: px(win.innerHeight) },
         { name: "100dvh", value: px(measureDvh(win)) },

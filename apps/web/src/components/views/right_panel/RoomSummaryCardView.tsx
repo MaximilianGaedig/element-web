@@ -134,7 +134,7 @@ const RoomSummaryCardView: React.FC<IProps> = ({
 }) => {
     const vm = useRoomSummaryCardViewModel(room, permalinkCreator, onSearchCancel);
     const topicVm = useRoomTopicViewModel(room);
-    const telegramLayout = useSettingValue("telegramStyleLayout");
+    const profilePanel = useSettingValue("chatProfilePanel");
     // XXX: this name should be part of the view model
     const name = useRoomName(room);
 
@@ -307,7 +307,7 @@ const RoomSummaryCardView: React.FC<IProps> = ({
         </div>
     );
 
-    if (telegramLayout) {
+    if (profilePanel) {
         // Fork: laid out like Telegram Web K's profile tab.
         return (
             <BaseCard

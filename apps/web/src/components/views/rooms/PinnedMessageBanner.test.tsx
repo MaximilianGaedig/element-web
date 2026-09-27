@@ -45,7 +45,7 @@ describe("<PinnedMessageBanner />", () => {
         telegram = false;
         const getValue = SettingsStore.getValue.bind(SettingsStore);
         vi.spyOn(SettingsStore, "getValue").mockImplementation(((name: string, ...rest: any[]) =>
-            name === "telegramStyleLayout" ? telegram : (getValue as any)(name, ...rest)) as any);
+            name === "floatingBars" ? telegram : (getValue as any)(name, ...rest)) as any);
     });
 
     afterEach(() => {
