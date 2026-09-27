@@ -109,6 +109,10 @@ export function tabCountsFromStats(byKind: Record<string, number>): Partial<Reco
     if (byKind.file) counts.files = byKind.file;
     if (byKind.audio) counts.music = byKind.audio;
     if (byKind.voice) counts.voice = byKind.voice;
+    // Links are text the server happens to have found a link in, so they only have a count of their
+    // own where the server counts them apart (tuwunel rooms::room_stats Class::Link). An older one
+    // says nothing here and the tab goes on counting what it has loaded, as it always did.
+    if (byKind.link) counts.links = byKind.link;
     return counts;
 }
 

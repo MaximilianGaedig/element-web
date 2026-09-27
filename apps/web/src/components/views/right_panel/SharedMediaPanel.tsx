@@ -179,8 +179,7 @@ function tabSubtitle(
         if (filter.videos && videos) parts.push(_t("bridge|shared_media|video_count", { count: videos }));
         return parts.join(", ");
     }
-    // Links are text to the server, so only a list that has run out knows how many there are.
-    const fromServer = byKind && tab !== "links" ? (tabCountsFromStats(byKind)[tab] ?? 0) : undefined;
+    const fromServer = byKind ? tabCountsFromStats(byKind)[tab] : undefined;
     const count = fromServer ?? (state.done ? state.items.length : 0);
     if (!count) return "";
     switch (tab) {
@@ -1294,8 +1293,7 @@ function SharedMediaTabBody({
         [state.items, selection.ids],
     );
     const subtitle = tabSubtitle(tab, state, filter, byKind);
-    // Links are text as far as the server is concerned, so it has no count for them.
-    const total = byKind && tab !== "links" ? tabCountsFromStats(byKind)[tab] : undefined;
+    const total = byKind ? tabCountsFromStats(byKind)[tab] : undefined;
     return (
         <>
             {selection.ids.size > 0 ? (

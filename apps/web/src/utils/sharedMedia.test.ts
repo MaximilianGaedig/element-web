@@ -68,6 +68,12 @@ describe("tabCountsFromStats", () => {
         ).toEqual({ media: 9690, files: 9, music: 6, voice: 9 });
     });
 
+    it("counts links where the server counts them apart from text", () => {
+        expect(tabCountsFromStats({ text: 100, link: 12 })).toEqual({ links: 12 });
+        // An older homeserver says nothing about links, and the tab falls back to what it loaded.
+        expect(tabCountsFromStats({ text: 100 }).links).toBeUndefined();
+    });
+
     it("leaves out what the room has none of", () => {
         expect(tabCountsFromStats({ text: 10 })).toEqual({});
     });
