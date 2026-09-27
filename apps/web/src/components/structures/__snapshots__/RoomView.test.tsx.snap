@@ -597,12 +597,9 @@ exports[`RoomView > for a local room > in state NEW > should match the snapshot 
                 tabindex="0"
               >
                 <span
-                  aria-hidden="true"
                   class="mx_TgEmoticonsButton_icon"
-                  data-has-text="false"
                 >
                   <svg
-                    class="mx_TgEmoticonsButton_sticker"
                     fill="currentColor"
                     height="1em"
                     viewBox="0 0 24 24"
@@ -615,51 +612,7 @@ exports[`RoomView > for a local room > in state NEW > should match the snapshot 
                       fill-rule="evenodd"
                     />
                   </svg>
-                  <svg
-                    class="mx_TgEmoticonsButton_emoji"
-                    fill="currentColor"
-                    height="1em"
-                    viewBox="0 0 24 24"
-                    width="1em"
-                    xmlns="http://www.w3.org/2000/svg"
-                  >
-                    <path
-                      d="M15.536 15.536a1 1 0 0 0-1.415-1.415 3 3 0 0 1-2.12.879 3 3 0 0 1-2.122-.879 1 1 0 1 0-1.414 1.415A5 5 0 0 0 12 17c1.38 0 2.632-.56 3.536-1.464M10 10.5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0m5.5 1.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3"
-                    />
-                    <path
-                      d="M22 12c0 5.523-4.477 10-10 10S2 17.523 2 12 6.477 2 12 2s10 4.477 10 10m-2 0a8 8 0 1 0-16 0 8 8 0 0 0 16 0"
-                    />
-                  </svg>
                 </span>
-              </div>
-              <div
-                aria-hidden="true"
-                class="mx_TgSendSlot"
-                inert=""
-              >
-                <div
-                  aria-label="Send message"
-                  class="mx_AccessibleButton mx_TgSendButton mx_TgSendButton_send"
-                  data-testid="sendmessagebtn"
-                  role="button"
-                  tabindex="0"
-                >
-                  <span
-                    class="mx_TgSendButton_icon"
-                  >
-                    <svg
-                      fill="currentColor"
-                      height="1em"
-                      viewBox="0 0 24 24"
-                      width="1em"
-                      xmlns="http://www.w3.org/2000/svg"
-                    >
-                      <path
-                        d="m21.211 12.895-16.14 8.07c-.785.392-1.658-.342-1.406-1.182L5.7 13h6.55a1 1 0 1 0 0-2H5.7L3.665 4.217c-.252-.84.621-1.574 1.405-1.182l16.141 8.07a1 1 0 0 1 0 1.79"
-                      />
-                    </svg>
-                  </span>
-                </div>
               </div>
             </div>
           </div>
@@ -1037,12 +990,9 @@ exports[`RoomView > for a local room > in state NEW > that is encrypted > should
                 tabindex="0"
               >
                 <span
-                  aria-hidden="true"
                   class="mx_TgEmoticonsButton_icon"
-                  data-has-text="false"
                 >
                   <svg
-                    class="mx_TgEmoticonsButton_sticker"
                     fill="currentColor"
                     height="1em"
                     viewBox="0 0 24 24"
@@ -1055,51 +1005,7 @@ exports[`RoomView > for a local room > in state NEW > that is encrypted > should
                       fill-rule="evenodd"
                     />
                   </svg>
-                  <svg
-                    class="mx_TgEmoticonsButton_emoji"
-                    fill="currentColor"
-                    height="1em"
-                    viewBox="0 0 24 24"
-                    width="1em"
-                    xmlns="http://www.w3.org/2000/svg"
-                  >
-                    <path
-                      d="M15.536 15.536a1 1 0 0 0-1.415-1.415 3 3 0 0 1-2.12.879 3 3 0 0 1-2.122-.879 1 1 0 1 0-1.414 1.415A5 5 0 0 0 12 17c1.38 0 2.632-.56 3.536-1.464M10 10.5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0m5.5 1.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3"
-                    />
-                    <path
-                      d="M22 12c0 5.523-4.477 10-10 10S2 17.523 2 12 6.477 2 12 2s10 4.477 10 10m-2 0a8 8 0 1 0-16 0 8 8 0 0 0 16 0"
-                    />
-                  </svg>
                 </span>
-              </div>
-              <div
-                aria-hidden="true"
-                class="mx_TgSendSlot"
-                inert=""
-              >
-                <div
-                  aria-label="Send message"
-                  class="mx_AccessibleButton mx_TgSendButton mx_TgSendButton_send"
-                  data-testid="sendmessagebtn"
-                  role="button"
-                  tabindex="0"
-                >
-                  <span
-                    class="mx_TgSendButton_icon"
-                  >
-                    <svg
-                      fill="currentColor"
-                      height="1em"
-                      viewBox="0 0 24 24"
-                      width="1em"
-                      xmlns="http://www.w3.org/2000/svg"
-                    >
-                      <path
-                        d="m21.211 12.895-16.14 8.07c-.785.392-1.658-.342-1.406-1.182L5.7 13h6.55a1 1 0 1 0 0-2H5.7L3.665 4.217c-.252-.84.621-1.574 1.405-1.182l16.141 8.07a1 1 0 0 1 0 1.79"
-                      />
-                    </svg>
-                  </span>
-                </div>
               </div>
             </div>
           </div>
@@ -1767,12 +1673,9 @@ exports[`RoomView > should hide the header when hideHeader=true 1`] = `
                   tabindex="0"
                 >
                   <span
-                    aria-hidden="true"
                     class="mx_TgEmoticonsButton_icon"
-                    data-has-text="false"
                   >
                     <svg
-                      class="mx_TgEmoticonsButton_sticker"
                       fill="currentColor"
                       height="1em"
                       viewBox="0 0 24 24"
@@ -1785,51 +1688,7 @@ exports[`RoomView > should hide the header when hideHeader=true 1`] = `
                         fill-rule="evenodd"
                       />
                     </svg>
-                    <svg
-                      class="mx_TgEmoticonsButton_emoji"
-                      fill="currentColor"
-                      height="1em"
-                      viewBox="0 0 24 24"
-                      width="1em"
-                      xmlns="http://www.w3.org/2000/svg"
-                    >
-                      <path
-                        d="M15.536 15.536a1 1 0 0 0-1.415-1.415 3 3 0 0 1-2.12.879 3 3 0 0 1-2.122-.879 1 1 0 1 0-1.414 1.415A5 5 0 0 0 12 17c1.38 0 2.632-.56 3.536-1.464M10 10.5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0m5.5 1.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3"
-                      />
-                      <path
-                        d="M22 12c0 5.523-4.477 10-10 10S2 17.523 2 12 6.477 2 12 2s10 4.477 10 10m-2 0a8 8 0 1 0-16 0 8 8 0 0 0 16 0"
-                      />
-                    </svg>
                   </span>
-                </div>
-                <div
-                  aria-hidden="true"
-                  class="mx_TgSendSlot"
-                  inert=""
-                >
-                  <div
-                    aria-label="Send message"
-                    class="mx_AccessibleButton mx_TgSendButton mx_TgSendButton_send"
-                    data-testid="sendmessagebtn"
-                    role="button"
-                    tabindex="0"
-                  >
-                    <span
-                      class="mx_TgSendButton_icon"
-                    >
-                      <svg
-                        fill="currentColor"
-                        height="1em"
-                        viewBox="0 0 24 24"
-                        width="1em"
-                        xmlns="http://www.w3.org/2000/svg"
-                      >
-                        <path
-                          d="m21.211 12.895-16.14 8.07c-.785.392-1.658-.342-1.406-1.182L5.7 13h6.55a1 1 0 1 0 0-2H5.7L3.665 4.217c-.252-.84.621-1.574 1.405-1.182l16.141 8.07a1 1 0 0 1 0 1.79"
-                        />
-                      </svg>
-                    </span>
-                  </div>
                 </div>
               </div>
             </div>
@@ -2329,12 +2188,9 @@ exports[`RoomView > should hide the pinned message banner when hidePinnedMessage
                   tabindex="0"
                 >
                   <span
-                    aria-hidden="true"
                     class="mx_TgEmoticonsButton_icon"
-                    data-has-text="false"
                   >
                     <svg
-                      class="mx_TgEmoticonsButton_sticker"
                       fill="currentColor"
                       height="1em"
                       viewBox="0 0 24 24"
@@ -2347,51 +2203,7 @@ exports[`RoomView > should hide the pinned message banner when hidePinnedMessage
                         fill-rule="evenodd"
                       />
                     </svg>
-                    <svg
-                      class="mx_TgEmoticonsButton_emoji"
-                      fill="currentColor"
-                      height="1em"
-                      viewBox="0 0 24 24"
-                      width="1em"
-                      xmlns="http://www.w3.org/2000/svg"
-                    >
-                      <path
-                        d="M15.536 15.536a1 1 0 0 0-1.415-1.415 3 3 0 0 1-2.12.879 3 3 0 0 1-2.122-.879 1 1 0 1 0-1.414 1.415A5 5 0 0 0 12 17c1.38 0 2.632-.56 3.536-1.464M10 10.5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0m5.5 1.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3"
-                      />
-                      <path
-                        d="M22 12c0 5.523-4.477 10-10 10S2 17.523 2 12 6.477 2 12 2s10 4.477 10 10m-2 0a8 8 0 1 0-16 0 8 8 0 0 0 16 0"
-                      />
-                    </svg>
                   </span>
-                </div>
-                <div
-                  aria-hidden="true"
-                  class="mx_TgSendSlot"
-                  inert=""
-                >
-                  <div
-                    aria-label="Send message"
-                    class="mx_AccessibleButton mx_TgSendButton mx_TgSendButton_send"
-                    data-testid="sendmessagebtn"
-                    role="button"
-                    tabindex="0"
-                  >
-                    <span
-                      class="mx_TgSendButton_icon"
-                    >
-                      <svg
-                        fill="currentColor"
-                        height="1em"
-                        viewBox="0 0 24 24"
-                        width="1em"
-                        xmlns="http://www.w3.org/2000/svg"
-                      >
-                        <path
-                          d="m21.211 12.895-16.14 8.07c-.785.392-1.658-.342-1.406-1.182L5.7 13h6.55a1 1 0 1 0 0-2H5.7L3.665 4.217c-.252-.84.621-1.574 1.405-1.182l16.141 8.07a1 1 0 0 1 0 1.79"
-                        />
-                      </svg>
-                    </span>
-                  </div>
                 </div>
               </div>
             </div>
@@ -3140,12 +2952,9 @@ exports[`RoomView > should not display the timeline when the room encryption is 
                   tabindex="0"
                 >
                   <span
-                    aria-hidden="true"
                     class="mx_TgEmoticonsButton_icon"
-                    data-has-text="false"
                   >
                     <svg
-                      class="mx_TgEmoticonsButton_sticker"
                       fill="currentColor"
                       height="1em"
                       viewBox="0 0 24 24"
@@ -3158,51 +2967,7 @@ exports[`RoomView > should not display the timeline when the room encryption is 
                         fill-rule="evenodd"
                       />
                     </svg>
-                    <svg
-                      class="mx_TgEmoticonsButton_emoji"
-                      fill="currentColor"
-                      height="1em"
-                      viewBox="0 0 24 24"
-                      width="1em"
-                      xmlns="http://www.w3.org/2000/svg"
-                    >
-                      <path
-                        d="M15.536 15.536a1 1 0 0 0-1.415-1.415 3 3 0 0 1-2.12.879 3 3 0 0 1-2.122-.879 1 1 0 1 0-1.414 1.415A5 5 0 0 0 12 17c1.38 0 2.632-.56 3.536-1.464M10 10.5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0m5.5 1.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3"
-                      />
-                      <path
-                        d="M22 12c0 5.523-4.477 10-10 10S2 17.523 2 12 6.477 2 12 2s10 4.477 10 10m-2 0a8 8 0 1 0-16 0 8 8 0 0 0 16 0"
-                      />
-                    </svg>
                   </span>
-                </div>
-                <div
-                  aria-hidden="true"
-                  class="mx_TgSendSlot"
-                  inert=""
-                >
-                  <div
-                    aria-label="Send message"
-                    class="mx_AccessibleButton mx_TgSendButton mx_TgSendButton_send"
-                    data-testid="sendmessagebtn"
-                    role="button"
-                    tabindex="0"
-                  >
-                    <span
-                      class="mx_TgSendButton_icon"
-                    >
-                      <svg
-                        fill="currentColor"
-                        height="1em"
-                        viewBox="0 0 24 24"
-                        width="1em"
-                        xmlns="http://www.w3.org/2000/svg"
-                      >
-                        <path
-                          d="m21.211 12.895-16.14 8.07c-.785.392-1.658-.342-1.406-1.182L5.7 13h6.55a1 1 0 1 0 0-2H5.7L3.665 4.217c-.252-.84.621-1.574 1.405-1.182l16.141 8.07a1 1 0 0 1 0 1.79"
-                        />
-                      </svg>
-                    </span>
-                  </div>
                 </div>
               </div>
             </div>
@@ -3766,12 +3531,9 @@ exports[`RoomView > video rooms > should render joined video room view 1`] = `
                       tabindex="0"
                     >
                       <span
-                        aria-hidden="true"
                         class="mx_TgEmoticonsButton_icon"
-                        data-has-text="false"
                       >
                         <svg
-                          class="mx_TgEmoticonsButton_sticker"
                           fill="currentColor"
                           height="1em"
                           viewBox="0 0 24 24"
@@ -3784,51 +3546,7 @@ exports[`RoomView > video rooms > should render joined video room view 1`] = `
                             fill-rule="evenodd"
                           />
                         </svg>
-                        <svg
-                          class="mx_TgEmoticonsButton_emoji"
-                          fill="currentColor"
-                          height="1em"
-                          viewBox="0 0 24 24"
-                          width="1em"
-                          xmlns="http://www.w3.org/2000/svg"
-                        >
-                          <path
-                            d="M15.536 15.536a1 1 0 0 0-1.415-1.415 3 3 0 0 1-2.12.879 3 3 0 0 1-2.122-.879 1 1 0 1 0-1.414 1.415A5 5 0 0 0 12 17c1.38 0 2.632-.56 3.536-1.464M10 10.5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0m5.5 1.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3"
-                          />
-                          <path
-                            d="M22 12c0 5.523-4.477 10-10 10S2 17.523 2 12 6.477 2 12 2s10 4.477 10 10m-2 0a8 8 0 1 0-16 0 8 8 0 0 0 16 0"
-                          />
-                        </svg>
                       </span>
-                    </div>
-                    <div
-                      aria-hidden="true"
-                      class="mx_TgSendSlot"
-                      inert=""
-                    >
-                      <div
-                        aria-label="Send message"
-                        class="mx_AccessibleButton mx_TgSendButton mx_TgSendButton_send"
-                        data-testid="sendmessagebtn"
-                        role="button"
-                        tabindex="0"
-                      >
-                        <span
-                          class="mx_TgSendButton_icon"
-                        >
-                          <svg
-                            fill="currentColor"
-                            height="1em"
-                            viewBox="0 0 24 24"
-                            width="1em"
-                            xmlns="http://www.w3.org/2000/svg"
-                          >
-                            <path
-                              d="m21.211 12.895-16.14 8.07c-.785.392-1.658-.342-1.406-1.182L5.7 13h6.55a1 1 0 1 0 0-2H5.7L3.665 4.217c-.252-.84.621-1.574 1.405-1.182l16.141 8.07a1 1 0 0 1 0 1.79"
-                            />
-                          </svg>
-                        </span>
-                      </div>
                     </div>
                   </div>
                 </div>
