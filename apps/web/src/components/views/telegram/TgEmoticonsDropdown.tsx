@@ -129,9 +129,10 @@ export function TgEmoticonsDropdown({ room, threadId, addEmoji, hasText }: Props
                 onMouseEnter={() => hover(true)}
                 onMouseLeave={() => hover(false)}
             >
-                {/* Keyed so the icon re-runs the grow animation when it morphs. */}
-                <span key={hasText ? "emoji" : "stickers"} className="mx_TgEmoticonsButton_icon">
-                    {hasText ? <ReactionIcon /> : <StickerIcon />}
+                {/* Retain both shapes so typing/deleting reverses the transition without remounting. */}
+                <span className="mx_TgEmoticonsButton_icon" data-has-text={hasText} aria-hidden="true">
+                    <StickerIcon className="mx_TgEmoticonsButton_sticker" />
+                    <ReactionIcon className="mx_TgEmoticonsButton_emoji" />
                 </span>
             </AccessibleButton>
             {open &&

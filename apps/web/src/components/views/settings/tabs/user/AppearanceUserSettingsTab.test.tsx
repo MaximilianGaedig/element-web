@@ -11,10 +11,12 @@ Please see LICENSE files in the repository root for full details.
 import React from "react";
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { type MatrixClient } from "matrix-js-sdk/src/matrix";
-import { render } from "test-utils-rtl";
+import { render, screen, waitFor, within } from "test-utils-rtl";
+import userEvent from "@testing-library/user-event";
 import { withClientContextRenderOptions, stubClient } from "test-utils";
 
 import AppearanceUserSettingsTab from "./AppearanceUserSettingsTab";
+import SettingsStore from "../../../../../settings/SettingsStore";
 
 describe("AppearanceUserSettingsTab", () => {
     let client: MatrixClient;
@@ -45,5 +47,19 @@ describe("AppearanceUserSettingsTab", () => {
     it("should render", () => {
         const { asFragment } = render(<AppearanceUserSettingsTab />, withClientContextRenderOptions(client));
         expect(asFragment()).toMatchSnapshot();
+    });
+
+    it("offers and applies all three mobile message padding presets", async () => {
+        render(<AppearanceUserSettingsTab />, withClientContextRenderOptions(client));
+        for (const [label, value] of [
+            ["Telegram Web", "telegram-web"],
+            ["Element default", "element"],
+            ["Telegram iOS", "telegram-ios"],
+        ]) {
+            const padding = screen.getByText("Mobile message padding").closest(".mx_SettingsDropdown")!;
+            await userEvent.click(within(padding as HTMLElement).getByRole("button"));
+            await userEvent.click(screen.getByRole("option", { name: label }));
+            await waitFor(() => expect(SettingsStore.getValue("mobileMessagePadding")).toBe(value));
+        }
     });
 });

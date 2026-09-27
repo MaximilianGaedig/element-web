@@ -243,6 +243,22 @@ describe("RoomTimelineViewModel", () => {
             const markerIndex = items.findIndex((i) => i.kind === "read-marker");
             expect(markerIndex).toBeGreaterThan(-1);
             expect(items[markerIndex - 1].key).toBe("$b");
+            expect(items[markerIndex - 1]).toMatchObject({ lastInSection: true });
+            expect(items[markerIndex + 1]).toMatchObject({ continuation: false });
+        });
+
+        it("starts a new sender run when a bridge relay changes remote author", async () => {
+            const first = makeMessage("$a");
+            const second = makeMessage("$b");
+            first.getContent()["com.beeper.per_message_profile"] = { id: "alice", displayname: "Alice" };
+            second.getContent()["com.beeper.per_message_profile"] = { id: "bob", displayname: "Bob" };
+            seedTimeline([first, second]);
+
+            const vm = await createStartedViewModel();
+
+            const events = vm.getSnapshot().items.filter((item) => item.kind === "event");
+            expect(events.map((item) => item.continuation)).toEqual([false, false]);
+            expect(events.map((item) => item.lastInSection)).toEqual([true, true]);
         });
     });
 
@@ -259,6 +275,19 @@ describe("RoomTimelineViewModel", () => {
             } as any);
 
             await vi.waitFor(() => expect(eventKeys(vm.getSnapshot().items)).toContain("$b"));
+        });
+
+        it("shows a message we just sent, before the server has echoed it back", async () => {
+            seedTimeline([makeMessage("$a")]);
+            const vm = await createStartedViewModel();
+
+            // A pending event lives on the room, not in the timeline window, and announces
+            // itself through LocalEchoUpdated rather than RoomEvent.Timeline.
+            const sending = makeMessage("~local-echo");
+            vi.spyOn(room, "getPendingEvents").mockReturnValue([sending]);
+            room.emit(RoomEvent.LocalEchoUpdated, sending, room, undefined, undefined);
+
+            await vi.waitFor(() => expect(eventKeys(vm.getSnapshot().items)).toContain("~local-echo"));
         });
     });
 

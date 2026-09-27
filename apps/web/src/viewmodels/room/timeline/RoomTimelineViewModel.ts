@@ -32,6 +32,8 @@ import { haveRendererForEvent, pickFactory } from "../../../events/EventTileFact
 import shouldHideEvent from "../../../shouldHideEvent";
 import SettingsStore from "../../../settings/SettingsStore";
 import { clearRoomNotification } from "../../../utils/notifications";
+import { hasThreadSummary } from "../../../utils/EventUtils";
+import { getPerMessageProfile } from "../../../utils/bridge/perMessageProfile";
 
 const DEBUG_TIMELINE = false;
 
@@ -378,7 +380,25 @@ export class RoomTimelineViewModel
             MatrixEventEvent.Decrypted,
             this.onEventDecrypted as (...args: unknown[]) => void,
         );
+        // Sending, failing and being replaced by the remote echo all arrive here rather than
+        // through RoomEvent.Timeline, which never sees a pending event.
+        this.disposables.trackListener(
+            this.opts.room,
+            RoomEvent.LocalEchoUpdated,
+            this.onLocalEchoUpdated as (...args: unknown[]) => void,
+        );
     }
+
+    /**
+     * A message of ours was queued, sent, failed or replaced by its remote echo. None of that
+     * reaches RoomEvent.Timeline while the event is still pending, so this is the only signal
+     * that the live end has changed. It shares the decryption path's rebuild, which already
+     * knows to wait for an in-flight pagination and to keep the reader's position by message id.
+     */
+    private onLocalEchoUpdated = (): void => {
+        if (this.isDisposed) return;
+        this.flushDecryptRebuild();
+    };
 
     private onRoomTimeline = (
         event: MatrixEvent,
@@ -1333,7 +1353,20 @@ export class RoomTimelineViewModel
     private static readonly CONTINUED_TYPES = new Set(["m.room.message", "m.sticker"]);
 
     private buildItems(): TimelineItem[] {
-        const events: MatrixEvent[] = this.timelineWindow.getEvents();
+        /*
+         * A message you just sent is not in the timeline yet: until the server echoes it back the
+         * room holds it as a pending event, and the window knows nothing about it. Without these
+         * the message only appears once the round trip finishes, which reads as the app having
+         * swallowed it. They belong at the live end, and only there — at any other scroll position
+         * they would be messages from the future.
+         */
+        const pending = this.timelineWindow.canPaginate(Direction.Forward)
+            ? []
+            : this.opts.room.getPendingEvents().filter((event) => {
+                  const id = event.getId();
+                  return !!id && !this.timelineWindow.getEvents().some((e) => e.getId() === id);
+              });
+        const events: MatrixEvent[] = [...this.timelineWindow.getEvents(), ...pending];
         const items: TimelineItem[] = [];
         let lastDate: string | null = null;
         let prevEvent: MatrixEvent | null = null;
@@ -1408,18 +1441,17 @@ export class RoomTimelineViewModel
                 items.push({ key: "read-marker", kind: "read-marker" });
             }
 
-            prevEvent = event;
+            prevEvent = this.frozenMarkerEventId === eventId ? null : event;
         }
 
-        // lastInSection: an event closes its continuation group when the next
-        // event does not continue from it (or it is the last event). This mirrors
-        // the grouping MessagePanel derives for the legacy timeline; bubble layout
-        // rounds a group's closing corner off it. Mutating the filtered references
-        // mutates the originals in `items` (same objects). Recomputed each build —
-        // it only drives border-radius, so a flip has no height/scroll impact.
-        const eventItems = items.filter((it): it is Extract<TimelineItem, { kind: "event" }> => it.kind === "event");
-        for (let i = 0; i < eventItems.length; i++) {
-            eventItems[i].lastInSection = i === eventItems.length - 1 || !eventItems[i + 1].continuation;
+        // Separators close sender runs as well as sender changes. Keep individual
+        // message keys stable; the closing corner and avatar don't change row height.
+        for (let i = 0; i < items.length; i++) {
+            const item = items[i];
+            const next = items[i + 1];
+            if (item.kind === "event") {
+                item.lastInSection = next?.kind !== "event" || !next.continuation;
+            }
         }
 
         debug(
@@ -1488,6 +1520,10 @@ export class RoomTimelineViewModel
      * have already seen the event before. See `continuationCache` for why.
      */
     private getCachedContinuation(eventId: string, prev: MatrixEvent | null, cur: MatrixEvent): boolean {
+        if (!prev) {
+            this.continuationCache.set(eventId, false);
+            return false;
+        }
         const cached = this.continuationCache.get(eventId);
         if (cached !== undefined) return cached;
         const value = this.shouldFormContinuation(prev, cur);
@@ -1497,6 +1533,15 @@ export class RoomTimelineViewModel
 
     private shouldFormContinuation(prev: MatrixEvent | null, cur: MatrixEvent): boolean {
         if (!prev?.sender || !cur.sender) return false;
+        if (hasThreadSummary(prev) || hasThreadSummary(cur)) return false;
+        const previousProfile = getPerMessageProfile(prev);
+        const currentProfile = getPerMessageProfile(cur);
+        if (
+            previousProfile?.displayname !== currentProfile?.displayname ||
+            previousProfile?.avatar_url !== currentProfile?.avatar_url ||
+            previousProfile?.id !== currentProfile?.id
+        )
+            return false;
         if (cur.getTs() - prev.getTs() > RoomTimelineViewModel.CONTINUATION_MAX_INTERVAL) return false;
         if (cur.isRedacted() !== prev.isRedacted()) return false;
         const curType = cur.getType();

@@ -62,7 +62,11 @@ interface Part {
  * comes before the first one is the opening line, and anything whose heading does not match a chat that
  * was sent is still shown - under its own name, without the pills it has no room for.
  */
-function partsOf(text: string, chats: UnreadChat[], drafts: Record<string, string[]>): { intro: string; parts: Part[] } {
+function partsOf(
+    text: string,
+    chats: UnreadChat[],
+    drafts: Record<string, string[]>,
+): { intro: string; parts: Part[] } {
     const byName = new Map(chats.map(({ room }) => [room.name.trim().toLowerCase(), room]));
     const sections = text.split(/^##+\s*/m);
     const intro = sections.shift()?.trim() ?? "";
@@ -178,7 +182,7 @@ export function AiDigest(): JSX.Element | null {
 
     if (text === undefined && !failed) {
         return (
-            <Button kind="secondary" size="md" className="mx_AiDigest_ask" Icon={AiIcon} onClick={() => void run()}>
+            <Button kind="tertiary" size="md" className="mx_AiDigest_ask" Icon={AiIcon} onClick={() => void run()}>
                 {_t("ai|digest")}
             </Button>
         );

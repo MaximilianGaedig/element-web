@@ -39,7 +39,9 @@ export function TgChatChrome({ body }: Props): JSX.Element {
          * scroller here, inside the observer and before that paint, and pinning it in the same frame
          * keeps the last message exactly where it was while the composer grows under it.
          */
-        const scroller = (): HTMLElement | null => el.querySelector(".mx_ScrollPanel");
+        // The virtualised timeline has its own scroller rather than legacy ScrollPanel. Both share the
+        // same composer-pinning rule: growing the composer must not move the last message underneath it.
+        const scroller = (): HTMLElement | null => el.querySelector(".mx_ScrollPanel, [data-testid=timeline-scroller]");
         const update = (): void => {
             const scroll = scroller();
             const atBottom =

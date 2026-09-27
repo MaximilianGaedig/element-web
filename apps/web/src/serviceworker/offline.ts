@@ -124,6 +124,8 @@ async function appCacheReady(cache: Cache): Promise<boolean> {
 
 /** Answers an app request per {@link classifyAppRequest}; the network as before until a build is cached. */
 export async function respondApp(event: FetchEventLike, kind: AppRequestKind): Promise<Response> {
+    // This origin may still have a production app cached from before the dev server started.
+    if (process.env.NODE_ENV === "development") return fetch(event.request);
     const cache = await caches.open(APP_CACHE);
     if (!(await appCacheReady(cache))) {
         if (kind === "shell") event.waitUntil(syncAppCache());
@@ -193,6 +195,8 @@ let appSync: Promise<void> | undefined;
  * leave the current build in place.
  */
 export function syncAppCache(): Promise<void> {
+    // The dev server can expose a leftover production manifest through its static directory.
+    if (process.env.NODE_ENV === "development") return Promise.resolve();
     appSync ??= doSyncAppCache()
         .catch((e) => console.warn("[ServiceWorker] Offline cache update failed", e))
         .finally(() => (appSync = undefined));

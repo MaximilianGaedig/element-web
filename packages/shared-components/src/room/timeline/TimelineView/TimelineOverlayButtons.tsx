@@ -41,13 +41,13 @@ export function TimelineOverlayButtons({ snapshot, vm, scrollNow }: TimelineOver
     return (
         // Non-interactive layer (pointer-events:none) so clicks fall through to the list;
         // only the buttons re-enable them. Must NOT be aria-hidden — these are AT-reachable.
-        <div className={styles.overlay}>
+        <div className={classNames(styles.overlay, "mx_TimelineOverlayButtons")}>
             {/* Top unread bar — marker is above the viewport */}
             {readMarkerDirection === "above" && (
-                <div className={styles.topUnreadBar}>
+                <div className={classNames(styles.topUnreadBar, "mx_TopUnreadMessagesBar")}>
                     <Tooltip description={_t("room|jump_read_marker")} placement="left">
                         <button
-                            className={styles.topUnreadBarScrollUp}
+                            className={classNames(styles.topUnreadBarScrollUp, "mx_TopUnreadMessagesBar_scrollUp")}
                             aria-label={_t("room|jump_read_marker")}
                             onClick={onJumpToReadMarkerClick}
                             type="button"
@@ -57,7 +57,7 @@ export function TimelineOverlayButtons({ snapshot, vm, scrollNow }: TimelineOver
                     </Tooltip>
                     <Tooltip description={_t("notifications|mark_all_read")} placement="left">
                         <button
-                            className={styles.topUnreadBarMarkAsRead}
+                            className={classNames(styles.topUnreadBarMarkAsRead, "mx_TopUnreadMessagesBar_markAsRead")}
                             aria-label={_t("notifications|mark_all_read")}
                             onClick={() => vm.onMarkAllAsRead()}
                             type="button"
@@ -70,10 +70,10 @@ export function TimelineOverlayButtons({ snapshot, vm, scrollNow }: TimelineOver
 
             {/* Unread bar — marker is below the viewport; sits at top-right like the above bar */}
             {readMarkerDirection === "below" && (
-                <div className={styles.belowUnreadBar}>
+                <div className={classNames(styles.belowUnreadBar, "mx_TopUnreadMessagesBar")}>
                     <Tooltip description={_t("room|jump_read_marker")} placement="left">
                         <button
-                            className={styles.belowUnreadBarScrollDown}
+                            className={classNames(styles.belowUnreadBarScrollDown, "mx_TopUnreadMessagesBar_scrollUp")}
                             aria-label={_t("room|jump_read_marker")}
                             onClick={onJumpToReadMarkerClick}
                             type="button"
@@ -83,7 +83,10 @@ export function TimelineOverlayButtons({ snapshot, vm, scrollNow }: TimelineOver
                     </Tooltip>
                     <Tooltip description={_t("notifications|mark_all_read")} placement="left">
                         <button
-                            className={styles.belowUnreadBarMarkAsRead}
+                            className={classNames(
+                                styles.belowUnreadBarMarkAsRead,
+                                "mx_TopUnreadMessagesBar_markAsRead",
+                            )}
                             aria-label={_t("notifications|mark_all_read")}
                             onClick={() => vm.onMarkAllAsRead()}
                             type="button"
@@ -96,10 +99,15 @@ export function TimelineOverlayButtons({ snapshot, vm, scrollNow }: TimelineOver
 
             {/* Jump-to-bottom button — matches legacy JumpToBottomButton */}
             {showJumpToBottom && (
-                <div className={classNames(styles.jumpToBottom, { [styles.highlight]: snapshot.hasHighlights })}>
+                <div
+                    className={classNames(styles.jumpToBottom, "mx_JumpToBottomButton", {
+                        [styles.highlight]: snapshot.hasHighlights,
+                        mx_JumpToBottomButton_highlight: snapshot.hasHighlights,
+                    })}
+                >
                     <Tooltip description={_t("room|jump_to_bottom_button")} placement="left">
                         <button
-                            className={styles.jumpToBottomScrollDown}
+                            className={classNames(styles.jumpToBottomScrollDown, "mx_JumpToBottomButton_scrollDown")}
                             aria-label={_t("room|jump_to_bottom_button")}
                             onClick={onJumpToLiveClick}
                             type="button"
@@ -108,7 +116,9 @@ export function TimelineOverlayButtons({ snapshot, vm, scrollNow }: TimelineOver
                         </button>
                     </Tooltip>
                     {snapshot.numUnreadMessages > 0 && (
-                        <div className={styles.jumpToBottomBadge}>{snapshot.numUnreadMessages}</div>
+                        <div className={classNames(styles.jumpToBottomBadge, "mx_JumpToBottomButton_badge")}>
+                            {snapshot.numUnreadMessages}
+                        </div>
                     )}
                 </div>
             )}

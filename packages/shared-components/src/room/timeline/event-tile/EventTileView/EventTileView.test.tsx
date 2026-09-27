@@ -205,6 +205,27 @@ const shellPlacementMatrix = [
 }>;
 
 describe("EventTileView", () => {
+    it("allows independent text insets without changing grouping gaps or media padding", () => {
+        const props = createProps({ root: { ...renderState, state: { isOwnEvent: false, hasReply: false } } });
+        const { getByTestId, rerender } = render(<EventTileView {...props} />, {
+            presentation: { layout: "bubble" },
+        });
+        const root = getByTestId("event-tile");
+        const line = getByTestId("event-tile-line");
+        const originalGap = getComputedStyle(root).marginBlockStart;
+        const originalPadding = getComputedStyle(line).paddingInlineStart;
+        expect(originalPadding).toBe("10px");
+        root.style.setProperty("--event-tile-bubble-padding-block-start", "3px");
+        root.style.setProperty("--event-tile-bubble-padding-block-end", "4px");
+        root.style.setProperty("--event-tile-bubble-padding-inline", "7px");
+        expect(getComputedStyle(line).paddingBlockStart).toBe("3px");
+        expect(getComputedStyle(line).paddingBlockEnd).toBe("4px");
+        expect(getComputedStyle(line).paddingInlineStart).toBe("7px");
+        expect(getComputedStyle(root).marginBlockStart).toBe(originalGap);
+        rerender(<EventTileView {...props} line={{ media: true }} />);
+        expect(getComputedStyle(getByTestId("event-tile-line")).padding).toBe("0px");
+    });
+
     it("renders the common root and line structure", () => {
         const { container, getByTestId } = render(<EventTileView {...createProps()} />);
         const root = container.firstElementChild;

@@ -141,7 +141,7 @@ const MessageComposerButtons: React.FC<IProps> = (props: IProps) => {
             key={type}
         />
     ));
-    if (props.telegram && !isWysiwygLabEnabled) {
+    if (props.telegram) {
         // Telegram-style: one menu button at the start holding the attachment options, polls and
         // location; the smiley at the end opens the combined emoji/sticker dropdown.
         mainButtons = [
@@ -155,6 +155,13 @@ const MessageComposerButtons: React.FC<IProps> = (props: IProps) => {
         ];
         moreButtons = [
             uploadOptions,
+            isWysiwygLabEnabled ? (
+                <ComposerModeButton
+                    key="composerModeButton"
+                    isRichTextEnabled={props.isRichTextEnabled}
+                    onClick={props.onComposerModeClick}
+                />
+            ) : null,
             props.showPollsButton ? pollButton(room, props.relation) : null,
             showLocationButton(props, room, matrixClient),
             askingOptions(matrixClient, room),

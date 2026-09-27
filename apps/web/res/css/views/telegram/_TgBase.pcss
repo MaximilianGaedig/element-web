@@ -78,6 +78,14 @@ html[data-tg-keyboard] {
     }
 }
 
+/* The HTML template gives html, body and #matrixchat 100% heights. On iOS
+ * standalone those percentages can resolve to the safe viewport while the
+ * handheld columns use 100dvh, clipping the bottom of the app. Size their
+ * containing block to the same dynamic viewport as the columns. */
+html[data-tg-screen="mobile"] {
+    height: 100dvh !important;
+}
+
 /* Set by viewportHeight.ts: how far iOS has panned the visual viewport (0 unless the keyboard is up). */
 :root {
     --tg-vv-top: 0px;

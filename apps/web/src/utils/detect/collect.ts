@@ -26,10 +26,10 @@ import { type MatrixClient, type MatrixEvent, type Room, RoomEvent } from "matri
 import { forget, remember, unread } from "./collected";
 
 /**
- * Nothing without a digit in it can name a time, a number, a house, a flight or a parcel - and that is
- * most messages. The one cheap test worth doing before waking anything expensive.
+ * Nothing without a digit or the shape of a link can name anything this collects. That is still most
+ * messages, and is the one cheap test worth doing before waking anything expensive.
  */
-export const mightHold = (text: string): boolean => /\d/.test(text);
+export const mightHold = (text: string): boolean => /\d|(?:https?:\/\/|www\.|\b[\w-]+\.[a-z]{2,}\b)/i.test(text);
 
 /**
  * Runs `work` when the browser is next idle, or soon, where that is not offered.

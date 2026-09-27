@@ -71,7 +71,7 @@ describe("<TimelineOverlayButtons />", () => {
         });
 
         it("shows when at the live end but scrolled up off the bottom", () => {
-            render(
+            const { container } = render(
                 <TimelineOverlayButtons
                     snapshot={{ ...baseSnapshot, atLiveEnd: true, isAtBottom: false }}
                     vm={makeActions()}
@@ -79,6 +79,8 @@ describe("<TimelineOverlayButtons />", () => {
                 />,
             );
             expect(button(JUMP_TO_BOTTOM)).toBeInTheDocument();
+            // The Telegram layout uses the same stable class as legacy navigation controls.
+            expect(container.querySelector(".mx_JumpToBottomButton")).not.toBeNull();
         });
 
         it("calls onJumpToLive with the imperative scroll handle when clicked", async () => {

@@ -189,6 +189,48 @@ describe("<NewTimelinePanel />", () => {
         expect(tileProps.current[0].layout).toBe(Layout.Bubble);
     });
 
+    it("hides sender avatars and names in a one-to-one Telegram bubble timeline", () => {
+        withItems([{ key: event.getId()!, kind: "event", continuation: false, lastInSection: true } as TimelineItem]);
+
+        const { container } = renderPanel({ layout: Layout.Bubble });
+
+        expect(tileProps.current[0]).toMatchObject({
+            hideAvatar: true,
+            hideSender: true,
+            telegramBubbles: true,
+            telegramTicks: true,
+        });
+        expect(container.querySelector(".mx_NewTimelinePanel")).toHaveClass("mx_MessagePanel_noAvatars");
+    });
+
+    it("keeps sender avatars in a group bubble timeline", () => {
+        vi.spyOn(room, "getInvitedAndJoinedMemberCount").mockReturnValue(3);
+        withItems([{ key: event.getId()!, kind: "event", continuation: false, lastInSection: true } as TimelineItem]);
+
+        const { container } = renderPanel({ layout: Layout.Bubble });
+
+        expect(tileProps.current[0]).toMatchObject({ hideAvatar: true, hideSender: false });
+        expect(container.querySelectorAll(".mx_NewTimelinePanel_senderAvatar")).toHaveLength(1);
+        expect(container.querySelector(".mx_NewTimelinePanel")).not.toHaveClass("mx_MessagePanel_noAvatars");
+    });
+
+    it("shows one avatar at the end of an incoming sender run", () => {
+        vi.spyOn(room, "getInvitedAndJoinedMemberCount").mockReturnValue(3);
+        const other = mkMessage({ room: ROOM_ID, user: USER_ID, msg: "next", event: true });
+        room.getUnfilteredTimelineSet().addLiveEvent(other, { addToState: false });
+        withItems([
+            { key: event.getId()!, kind: "event", continuation: false, lastInSection: false } as TimelineItem,
+            { key: other.getId()!, kind: "event", continuation: true, lastInSection: true } as TimelineItem,
+        ]);
+
+        const { container } = renderPanel({ layout: Layout.Bubble });
+
+        const messages = container.querySelectorAll(".mx_NewTimelinePanel_senderMessage");
+        expect(messages).toHaveLength(2);
+        expect(messages[0].querySelector(".mx_NewTimelinePanel_senderAvatar")).toBeNull();
+        expect(messages[1].querySelector(".mx_NewTimelinePanel_senderAvatar")).not.toBeNull();
+    });
+
     it("gives the edit state only to the message being edited", () => {
         const other = mkMessage({ room: ROOM_ID, user: USER_ID, msg: "other", event: true });
         room.getUnfilteredTimelineSet().addLiveEvent(other, { addToState: false });

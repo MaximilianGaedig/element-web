@@ -742,7 +742,9 @@
         border-radius: var(--event-tile-bubble-corner-radius) var(--event-tile-bubble-corner-radius) 0 0;
         line-height: var(--event-tile-bubble-line-height);
         position: relative;
-        padding: calc(var(--event-tile-bubble-gutter) - 1px);
+        padding-block: var(--event-tile-bubble-padding-block-start, calc(var(--event-tile-bubble-gutter) - 1px))
+            var(--event-tile-bubble-padding-block-end, calc(var(--event-tile-bubble-gutter) - 1px));
+        padding-inline: var(--event-tile-bubble-padding-inline, calc(var(--event-tile-bubble-gutter) - 1px));
         padding-inline-end: 60px;
         background: var(--event-tile-bubble-other-background);
         border-end-end-radius: var(--event-tile-bubble-corner-radius);
