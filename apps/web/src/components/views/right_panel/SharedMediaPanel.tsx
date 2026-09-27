@@ -728,10 +728,11 @@ function VirtualRows({
         const box = scrollParentOf(el);
         const measure = (): void => {
             if (!box) return;
-            // Taken from the boxes, for the same reason as the grid's: offsetTop answers about a
-            // positioned ancestor rather than about the box that scrolls.
-            const top = box.getBoundingClientRect().top - el.getBoundingClientRect().top;
-            setScroll({ top: Math.max(0, top), viewport: box.clientHeight });
+            // Where the rows begin within everything the box scrolls: the tabs and the header are
+            // above them, and a window that ignores that is out by their height. Taken from the two
+            // boxes because offsetTop answers about a positioned ancestor, not about the box.
+            const offset = box.scrollTop + (el.getBoundingClientRect().top - box.getBoundingClientRect().top);
+            setScroll({ top: Math.max(0, box.scrollTop - Math.max(0, offset)), viewport: box.clientHeight });
         };
         measure();
         box?.addEventListener("scroll", measure, { passive: true });
@@ -839,7 +840,7 @@ function useGridLayout(
 } {
     const ref = useRef<HTMLDivElement>(null);
     const [width, setWidth] = useState(0);
-    const [scroll, setScroll] = useState({ top: 0, viewport: 0 });
+    const [scroll, setScroll] = useState({ top: 0, viewport: 0, content: 0, offset: 0 });
 
     // Measured before the first paint: the column's width sets every row's height, so measuring
     // after it would show one frame of rows piled on top of each other.
@@ -851,13 +852,22 @@ function useGridLayout(
             setWidth(el.clientWidth);
             if (!box) return;
             /*
-             * How far the column has gone past the top of the box that scrolls, taken from the two
-             * boxes rather than from offsetTop: offsetTop is measured against whichever ancestor
-             * happens to be positioned, and the wrapper the handle floats in is one - so it reads
-             * zero however far the column has actually scrolled.
+             * Measured in the scrolling box's own terms, because the column is not the only thing in
+             * it: the tabs and the header sit above it. Deriving the scroll from the column alone
+             * leaves that chrome out, and everything reading it is then short by exactly its height
+             * - the handle reaches the end of its track before the list reaches its end.
+             *
+             * `offset` is where the column begins within everything the box scrolls, taken from the
+             * two boxes rather than from offsetTop: offsetTop answers about whichever ancestor
+             * happens to be positioned, and the wrapper the handle floats in is one.
              */
-            const top = box.getBoundingClientRect().top - el.getBoundingClientRect().top;
-            setScroll({ top: Math.max(0, top), viewport: box.clientHeight });
+            const offset = box.scrollTop + (el.getBoundingClientRect().top - box.getBoundingClientRect().top);
+            setScroll({
+                top: box.scrollTop,
+                viewport: box.clientHeight,
+                content: box.scrollHeight,
+                offset: Math.max(0, offset),
+            });
         };
         measure();
         /*
@@ -893,15 +903,23 @@ function useGridLayout(
     // Before the first measurement there is no height to window against, so show the first screenful
     // rather than nothing: the measurement lands on the same frame and the window takes over.
     const shown = cell
-        ? visibleRows(rows, scroll.top, scroll.viewport || 800)
+        ? visibleRows(rows, Math.max(0, scroll.top - scroll.offset), scroll.viewport || 800)
         : ([0, Math.min(rows.length, 12)] as [number, number]);
+    // Told where to go in the box's own terms, since that is what the handle stands for.
     const seek = useCallback((top: number) => {
-        const el = ref.current;
-        const box = scrollParentOf(el);
-        if (el && box) box.scrollTop = el.offsetTop + top;
+        const box = scrollParentOf(ref.current);
+        if (box) box.scrollTop = top;
     }, []);
 
-    return { ref, rows, height, window: shown, month: sectionAt(rows, scroll.top), scroll, seek };
+    return {
+        ref,
+        rows,
+        height,
+        window: shown,
+        month: sectionAt(rows, Math.max(0, scroll.top - scroll.offset)),
+        scroll,
+        seek,
+    };
 }
 
 /**
@@ -913,13 +931,11 @@ function useGridLayout(
  */
 function DateScrubber({
     rows,
-    height,
     scroll,
     seek,
 }: {
     rows: MediaRow[];
-    height: number;
-    scroll: { top: number; viewport: number };
+    scroll: { top: number; viewport: number; content: number; offset: number };
     seek: (top: number) => void;
 }): JSX.Element | null {
     const track = useRef<HTMLDivElement>(null);
@@ -927,7 +943,8 @@ function DateScrubber({
     // position: at either end the column stops moving before the finger does, and a handle that
     // stopped with it would be left behind by the thing dragging it.
     const [held, setHeld] = useState<number | null>(null);
-    const span = height - scroll.viewport;
+    // Everything the box can scroll, which includes the tabs and header above the column.
+    const span = scroll.content - scroll.viewport;
 
     const to = useCallback(
         (clientY: number) => {
@@ -957,7 +974,8 @@ function DateScrubber({
     // Nothing to scrub when the whole column already fits.
     if (span <= 0) return null;
     const at = held ?? Math.min(1, Math.max(0, scroll.top / span));
-    const under = sectionAt(rows, at * span)?.section;
+    // Where that lands in the column itself, which starts below the chrome.
+    const under = sectionAt(rows, Math.max(0, at * span - scroll.offset))?.section;
     return (
         <div
             ref={track}
@@ -1044,7 +1062,7 @@ function MediaGrid({
          * clipping, which is what the float and the stickiness each need.
          */
         <div className="mx_SharedMedia_column">
-            <DateScrubber rows={rows} height={height} scroll={scroll} seek={seek} />
+            <DateScrubber rows={rows} scroll={scroll} seek={seek} />
             <div className="mx_SharedMedia_grid" ref={ref} style={{ height }}>
                 {/* The month at the top, but only once its own heading has scrolled away - otherwise the
                     two of them say the same thing one under the other. */}
