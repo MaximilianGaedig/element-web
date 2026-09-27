@@ -30,6 +30,7 @@ import PlayIcon from "@vector-im/compound-design-tokens/assets/web/icons/play-so
 import { _t } from "../../../languageHandler";
 import { useStuck } from "../../../hooks/useStuck";
 import { scrollParentOf } from "../../../utils/scrollParent";
+import { listOffsets, listWindow } from "../../../utils/listWindow";
 import { mediaRows, type MediaRow, type MediaSection, sectionAt, visibleRows } from "../../../utils/sharedMediaLayout";
 import BaseCard from "./BaseCard";
 import AccessibleButton from "../elements/AccessibleButton";
@@ -695,6 +696,116 @@ function useDragSelect(
     };
 }
 
+/** What a row of each list tab is roughly worth, until one has been measured. */
+const ROW_ESTIMATE: Partial<Record<SharedMediaTab, number>> = { links: 96, files: 64, music: 64, voice: 64 };
+
+/**
+ * The list tabs, rendering only the rows on screen.
+ *
+ * Same reason as the grid - a chat's whole history of files or links is thousands of rows, and
+ * building all of them costs seconds and then scrolls badly. The difference is that these rows are
+ * not all the same height, so each is measured as it renders and the ones not yet seen stand at an
+ * estimate (utils/listWindow.ts). The estimate being wrong only makes the total height approximate
+ * until every row has been seen once.
+ */
+function VirtualRows({
+    count,
+    estimate,
+    onNearEnd,
+    children,
+}: {
+    count: number;
+    estimate: number;
+    onNearEnd: () => void;
+    children: (index: number) => JSX.Element;
+}): JSX.Element {
+    const ref = useRef<HTMLDivElement>(null);
+    const [measured, setMeasured] = useState<Map<number, number>>(new Map());
+    const [scroll, setScroll] = useState({ top: 0, viewport: 0 });
+
+    useLayoutEffect(() => {
+        const el = ref.current;
+        if (!el) return;
+        const box = scrollParentOf(el);
+        const measure = (): void =>
+            setScroll({
+                top: box ? Math.max(0, box.scrollTop - el.offsetTop) : 0,
+                viewport: box ? box.clientHeight : (el.parentElement?.clientHeight ?? 0),
+            });
+        measure();
+        box?.addEventListener("scroll", measure, { passive: true });
+        const observer = typeof ResizeObserver === "undefined" ? undefined : new ResizeObserver(measure);
+        if (box) observer?.observe(box);
+        return () => {
+            box?.removeEventListener("scroll", measure);
+            observer?.disconnect();
+        };
+    }, []);
+
+    const offsets = useMemo(() => listOffsets(count, measured, estimate), [count, measured, estimate]);
+    const [from, to] = scroll.viewport
+        ? listWindow(offsets, scroll.top, scroll.viewport)
+        : ([0, Math.min(count, 12)] as [number, number]);
+
+    // A row reports its real height once, and only a change worth moving anything for is kept.
+    const remember = (index: number, height: number): void =>
+        setMeasured((prev) => {
+            if (Math.abs((prev.get(index) ?? estimate) - height) < 1) return prev;
+            const next = new Map(prev);
+            next.set(index, height);
+            return next;
+        });
+
+    const nearEnd = useRef(onNearEnd);
+    nearEnd.current = onNearEnd;
+    const atEnd = count > 0 && to >= count;
+    useEffect(() => {
+        if (atEnd) nearEnd.current();
+    }, [atEnd, count]);
+
+    const shown = [];
+    for (let i = from; i < to; i++) shown.push(i);
+    return (
+        <div ref={ref} className="mx_SharedMedia_rows" style={{ height: offsets[count] }}>
+            {shown.map((index) => (
+                <MeasuredRow key={index} top={offsets[index]} onHeight={(h) => remember(index, h)}>
+                    {children(index)}
+                </MeasuredRow>
+            ))}
+        </div>
+    );
+}
+
+/** One row, placed where the layout says and reporting what it turned out to be worth. */
+function MeasuredRow({
+    top,
+    onHeight,
+    children,
+}: {
+    top: number;
+    onHeight: (height: number) => void;
+    children: JSX.Element;
+}): JSX.Element {
+    const ref = useRef<HTMLDivElement>(null);
+    const report = useRef(onHeight);
+    report.current = onHeight;
+    useLayoutEffect(() => {
+        const el = ref.current;
+        if (!el) return;
+        report.current(el.offsetHeight);
+        if (typeof ResizeObserver === "undefined") return;
+        // A link preview's image arrives later and changes the row's height with it.
+        const observer = new ResizeObserver(() => report.current(el.offsetHeight));
+        observer.observe(el);
+        return () => observer.disconnect();
+    }, []);
+    return (
+        <div ref={ref} className="mx_SharedMedia_row_placed" style={{ top }}>
+            {children}
+        </div>
+    );
+}
+
 /* Must match the grid's CSS: three equal columns, a hairline between them, and a month heading. */
 const GRID_COLUMNS = 3;
 const GRID_GAP = 1;
@@ -1121,19 +1232,23 @@ function TabContent({
             );
         } else {
             list = (
-                <>
-                    {items.map((ev) => (
-                        <Selectable key={ev.getId()} event={ev} selection={selection}>
+                <VirtualRows
+                    count={items.length}
+                    estimate={ROW_ESTIMATE[tab] ?? 64}
+                    onNearEnd={() => void loader.loadMore(tab)}
+                >
+                    {(index) => (
+                        <Selectable event={items[index]} selection={selection}>
                             {tab === "links" ? (
-                                <LinkRow event={ev} room={room} />
+                                <LinkRow event={items[index]} room={room} />
                             ) : tab === "files" ? (
-                                <BodyRow event={ev} room={room} />
+                                <BodyRow event={items[index]} room={room} />
                             ) : (
-                                <AudioRow event={ev} room={room} />
+                                <AudioRow event={items[index]} room={room} />
                             )}
                         </Selectable>
-                    ))}
-                </>
+                    )}
+                </VirtualRows>
             );
         }
     }

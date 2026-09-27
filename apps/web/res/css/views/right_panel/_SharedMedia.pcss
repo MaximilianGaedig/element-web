@@ -149,6 +149,22 @@ Please see LICENSE files in the repository root for full details.
         animation: mx_SharedMedia_in var(--SharedMedia-tabs-transition) both;
     }
 
+    /*
+     * A list tab's rows, placed rather than stacked: only the rows on screen exist, so each is put
+     * at the offset the layout measured for it (utils/listWindow.ts).
+     */
+    .mx_SharedMedia_rows {
+        position: relative;
+    }
+
+    .mx_SharedMedia_row_placed {
+        position: absolute;
+        inset-inline: 0;
+        /* The rows used to be spaced by the content column's gap, which a placed row is no longer
+           subject to. Carried as padding so the space is part of what each row measures. */
+        padding-block-end: var(--cpd-space-2x);
+    }
+
     /* Holds the column and the handle beside it; a block, so the handle can float. */
     .mx_SharedMedia_column {
         position: relative;
