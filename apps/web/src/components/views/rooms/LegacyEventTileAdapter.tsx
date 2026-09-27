@@ -33,6 +33,9 @@ export interface LegacyEventTileAdapterProps {
     isRedacted?: boolean;
     replacingEventId?: string;
     hideSender?: boolean;
+    hideAvatar?: boolean;
+    telegramBubbles?: boolean;
+    telegramTicks?: boolean;
 
     // Read state
     readReceipts?: IReadReceiptProps[];
@@ -77,6 +80,9 @@ export function LegacyEventTileAdapter(props: Readonly<LegacyEventTileAdapterPro
             isRedacted={props.isRedacted}
             replacingEventId={props.replacingEventId}
             hideSender={props.hideSender}
+            hideAvatar={props.hideAvatar}
+            telegramBubbles={props.telegramBubbles}
+            telegramTicks={props.telegramTicks}
             readReceipts={props.readReceipts}
             readReceiptMap={props.readReceiptMap}
             showReadReceipts={props.showReadReceipts}

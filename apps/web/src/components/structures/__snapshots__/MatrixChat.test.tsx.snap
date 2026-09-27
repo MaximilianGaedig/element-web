@@ -16,9 +16,7 @@ exports[`<MatrixChat /> > Multi-tab lockout > shows the lockout page when a seco
 `;
 
 exports[`<MatrixChat /> > Multi-tab lockout > shows the lockout page when a second tab opens > during crypto init 1`] = `
-<body
-  style="--emoji-font-family: Twemoji;"
->
+<body>
   <div>
     <main
       class="mx_SessionLockStolenView mx_SplashPage"

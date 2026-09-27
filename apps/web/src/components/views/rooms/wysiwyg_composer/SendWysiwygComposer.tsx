@@ -32,6 +32,8 @@ const Content = function Content({ disabled = false, composerFunctions, ref }: C
 };
 
 export interface SendWysiwygComposerProps {
+    /** The containing composer supplies the emoji picker and security affordances. */
+    externalControls?: boolean;
     initialContent?: string;
     isRichTextEnabled: boolean;
     placeholder?: string;
@@ -48,6 +50,7 @@ export default function SendWysiwygComposer({
     isRichTextEnabled,
     e2eStatus,
     menuPosition,
+    externalControls = false,
     ...props
 }: SendWysiwygComposerProps): JSX.Element {
     const Composer = isRichTextEnabled ? WysiwygComposer : PlainTextComposer;
@@ -74,8 +77,8 @@ export default function SendWysiwygComposer({
         <ComposerContext.Provider value={defaultContextValue}>
             <Composer
                 className="mx_SendWysiwygComposer"
-                leftComponent={leftIcon}
-                rightComponent={<Emoji menuPosition={menuPosition} />}
+                leftComponent={externalControls ? undefined : leftIcon}
+                rightComponent={externalControls ? undefined : <Emoji menuPosition={menuPosition} />}
                 {...props}
             >
                 {(ref, composerFunctions) => (

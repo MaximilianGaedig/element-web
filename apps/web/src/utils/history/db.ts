@@ -58,7 +58,20 @@ export interface RoomHistoryState {
 
 let db: Promise<IDBDatabase> | undefined;
 
+/**
+ * Whether this context can store anything at all. A private window may refuse IndexedDB, and a
+ * worker or a test environment may simply not have it; the stored history is an optimisation, so
+ * where it is missing everything here quietly does nothing rather than taking the session down
+ * with it.
+ */
+function available(): boolean {
+    return typeof indexedDB !== "undefined";
+}
+
 function open(): Promise<IDBDatabase> {
+    // Every caller already treats a failure here as "no stored history"; saying why keeps the
+    // warning they log from reading like a bug in the store.
+    if (!available()) return Promise.reject(new Error("IndexedDB is not available in this context"));
     db ??= new Promise((resolve, reject) => {
         const request = indexedDB.open(DB_NAME, DB_VERSION);
         request.onupgradeneeded = (): void => {
@@ -177,6 +190,7 @@ export async function setRoomHistoryState(state: RoomHistoryState): Promise<void
 /** On logout: the messages go with the session. */
 export async function clearHistoryDb(): Promise<void> {
     db = undefined;
+    if (!available()) return;
     await new Promise<void>((resolve) => {
         const request = indexedDB.deleteDatabase(DB_NAME);
         request.onsuccess = request.onerror = request.onblocked = (): void => resolve();
