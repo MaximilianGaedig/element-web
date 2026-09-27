@@ -339,6 +339,15 @@ Please see LICENSE files in the repository root for full details.
     .mx_EventTile_tgBubble > .mx_EventTile_tgMediaLine {
         background: var(--event-tile-bubble-other-background);
 
+        /*
+         * The line's height is the picture's height and nothing else. As a block it was four pixels
+         * taller than what it held, which showed as a strip of bubble under every photo; as a column
+         * it can only be as tall as its content. Everything else in the line - the time, the action
+         * bar, the tail - is positioned rather than in flow, so none of it is affected.
+         */
+        display: flex;
+        flex-direction: column;
+
         :is(.mx_MediaBody, .mx_MImageBody, .mx_MVideoBody) {
             border-radius: inherit;
             overflow: hidden;

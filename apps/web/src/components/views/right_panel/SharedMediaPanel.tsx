@@ -281,6 +281,19 @@ interface Selection {
 function useSelection(): Selection {
     const [ids, setIds] = useState<Set<string>>(new Set());
     const [active, setActive] = useState(false);
+    // Escape leaves a selection wherever the focus happens to be, which is what every list does and
+    // what someone reaches for before hunting down the close button.
+    useEffect(() => {
+        if (!active && !ids.size) return;
+        const onKey = (e: KeyboardEvent): void => {
+            if (e.key !== "Escape") return;
+            e.stopPropagation();
+            setActive(false);
+            setIds(new Set());
+        };
+        window.addEventListener("keydown", onKey);
+        return () => window.removeEventListener("keydown", onKey);
+    }, [active, ids.size]);
     return useMemo(
         () => ({
             ids,
@@ -444,12 +457,14 @@ function GridThumb({
     onOpen,
     index,
     drag,
+    onRange,
 }: {
     event: MatrixEvent;
     selection: Selection;
     onOpen: () => void;
     index: number;
     drag: DragSelect;
+    onRange: (from: number, to: number) => void;
 }): JSX.Element {
     const content = event.getContent<MediaEventContent>();
     const encrypted = !!content.file;
@@ -492,6 +507,7 @@ function GridThumb({
             type="button"
             className={classNames("mx_SharedMedia_gridItem", { mx_SharedMedia_item_selected: selected })}
             data-tg-media-id={event.getId()}
+            data-grid-index={index}
             aria-pressed={selection.active ? selected : undefined}
             onPointerDown={(e) => drag.onPointerDown(index, e)}
             onPointerEnter={() => drag.onPointerEnter(index)}
@@ -500,8 +516,14 @@ function GridThumb({
                 // The press that just finished a drag, or started a selection by being held, must
                 // not also count as a tap on the picture.
                 if (drag.swallowedClick()) return;
-                if (selection.active || e.ctrlKey || e.metaKey) selection.toggle(event);
-                else onOpen();
+                const from = drag.anchorAt();
+                if (e.shiftKey && from !== undefined) {
+                    // Reaching back to where the selection started, the way a file list does.
+                    onRange(from, index);
+                } else if (selection.active || e.ctrlKey || e.metaKey) {
+                    drag.setAnchor(index);
+                    selection.toggle(event);
+                } else onOpen();
             }}
             aria-label={typeof content.body === "string" ? content.body : undefined}
         >
@@ -514,8 +536,15 @@ function GridThumb({
 
 /** How long a press has to be held, with nothing selected yet, before it starts a selection. */
 const LONG_PRESS_MS = 450;
+/** How close to an edge a drag has to get before the column starts coming to meet it. */
+const EDGE_SCROLL_ZONE = 64;
+/** The most it moves per frame, at the very edge. */
+const EDGE_SCROLL_SPEED = 18;
 
 interface DragSelect {
+    /** Where the last selection gesture started, which is what shift-click reaches back to. */
+    anchorAt: () => number | undefined;
+    setAnchor: (index: number) => void;
     onPointerDown: (index: number, e: React.PointerEvent<HTMLElement>) => void;
     onPointerEnter: (index: number) => void;
     /** True once a drag has done something, so the click that ends it must not open the picture. */
@@ -530,8 +559,13 @@ interface DragSelect {
  * back over what was just covered puts it back the way it was, so overshooting is recoverable
  * rather than something to undo by hand afterwards.
  */
-function useDragSelect(items: MatrixEvent[], selection: Selection): DragSelect {
+function useDragSelect(
+    items: MatrixEvent[],
+    selection: Selection,
+    grid: React.RefObject<HTMLDivElement | null>,
+): DragSelect {
     const drag = useRef<{ from: number; last: number; on: boolean; before: Set<string> } | null>(null);
+    const anchor = useRef<number | undefined>(undefined);
     const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
     const swallow = useRef(false);
 
@@ -565,26 +599,74 @@ function useDragSelect(items: MatrixEvent[], selection: Selection): DragSelect {
     const begin = useCallback(
         (index: number, on: boolean) => {
             drag.current = { from: index, last: index, on, before: new Set(selection.ids) };
+            anchor.current = index;
             selection.setMany(idsOf(index, index), on);
         },
         [idsOf, selection],
     );
 
+    /*
+     * Dragging past the edge of a virtualised grid.
+     *
+     * Only the rows on screen exist, so a drag can only reach the rest if the column comes to meet
+     * it: near an edge this scrolls, faster the closer the pointer gets, and each frame asks what is
+     * now under the pointer rather than waiting to be entered - a row that appears underneath a
+     * finger that is already still never fires a pointerenter of its own.
+     */
+    // Read through a ref so the listeners below can be set up once: `reach` closes over the
+    // selection, which changes with every item the drag takes.
+    const reachRef = useRef(reach);
+    reachRef.current = reach;
+
     useEffect(() => {
+        let at: { x: number; y: number } | undefined;
+        let frame: number | undefined;
+
+        const step = (): void => {
+            frame = undefined;
+            if (!drag.current || !at) return;
+            const box = scrollParentOf(grid.current);
+            if (box) {
+                const rect = box.getBoundingClientRect();
+                const near = Math.min(EDGE_SCROLL_ZONE, rect.height / 3);
+                const above = at.y - rect.top;
+                const below = rect.bottom - at.y;
+                if (above < near) box.scrollTop -= EDGE_SCROLL_SPEED * (1 - Math.max(0, above) / near);
+                else if (below < near) box.scrollTop += EDGE_SCROLL_SPEED * (1 - Math.max(0, below) / near);
+            }
+            const under = document.elementFromPoint(at.x, at.y)?.closest<HTMLElement>("[data-grid-index]")
+                ?.dataset.gridIndex;
+            if (under !== undefined) reachRef.current(Number(under));
+            frame = requestAnimationFrame(step);
+        };
+
+        const move = (e: PointerEvent): void => {
+            if (!drag.current) return;
+            at = { x: e.clientX, y: e.clientY };
+            frame ??= requestAnimationFrame(step);
+        };
         const end = (): void => {
             clearTimeout(timer.current);
             drag.current = null;
+            at = undefined;
+            if (frame !== undefined) cancelAnimationFrame(frame);
+            frame = undefined;
         };
+        window.addEventListener("pointermove", move);
         window.addEventListener("pointerup", end);
         window.addEventListener("pointercancel", end);
         return () => {
+            window.removeEventListener("pointermove", move);
             window.removeEventListener("pointerup", end);
             window.removeEventListener("pointercancel", end);
             clearTimeout(timer.current);
+            if (frame !== undefined) cancelAnimationFrame(frame);
         };
-    }, []);
+    }, [grid]);
 
     return {
+        anchorAt: () => anchor.current,
+        setAnchor: (index) => void (anchor.current = index),
         onPointerDown: (index, e) => {
             // A touch captures the pointer to the element it started on, so without releasing it the
             // drag would never enter the neighbours and could only ever select the one item.
@@ -631,7 +713,10 @@ function monthLabel(time: number): string {
  * seconds to appear. The cells are square and the columns equal, so every row's position follows
  * from the container's width (sharedMediaLayout.ts) and the rest is a window onto that.
  */
-function useGridLayout(items: MatrixEvent[]): {
+function useGridLayout(
+    items: MatrixEvent[],
+    total?: number,
+): {
     ref: React.RefObject<HTMLDivElement | null>;
     rows: MediaRow[];
     height: number;
@@ -667,10 +752,20 @@ function useGridLayout(items: MatrixEvent[]): {
     }, []);
 
     const cell = width ? (width - GRID_GAP * (GRID_COLUMNS - 1)) / GRID_COLUMNS : 0;
-    const { rows, height } = useMemo(
-        () => mediaRows(items, GRID_COLUMNS, { header: MONTH_HEADER, cell, gap: GRID_GAP }),
-        [items, cell],
-    );
+    const { rows, height } = useMemo(() => {
+        const laid = mediaRows(items, GRID_COLUMNS, { header: MONTH_HEADER, cell, gap: GRID_GAP });
+        /*
+         * The column stands for the whole history, not the part of it that has loaded.
+         *
+         * The loader holds the newest ones, so what is missing is older and belongs below: the rows
+         * it would take are left as room at the bottom. Without this the column grows under the
+         * reader as pages arrive, the scrollbar lies about how much there is, and the scrubber can
+         * only reach what has already been fetched - which is the opposite of what it is for.
+         */
+        const missing = Math.max(0, (total ?? 0) - items.length);
+        const reserved = Math.ceil(missing / GRID_COLUMNS) * (cell + GRID_GAP);
+        return { rows: laid.rows, height: laid.height + reserved };
+    }, [items, cell, total]);
     // Before the first measurement there is no height to window against, so show the first screenful
     // rather than nothing: the measurement lands on the same frame and the window takes over.
     const shown = cell
@@ -739,6 +834,10 @@ function DateScrubber({
         <div
             ref={track}
             className="mx_SharedMedia_scrubber"
+            // As long as what can be seen, pinned to it: dragging the handle from one end of the
+            // track to the other then covers the whole column, however tall it is. Sized to the
+            // column instead, most of it would be off screen and only part of the history reachable.
+            style={{ height: scroll.viewport }}
             data-dragging={dragging || undefined}
             onPointerDown={(e) => {
                 e.preventDefault();
@@ -753,8 +852,37 @@ function DateScrubber({
     );
 }
 
-function MediaGrid({ items, selection }: { items: MatrixEvent[]; selection: Selection }): JSX.Element {
-    const drag = useDragSelect(items, selection);
+function MediaGrid({
+    items,
+    selection,
+    total,
+    onNearEnd,
+}: {
+    items: MatrixEvent[];
+    selection: Selection;
+    total?: number;
+    /** Called when the window reaches the last row there is, so the next page can be fetched. */
+    onNearEnd: () => void;
+}): JSX.Element {
+    const { ref, rows, height, window: shown, month, scroll, seek } = useGridLayout(items, total);
+    /*
+     * With room reserved at the bottom for what has not loaded, the end of the column is nowhere
+     * near the end of the rows - so reaching the last row is what asks for the next page, rather
+     * than something at the very bottom that a reader would have to scroll past the gap to meet.
+     */
+    const atEnd = shown[1] >= rows.length && rows.length > 0;
+    // Through a ref, and keyed on how much there is rather than on the callback: an identity that
+    // changes each render would ask for the next page on every render, for ever.
+    const nearEnd = useRef(onNearEnd);
+    nearEnd.current = onNearEnd;
+    useEffect(() => {
+        if (atEnd) nearEnd.current();
+    }, [atEnd, rows.length]);
+    const drag = useDragSelect(items, selection, ref);
+    const range = useCallback(
+        (from: number, to: number) => selection.setMany(items.slice(Math.min(from, to), Math.max(from, to) + 1), true),
+        [items, selection],
+    );
     const open = useCallback(
         (index: number) => {
             if (chatColumnsEnabled()) {
@@ -774,7 +902,6 @@ function MediaGrid({ items, selection }: { items: MatrixEvent[]; selection: Sele
         },
         [items],
     );
-    const { ref, rows, height, window: shown, month, scroll, seek } = useGridLayout(items);
     return (
         <div className="mx_SharedMedia_grid" ref={ref} style={{ height }}>
             {/* The month at the top, but only once its own heading has scrolled away - otherwise the
@@ -806,6 +933,7 @@ function MediaGrid({ items, selection }: { items: MatrixEvent[]; selection: Sele
                                 onOpen={() => open(i)}
                                 index={i}
                                 drag={drag}
+                                onRange={range}
                             />
                         ))}
                     </div>
@@ -916,11 +1044,14 @@ function TabContent({
     tab,
     filter,
     selection,
+    total,
 }: {
     loader: SharedMediaLoader;
     tab: SharedMediaTab;
     filter: MediaFilter;
     selection: Selection;
+    /** How many the room holds in all, from the homeserver's counts, where it can say. */
+    total?: number;
 }): JSX.Element {
     const state = useTabState(loader, tab);
     const { loading, done } = state;
@@ -946,7 +1077,14 @@ function TabContent({
     let list: JSX.Element | null = null;
     if (items.length) {
         if (tab === "media") {
-            list = <MediaGrid items={items} selection={selection} />;
+            list = (
+                <MediaGrid
+                    items={items}
+                    selection={selection}
+                    total={total}
+                    onNearEnd={() => void loader.loadMore(tab)}
+                />
+            );
         } else {
             list = (
                 <>
@@ -1007,6 +1145,8 @@ function SharedMediaTabBody({
         [state.items, selection.ids],
     );
     const subtitle = tabSubtitle(tab, state, filter, byKind);
+    // Links are text as far as the server is concerned, so it has no count for them.
+    const total = byKind && tab !== "links" ? tabCountsFromStats(byKind)[tab] : undefined;
     return (
         <>
             {selection.ids.size > 0 ? (
@@ -1017,7 +1157,7 @@ function SharedMediaTabBody({
                     <TabMenu tab={tab} filter={filter} onChange={setFilter} onSelect={selection.start} />
                 </div>
             )}
-            <TabContent loader={loader} tab={tab} filter={filter} selection={selection} />
+            <TabContent loader={loader} tab={tab} filter={filter} selection={selection} total={total} />
         </>
     );
 }
