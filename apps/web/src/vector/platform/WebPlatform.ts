@@ -37,44 +37,25 @@ function getNormalizedAppVersion(version: string): string {
 export default class WebPlatform extends BasePlatform {
     // oxlint-disable-next-line node/no-process-env
     private static readonly VERSION = process.env.VERSION!; // baked in by Webpack
-    /** Whether this is the development build, which has neither offline mode nor updates. */
-    private static get DEVELOPMENT(): boolean {
-        // oxlint-disable-next-line node/no-process-env
-        return process.env.NODE_ENV === "development";
-    }
     private readonly registerServiceWorkerPromise: Promise<void>;
 
     public constructor() {
         super();
 
         /*
-         * The development build has no offline mode, and no worker either.
+         * The worker is registered in development too, and it has to be.
          *
-         * The worker already declines to cache anything in development, so registering one only
-         * leaves a thing sitting between the dev server and the page that does nothing - and it is
-         * the first thing anybody suspects when a change does not appear. Nor is there any update
-         * to offer: the dev build's version never changes, so the check that would raise the
-         * "update and reload" toast can never find a newer one. A reload gets the new build.
-         *
-         * Any worker left over from before is unregistered, so a page that has one stops being
-         * served by it rather than keeping it until somebody clears it by hand.
+         * It is not only the offline cache - it is what rewrites a media request onto the
+         * authenticated endpoint and puts the access token on it (serviceworker/index.ts). Without
+         * it every thumbnail goes out unauthenticated, and a homeserver that has turned legacy
+         * media off answers 403, so the app comes up with no pictures at all. Its offline caching
+         * already declines to do anything in development, which is the part that was worth
+         * disabling and is disabled where it lives.
          */
-        this.registerServiceWorkerPromise = WebPlatform.DEVELOPMENT
-            ? WebPlatform.unregisterServiceWorkers()
-            : this.registerServiceWorker();
+        this.registerServiceWorkerPromise = this.registerServiceWorker();
         this.registerServiceWorkerPromise.catch((e) => {
             console.error("Error registering/updating service worker:", e);
         });
-    }
-
-    /** Removes any worker registered for this origin, and anything it had cached. */
-    private static async unregisterServiceWorkers(): Promise<void> {
-        if (!navigator.serviceWorker) return;
-        const registrations = await navigator.serviceWorker.getRegistrations();
-        await Promise.all(registrations.map((registration) => registration.unregister()));
-        if (registrations.length) {
-            console.log("Development build: unregistered a leftover service worker");
-        }
     }
 
     protected onAction(payload: ActionPayload): void {
