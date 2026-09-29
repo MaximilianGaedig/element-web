@@ -45,6 +45,13 @@ interface Props {
     /** The name the reader gave them, if they gave one, and how to change it. */
     nickname?: string;
     onRename?: (person: Person, name: string) => void;
+    /**
+     * Say this person and another are one.
+     *
+     * The only merging that works on an account whose bridges publish no identifiers, which is every
+     * bridge here: nothing is detected, so the reader has to be able to say so.
+     */
+    onLink?: () => void;
 }
 
 /** What to call each kind of published detail. */
@@ -64,7 +71,16 @@ function Fact({ label, value }: { label: string; value: string }): JSX.Element {
     );
 }
 
-export function ContactCard({ person, onBack, onMessage, onCall, onSeparate, nickname, onRename }: Props): JSX.Element {
+export function ContactCard({
+    person,
+    onBack,
+    onMessage,
+    onCall,
+    onSeparate,
+    nickname,
+    onRename,
+    onLink,
+}: Props): JSX.Element {
     const [editing, setEditing] = useState(false);
     const [draft, setDraft] = useState(nickname ?? person.name);
     const url = person.avatarUrl ? mediaFromMxc(person.avatarUrl).getSquareThumbnailHttp(96) : null;
@@ -122,7 +138,7 @@ export function ContactCard({ person, onBack, onMessage, onCall, onSeparate, nic
                             </Button>
                             {/* Explicitly not a submit: a button inside a form is one by default, so
                                 cancelling saved. */}
-                            <Button kind="tertiary" size="md" type="button" onClick={() => setEditing(false)}>
+                            <Button kind="secondary" size="md" type="button" onClick={() => setEditing(false)}>
                                 {_t("action|cancel")}
                             </Button>
                         </div>
@@ -199,6 +215,14 @@ export function ContactCard({ person, onBack, onMessage, onCall, onSeparate, nic
                     </button>
                 ))}
             </section>
+
+            {onLink && (
+                <div className="mx_ContactCard_foot">
+                    <Button kind="secondary" size="md" onClick={onLink}>
+                        {_t("contacts|link")}
+                    </Button>
+                </div>
+            )}
 
             {onSeparate && (
                 <div className="mx_ContactCard_foot">

@@ -103,6 +103,39 @@ describe("ContactsView people", () => {
     });
 });
 
+describe("ContactsView linking by hand", () => {
+    /*
+     * The only merging that can happen on an account whose bridges publish no identifiers - which is this
+     * one, every bridge - so it is the path that matters most, not a convenience.
+     */
+    it("offers the other people to link with, never the person themselves", async () => {
+        vi.spyOn(peopleModule, "allPeople").mockResolvedValue([person("Ada"), person("Bob"), person("Cyd")]);
+        open();
+        await waitFor(() => expect(screen.getByText("Ada")).toBeInTheDocument());
+
+        await userEvent.click(screen.getByText("Ada"));
+        await userEvent.click(screen.getByRole("button", { name: "Link to another contact" }));
+
+        expect(screen.getByRole("heading", { name: "Link with Ada" })).toBeInTheDocument();
+        expect(screen.getByText("Bob")).toBeInTheDocument();
+        expect(screen.getByText("Cyd")).toBeInTheDocument();
+        expect(screen.queryByText("Ada")).not.toBeInTheDocument();
+    });
+
+    it("records both sides when one is chosen", async () => {
+        const link = vi.spyOn(peopleModule, "linkAccounts").mockResolvedValue(undefined);
+        vi.spyOn(peopleModule, "allPeople").mockResolvedValue([person("Ada"), person("Bob")]);
+        open();
+        await waitFor(() => expect(screen.getByText("Ada")).toBeInTheDocument());
+
+        await userEvent.click(screen.getByText("Ada"));
+        await userEvent.click(screen.getByRole("button", { name: "Link to another contact" }));
+        await userEvent.click(screen.getByText("Bob"));
+
+        expect(link).toHaveBeenCalledWith(expect.anything(), expect.arrayContaining(["@Ada:e", "@Bob:e"]));
+    });
+});
+
 describe("ContactsView calls", () => {
     const openCalls = async (): Promise<void> => {
         open();

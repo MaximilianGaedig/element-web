@@ -118,7 +118,7 @@ function PersonRow({
     return onSeparate ? (
         <div className="mx_Contacts_rowWith">
             {row}
-            <Button kind="tertiary" size="md" onClick={() => onSeparate(person)}>
+            <Button kind="secondary" size="md" onClick={() => onSeparate(person)}>
                 {_t("contacts|separate")}
             </Button>
         </div>
@@ -229,7 +229,7 @@ function SuggestionCard({
             <Button kind="primary" size="md" onClick={() => onMerge(suggestion)}>
                 {_t("contacts|merge")}
             </Button>
-            <Button kind="tertiary" size="md" onClick={() => onDismiss(suggestion)}>
+            <Button kind="secondary" size="md" onClick={() => onDismiss(suggestion)}>
                 {_t("contacts|not_same_person")}
             </Button>
         </div>
@@ -259,6 +259,14 @@ export function ContactsView({ initialTab = "people", onFinished }: Props): JSX.
     const [onlyUnknown, setOnlyUnknown] = useState(false);
     /* The person whose card is open, if one is: the list and one of its rows are one column's two depths. */
     const [open, setOpen] = useState<Person>();
+    /*
+     * The person being linked to another, while the reader picks that other one.
+     *
+     * Linking by hand is not a convenience here, it is the only merging that can happen: accounts are
+     * matched on published identifiers, and no bridge on this account publishes any - so nothing is ever
+     * detected and the reader has to be able to say "these two are the same person" themselves.
+     */
+    const [linking, setLinking] = useState<Person>();
     /*
      * The list and the decisions behind it, read together.
      *
@@ -332,6 +340,18 @@ export function ContactsView({ initialTab = "people", onFinished }: Props): JSX.
             void namePerson(client, person, name).then(again);
         },
         [client, again],
+    );
+
+    /** Records that the person being linked and the one just chosen are one, and opens the result. */
+    const linkTo = useCallback(
+        (other: Person): void => {
+            if (!linking) return;
+            const both = accountsOf([linking, other]);
+            setLinking(undefined);
+            setOpen(undefined);
+            void linkAccounts(client, both).then(again);
+        },
+        [client, again, linking],
     );
 
     const separate = useCallback(
@@ -466,6 +486,31 @@ export function ContactsView({ initialTab = "people", onFinished }: Props): JSX.
      * The card instead of the list, not over it. Same reasoning as contacts replacing the room list:
      * one column, one thing in it, and back returns the way it came.
      */
+    /*
+     * Picking the other half of a link: the same list, in the same column, with the person being linked
+     * left out of it. A separate screen rather than a dialog over the card, for the same reason contacts
+     * are not a dialog over the room list.
+     */
+    if (linking) {
+        const others = (people ?? []).filter((one) => one.id !== linking.id);
+        return (
+            <div className="mx_Contacts mx_ContactsView">
+                <div className="mx_ContactsView_header">
+                    <IconButton aria-label={_t("action|back")} onClick={() => setLinking(undefined)} size="32px">
+                        <BackIcon />
+                    </IconButton>
+                    <h2 className="mx_ContactsView_title">{_t("contacts|link_with", { name: linking.name })}</h2>
+                </div>
+                <div className="mx_Contacts_list">
+                    {!others.length && <p className="mx_Contacts_empty">{_t("contacts|no_people")}</p>}
+                    {others.map((person) => (
+                        <PersonRow key={person.id} person={person} onOpen={linkTo} />
+                    ))}
+                </div>
+            </div>
+        );
+    }
+
     if (open) {
         const linked = open.accounts.some((a) => a.mxid && state?.linked.has(a.mxid));
         return (
@@ -477,6 +522,7 @@ export function ContactsView({ initialTab = "people", onFinished }: Props): JSX.
                     onSeparate={linked ? separate : undefined}
                     nickname={chosenName(client, open)}
                     onRename={rename}
+                    onLink={() => setLinking(open)}
                 />
             </div>
         );
@@ -594,7 +640,7 @@ export function ContactsView({ initialTab = "people", onFinished }: Props): JSX.
                     )}
                     <div className="mx_Contacts_filters">
                         <Button
-                            kind={onlyMissed ? "primary" : "tertiary"}
+                            kind={onlyMissed ? "primary" : "secondary"}
                             size="md"
                             aria-pressed={onlyMissed}
                             onClick={() => setOnlyMissed((only) => !only)}
@@ -602,7 +648,7 @@ export function ContactsView({ initialTab = "people", onFinished }: Props): JSX.
                             {_t("contacts|call_missed")}
                         </Button>
                         <Button
-                            kind={onlyUnknown ? "primary" : "tertiary"}
+                            kind={onlyUnknown ? "primary" : "secondary"}
                             size="md"
                             aria-pressed={onlyUnknown}
                             onClick={() => setOnlyUnknown((only) => !only)}
