@@ -6,6 +6,8 @@
  */
 
 .mx_RoomListPanel {
+    /* The containing block for the pill floating over the list. */
+    position: relative;
     background-color: var(--cpd-color-bg-canvas-default);
     height: 100%;
 }
@@ -41,4 +43,26 @@
 .mx_RoomListPanel_found {
     flex: 0 0 auto;
     white-space: nowrap;
+}
+
+/*
+ * The whole-list actions, floating over the list rather than taking a row above it.
+ *
+ * Centred and clear of the home indicator, as iOS keeps this kind of control, and the list scrolls
+ * underneath: on a handset the row it replaces was the scarcest thing on screen.
+ */
+.mx_RoomListPill {
+    position: absolute;
+    bottom: calc(var(--tg-safe-bottom, 0px) + var(--cpd-space-4x));
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    gap: var(--cpd-space-1x);
+    padding: var(--cpd-space-1x) var(--cpd-space-2x);
+    /* A pill, as Element's other rounded chrome writes it. */
+    border-radius: 99px;
+    background: var(--cpd-color-bg-canvas-default);
+    box-shadow: 0 2px 12px rgb(0 0 0 / 18%);
 }

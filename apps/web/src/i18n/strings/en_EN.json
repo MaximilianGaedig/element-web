@@ -2294,6 +2294,7 @@
             "leave_room": "Leave room"
         },
         "notification_options": "Notification options",
+        "pill_label": "Everything in this list",
         "section": {
             "chats": "Chats",
             "favourites": "Favourites",

@@ -12,9 +12,11 @@ import { shouldShowComponent } from "../../../../customisations/helpers/UICompon
 import { UIComponent } from "../../../../settings/UIFeature";
 import { RoomListSearch } from "./RoomListSearch";
 import { HistoryStatusMini } from "../../telegram/TgHistoryChip";
-import FoundIcon from "@vector-im/compound-design-tokens/assets/web/icons/search";
-import { Button } from "@vector-im/compound-web";
 import { RoomListView } from "./RoomListView";
+import { RoomListPill } from "./RoomListPill";
+import { ContactsView } from "../../contacts/ContactsView";
+import { contactsTab } from "../../../../utils/contacts/contactsTab";
+import { setRoomListPanelView, useRoomListPanelView } from "../../../../utils/roomListPanelView";
 import { _t } from "../../../../languageHandler";
 import { getKeyBindingsManager } from "../../../../KeyBindingsManager";
 import { KeyBindingAction } from "../../../../accessibility/KeyboardShortcuts";
@@ -64,6 +66,7 @@ export const RoomListPanel: React.FC<RoomListPanelProps> = ({ activeSpace }) => 
         [focusedElement],
     );
 
+    const panelView = useRoomListPanelView();
     const matrixClient = useMatrixClientContext();
     const vm = useCreateAutoDisposedViewModel(
         () => new RoomListHeaderViewModel({ matrixClient, spaceStore: sdkContext.spaceStore }),
@@ -80,35 +83,32 @@ export const RoomListPanel: React.FC<RoomListPanelProps> = ({ activeSpace }) => 
             onBlur={onBlur}
             onKeyDown={onKeyDown}
         >
-            {displayRoomSearch && (
-                /* Fork: the search row also carries what is left of the bridge status once the
+            {panelView === "contacts" ? (
+                /*
+                 * In place of the list, not over it: one column, one thing in it. Keyed on the tab so
+                 * reopening on Calls from the pill remounts rather than leaving the last tab showing.
+                 */
+                <ContactsView
+                    key={contactsTab()}
+                    initialTab={contactsTab()}
+                    onFinished={() => setRoomListPanelView("rooms")}
+                />
+            ) : (
+                <>
+                    {displayRoomSearch && (
+                        /* Fork: the search row also carries what is left of the bridge status once the
                    imports are done - a tick, rather than the full chip taking a row of its own. */
-                <div className="mx_RoomListPanel_searchRow">
-                    <RoomListSearch activeSpace={activeSpace} />
-                    <HistoryStatusMini />
-                </div>
+                        <div className="mx_RoomListPanel_searchRow">
+                            <RoomListSearch activeSpace={activeSpace} />
+                            <HistoryStatusMini />
+                        </div>
+                    )}
+                    <RoomListHeaderView vm={vm} />
+                    <RoomListView />
+                    {/* Fork: over the list rather than above it, so it costs the list no height. */}
+                    <RoomListPill />
+                </>
             )}
-            <RoomListHeaderView vm={vm} />
-            {/* Fork: what the chats turned out to contain, which was read here in idle time and never
-                left the device. */}
-            <div className="mx_RoomListPanel_tools">
-                <Button
-                    kind="secondary"
-                    size="md"
-                    className="mx_RoomListPanel_found"
-                    Icon={FoundIcon}
-                    onClick={() => {
-                        // The room list is part of the startup graph. Keep both the dialog and Modal out
-                        // of it: they only matter after the reader asks to see what was found.
-                        void Promise.all([import("../../dialogs/FoundDialog"), import("../../../../Modal")]).then(
-                            ([{ default: FoundDialog }, { default: Modal }]) => Modal.createDialog(FoundDialog),
-                        );
-                    }}
-                >
-                    {_t("found|open_it")}
-                </Button>
-            </div>
-            <RoomListView />
         </Flex>
     );
 };

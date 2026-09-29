@@ -6,14 +6,14 @@ Please see LICENSE files in the repository root for full details.
 */
 
 /* Element's own list shapes, not a new set: a row is an avatar, two lines of text and a trailing note. */
-.mx_ContactsDialog {
-    .mx_ContactsDialog_tabs {
+.mx_Contacts {
+    .mx_Contacts_tabs {
         display: flex;
         gap: var(--cpd-space-2x);
         margin-bottom: var(--cpd-space-3x);
     }
 
-    .mx_ContactsDialog_search {
+    .mx_Contacts_search {
         width: 100%;
         box-sizing: border-box;
         padding: var(--cpd-space-2x) var(--cpd-space-3x);
@@ -27,14 +27,14 @@ Please see LICENSE files in the repository root for full details.
     }
 
     /* Its own scroller, so a long list cannot push the tabs or the search off the dialog. */
-    .mx_ContactsDialog_list {
+    .mx_Contacts_list {
         display: flex;
         flex-direction: column;
         max-height: 60vh;
         overflow-y: auto;
     }
 
-    .mx_ContactsDialog_row {
+    .mx_Contacts_row {
         display: flex;
         align-items: center;
         gap: var(--cpd-space-3x);
@@ -55,12 +55,12 @@ Please see LICENSE files in the repository root for full details.
     }
 
     /* A row that has an action beside it: the row still takes the width, the action sits at the end. */
-    .mx_ContactsDialog_rowWith {
+    .mx_Contacts_rowWith {
         display: flex;
         align-items: center;
         gap: var(--cpd-space-1x);
 
-        .mx_ContactsDialog_row {
+        .mx_Contacts_row {
             min-width: 0;
         }
     }
@@ -69,7 +69,7 @@ Please see LICENSE files in the repository root for full details.
      * Two accounts that might be one person, above the list because it is a question rather than a row:
      * tinted so it does not read as somebody you can open, and gone as soon as it is answered either way.
      */
-    .mx_ContactsDialog_suggestion {
+    .mx_Contacts_suggestion {
         display: flex;
         align-items: center;
         gap: var(--cpd-space-2x);
@@ -80,13 +80,13 @@ Please see LICENSE files in the repository root for full details.
     }
 
     /* The list and the letters beside it: the list scrolls, the index stays put next to it. */
-    .mx_ContactsDialog_listWithIndex {
+    .mx_Contacts_listWithIndex {
         display: flex;
         align-items: stretch;
         gap: var(--cpd-space-1x);
         min-height: 0;
 
-        .mx_ContactsDialog_list {
+        .mx_Contacts_list {
             flex: 1;
             min-width: 0;
         }
@@ -98,7 +98,7 @@ Please see LICENSE files in the repository root for full details.
      * Small and tight on purpose: it is a ruler for the list rather than a set of buttons, so it stays out
      * of the way of the names until it is aimed at.
      */
-    .mx_ContactsDialog_index {
+    .mx_Contacts_index {
         display: flex;
         flex-direction: column;
         justify-content: center;
@@ -122,7 +122,7 @@ Please see LICENSE files in the repository root for full details.
     }
 
     /* Sticky, so the reader can always see which letter the names under the cursor belong to. */
-    .mx_ContactsDialog_letter {
+    .mx_Contacts_letter {
         position: sticky;
         top: 0;
         z-index: 1;
@@ -134,7 +134,7 @@ Please see LICENSE files in the repository root for full details.
     }
 
     /* A row of faces above the calls: scrolled sideways, so a long list of favourites costs no height. */
-    .mx_ContactsDialog_favourites {
+    .mx_Contacts_favourites {
         display: flex;
         gap: var(--cpd-space-3x);
         overflow-x: auto;
@@ -142,7 +142,7 @@ Please see LICENSE files in the repository root for full details.
         margin-bottom: var(--cpd-space-2x);
     }
 
-    .mx_ContactsDialog_favourite {
+    .mx_Contacts_favourite {
         display: flex;
         flex-direction: column;
         align-items: center;
@@ -157,7 +157,7 @@ Please see LICENSE files in the repository root for full details.
         cursor: pointer;
     }
 
-    .mx_ContactsDialog_favouriteName {
+    .mx_Contacts_favouriteName {
         max-width: 100%;
         overflow: hidden;
         text-overflow: ellipsis;
@@ -165,33 +165,33 @@ Please see LICENSE files in the repository root for full details.
         font: var(--cpd-font-body-xs-regular);
     }
 
-    .mx_ContactsDialog_filters {
+    .mx_Contacts_filters {
         display: flex;
         gap: var(--cpd-space-2x);
         margin-bottom: var(--cpd-space-2x);
     }
 
     /* A missed call is the one row people open this list to find. */
-    .mx_ContactsDialog_row_missed .mx_ContactsDialog_name {
+    .mx_Contacts_row_missed .mx_Contacts_name {
         color: var(--cpd-color-text-critical-primary);
     }
 
-    .mx_ContactsDialog_rowText {
+    .mx_Contacts_rowText {
         display: flex;
         flex-direction: column;
         flex: 1;
         min-width: 0;
     }
 
-    .mx_ContactsDialog_name {
+    .mx_Contacts_name {
         font: var(--cpd-font-body-md-medium);
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
     }
 
-    .mx_ContactsDialog_detail,
-    .mx_ContactsDialog_when {
+    .mx_Contacts_detail,
+    .mx_Contacts_when {
         color: var(--cpd-color-text-secondary);
         font: var(--cpd-font-body-sm-regular);
         overflow: hidden;
@@ -199,13 +199,13 @@ Please see LICENSE files in the repository root for full details.
         white-space: nowrap;
     }
 
-    .mx_ContactsDialog_networks {
+    .mx_Contacts_networks {
         display: flex;
         gap: var(--cpd-space-1x);
         flex-shrink: 0;
     }
 
-    .mx_ContactsDialog_network {
+    .mx_Contacts_network {
         padding: 0 var(--cpd-space-2x);
         /* A pill, as Element's other rounded chrome writes it. */
         border-radius: 99px;
@@ -215,19 +215,39 @@ Please see LICENSE files in the repository root for full details.
         line-height: 20px;
     }
 
-    .mx_ContactsDialog_empty {
+    .mx_Contacts_empty {
         padding: var(--cpd-space-6x) 0;
         color: var(--cpd-color-text-secondary);
         text-align: center;
     }
 }
 
-/* Sits with the other rail buttons, so it reads as one of them rather than as something bolted on. */
-.mx_ContactsButton {
-    margin: 0 auto var(--cpd-space-2x);
+/*
+ * Contacts in the room list's column, so it fills it: the header is the only fixed part and the lists
+ * below take the rest, which is what lets their own scroller reach the bottom of the screen.
+ */
+.mx_ContactsView {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    flex: 1;
+    padding: 0 var(--cpd-space-3x);
+}
 
-    .mx_ContactsButton_label {
-        margin-left: var(--cpd-space-2x);
-        color: var(--cpd-color-text-secondary);
-    }
+.mx_ContactsView_header {
+    display: flex;
+    align-items: center;
+    gap: var(--cpd-space-2x);
+    padding: var(--cpd-space-2x) 0;
+}
+
+.mx_ContactsView_title {
+    margin: 0;
+    font: var(--cpd-font-heading-sm-semibold);
+}
+
+/* Fills the column, rather than the 60vh a dialog could afford to stop at. */
+.mx_ContactsView .mx_Contacts_list {
+    max-height: none;
+    flex: 1;
 }

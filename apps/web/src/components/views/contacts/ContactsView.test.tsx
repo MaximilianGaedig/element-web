@@ -13,7 +13,7 @@ import userEvent from "@testing-library/user-event";
 import { vi, describe, it, expect, beforeEach } from "vitest";
 import { type MatrixClient } from "matrix-js-sdk/src/matrix";
 
-import { ContactsDialog } from "./ContactsDialog";
+import { ContactsView } from "./ContactsView";
 import { type Call } from "../../../utils/contacts/calls";
 import { type Person } from "../../../utils/contacts/people";
 import * as peopleModule from "../../../utils/contacts/people";
@@ -53,7 +53,7 @@ const call = (over: Partial<Call> = {}): Call => ({
     ...over,
 });
 
-const open = (): RenderResult => render(<ContactsDialog onFinished={() => {}} />);
+const open = (): RenderResult => render(<ContactsView onFinished={() => {}} />);
 
 beforeEach(() => {
     vi.restoreAllMocks();
@@ -70,7 +70,7 @@ beforeEach(() => {
     vi.spyOn(favouritesModule, "favourites").mockReturnValue([]);
 });
 
-describe("ContactsDialog people", () => {
+describe("ContactsView people", () => {
     it("files people under their initials and offers a letter for each section", async () => {
         vi.spyOn(peopleModule, "allPeople").mockResolvedValue([person("Ada"), person("Bob"), person("+49 170")]);
         open();
@@ -102,7 +102,7 @@ describe("ContactsDialog people", () => {
     });
 });
 
-describe("ContactsDialog calls", () => {
+describe("ContactsView calls", () => {
     const openCalls = async (): Promise<void> => {
         open();
         await userEvent.click(screen.getByRole("tab", { name: "Calls" }));

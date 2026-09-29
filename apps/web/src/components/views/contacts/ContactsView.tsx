@@ -17,14 +17,14 @@ Please see LICENSE files in the repository root for full details.
  */
 
 import React, { type JSX, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Button } from "@vector-im/compound-web";
+import { Button, IconButton } from "@vector-im/compound-web";
 import UserProfileIcon from "@vector-im/compound-design-tokens/assets/web/icons/user-profile";
 import VoiceCallIcon from "@vector-im/compound-design-tokens/assets/web/icons/voice-call";
 import VideoCallIcon from "@vector-im/compound-design-tokens/assets/web/icons/video-call";
 import InfoIcon from "@vector-im/compound-design-tokens/assets/web/icons/info";
+import BackIcon from "@vector-im/compound-design-tokens/assets/web/icons/chevron-left";
 
 import { _t } from "../../../languageHandler";
-import BaseDialog from "../dialogs/BaseDialog";
 import { type Call, callHistory, missedCalls, unknownCallers } from "../../../utils/contacts/calls";
 import { type Favourite, favourites } from "../../../utils/contacts/favourites";
 import { sectionsOf } from "../../../utils/contacts/sections";
@@ -92,15 +92,15 @@ function PersonRow({
     const detail = person.keys.length ? readKey(person.keys[0]) : networks.join(" · ");
 
     const row = (
-        <button type="button" className="mx_ContactsDialog_row" onClick={() => onOpen(person)}>
+        <button type="button" className="mx_Contacts_row" onClick={() => onOpen(person)}>
             <Face name={person.name} avatarUrl={person.avatarUrl} />
-            <span className="mx_ContactsDialog_rowText">
-                <span className="mx_ContactsDialog_name">{person.name}</span>
-                <span className="mx_ContactsDialog_detail">{detail}</span>
+            <span className="mx_Contacts_rowText">
+                <span className="mx_Contacts_name">{person.name}</span>
+                <span className="mx_Contacts_detail">{detail}</span>
             </span>
-            <span className="mx_ContactsDialog_networks">
+            <span className="mx_Contacts_networks">
                 {networks.map((network) => (
-                    <span key={network} className="mx_ContactsDialog_network">
+                    <span key={network} className="mx_Contacts_network">
                         {network}
                     </span>
                 ))}
@@ -113,7 +113,7 @@ function PersonRow({
      * markup a browser will keep, and the click would have to be stopped from opening the chat anyway.
      */
     return onSeparate ? (
-        <div className="mx_ContactsDialog_rowWith">
+        <div className="mx_Contacts_rowWith">
             {row}
             <Button kind="tertiary" size="md" onClick={() => onSeparate(person)}>
                 {_t("contacts|separate")}
@@ -138,9 +138,9 @@ function FavouriteCard({
     onOpen: (favourite: Favourite) => void;
 }): JSX.Element {
     return (
-        <button type="button" className="mx_ContactsDialog_favourite" onClick={() => onOpen(favourite)}>
+        <button type="button" className="mx_Contacts_favourite" onClick={() => onOpen(favourite)}>
             <Face name={favourite.name} avatarUrl={favourite.avatarUrl} />
-            <span className="mx_ContactsDialog_favouriteName">{favourite.name}</span>
+            <span className="mx_Contacts_favouriteName">{favourite.name}</span>
         </button>
     );
 }
@@ -172,18 +172,18 @@ function CallRow({
      * reason the merge action is (see PersonRow): a button cannot hold another button.
      */
     return (
-        <div className="mx_ContactsDialog_rowWith">
+        <div className="mx_Contacts_rowWith">
             <button
                 type="button"
-                className={`mx_ContactsDialog_row${call.outcome === "missed" && !call.outgoing ? " mx_ContactsDialog_row_missed" : ""}`}
+                className={`mx_Contacts_row${call.outcome === "missed" && !call.outgoing ? " mx_Contacts_row_missed" : ""}`}
                 onClick={() => onOpen(call)}
             >
                 <Face name={call.name} avatarUrl={call.avatarUrl} />
-                <span className="mx_ContactsDialog_rowText">
-                    <span className="mx_ContactsDialog_name">{call.name}</span>
-                    <span className="mx_ContactsDialog_detail">{detail}</span>
+                <span className="mx_Contacts_rowText">
+                    <span className="mx_Contacts_name">{call.name}</span>
+                    <span className="mx_Contacts_detail">{detail}</span>
                 </span>
-                <span className="mx_ContactsDialog_when">{formatRelativeTime(new Date(call.ts))}</span>
+                <span className="mx_Contacts_when">{formatRelativeTime(new Date(call.ts))}</span>
                 {call.video ? <VideoCallIcon aria-hidden /> : <VoiceCallIcon aria-hidden />}
             </button>
             <Button
@@ -215,11 +215,11 @@ function SuggestionCard({
 }): JSX.Element {
     const networks = [...new Set(suggestion.people.flatMap((one) => one.accounts.map((a) => a.network)))];
     return (
-        <div className="mx_ContactsDialog_suggestion">
+        <div className="mx_Contacts_suggestion">
             <Face name={suggestion.people[0].name} avatarUrl={suggestion.people[0].avatarUrl} />
-            <span className="mx_ContactsDialog_rowText">
-                <span className="mx_ContactsDialog_name">{suggestion.people[0].name}</span>
-                <span className="mx_ContactsDialog_detail">
+            <span className="mx_Contacts_rowText">
+                <span className="mx_Contacts_name">{suggestion.people[0].name}</span>
+                <span className="mx_Contacts_detail">
                     {_t("contacts|same_person", { networks: networks.join(", ") })}
                 </span>
             </span>
@@ -233,7 +233,14 @@ function SuggestionCard({
     );
 }
 
-export function ContactsDialog({ initialTab = "people", onFinished }: Props): JSX.Element {
+/**
+ * People, and the calls with them, in the room list's own column.
+ *
+ * Not a dialog: on a handset a floating panel over the chat list is the desktop answer to a problem a
+ * phone does not have, and there is no room for both at once. This replaces the list and the back
+ * control returns it, as the Contacts and Phone apps do. `onFinished` is that return.
+ */
+export function ContactsView({ initialTab = "people", onFinished }: Props): JSX.Element {
     /*
      * The peg, not the context.
      *
@@ -438,8 +445,14 @@ export function ContactsDialog({ initialTab = "people", onFinished }: Props): JS
     );
 
     return (
-        <BaseDialog className="mx_ContactsDialog" onFinished={onFinished} title={_t("contacts|title")} hasCancel={true}>
-            <div className="mx_ContactsDialog_tabs" role="tablist">
+        <div className="mx_Contacts mx_ContactsView">
+            <div className="mx_ContactsView_header">
+                <IconButton aria-label={_t("action|back")} onClick={onFinished} size="32px">
+                    <BackIcon />
+                </IconButton>
+                <h2 className="mx_ContactsView_title">{_t("contacts|title")}</h2>
+            </div>
+            <div className="mx_Contacts_tabs" role="tablist">
                 <Button
                     kind={tab === "people" ? "primary" : "tertiary"}
                     size="md"
@@ -465,15 +478,15 @@ export function ContactsDialog({ initialTab = "people", onFinished }: Props): JS
             {tab === "people" ? (
                 <>
                     <input
-                        className="mx_ContactsDialog_search"
+                        className="mx_Contacts_search"
                         type="search"
                         value={query}
                         placeholder={_t("contacts|search_people")}
                         onChange={(event) => setQuery(event.target.value)}
                         autoFocus
                     />
-                    <div className="mx_ContactsDialog_listWithIndex">
-                        <div className="mx_ContactsDialog_list" ref={listRef}>
+                    <div className="mx_Contacts_listWithIndex">
+                        <div className="mx_Contacts_list" ref={listRef}>
                             {people === undefined && <Spinner />}
                             {/* Only while nothing is typed: a search is a question about one person. */}
                             {!query &&
@@ -486,12 +499,12 @@ export function ContactsDialog({ initialTab = "people", onFinished }: Props): JS
                                     />
                                 ))}
                             {people !== undefined && !shown.length && (
-                                <p className="mx_ContactsDialog_empty">{_t("contacts|no_people")}</p>
+                                <p className="mx_Contacts_empty">{_t("contacts|no_people")}</p>
                             )}
                             {(query ? [{ letter: "", items: shown }] : sections).map((section) => (
                                 <React.Fragment key={section.letter}>
                                     {section.letter && (
-                                        <h3 className="mx_ContactsDialog_letter" data-letter={section.letter}>
+                                        <h3 className="mx_Contacts_letter" data-letter={section.letter}>
                                             {section.letter}
                                         </h3>
                                     )}
@@ -512,7 +525,7 @@ export function ContactsDialog({ initialTab = "people", onFinished }: Props): JS
                         </div>
                         {/* Nothing to jump between under one letter, so the index only appears above that. */}
                         {!query && sections.length > 1 && (
-                            <nav className="mx_ContactsDialog_index" aria-label={_t("contacts|index")}>
+                            <nav className="mx_Contacts_index" aria-label={_t("contacts|index")}>
                                 {sections.map((section) => (
                                     <button key={section.letter} type="button" onClick={() => jumpTo(section.letter)}>
                                         {section.letter}
@@ -525,13 +538,13 @@ export function ContactsDialog({ initialTab = "people", onFinished }: Props): JS
             ) : (
                 <>
                     {!!favourited.length && (
-                        <div className="mx_ContactsDialog_favourites" aria-label={_t("contacts|favourites")}>
+                        <div className="mx_Contacts_favourites" aria-label={_t("contacts|favourites")}>
                             {favourited.map((favourite) => (
                                 <FavouriteCard key={favourite.roomId} favourite={favourite} onOpen={openFavourite} />
                             ))}
                         </div>
                     )}
-                    <div className="mx_ContactsDialog_filters">
+                    <div className="mx_Contacts_filters">
                         <Button
                             kind={onlyMissed ? "primary" : "tertiary"}
                             size="md"
@@ -549,9 +562,9 @@ export function ContactsDialog({ initialTab = "people", onFinished }: Props): JS
                             {_t("contacts|call_unknown")}
                         </Button>
                     </div>
-                    <div className="mx_ContactsDialog_list">
+                    <div className="mx_Contacts_list">
                         {!shownCalls.length && (
-                            <p className="mx_ContactsDialog_empty">
+                            <p className="mx_Contacts_empty">
                                 {onlyMissed || onlyUnknown ? _t("contacts|no_calls_matching") : _t("contacts|no_calls")}
                             </p>
                         )}
@@ -566,6 +579,6 @@ export function ContactsDialog({ initialTab = "people", onFinished }: Props): JS
                     </div>
                 </>
             )}
-        </BaseDialog>
+        </div>
     );
 }
