@@ -53,7 +53,7 @@ describe("AppearanceUserSettingsTab", () => {
         render(<AppearanceUserSettingsTab />, withClientContextRenderOptions(client));
         for (const [label, value] of [
             ["Telegram Web", "telegram-web"],
-            ["Element default", "element"],
+            ["Standard", "element"],
             ["Telegram iOS", "telegram-ios"],
         ]) {
             const padding = screen.getByText("Mobile message padding").closest(".mx_SettingsDropdown")!;
