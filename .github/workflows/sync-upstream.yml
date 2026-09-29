@@ -5,11 +5,16 @@ on:
         - cron: "0 */6 * * *"
     workflow_dispatch:
 
+# A clean merge goes straight to develop as before. A conflicted one used to fail the job and leave a
+# red check nobody is paged about - which is how this fork ended up 74 commits and eight weeks behind
+# without anyone noticing. Now it opens a pull request instead, so a sync that needs a human produces
+# something to look at rather than a failure, and the branch it opens is built by CI without deploying.
 jobs:
     sync:
         runs-on: ubuntu-latest
         permissions:
             contents: write
+            pull-requests: write
         steps:
             - uses: actions/checkout@v4
               with:
@@ -23,8 +28,50 @@ jobs:
                   git config user.email "github-actions[bot]@users.noreply.github.com"
 
             - name: Merge upstream develop
+              id: merge
               run: |
                   git remote add upstream https://github.com/element-hq/element-web.git
                   git fetch upstream develop
-                  git merge upstream/develop --no-edit
-                  git push origin develop
+                  if git merge upstream/develop --no-edit; then
+                      echo "conflicted=false" >> "$GITHUB_OUTPUT"
+                  else
+                      # Leave the conflict markers in place: the point of the branch is to show a human
+                      # exactly what disagreed, which a --abort would throw away.
+                      echo "conflicted=true" >> "$GITHUB_OUTPUT"
+                      {
+                          echo "files<<EOF"
+                          git diff --name-only --diff-filter=U
+                          echo "EOF"
+                      } >> "$GITHUB_OUTPUT"
+                  fi
+                  echo "behind=$(git rev-list --count HEAD..upstream/develop)" >> "$GITHUB_OUTPUT"
+
+            - name: Push the merge
+              if: steps.merge.outputs.conflicted == 'false'
+              run: git push origin develop
+
+            - name: Open a pull request for a sync that needs a human
+              if: steps.merge.outputs.conflicted == 'true'
+              env:
+                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+                  FILES: ${{ steps.merge.outputs.files }}
+                  BEHIND: ${{ steps.merge.outputs.behind }}
+              run: |
+                  # One branch per day: a sync that keeps conflicting updates its own branch rather
+                  # than opening a new pull request every six hours.
+                  BRANCH="sync-upstream/$(date -u +%Y-%m-%d)"
+                  git checkout -B "$BRANCH"
+                  git add -A
+                  git commit -m "Merge upstream develop (conflicts left for review)" --no-edit || true
+                  git push --force-with-lease origin "$BRANCH"
+                  if [ -n "$(gh pr list --head "$BRANCH" --json number --jq '.[].number')" ]; then
+                      exit 0
+                  fi
+                  {
+                      printf '%s\n\n' "The scheduled sync could not merge upstream cleanly, $BEHIND commits behind."
+                      printf '%s\n\n' "The conflict markers are left in this branch on purpose, so what disagreed is visible."
+                      printf '%s\n' "Conflicted files:"
+                      printf '\n```\n%s\n```\n\n' "$FILES"
+                      printf '%s\n' "Resolve on this branch; CI builds it without deploying. Landing it is a merge into develop, which does deploy."
+                  } > /tmp/pr-body.md
+                  gh pr create --base develop --head "$BRANCH" --title "Sync upstream develop" --body-file /tmp/pr-body.md
