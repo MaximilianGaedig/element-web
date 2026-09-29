@@ -70,16 +70,22 @@ export function HistoryStatusChip(): JSX.Element | null {
 
     // A bridge that needs you comes first: those chats are not moving at all until it is logged in.
     const tone: "problem" | "working" = headline.blocked > 0 ? "problem" : "working";
+    const progress = _t("tg_layout|chip_importing", {
+        done: headline.done.toLocaleString(),
+        total: headline.total.toLocaleString(),
+    });
+    /*
+     * A blocked bridge used to replace the progress rather than lead it, so the moment one network
+     * logged out there was no longer any sign of how far the others had got - which is the thing the
+     * chip is there to answer. Both, when there is both: what needs you, then where the rest is up to.
+     */
     const text =
         tone === "problem"
-            ? _t("tg_layout|chip_login_problem", {
+            ? `${_t("tg_layout|chip_login_problem", {
                   count: headline.blockedNetworks.length,
                   names: headline.blockedNetworks.join(", "),
-              })
-            : _t("tg_layout|chip_importing", {
-                  done: headline.done.toLocaleString(),
-                  total: headline.total.toLocaleString(),
-              });
+              })} · ${progress}`
+            : progress;
 
     return (
         <button
@@ -98,7 +104,7 @@ export function HistoryStatusChip(): JSX.Element | null {
             )}
             {tone === "problem" && <span className="mx_TgHistoryChip_dot" aria-hidden />}
             <span className="mx_TgHistoryChip_text">{text}</span>
-            {tone === "working" && headline.percent !== undefined && (
+            {headline.percent !== undefined && (
                 <span className="mx_TgHistoryChip_percent">{`${headline.percent}%`}</span>
             )}
         </button>
