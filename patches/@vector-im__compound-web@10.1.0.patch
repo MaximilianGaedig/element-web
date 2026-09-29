@@ -7,7 +7,7 @@ index a282d34afb4172398f9433cb257bfb0748b52c44..a96a7a13aaab9f4cc8c5dba557c79b24
  //#region src/components/Tooltip/Tooltip.tsx
  var hasLabel = (props) => "label" in props && !!props.label;
 +const offstage = {
-+	position: "fixed",
++	position: "fixed", pointerEvents: "none",
 +	top: 0,
 +	left: 0
 +};
@@ -41,7 +41,7 @@ index fcbf7f4c98383e319f32c8d5e3c91c540bd9e63e..e62b4f0f7ea80e768b0da0e6a9c3807e
  //#region src/components/Tooltip/Tooltip.tsx
  var hasLabel = (props) => "label" in props && !!props.label;
 +const offstage = {
-+	position: "fixed",
++	position: "fixed", pointerEvents: "none",
 +	top: 0,
 +	left: 0
 +};

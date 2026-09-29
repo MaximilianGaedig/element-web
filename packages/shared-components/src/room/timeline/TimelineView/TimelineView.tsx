@@ -388,7 +388,10 @@ export function TimelineView({
         if (!scroller) return;
         let idleTimeout: number | undefined;
         const onScroll = (): void => {
-            scrollingRef.current = true;
+            // Only once the reader is the one scrolling. Placing the timeline scrolls it repeatedly as
+            // rows are measured, and reading that as scrolling puts the floating date on screen for the
+            // first moment of every room opened - which is the one time nothing has moved.
+            if (phaseRef.current === "live") scrollingRef.current = true;
             updateStickyDate();
             window.clearTimeout(idleTimeout);
             idleTimeout = window.setTimeout(() => {

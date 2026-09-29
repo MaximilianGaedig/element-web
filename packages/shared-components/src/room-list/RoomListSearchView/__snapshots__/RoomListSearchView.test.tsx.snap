@@ -33,6 +33,7 @@ exports[`RoomListSearchView > Storybook snapshots > renders the default state 1`
         style="--mx-flex-display: flex; --mx-flex-direction: row; --mx-flex-align: start; --mx-flex-justify: space-between; --mx-flex-gap: 0; --mx-flex-wrap: nowrap;"
       >
         <span
+          aria-live="polite"
           class="RoomListSearchView-module_search_text"
         >
           Search
@@ -100,6 +101,7 @@ exports[`RoomListSearchView > Storybook snapshots > renders with all buttons vis
         style="--mx-flex-display: flex; --mx-flex-direction: row; --mx-flex-align: start; --mx-flex-justify: space-between; --mx-flex-gap: 0; --mx-flex-wrap: nowrap;"
       >
         <span
+          aria-live="polite"
           class="RoomListSearchView-module_search_text"
         >
           Search
@@ -188,6 +190,7 @@ exports[`RoomListSearchView > Storybook snapshots > renders with dial pad button
         style="--mx-flex-display: flex; --mx-flex-direction: row; --mx-flex-align: start; --mx-flex-justify: space-between; --mx-flex-gap: 0; --mx-flex-wrap: nowrap;"
       >
         <span
+          aria-live="polite"
           class="RoomListSearchView-module_search_text"
         >
           Search
@@ -276,6 +279,7 @@ exports[`RoomListSearchView > Storybook snapshots > renders without explore butt
         style="--mx-flex-display: flex; --mx-flex-direction: row; --mx-flex-align: start; --mx-flex-justify: space-between; --mx-flex-gap: 0; --mx-flex-wrap: nowrap;"
       >
         <span
+          aria-live="polite"
           class="RoomListSearchView-module_search_text"
         >
           Search

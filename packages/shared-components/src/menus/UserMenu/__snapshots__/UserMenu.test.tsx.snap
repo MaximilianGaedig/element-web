@@ -457,7 +457,7 @@ exports[`UserMenu > renders a menu without an avatar 1`] = `
         </span>
       </section>
       <div
-        class="_separator_13qwf_8"
+        class="_separator_13qwf_8 UserMenu-module_separator"
         data-kind="primary"
         data-orientation="horizontal"
         role="separator"
@@ -920,7 +920,7 @@ exports[`UserMenu > renders an open menu 1`] = `
         </span>
       </section>
       <div
-        class="_separator_13qwf_8"
+        class="_separator_13qwf_8 UserMenu-module_separator"
         data-kind="primary"
         data-orientation="horizontal"
         role="separator"

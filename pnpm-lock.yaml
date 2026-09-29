@@ -322,7 +322,7 @@ patchedDependencies:
   '@arcmantle/vite-plugin-import-css-sheet': 8019aa9feca17db6bab3483612b4150c911d70b58fddc52bf2d7258a1484a747
   '@tanstack/virtual-core@3': 8326005fc8dbe141d728bc736007fb32054cd093ed7a7209fba336c0902b23ff
   '@types/auto-launch': b60dc9846a11a1684ce52c55493f29ea398d3dc44b88f66ab44e9843d6c01538
-  '@vector-im/compound-web@10.1.0': bca437869b057dad3ae5d52b38f4da74a6748304f05571aa56f5a9a8505324e9
+  '@vector-im/compound-web@10.1.0': 5e9200be98e67d658f47f58201aed9d6900451eaf8745ddd65c4e08032a35099
   '@vector-im/matrix-wysiwyg': 7bdf6150f2905bc2f055a6bcaa7b9d78fa7ffde82e800bcc454ac7b0096bd65e
   knip: 9ee905cce2466e391db69dfcea905b0fe2502afd935d1dc6a6ac94ffe2855c28
   linkify-html: 1761c1eabe25d9fae83f74f27a20b3d24515840a4a8747bb04828df46bcfdea2
@@ -580,7 +580,7 @@ importers:
         version: 10.2.1(@types/react@19.2.18)(react@19.2.8)
       '@vector-im/compound-web':
         specifier: 'catalog:'
-        version: 10.1.0(patch_hash=bca437869b057dad3ae5d52b38f4da74a6748304f05571aa56f5a9a8505324e9)(@fontsource/inconsolata@5.2.8)(@fontsource/inter@5.3.0)(@types/react-dom@19.2.3)(@types/react@19.2.18)(@vector-im/compound-design-tokens@10.2.1)(react-dom@19.2.8)(react@19.2.8)
+        version: 10.1.0(patch_hash=5e9200be98e67d658f47f58201aed9d6900451eaf8745ddd65c4e08032a35099)(@fontsource/inconsolata@5.2.8)(@fontsource/inter@5.3.0)(@types/react-dom@19.2.3)(@types/react@19.2.18)(@vector-im/compound-design-tokens@10.2.1)(react-dom@19.2.8)(react@19.2.8)
       '@vector-im/matrix-wysiwyg':
         specifier: 2.40.0
         version: 2.40.0(patch_hash=7bdf6150f2905bc2f055a6bcaa7b9d78fa7ffde82e800bcc454ac7b0096bd65e)(react@19.2.8)
@@ -1539,7 +1539,7 @@ importers:
         version: typescript@7.0.2
       '@vector-im/compound-web':
         specifier: 'catalog:'
-        version: 10.1.0(patch_hash=bca437869b057dad3ae5d52b38f4da74a6748304f05571aa56f5a9a8505324e9)(@fontsource/inconsolata@5.2.8)(@fontsource/inter@5.3.0)(@types/react-dom@19.2.3)(@types/react@19.2.18)(@vector-im/compound-design-tokens@10.2.1)(react-dom@19.2.8)(react@19.2.8)
+        version: 10.1.0(patch_hash=5e9200be98e67d658f47f58201aed9d6900451eaf8745ddd65c4e08032a35099)(@fontsource/inconsolata@5.2.8)(@fontsource/inter@5.3.0)(@types/react-dom@19.2.3)(@types/react@19.2.18)(@vector-im/compound-design-tokens@10.2.1)(react-dom@19.2.8)(react@19.2.8)
       '@vitejs/plugin-react':
         specifier: 'catalog:'
         version: 6.1.1(vite@8.3.1)
@@ -18714,7 +18714,7 @@ snapshots:
       '@types/react': 19.2.18
       react: 19.2.8
 
-  '@vector-im/compound-web@10.1.0(patch_hash=bca437869b057dad3ae5d52b38f4da74a6748304f05571aa56f5a9a8505324e9)(@fontsource/inconsolata@5.2.8)(@fontsource/inter@5.3.0)(@types/react-dom@19.2.3)(@types/react@19.2.18)(@vector-im/compound-design-tokens@10.2.1)(react-dom@19.2.8)(react@19.2.8)':
+  '@vector-im/compound-web@10.1.0(patch_hash=5e9200be98e67d658f47f58201aed9d6900451eaf8745ddd65c4e08032a35099)(@fontsource/inconsolata@5.2.8)(@fontsource/inter@5.3.0)(@types/react-dom@19.2.3)(@types/react@19.2.18)(@vector-im/compound-design-tokens@10.2.1)(react-dom@19.2.8)(react@19.2.8)':
     dependencies:
       '@floating-ui/react': 0.27.17(react-dom@19.2.8)(react@19.2.8)
       '@floating-ui/react-dom': 2.1.9(react-dom@19.2.8)(react@19.2.8)
