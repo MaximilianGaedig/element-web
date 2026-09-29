@@ -35,7 +35,16 @@ export function useMessageSendStatus(mxEvent: MatrixEvent): MessageSendStatus | 
         (listener: () => void) => (store ? store.subscribe(eventId, listener) : () => {}),
         [store, eventId],
     );
-    return useSyncExternalStore(subscribe, () => store?.get(eventId, roomId));
+    const read = useCallback(() => store?.get(eventId, roomId), [store, eventId, roomId]);
+    /*
+     * The third argument is the same read, for rendering with no DOM to subscribe to.
+     *
+     * The chat exporter renders tiles through renderToStaticMarkup, where React refuses a store it cannot
+     * subscribe to unless it is told how to read one snapshot - and without it every tile holding a send
+     * status threw, which the exporter caught as a file it could not fetch. The read is a plain lookup with
+     * no subscription behind it, so it is as correct there as it is here.
+     */
+    return useSyncExternalStore(subscribe, read, read);
 }
 
 function failureText(status: MessageSendStatus): string {
