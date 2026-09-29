@@ -28,7 +28,7 @@ import GoIcon from "@vector-im/compound-design-tokens/assets/web/icons/arrow-up-
 
 import { Button } from "@vector-im/compound-web";
 
-import { _t } from "../../../languageHandler";
+import { _t, _td } from "../../../languageHandler";
 import BaseDialog from "./BaseDialog";
 import Spinner from "../elements/Spinner";
 import { type Collected, collectedOf } from "../../../utils/detect/collected";
@@ -44,11 +44,14 @@ import RoomAvatar from "../avatars/RoomAvatar";
  * with a deadline in it.
  */
 const SECTIONS = [
-    { id: "when", icon: CalendarIcon, kinds: ["datetime"] },
-    { id: "who", icon: PhoneIcon, kinds: ["phone"] },
-    { id: "where", icon: PlaceIcon, kinds: ["address"] },
-    { id: "onway", icon: OnTheWayIcon, kinds: ["flight", "parcel"] },
-    { id: "links", icon: LinkIcon, kinds: ["url"] },
+    // The label is written out per section rather than built from the id: a key the extractor cannot
+    // read as a literal is a key it prunes from en_EN.json, and the string then exists nowhere to
+    // translate. _td marks it for extraction here and _t reads it at render.
+    { id: "when", label: _td("found|when"), icon: CalendarIcon, kinds: ["datetime"] },
+    { id: "who", label: _td("found|who"), icon: PhoneIcon, kinds: ["phone"] },
+    { id: "where", label: _td("found|where"), icon: PlaceIcon, kinds: ["address"] },
+    { id: "onway", label: _td("found|onway"), icon: OnTheWayIcon, kinds: ["flight", "parcel"] },
+    { id: "links", label: _td("found|links"), icon: LinkIcon, kinds: ["url"] },
 ] as const;
 
 type SectionId = (typeof SECTIONS)[number]["id"];
@@ -150,7 +153,7 @@ export default function FoundDialog({ onFinished }: Props): JSX.Element {
             contentId="mx_FoundDialog_content"
         >
             <nav className="mx_FoundDialog_sections">
-                {SECTIONS.map(({ id, icon: Icon }) => (
+                {SECTIONS.map(({ id, label: sectionLabel, icon: Icon }) => (
                     <Button
                         key={id}
                         kind={id === section ? "primary" : "secondary"}
@@ -160,7 +163,7 @@ export default function FoundDialog({ onFinished }: Props): JSX.Element {
                         onClick={() => setSection(id)}
                     >
                         <Icon />
-                        {_t(`found|${id}` as "found|when")}
+                        {_t(sectionLabel)}
                     </Button>
                 ))}
             </nav>
