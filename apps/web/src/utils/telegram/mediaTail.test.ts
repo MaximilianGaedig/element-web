@@ -10,10 +10,14 @@ import { MatrixEvent } from "matrix-js-sdk/src/matrix";
 
 import { mediaTailStyle } from "./mediaTail";
 
+const asked: Array<boolean | undefined> = [];
 vi.mock("../../customisations/Media", () => ({
     mediaFromContent: () => ({
         hasThumbnail: true,
-        getThumbnailHttp: () => "https://example.org/thumb.jpg",
+        getThumbnailHttp: (_w: number, _h: number, _mode: string, authenticated?: boolean) => {
+            asked.push(authenticated);
+            return "https://example.org/thumb.jpg";
+        },
         getThumbnailOfSourceHttp: () => "https://example.org/source.jpg",
     }),
 }));
@@ -34,6 +38,14 @@ describe("mediaTailStyle", () => {
         expect(mediaTailStyle(message({ msgtype: "m.image", body: "a", url: "mxc://x/a" }))).toEqual({
             "--tg-media-tail": 'url("https://example.org/thumb.jpg")',
         });
+    });
+
+    it("asks for a URL the browser can fetch itself, since a stylesheet carries no token", () => {
+        asked.length = 0;
+        mediaTailStyle(message({ msgtype: "m.image", body: "a", url: "mxc://x/a" }));
+        // The authenticated endpoint would refuse a background image; the worker authenticates the
+        // legacy one instead.
+        expect(asked).toEqual([false]);
     });
 
     it("does the same for a video, which shows as its frame", () => {

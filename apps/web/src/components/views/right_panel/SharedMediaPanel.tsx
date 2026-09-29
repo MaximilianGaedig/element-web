@@ -835,7 +835,12 @@ function useGridLayout(
     height: number;
     window: [number, number];
     month?: { section: MediaSection; headingVisible: boolean };
-    scroll: { top: number; viewport: number };
+    /**
+     * The scroll, in the scrolling box's own terms rather than the column's: the scrubber's handle
+     * has to span the whole of what scrolls, tabs and header included, or it reaches the end of its
+     * track before the list reaches its end. `offset` is where the column starts inside that.
+     */
+    scroll: { top: number; viewport: number; content: number; offset: number };
     seek: (top: number) => void;
 } {
     const ref = useRef<HTMLDivElement>(null);

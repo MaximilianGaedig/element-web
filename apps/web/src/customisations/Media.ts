@@ -92,15 +92,23 @@ class MediaImplementation {
      * @param {number} width The desired width of the thumbnail.
      * @param {number} height The desired height of the thumbnail.
      * @param {"scale"|"crop"} mode The desired thumbnailing mode. Defaults to scale.
+     * @param {boolean} authenticated Whether to ask for the authenticated endpoint. Pass false where
+     *     the browser will fetch the URL itself - a stylesheet's url(), say - and so has no token to
+     *     put on it; the service worker authenticates the legacy path and rewrites it on the way out.
      * @returns {string} The HTTP URL which points to the thumbnail.
      */
-    public getThumbnailHttp(width: number, height: number, mode: ResizeMethod = "scale"): string | null {
+    public getThumbnailHttp(
+        width: number,
+        height: number,
+        mode: ResizeMethod = "scale",
+        authenticated = true,
+    ): string | null {
         if (!this.hasThumbnail) return null;
         // scale using the device pixel ratio to keep images clear
         width = Math.floor(width * window.devicePixelRatio);
         height = Math.floor(height * window.devicePixelRatio);
         // eslint-disable-next-line no-restricted-properties
-        return this.client.mxcUrlToHttp(this.thumbnailMxc!, width, height, mode, false, true);
+        return this.client.mxcUrlToHttp(this.thumbnailMxc!, width, height, mode, false, authenticated);
     }
 
     /**
@@ -110,12 +118,17 @@ class MediaImplementation {
      * @param {"scale"|"crop"} mode The desired thumbnailing mode. Defaults to scale.
      * @returns {string} The HTTP URL which points to the thumbnail.
      */
-    public getThumbnailOfSourceHttp(width: number, height: number, mode: ResizeMethod = "scale"): string | null {
+    public getThumbnailOfSourceHttp(
+        width: number,
+        height: number,
+        mode: ResizeMethod = "scale",
+        authenticated = true,
+    ): string | null {
         // scale using the device pixel ratio to keep images clear
         width = Math.floor(width * window.devicePixelRatio);
         height = Math.floor(height * window.devicePixelRatio);
         // eslint-disable-next-line no-restricted-properties
-        return this.client.mxcUrlToHttp(this.srcMxc, width, height, mode, false, true);
+        return this.client.mxcUrlToHttp(this.srcMxc, width, height, mode, false, authenticated);
     }
 
     /**

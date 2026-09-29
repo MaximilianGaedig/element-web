@@ -29,10 +29,18 @@ export function mediaTailStyle(event: MatrixEvent): CSSProperties | undefined {
     const content = event.getContent<MediaEventContent>();
     if (content.file || ![MsgType.Image, MsgType.Video].includes(content.msgtype)) return undefined;
     const media = mediaFromContent(content);
+    /*
+     * Asked for as a legacy media URL, deliberately.
+     *
+     * The browser fetches a background image itself and has no access token to put on the request,
+     * so the authenticated endpoint would refuse it. The service worker authenticates the legacy
+     * path and rewrites it to the authenticated one on the way out (serviceworker/index.ts), which
+     * is the only route a URL in a stylesheet can take.
+     */
     const url = media.hasThumbnail
-        ? media.getThumbnailHttp(TAIL_THUMB, TAIL_THUMB, "crop")
+        ? media.getThumbnailHttp(TAIL_THUMB, TAIL_THUMB, "crop", false)
         : content.msgtype === MsgType.Image
-          ? media.getThumbnailOfSourceHttp(TAIL_THUMB, TAIL_THUMB, "crop")
+          ? media.getThumbnailOfSourceHttp(TAIL_THUMB, TAIL_THUMB, "crop", false)
           : null;
     return url ? ({ "--tg-media-tail": `url("${url}")` } as CSSProperties) : undefined;
 }
