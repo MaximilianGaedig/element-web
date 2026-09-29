@@ -90,6 +90,7 @@
         "@element-hq/element-web-playwright-common": "workspace:*",
         "shared-types": "workspace:*",
         "@fetch-mock/vitest": "^0.2.18",
+        "@types/events": "^3.0.3",
         "@fontsource/inter": "catalog:",
         "@microsoft/api-extractor": "^7.56.0",
         "@playwright/test": "catalog:",

@@ -64,9 +64,7 @@ export function AiSources({ cites, onJump, most = MOST }: Props): JSX.Element | 
                     </li>
                 ),
             )}
-            {rest > 0 && (
-                <li className="mx_AiSources_rest">{_t("ai|sources_more", { count: rest })}</li>
-            )}
+            {rest > 0 && <li className="mx_AiSources_rest">{_t("ai|sources_more", { count: rest })}</li>}
         </ul>
     );
 }

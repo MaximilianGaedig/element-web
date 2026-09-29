@@ -146,7 +146,7 @@ export function DetectedActions({
             cancelled = true;
             cancelIdle();
         };
-    }, [text, bodyRef]);
+    }, [text, bodyRef, mxEvent]);
 
     if (!found.length) return null;
     return (

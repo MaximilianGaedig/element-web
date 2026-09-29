@@ -241,6 +241,7 @@ export async function collectedOf(
 }
 
 /** How many of each kind there are, for a view that says so before it is opened. */
+/** @knipignore Written for the collected-things view (MEO-47); pinned by tests until it lands. */
 export async function counts(userId: string): Promise<Partial<Record<Collected["kind"], number>>> {
     const db = await database(userId);
     if (!db) return {};

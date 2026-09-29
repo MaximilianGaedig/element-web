@@ -958,7 +958,7 @@ export const SETTINGS: Settings = {
         options: [
             { value: "telegram-ios", label: _td("settings|mobile_message_padding_ios") },
             { value: "telegram-web", label: _td("settings|mobile_message_padding_web") },
-            { value: "element", label: _td("settings|mobile_message_padding_element") },
+            { value: "element", label: _td("settings|mobile_message_padding_default") },
         ],
     },
     "bubbleTail": {

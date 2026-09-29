@@ -24,9 +24,20 @@ import VideoCallIcon from "@vector-im/compound-design-tokens/assets/web/icons/vi
 
 import { _t } from "../../../languageHandler";
 import BaseDialog from "../dialogs/BaseDialog";
-import { type Call, callHistory } from "../../../utils/contacts/calls";
+import { type Call, callHistory, missedCalls } from "../../../utils/contacts/calls";
 import { fuzzyMatch } from "../../../utils/search/fuzzy";
-import { type Person, allPeople } from "../../../utils/contacts/people";
+import {
+    type Person,
+    type Suggestion,
+    accountsOf,
+    allPeople,
+    dismissSuggestion,
+    dismissedSuggestions,
+    linkAccounts,
+    manualLinks,
+    sameNameSuggestions,
+    unlinkAccounts,
+} from "../../../utils/contacts/people";
 import { readKey } from "../../../utils/contacts/identity";
 import { useMatrixClientContext } from "../../../contexts/MatrixClientContext";
 import BaseAvatar from "../avatars/BaseAvatar";
@@ -58,7 +69,16 @@ function readDuration(seconds: number): string {
     return minutes ? `${minutes}m ${seconds % 60}s` : `${seconds}s`;
 }
 
-function PersonRow({ person, onOpen }: { person: Person; onOpen: (person: Person) => void }): JSX.Element {
+function PersonRow({
+    person,
+    onOpen,
+    onSeparate,
+}: {
+    person: Person;
+    onOpen: (person: Person) => void;
+    /** Given only where the reader is the one who merged them, since that is the only merge to undo. */
+    onSeparate?: (person: Person) => void;
+}): JSX.Element {
     /*
      * What to say under the name: their number when a network published one - that is the thing that made
      * these accounts one person - and otherwise which networks they are on, which is the next most useful
@@ -67,7 +87,7 @@ function PersonRow({ person, onOpen }: { person: Person; onOpen: (person: Person
     const networks = [...new Set(person.accounts.map((account) => account.network))];
     const detail = person.keys.length ? readKey(person.keys[0]) : networks.join(" · ");
 
-    return (
+    const row = (
         <button type="button" className="mx_ContactsDialog_row" onClick={() => onOpen(person)}>
             <Face name={person.name} avatarUrl={person.avatarUrl} />
             <span className="mx_ContactsDialog_rowText">
@@ -82,6 +102,21 @@ function PersonRow({ person, onOpen }: { person: Person; onOpen: (person: Person
                 ))}
             </span>
         </button>
+    );
+
+    /*
+     * The row is a button, so the one beside it cannot be inside it: a button in a button is not
+     * markup a browser will keep, and the click would have to be stopped from opening the chat anyway.
+     */
+    return onSeparate ? (
+        <div className="mx_ContactsDialog_rowWith">
+            {row}
+            <Button kind="tertiary" size="md" onClick={() => onSeparate(person)}>
+                {_t("contacts|separate")}
+            </Button>
+        </div>
+    ) : (
+        row
     );
 }
 
@@ -114,24 +149,102 @@ function CallRow({ call, onOpen }: { call: Call; onOpen: (call: Call) => void })
     );
 }
 
+/**
+ * Two people the client could not prove are one, offered to the reader to decide.
+ *
+ * Both answers are kept, because either one is knowledge only the reader has: merging records the link,
+ * and turning it down records that too, so the same pair is not offered again on every opening.
+ */
+function SuggestionCard({
+    suggestion,
+    onMerge,
+    onDismiss,
+}: {
+    suggestion: Suggestion;
+    onMerge: (suggestion: Suggestion) => void;
+    onDismiss: (suggestion: Suggestion) => void;
+}): JSX.Element {
+    const networks = [...new Set(suggestion.people.flatMap((one) => one.accounts.map((a) => a.network)))];
+    return (
+        <div className="mx_ContactsDialog_suggestion">
+            <Face name={suggestion.people[0].name} avatarUrl={suggestion.people[0].avatarUrl} />
+            <span className="mx_ContactsDialog_rowText">
+                <span className="mx_ContactsDialog_name">{suggestion.people[0].name}</span>
+                <span className="mx_ContactsDialog_detail">
+                    {_t("contacts|same_person", { networks: networks.join(", ") })}
+                </span>
+            </span>
+            <Button kind="primary" size="md" onClick={() => onMerge(suggestion)}>
+                {_t("contacts|merge")}
+            </Button>
+            <Button kind="tertiary" size="md" onClick={() => onDismiss(suggestion)}>
+                {_t("contacts|not_same_person")}
+            </Button>
+        </div>
+    );
+}
+
 export function ContactsDialog({ initialTab = "people", onFinished }: Props): JSX.Element {
     const client = useMatrixClientContext();
     const [tab, setTab] = useState(initialTab);
-    const [people, setPeople] = useState<Person[]>();
     const [query, setQuery] = useState("");
+    const [onlyMissed, setOnlyMissed] = useState(false);
+    /*
+     * The list and the decisions behind it, read together.
+     *
+     * People are grouped by the links the reader made, so which accounts those are, and which pairings
+     * they turned down, are part of the same answer - held apart they would be a build of the list and a
+     * set of links from either side of a merge. Rebuilt whenever the reader decides something, which is
+     * what `at` counts.
+     */
+    const [at, setAt] = useState(0);
+    const [state, setState] = useState<{ people: Person[]; linked: Set<string>; suggestions: Suggestion[] }>();
 
     // Asked for once per opening: the bridges answer in their own time and the list fills in when they do.
     useEffect(() => {
         let alive = true;
         void allPeople(client).then((found) => {
-            if (alive) setPeople(found);
+            if (!alive) return;
+            setState({
+                people: found,
+                // Only people the reader merged can be separated: anyone the networks' own identifiers
+                // put together would be merged again by the next build, and offering to undo something
+                // that comes straight back is worse than not offering it.
+                linked: new Set(manualLinks(client).flat()),
+                suggestions: sameNameSuggestions(found, dismissedSuggestions(client)),
+            });
         });
         return () => {
             alive = false;
         };
-    }, [client]);
+    }, [client, at]);
+
+    const people = state?.people;
+    const again = useCallback(() => setAt((n) => n + 1), []);
 
     const calls = useMemo(() => callHistory(client), [client]);
+    const shownCalls = useMemo(() => (onlyMissed ? missedCalls(calls) : calls), [calls, onlyMissed]);
+
+    const merge = useCallback(
+        (suggestion: Suggestion): void => {
+            void linkAccounts(client, accountsOf(suggestion.people)).then(again);
+        },
+        [client, again],
+    );
+
+    const dismiss = useCallback(
+        (suggestion: Suggestion): void => {
+            void dismissSuggestion(client, accountsOf(suggestion.people)).then(again);
+        },
+        [client, again],
+    );
+
+    const separate = useCallback(
+        (person: Person): void => {
+            void unlinkAccounts(client, accountsOf([person])).then(again);
+        },
+        [client, again],
+    );
 
     /*
      * Best match first, not alphabetical.
@@ -231,24 +344,57 @@ export function ContactsDialog({ initialTab = "people", onFinished }: Props): JS
                     />
                     <div className="mx_ContactsDialog_list">
                         {people === undefined && <Spinner />}
+                        {/* Only while nothing is typed: a search is a question about one person. */}
+                        {!query &&
+                            state?.suggestions.map((suggestion) => (
+                                <SuggestionCard
+                                    key={accountsOf(suggestion.people).join(",")}
+                                    suggestion={suggestion}
+                                    onMerge={merge}
+                                    onDismiss={dismiss}
+                                />
+                            ))}
                         {people !== undefined && !shown.length && (
                             <p className="mx_ContactsDialog_empty">{_t("contacts|no_people")}</p>
                         )}
                         {shown.map((person) => (
-                            <PersonRow key={person.id} person={person} onOpen={openPerson} />
+                            <PersonRow
+                                key={person.id}
+                                person={person}
+                                onOpen={openPerson}
+                                onSeparate={
+                                    person.accounts.some((a) => a.mxid && state?.linked.has(a.mxid))
+                                        ? separate
+                                        : undefined
+                                }
+                            />
                         ))}
                     </div>
                 </>
             ) : (
-                <div className="mx_ContactsDialog_list">
-                    {!calls.length && <p className="mx_ContactsDialog_empty">{_t("contacts|no_calls")}</p>}
-                    {calls.map((call) => (
-                        <CallRow key={`${call.roomId}:${call.eventId}`} call={call} onOpen={openCall} />
-                    ))}
-                </div>
+                <>
+                    <div className="mx_ContactsDialog_filters">
+                        <Button
+                            kind={onlyMissed ? "primary" : "tertiary"}
+                            size="md"
+                            aria-pressed={onlyMissed}
+                            onClick={() => setOnlyMissed((only) => !only)}
+                        >
+                            {_t("contacts|call_missed")}
+                        </Button>
+                    </div>
+                    <div className="mx_ContactsDialog_list">
+                        {!shownCalls.length && (
+                            <p className="mx_ContactsDialog_empty">
+                                {onlyMissed ? _t("contacts|no_missed_calls") : _t("contacts|no_calls")}
+                            </p>
+                        )}
+                        {shownCalls.map((call) => (
+                            <CallRow key={`${call.roomId}:${call.eventId}`} call={call} onOpen={openCall} />
+                        ))}
+                    </div>
+                </>
             )}
         </BaseDialog>
     );
 }
-
-export default ContactsDialog;

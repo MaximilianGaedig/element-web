@@ -54,6 +54,37 @@ Please see LICENSE files in the repository root for full details.
         }
     }
 
+    /* A row that has an action beside it: the row still takes the width, the action sits at the end. */
+    .mx_ContactsDialog_rowWith {
+        display: flex;
+        align-items: center;
+        gap: var(--cpd-space-1x);
+
+        .mx_ContactsDialog_row {
+            min-width: 0;
+        }
+    }
+
+    /*
+     * Two accounts that might be one person, above the list because it is a question rather than a row:
+     * tinted so it does not read as somebody you can open, and gone as soon as it is answered either way.
+     */
+    .mx_ContactsDialog_suggestion {
+        display: flex;
+        align-items: center;
+        gap: var(--cpd-space-2x);
+        padding: var(--cpd-space-2x);
+        margin-bottom: var(--cpd-space-2x);
+        border-radius: var(--cpd-space-3x);
+        background: var(--cpd-color-bg-subtle-secondary);
+    }
+
+    .mx_ContactsDialog_filters {
+        display: flex;
+        gap: var(--cpd-space-2x);
+        margin-bottom: var(--cpd-space-2x);
+    }
+
     /* A missed call is the one row people open this list to find. */
     .mx_ContactsDialog_row_missed .mx_ContactsDialog_name {
         color: var(--cpd-color-text-critical-primary);

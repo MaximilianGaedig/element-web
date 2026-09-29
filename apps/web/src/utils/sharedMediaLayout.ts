@@ -143,6 +143,7 @@ export function visibleRows(
  *
  * The grid runs newest first, so "at or before" means further down the column.
  */
+/** @knipignore Where the date scrubber will land a jump (MEO-7); pinned by tests until it does. */
 export function rowAtTime(rows: readonly MediaRow[], items: readonly MatrixEvent[], time: number): number {
     for (let i = 0; i < rows.length; i++) {
         const row = rows[i];

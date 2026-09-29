@@ -159,9 +159,7 @@ describe("useRoomCall", () => {
         await setupAsyncStoreWithClient(CallStore.instance, client);
         vi.spyOn(WidgetLayoutStore.instance, "canAddToContainer").mockReturnValue(true);
         vi.spyOn(WidgetLayoutStore.instance, "isInContainer").mockReturnValue(false);
-        const moveToContainer = vi
-            .spyOn(WidgetLayoutStore.instance, "moveToContainer")
-            .mockImplementation(() => {});
+        const moveToContainer = vi.spyOn(WidgetLayoutStore.instance, "moveToContainer").mockImplementation(() => {});
 
         const { result } = render();
         await waitFor(() => expect(result.current.callOptions).toEqual([PlatformCallType.LegacyCall]));

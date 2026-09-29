@@ -243,9 +243,10 @@ export function AiDigest(): JSX.Element | null {
                         {part.said && <AiText className="mx_Ai_prose mx_AiDigest_said" text={part.said} />}
                         {part.drafts.length > 0 && part.room && (
                             <div className="mx_AiDigest_drafts">
-                                {part.drafts.map((draft, at) => (
+                                {/* Keyed by what it says: the drafts are deduplicated where they are written. */}
+                                {part.drafts.map((draft) => (
                                     <Button
-                                        key={`${at}:${draft}`}
+                                        key={draft}
                                         kind="secondary"
                                         size="md"
                                         className="mx_AiDigest_draft"

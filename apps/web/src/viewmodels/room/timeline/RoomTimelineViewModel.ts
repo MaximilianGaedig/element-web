@@ -382,11 +382,7 @@ export class RoomTimelineViewModel
         );
         // Sending, failing and being replaced by the remote echo all arrive here rather than
         // through RoomEvent.Timeline, which never sees a pending event.
-        this.disposables.trackListener(
-            this.opts.room,
-            RoomEvent.LocalEchoUpdated,
-            this.onLocalEchoUpdated as (...args: unknown[]) => void,
-        );
+        this.disposables.trackListener(this.opts.room, RoomEvent.LocalEchoUpdated, this.onLocalEchoUpdated);
     }
 
     /**

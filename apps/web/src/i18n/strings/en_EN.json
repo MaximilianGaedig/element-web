@@ -831,10 +831,15 @@
         "call_missed": "Missed",
         "call_outgoing": "Outgoing",
         "calls": "Calls",
+        "merge": "Same person",
         "no_calls": "No calls yet",
+        "no_missed_calls": "No missed calls",
         "no_people": "Nobody here yet",
+        "not_same_person": "Different people",
         "people": "People",
+        "same_person": "Also on %(networks)s under this name",
         "search_people": "Search people",
+        "separate": "Separate",
         "title": "People and calls"
     },
     "create_room": {
@@ -2938,7 +2943,7 @@
             "show_media": "Always show"
         },
         "mobile_message_padding": "Mobile message padding",
-        "mobile_message_padding_element": "Element default",
+        "mobile_message_padding_default": "Standard",
         "mobile_message_padding_ios": "Telegram iOS",
         "mobile_message_padding_web": "Telegram Web",
         "not_supported": "Your server does not implement this feature.",

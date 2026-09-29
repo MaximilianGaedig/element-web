@@ -33,7 +33,7 @@ test.describe("Message Selection", () => {
         }
 
         // Bob joins and sends 5 messages via API
-        const botUserId = await bot.evaluate((cli) => cli.getUserId());
+        const botUserId = await bot.evaluate((cli) => cli.getSafeUserId());
         await app.client.inviteUser(room.roomId, botUserId);
         await bot.joinRoom(room.roomId);
         for (let i = 6; i <= 10; i++) {

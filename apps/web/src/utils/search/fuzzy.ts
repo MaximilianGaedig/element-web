@@ -157,11 +157,6 @@ export function fuzzyMatch<T>(
     return [...best.keys()].map((at, rank) => ({ item: items[at].item, rank }));
 }
 
-/** Whether an item matches at all, for the places that only need to filter. */
-export function fuzzyFilter<T>(items: readonly Searchable<T>[], query: string, mode?: FuzzyMode): T[] {
-    return fuzzyMatch(items, query, { mode }).map((match) => match.item);
-}
-
 /**
  * Which of these strings match, by position.
  *
@@ -170,6 +165,7 @@ export function fuzzyFilter<T>(items: readonly Searchable<T>[], query: string, m
  * needle, and doing that once per candidate is how a search stops being instant. An empty query
  * matches everything, which is what a search box with nothing in it means.
  */
+/** @knipignore The by-position half of the API, for callers that walk their own list. */
 export function fuzzyMatching(values: readonly string[], query: string, mode: FuzzyMode = "names"): Set<number> {
     const term = query.trim();
     if (!term) return new Set(values.keys());

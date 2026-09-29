@@ -16,7 +16,6 @@ Please see LICENSE files in the repository root for full details.
  */
 
 import { type MatrixClient } from "matrix-js-sdk/src/matrix";
-import { logger } from "matrix-js-sdk/src/logger";
 
 import SdkConfig from "../../SdkConfig";
 
@@ -264,17 +263,4 @@ function answerSoFar(whole: string): string {
         }
     }
     return text;
-}
-
-/** What the model has cost, and what is left of today. */
-export async function askUsage(client: MatrixClient): Promise<unknown | undefined> {
-    try {
-        const response = await fetch(`${endpoint()}/usage`, {
-            headers: { Authorization: `Bearer ${client.getAccessToken()}` },
-        });
-        return response.ok ? await response.json() : undefined;
-    } catch (error) {
-        logger.warn("Could not read what the model has cost", error);
-        return undefined;
-    }
 }

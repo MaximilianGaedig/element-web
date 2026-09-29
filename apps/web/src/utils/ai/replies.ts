@@ -70,7 +70,7 @@ interface Kept {
 }
 
 function fromRoom(room: Room, anchor: string): string[] | undefined {
-    const kept = room.getAccountData(KEPT as never)?.getContent<Kept>();
+    const kept = room.getAccountData(KEPT)?.getContent<Kept>();
     return kept?.anchor === anchor ? kept.drafts : undefined;
 }
 
@@ -128,9 +128,7 @@ export function waitingOn(room: Room, me: string): MatrixEvent | undefined {
             const named = room.getMember(me)?.name;
             const mentioned =
                 body.includes(room.client.getUserIdLocalpart() ?? "\0") || (!!named && body.includes(named));
-            const toMe = event.replyEventId
-                ? room.findEventById(event.replyEventId)?.getSender() === me
-                : false;
+            const toMe = event.replyEventId ? room.findEventById(event.replyEventId)?.getSender() === me : false;
             if (!mentioned && !toMe) return undefined;
         }
         return event;
@@ -146,12 +144,23 @@ export function waitingOn(room: Room, me: string): MatrixEvent | undefined {
  * be the message and nothing about the message.
  */
 export function drafts(answer: string): string[] {
-    return answer
-        .split("\n")
-        .map((line) => line.replace(/^\s*(?:[-*•]|\d+[.)])\s*/, "").trim())
-        .map((line) => line.replace(/^["'“”]|["'“”]$/g, "").trim())
-        .filter((line) => line.length > 0 && line.length <= LONGEST)
-        .slice(0, MOST);
+    return pick(
+        answer
+            .split("\n")
+            .map((line) => line.replace(/^\s*(?:[-*•]|\d+[.)])\s*/, "").trim())
+            .map((line) => line.replace(/^["'“”]|["'“”]$/g, "").trim()),
+    );
+}
+
+/**
+ * The drafts worth showing, whoever wrote the list.
+ *
+ * Deduplicated, because a model asked for three replies sometimes writes the same one twice, and two
+ * identical pills are one suggestion taking up two - they are also indistinguishable to anything that
+ * identifies a draft by what it says, which is what the row does.
+ */
+function pick(lines: string[]): string[] {
+    return [...new Set(lines.filter((line) => line.length > 0 && line.length <= LONGEST))].slice(0, MOST);
 }
 
 /**
@@ -177,7 +186,7 @@ export async function repliesFor(client: MatrixClient, room: Room): Promise<stri
     known.set(at, []);
     try {
         const answer = await ask(client, { kind: "replies", messages, ...voiceOf(client, room) });
-        const suggested = answer.drafts?.slice(0, MOST) ?? drafts(answer.answer);
+        const suggested = answer.drafts ? pick(answer.drafts) : drafts(answer.answer);
         known.set(at, suggested);
         // `as never` the way notes.ts does it: the typed map knows only the event types upstream defines.
         void client.setRoomAccountData(room.roomId, KEPT as never, { anchor: at, drafts: suggested } as never);

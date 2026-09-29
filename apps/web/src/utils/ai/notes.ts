@@ -87,11 +87,6 @@ async function write(client: MatrixClient, roomId: string, notes: AiNote[]): Pro
     }
 }
 
-/** The notes of a chat, oldest first, as the timeline wants them. */
-export function notesOf(client: MatrixClient, roomId: string): AiNote[] {
-    return read(client, roomId);
-}
-
 /** Notes by the message they sit under, which is how the timeline looks them up. */
 export function notesByAnchor(client: MatrixClient, roomId: string): Map<string, AiNote[]> {
     const byAnchor = new Map<string, AiNote[]>();

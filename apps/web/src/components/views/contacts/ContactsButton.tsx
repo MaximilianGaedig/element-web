@@ -56,5 +56,3 @@ export function ContactsButton({ isPanelCollapsed = false }: { isPanelCollapsed?
         button
     );
 }
-
-export default ContactsButton;

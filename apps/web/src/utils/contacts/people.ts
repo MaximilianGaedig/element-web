@@ -142,13 +142,45 @@ function profileIdentifiers(room: Room, userId: string): string[] {
     return Array.isArray(raw) ? raw.filter((one): one is string => typeof one === "string") : [];
 }
 
-/** Links the reader made by hand: groups of Matrix IDs that are one person. */
-export function manualLinks(client: MatrixClient): string[][] {
-    const content = client.getAccountData(LINKS_EVENT_TYPE)?.getContent<{ links?: unknown }>();
-    const links = Array.isArray(content?.links) ? content.links : [];
-    return links
+/** What the reader has decided about people the client could not merge on its own. */
+interface Decisions {
+    /** Groups of Matrix IDs the reader said are one person. */
+    links?: unknown;
+    /** Groups the reader said are *not* one person, so the suggestion stops being offered. */
+    dismissed?: unknown;
+}
+
+const decisions = (client: MatrixClient): Decisions =>
+    client.getAccountData(LINKS_EVENT_TYPE)?.getContent<Decisions>() ?? {};
+
+/** Groups of Matrix IDs out of stored account data, ignoring anything that is not one. */
+function groupsIn(value: unknown): string[][] {
+    return (Array.isArray(value) ? value : [])
         .map((group) => (Array.isArray(group) ? group.filter((one): one is string => typeof one === "string") : []))
         .filter((group) => group.length > 1);
+}
+
+/** Links the reader made by hand: groups of Matrix IDs that are one person. */
+export function manualLinks(client: MatrixClient): string[][] {
+    return groupsIn(decisions(client).links);
+}
+
+/** Suggestions the reader has turned down, so they are not offered again on the next opening. */
+export function dismissedSuggestions(client: MatrixClient): string[][] {
+    return groupsIn(decisions(client).dismissed);
+}
+
+/**
+ * Writes the reader's decisions back, keeping whichever half is not being changed.
+ *
+ * Both halves go through their readers on the way out rather than the stored content being spread
+ * straight back, so anything malformed that got in there is dropped rather than written again.
+ */
+async function decide(client: MatrixClient, next: { links?: string[][]; dismissed?: string[][] }): Promise<void> {
+    await client.setAccountData(LINKS_EVENT_TYPE, {
+        links: next.links ?? manualLinks(client),
+        dismissed: next.dismissed ?? dismissedSuggestions(client),
+    });
 }
 
 /** Records that these accounts are one person, folding in any link they were already part of. */
@@ -157,15 +189,26 @@ export async function linkAccounts(client: MatrixClient, mxids: string[]): Promi
     const touched = existing.filter((group) => group.some((one) => mxids.includes(one)));
     const untouched = existing.filter((group) => !touched.includes(group));
     const merged = [...new Set([...mxids, ...touched.flat()])];
-    await client.setAccountData(LINKS_EVENT_TYPE, { links: [...untouched, merged] });
+    await decide(client, { links: [...untouched, merged] });
 }
 
-/** Undoes one link, leaving the accounts in it separate again. */
-export async function unlinkAccount(client: MatrixClient, mxid: string): Promise<void> {
+/**
+ * Undoes the links these accounts are part of, leaving them separate again.
+ *
+ * One write for however many accounts, because separating a person the reader merged means taking all of
+ * them out of the group at once - doing it one at a time would put a half-split person on screen in between.
+ * A group left holding fewer than two accounts is no longer a link and goes.
+ */
+export async function unlinkAccounts(client: MatrixClient, mxids: string[]): Promise<void> {
     const links = manualLinks(client)
-        .map((group) => group.filter((one) => one !== mxid))
+        .map((group) => group.filter((one) => !mxids.includes(one)))
         .filter((group) => group.length > 1);
-    await client.setAccountData(LINKS_EVENT_TYPE, { links });
+    await decide(client, { links });
+}
+
+/** Records that these accounts are not the same person, so the suggestion is not made again. */
+export async function dismissSuggestion(client: MatrixClient, mxids: string[]): Promise<void> {
+    await decide(client, { dismissed: [...dismissedSuggestions(client), [...mxids].sort()] });
 }
 
 /**
@@ -235,7 +278,8 @@ export function groupAccounts(accounts: Account[], links: string[][] = []): Pers
  * Offered, not applied: the reader knows whether the Bob Carter on Signal is the Bob Carter on Messenger, and
  * this is the only place that knowledge can come from.
  */
-export function sameNameSuggestions(people: Person[]): Suggestion[] {
+export function sameNameSuggestions(people: Person[], dismissed: string[][] = []): Suggestion[] {
+    const turnedDown = new Set(dismissed.map((group) => [...group].sort().join("\u0000")));
     const byName = new Map<string, Person[]>();
     for (const person of people) {
         const name = person.name.trim().toLowerCase();
@@ -244,7 +288,15 @@ export function sameNameSuggestions(people: Person[]): Suggestion[] {
     }
     return [...byName.values()]
         .filter((group) => group.length > 1)
+        .filter((group) => !turnedDown.has(accountsOf(group).sort().join("\u0000")))
         .map((group) => ({ reason: "same name" as const, people: group }));
+}
+
+/** Every Matrix ID under these people: what a link, or a refusal to link, is recorded against. */
+export function accountsOf(people: Person[]): string[] {
+    return [...new Set(people.flatMap((person) => person.accounts.map((account) => account.mxid)))].filter(
+        (mxid): mxid is string => !!mxid,
+    );
 }
 
 /** Everybody you know, merged, with the links you made applied. */

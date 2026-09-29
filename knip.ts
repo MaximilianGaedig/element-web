@@ -26,6 +26,11 @@ export default {
                 // `expect`'s types without declaring it as a dependency themselves. It has to be a
                 // direct dependency here for that .d.ts to resolve under pnpm's strict node_modules.
                 "expect",
+
+                // Types only, for `import type { EventEmitter } from "events"` in Disposables.ts. The
+                // `events` package ships none, so without this declared here the import resolves to
+                // whatever happens to be hoisted - which is nothing under a layered CI install.
+                "@types/events",
             ],
         },
         "packages/playwright-common": {
@@ -92,6 +97,13 @@ export default {
 
                 // Used by Playwright to serve the built web app.
                 "serve",
+
+                // The OCR engine's WebAssembly and its language data. Neither is imported: webpack
+                // copies them out of the packages into res/ocr/, and tesseract.js is handed their
+                // URLs at runtime, because it reads pictures inside a worker built from a blob and
+                // no relative path resolves in one. See utils/detect/ocr.ts.
+                "tesseract.js-core",
+                "@tesseract.js-data/eng",
             ],
         },
         "apps/desktop": {

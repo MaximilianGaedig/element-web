@@ -22,6 +22,9 @@ Please see LICENSE files in the repository root for full details.
     display: flex;
     flex: 0 0 auto;
     gap: var(--cpd-space-2x);
+    /* A list for what it is read as, not for what it looks like: the markers and indent come off. */
+    list-style: none;
+    margin: 0;
     padding: var(--cpd-space-1x) var(--cpd-space-4x);
     overflow-x: auto;
     overscroll-behavior-x: contain;
@@ -33,14 +36,21 @@ Please see LICENSE files in the repository root for full details.
         display: none;
     }
 
-    /* Element's own button (Compound): sized and clipped here, never restyled here. */
-    .mx_AiReplies_pill {
+    /* The row's item, which is what the row sizes: the button fills it. */
+    .mx_AiReplies_item {
+        display: flex;
         flex: 0 0 auto;
         max-width: 17rem;
         min-width: 0;
+        scroll-snap-align: start;
+    }
+
+    /* Element's own button (Compound): sized and clipped here, never restyled here. */
+    .mx_AiReplies_pill {
+        min-width: 0;
+        width: 100%;
         /* A label is read from its beginning: centred, a long one loses its first words as well. */
         justify-content: flex-start;
-        scroll-snap-align: start;
     }
 
     /*

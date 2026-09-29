@@ -7,7 +7,20 @@ Please see LICENSE files in the repository root for full details.
 
 import { describe, expect, it } from "vitest";
 
-import { type Account, groupAccounts, sameNameSuggestions } from "./people";
+import { type MatrixClient } from "matrix-js-sdk/src/matrix";
+
+import {
+    type Account,
+    LINKS_EVENT_TYPE,
+    accountsOf,
+    dismissSuggestion,
+    dismissedSuggestions,
+    groupAccounts,
+    linkAccounts,
+    manualLinks,
+    sameNameSuggestions,
+    unlinkAccounts,
+} from "./people";
 
 const account = (network: string, mxid: string, name: string, keys: string[] = [], roomId?: string): Account => ({
     network,
@@ -77,5 +90,64 @@ describe("grouping accounts into people", () => {
             account("Signal", "@a:example.org", "Alice"),
         ]);
         expect(people.map((one) => one.name)).toEqual(["Alice", "Carol"]);
+    });
+});
+
+/** A client that holds one account-data event, which is all these functions read and write. */
+function clientWith(content?: object): MatrixClient {
+    let held = content;
+    return {
+        getAccountData: (type: string) => (type === LINKS_EVENT_TYPE && held ? { getContent: () => held } : undefined),
+        setAccountData: async (_type: string, next: object) => {
+            held = next;
+        },
+    } as unknown as MatrixClient;
+}
+
+const read = (client: MatrixClient): { links?: string[][]; dismissed?: string[][] } =>
+    (client.getAccountData(LINKS_EVENT_TYPE) as unknown as { getContent: () => object } | undefined)?.getContent() ??
+    {};
+
+describe("what the reader decides about people nothing ties together", () => {
+    const alice = account("Signal", "@signal_one:example.org", "Bob Carter");
+    const bob = account("Messenger", "@facebook_2:example.org", "Bob Carter");
+
+    it("offers the same name as a suggestion, and stops once it is turned down", () => {
+        const people = groupAccounts([alice, bob]);
+        expect(sameNameSuggestions(people)).toHaveLength(1);
+        // The pairing the reader refused, recorded exactly as accountsOf writes it.
+        expect(sameNameSuggestions(people, [accountsOf(people)])).toEqual([]);
+    });
+
+    it("records a merge and leaves the refusals alone", async () => {
+        const client = clientWith({ dismissed: [["@x:example.org", "@y:example.org"]] });
+        await linkAccounts(client, ["@signal_one:example.org", "@facebook_2:example.org"]);
+        expect(read(client).links).toEqual([["@signal_one:example.org", "@facebook_2:example.org"]]);
+        expect(read(client).dismissed).toEqual([["@x:example.org", "@y:example.org"]]);
+    });
+
+    it("records a refusal and leaves the links alone", async () => {
+        const client = clientWith({ links: [["@a:example.org", "@b:example.org"]] });
+        await dismissSuggestion(client, ["@facebook_2:example.org", "@signal_one:example.org"]);
+        expect(read(client).links).toEqual([["@a:example.org", "@b:example.org"]]);
+        // Sorted, so the same pair is the same record however the two were handed over.
+        expect(read(client).dismissed).toEqual([["@facebook_2:example.org", "@signal_one:example.org"]]);
+    });
+
+    it("separates a person the reader merged, in one write rather than one per account", async () => {
+        const client = clientWith();
+        await linkAccounts(client, ["@signal_one:example.org", "@facebook_2:example.org"]);
+        expect(groupAccounts([alice, bob], manualLinks(client))).toHaveLength(1);
+        await unlinkAccounts(client, accountsOf(groupAccounts([alice, bob], manualLinks(client))));
+        expect(read(client).links).toEqual([]);
+        expect(groupAccounts([alice, bob], manualLinks(client))).toHaveLength(2);
+    });
+
+    it("ignores stored junk rather than handing it on or writing it back", async () => {
+        const client = clientWith({ links: ["not a group", ["@only:example.org"], 7], dismissed: "nonsense" });
+        expect(manualLinks(client)).toEqual([]);
+        expect(dismissedSuggestions(client)).toEqual([]);
+        await dismissSuggestion(client, ["@a:example.org", "@b:example.org"]);
+        expect(read(client).links).toEqual([]);
     });
 });

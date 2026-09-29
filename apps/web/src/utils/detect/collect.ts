@@ -80,7 +80,7 @@ export function startCollecting(client: MatrixClient): () => void {
     let cancelIdle: (() => void) | undefined;
 
     /** What is waiting to be read: the backlog once, then whatever arrives. */
-    let queue: MatrixEvent[] = [];
+    const queue: MatrixEvent[] = [];
     let rooms: Room[] | undefined;
     let roomAt = 0;
     let eventAt = -1;

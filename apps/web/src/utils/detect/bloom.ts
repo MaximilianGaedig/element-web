@@ -17,6 +17,7 @@ Please see LICENSE files in the repository root for full details.
  * How many bits each name gets. Ten bits with seven hashes is the textbook point where a name that was
  * never added is wrongly accepted about once in a hundred, which for offering a map lookup is nothing.
  */
+/** @knipignore Only the tests build a filter; the client reads ones the server sized with it. */
 export const FILTER_BITS_PER_NAME = 10;
 export const HASHES = 7;
 
@@ -62,6 +63,7 @@ function* bitsOf(name: string, bits: number): Generator<number> {
     }
 }
 
+/** @knipignore The writing half of the filter: the server does it, the tests check we read what it wrote. */
 export function setBit(bytes: Uint8Array, bits: number, name: string): void {
     for (const bit of bitsOf(name, bits)) {
         bytes[bit >>> 3] |= 1 << (bit & 7);

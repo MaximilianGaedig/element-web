@@ -136,25 +136,25 @@ export function AiReplies({ room }: Props): JSX.Element | null {
     if (!lines.length) return null;
 
     return (
-        <div
+        <ul
             className={`mx_AiReplies${stale ? " mx_AiReplies_stale" : ""}`}
-            role="list"
             aria-busy={stale}
             aria-label={_t("ai|replies")}
         >
-            {lines.map((line, at) => (
-                // Element's own button, sized and clipped by the row, never repainted by it.
-                <Button
-                    key={`${at}:${line}`}
-                    role="listitem"
-                    kind="secondary"
-                    size="md"
-                    className={`mx_AiReplies_pill${used === line ? " mx_AiReplies_pill_used" : ""}`}
-                    onClick={() => put(line)}
-                >
-                    <span className="mx_AiReplies_text">{line}</span>
-                </Button>
+            {/* A real list holding real buttons: a button given role="listitem" stops being a button. */}
+            {lines.map((line) => (
+                <li key={line} className="mx_AiReplies_item">
+                    {/* Element's own button, sized and clipped by the row, never repainted by it. */}
+                    <Button
+                        kind="secondary"
+                        size="md"
+                        className={`mx_AiReplies_pill${used === line ? " mx_AiReplies_pill_used" : ""}`}
+                        onClick={() => put(line)}
+                    >
+                        <span className="mx_AiReplies_text">{line}</span>
+                    </Button>
+                </li>
             ))}
-        </div>
+        </ul>
     );
 }
