@@ -71,6 +71,27 @@ vi.mock("../../../../hooks/right-panel/useCurrentPhase", () => ({
 }));
 vi.mock("../../../../Modal");
 
+/*
+ * What the header told the call handler, in full.
+ *
+ * The last argument is `forceMatrixCall`: the header has already chosen between a legacy Matrix call and
+ * Jitsi, and says which, because a bridged DM carries the bridge bot as a third member and the handler
+ * counting members cannot tell that from a real group. Which of the two it chose is the thing worth
+ * asserting, so these name it rather than leaving the argument off the end of the expectation.
+ */
+const asMatrixCall = (roomId: string, type: CallType): [string, CallType, undefined, boolean] => [
+    roomId,
+    type,
+    undefined,
+    true,
+];
+const asJitsiCall = (roomId: string, type: CallType): [string, CallType, undefined, boolean] => [
+    roomId,
+    type,
+    undefined,
+    false,
+];
+
 describe("RoomHeader", () => {
     filterConsole(
         "[getType] Room !1:example.org does not have an m.room.create event",
@@ -374,10 +395,10 @@ describe("RoomHeader", () => {
             const placeCallSpy = vi.spyOn(SDKContextClass.instance.legacyCallHandler, "placeCall");
 
             await user.click(voiceButton);
-            expect(placeCallSpy).toHaveBeenLastCalledWith(room.roomId, CallType.Voice);
+            expect(placeCallSpy).toHaveBeenLastCalledWith(...asMatrixCall(room.roomId, CallType.Voice));
 
             await user.click(videoButton);
-            expect(placeCallSpy).toHaveBeenLastCalledWith(room.roomId, CallType.Video);
+            expect(placeCallSpy).toHaveBeenLastCalledWith(...asMatrixCall(room.roomId, CallType.Video));
         });
 
         it("you can't call if there's already a call", () => {
@@ -552,10 +573,10 @@ describe("RoomHeader", () => {
 
             const placeCallSpy = vi.spyOn(SDKContextClass.instance.legacyCallHandler, "placeCall");
             await user.click(voiceButton);
-            expect(placeCallSpy).toHaveBeenLastCalledWith(room.roomId, CallType.Voice);
+            expect(placeCallSpy).toHaveBeenLastCalledWith(...asMatrixCall(room.roomId, CallType.Voice));
 
             await user.click(videoButton);
-            expect(placeCallSpy).toHaveBeenLastCalledWith(room.roomId, CallType.Video);
+            expect(placeCallSpy).toHaveBeenLastCalledWith(...asMatrixCall(room.roomId, CallType.Video));
         });
 
         it("calls using legacy or jitsi for large rooms", async () => {
@@ -574,7 +595,7 @@ describe("RoomHeader", () => {
 
             const placeCallSpy = vi.spyOn(SDKContextClass.instance.legacyCallHandler, "placeCall");
             await user.click(videoButton);
-            expect(placeCallSpy).toHaveBeenLastCalledWith(room.roomId, CallType.Video);
+            expect(placeCallSpy).toHaveBeenLastCalledWith(...asJitsiCall(room.roomId, CallType.Video));
         });
 
         it("calls using element call for large rooms", async () => {
@@ -778,7 +799,7 @@ describe("RoomHeader", () => {
 
             await user.click(screen.getByRole("button", { name: "Video call" }));
             expect(screen.queryByRole("menuitem", { name: "Element Call" })).not.toBeInTheDocument();
-            expect(placeCallSpy).toHaveBeenCalledWith(room.roomId, CallType.Video);
+            expect(placeCallSpy).toHaveBeenCalledWith(...asMatrixCall(room.roomId, CallType.Video));
         });
     });
 
