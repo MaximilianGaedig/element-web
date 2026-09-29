@@ -30,6 +30,8 @@ import {
     type NetworkSummary,
 } from "../../../../../utils/importOverview";
 import { Bar, eta, NetworkImportDetail, number as num } from "./importDetail";
+import { DeclaredSettingsControls } from "./DeclaredSettingsControls";
+import { type DeclaredSettings, declaredSettings } from "../../../../../utils/bridge/declaredSettings";
 
 const number = (n: number): string => n.toLocaleString();
 
@@ -63,6 +65,24 @@ function ago(ts: number): string {
     if (abs < 3600) return format.format(Math.round(seconds / 60), "minute");
     if (abs < 86_400) return format.format(Math.round(seconds / 3600), "hour");
     return format.format(Math.round(seconds / 86_400), "day");
+}
+
+/*
+ * What each bridge says it will let you change, watched like the connection state beside it.
+ *
+ * The same refresh signal on purpose: a control disabled because a login is down has to stop being
+ * disabled at the moment that login comes back, and the bridge writes both from one place.
+ */
+function useDeclaredSettings(): DeclaredSettings[] {
+    const client = useContext(MatrixClientContext);
+    const [declared, setDeclared] = useState<DeclaredSettings[]>([]);
+    useEffect(() => {
+        if (!client) return;
+        const refresh = (): void => setDeclared(declaredSettings(client));
+        refresh();
+        return onBridgeStatusChange(client, refresh);
+    }, [client]);
+    return declared;
 }
 
 function useBridges(): { logins?: BridgeLogin[]; overview?: ImportOverview } {
@@ -197,10 +217,13 @@ function BridgeCard({
     login,
     network,
     overview,
+    settings,
 }: {
     login: BridgeLogin;
     network?: NetworkSummary;
     overview?: ImportOverview;
+    /** What this login says it will let you change, if it says anything. */
+    settings?: DeclaredSettings;
 }): JSX.Element {
     const avatar = useBotAvatar(login);
     const needsAction = login.health === "disconnected" || login.health === "problem";
@@ -260,6 +283,8 @@ function BridgeCard({
                     </p>
                 )}
 
+                {settings && <DeclaredSettingsControls declaration={settings} />}
+
                 {login.health === "unreported" && (
                     <p className="mx_BridgeCard_note">
                         {_t("tg_layout|bridge_unreported_body", { network: login.network })}
@@ -308,6 +333,7 @@ function BridgeCard({
  */
 export default function BridgesUserSettingsTab(): JSX.Element {
     const { logins, overview } = useBridges();
+    const declared = useDeclaredSettings();
     return (
         <SettingsTab data-testid="mx_BridgesUserSettingsTab">
             <SettingsSection>
@@ -342,6 +368,9 @@ export default function BridgesUserSettingsTab(): JSX.Element {
                                     login={login}
                                     overview={overview}
                                     network={overview?.networks.find((n) => n.network === login.network)}
+                                    settings={declared.find(
+                                        (d) => d.loginId === login.accountId && d.roomId === login.room.roomId,
+                                    )}
                                 />
                             ))}
                         </div>

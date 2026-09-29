@@ -3558,6 +3558,7 @@
         "bridge_login_again": "Log in again",
         "bridge_open_chat": "Open bridge chat",
         "bridge_problem_title": "%(network)s isn't connecting",
+        "bridge_setting_failed": "Could not change that: %(reason)s",
         "bridge_state_connected": "Connected",
         "bridge_state_connecting": "Connecting…",
         "bridge_state_disconnected": "Logged out",

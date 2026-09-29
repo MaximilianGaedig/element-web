@@ -233,3 +233,51 @@ Please see LICENSE files in the repository root for full details.
     color: var(--cpd-color-text-secondary);
     font: var(--cpd-font-body-md-regular);
 }
+
+/*
+ * The controls a bridge declares (DeclaredSettingsControls).
+ *
+ * Styled by what a control is, not by which bridge declared it: the whole point of the protocol is
+ * that a new control needs no client change, and a stylesheet keyed on the network would put that
+ * back.
+ */
+.mx_DeclaredSettings {
+    display: flex;
+    flex-direction: column;
+    gap: var(--cpd-space-3x);
+    margin-block: var(--cpd-space-3x);
+}
+
+.mx_DeclaredSettings_labelled {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--cpd-space-3x);
+    font: var(--cpd-font-body-md-regular);
+    color: var(--cpd-color-text-primary);
+}
+
+.mx_DeclaredSettings_select,
+.mx_DeclaredSettings_input {
+    min-width: 0;
+    flex: 0 1 12rem;
+    padding: var(--cpd-space-1x) var(--cpd-space-2x);
+    border: 1px solid var(--cpd-color-border-interactive-primary);
+    border-radius: var(--cpd-space-1x);
+    background: var(--cpd-color-bg-canvas-default);
+    color: var(--cpd-color-text-primary);
+    font: var(--cpd-font-body-md-regular);
+}
+
+/* The bridge's own explanation, so it reads as the bridge speaking rather than as an error here. */
+.mx_DeclaredSettings_why {
+    margin: var(--cpd-space-1x) 0 0;
+    font: var(--cpd-font-body-sm-regular);
+    color: var(--cpd-color-text-secondary);
+}
+
+.mx_DeclaredSettings_failed {
+    margin: 0;
+    font: var(--cpd-font-body-sm-regular);
+    color: var(--cpd-color-text-critical-primary);
+}

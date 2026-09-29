@@ -17,6 +17,14 @@ import { logger } from "matrix-js-sdk/src/logger";
 export const BACKFILL_EVENT_TYPE = "im.mxg.backfill";
 /** Kept here too so the watcher below needs no import from the bridge-login module. */
 const BRIDGE_LOGIN_EVENT_TYPE = "im.mxg.bridge_login";
+/*
+ * The controls a bridge offers, watched alongside its state.
+ *
+ * Today a bridge writes both from one place, so watching the state alone would happen to work - but
+ * only by accident. A bridge that withdrew a control without its connection changing would go
+ * unnoticed, and that is exactly the case the control's disabled_reason exists for.
+ */
+const BRIDGE_SETTINGS_EVENT_TYPE = "im.mxg.settings";
 
 /**
  * complete: the network said there is nothing older; running: older history is being imported;
@@ -247,7 +255,10 @@ export function onBridgeStatusChange(client: MatrixClient, onChange: () => void)
         if (event.getType() === BACKFILL_EVENT_TYPE) onChange();
     };
     const onState = (event: { getType(): string }): void => {
-        if (event.getType() === BACKFILL_EVENT_TYPE || event.getType() === BRIDGE_LOGIN_EVENT_TYPE) onChange();
+        const type = event.getType();
+        if (type === BACKFILL_EVENT_TYPE || type === BRIDGE_LOGIN_EVENT_TYPE || type === BRIDGE_SETTINGS_EVENT_TYPE) {
+            onChange();
+        }
     };
     client.on(RoomEvent.AccountData, onAccountData);
     client.on(RoomStateEvent.Events, onState);
