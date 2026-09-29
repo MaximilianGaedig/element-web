@@ -1,5 +1,8 @@
 name: Tests
 on:
+    # So a run can be asked for without a push behind it - which is what it took to prove this workflow
+    # green again after it had been switched off.
+    workflow_dispatch: {}
     pull_request: {}
     merge_group:
         types: [checks_requested]
