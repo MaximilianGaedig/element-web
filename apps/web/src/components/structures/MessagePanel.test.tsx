@@ -864,6 +864,46 @@ describe("MessagePanel", function () {
         expect(within(tiles[0] as HTMLElement).queryByRole("status")).not.toBeInTheDocument();
         expect(within(tiles[1] as HTMLElement).queryByRole("status")).not.toBeInTheDocument();
     });
+
+    it("does not draw a receipt for a member the room says is there to serve it", () => {
+        client.getRoom.mockImplementation((id) => (id === room.roomId ? room : null));
+        const bot = "@whatsappbot:example.org";
+        room.currentState.setStateEvents([
+            TestUtilsMatrix.mkEvent({
+                event: true,
+                room: room.roomId,
+                user: client.getSafeUserId(),
+                type: "io.element.functional_members",
+                skey: "",
+                content: { service_members: [bot] },
+            }),
+        ]);
+        const events = [TestUtilsMatrix.mkMessage({ event: true, room: room.roomId, user: "@other:user", ts: 1000 })];
+        // A bridge bot's marker rides along with its own sends, so it sits on the newest message.
+        room.addReceiptToStructure(events[0].getId()!, ReceiptType.Read, bot, { ts: 1000 }, true);
+
+        const { container } = render(
+            getComponent({ events, showReadReceipts: true }),
+            clientAndSDKContextRenderOptions(client, sdkContext),
+        );
+
+        // The group renders an empty container either way, for layout; the avatars are the receipt.
+        expect(container.getElementsByClassName("mx_ReadReceiptGroup_button")).toHaveLength(1);
+        expect(container.querySelectorAll(".mx_ReadReceiptGroup_button .mx_BaseAvatar")).toHaveLength(0);
+    });
+
+    it("still draws a receipt from somebody the room does not call a service member", () => {
+        client.getRoom.mockImplementation((id) => (id === room.roomId ? room : null));
+        const events = [TestUtilsMatrix.mkMessage({ event: true, room: room.roomId, user: "@other:user", ts: 1000 })];
+        room.addReceiptToStructure(events[0].getId()!, ReceiptType.Read, "@reader:example.org", { ts: 1000 }, true);
+
+        const { container } = render(
+            getComponent({ events, showReadReceipts: true }),
+            clientAndSDKContextRenderOptions(client, sdkContext),
+        );
+
+        expect(container.querySelectorAll(".mx_ReadReceiptGroup_button .mx_BaseAvatar").length).toBeGreaterThan(0);
+    });
 });
 
 describe("shouldFormContinuation", () => {

@@ -43,6 +43,7 @@ import WhoIsTypingTile from "../views/rooms/WhoIsTypingTile";
 import ScrollPanel, { type IScrollState } from "./ScrollPanel";
 import ErrorBoundary from "../views/elements/ErrorBoundary";
 import Spinner from "../views/elements/Spinner";
+import { getFunctionalMembers } from "../../utils/room/getFunctionalMembers";
 import { type RoomPermalinkCreator } from "../../utils/permalinks/Permalinks";
 import type EditorStateTransfer from "../../utils/EditorStateTransfer";
 import { UPDATE_EVENT } from "../../stores/AsyncStore";
@@ -1023,6 +1024,16 @@ export default class MessagePanel extends React.Component<IProps, IState> {
 
         const receipts: IReadReceiptProps[] = [];
 
+        /*
+         * A service member's marker is not somebody having read the room.
+         *
+         * A bridge bot is in the room to do the bridging, and `io.element.functional_members` is how the
+         * room says which members are there for that rather than to talk - already honoured for the member
+         * count and for finding a DM (getFunctionalMembers). Its marker advances on its own sends, so it
+         * sits on the newest message forever and reads as a person keeping up with the conversation.
+         */
+        const serviceMembers = new Set(getFunctionalMembers(room));
+
         if (!receiptDestination) {
             logger.debug(
                 "Discarding request, could not find the receiptDestination for event: " + this.context.threadId,
@@ -1036,6 +1047,9 @@ export default class MessagePanel extends React.Component<IProps, IState> {
             }
             if (MatrixClientPeg.safeGet().isUserIgnored(r.userId)) {
                 return; // ignore ignored users
+            }
+            if (serviceMembers.has(r.userId)) {
+                return; // ignore the room's own service members, e.g. a bridge bot
             }
             const member = room.getMember(r.userId);
             receipts.push({
