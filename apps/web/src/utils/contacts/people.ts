@@ -30,7 +30,7 @@ import { type MatrixClient, type Room } from "matrix-js-sdk/src/matrix";
 
 import { type BridgeLogin, type BridgePerson, askBridge, askEveryBridge, bridgeLogins } from "../bridge/provisioning";
 import { getBridgeInfo, getBridgedDmUserId } from "../bridge/bridgeInfo";
-import { type IdentityKey, identityKeys } from "./identity";
+import { type ContactDetail, type IdentityKey, identityDetails, identityKeys } from "./identity";
 import DMRoomMap from "../DMRoomMap";
 
 /** Where links the reader made by hand are kept, so they follow the account and not the browser. */
@@ -49,6 +49,14 @@ export interface Account {
     /** The chat with them on this network, when one exists. */
     roomId?: string;
     keys: IdentityKey[];
+    /**
+     * Everything the network published, for showing. Wider than `keys`, which is matching only: a username
+     * cannot tie two accounts together but still belongs on the card. Absent where a network published
+     * nothing, which is most of the accounts that come from a chat rather than an address book.
+     */
+    details?: ContactDetail[];
+    /** The line the network shows to tell people of the same name apart, where it gives one. */
+    context?: string;
     /** Which login answered, so a chat is started on the right account of the right network. */
     login?: BridgeLogin;
     /** Whether the network's own contact list holds them, rather than only a chat existing. */
@@ -65,6 +73,8 @@ export interface Person {
     keys: IdentityKey[];
     /** The chats that exist with them, across networks. */
     rooms: string[];
+    /** Everything every network published about them, once each. */
+    details: ContactDetail[];
     /** Whether any network's contact list holds them, which is what "in your contacts" means here. */
     saved: boolean;
 }
@@ -94,6 +104,8 @@ async function contactsFromBridges(client: MatrixClient): Promise<Account[]> {
                 avatarUrl: contact.avatar_url,
                 roomId: contact.dm_room_mxid,
                 keys: identityKeys(contact.identifiers),
+                details: identityDetails(contact.identifiers),
+                context: contact.context,
                 login,
                 // This half of the list *is* the network's address book, so everyone in it is saved.
                 saved: true,
@@ -127,6 +139,7 @@ function contactsFromChats(client: MatrixClient): Account[] {
             // Identifiers come from the profile where the homeserver keeps extended fields; a chat alone
             // carries none, so these accounts merge only through a bridge's contact list or a manual link.
             keys: identityKeys(profileIdentifiers(room, otherId)),
+            details: identityDetails(profileIdentifiers(room, otherId)),
         });
     }
     return accounts;
@@ -321,6 +334,12 @@ export function groupAccounts(accounts: Account[], links: string[][] = []): Pers
                 keys,
                 rooms: [...new Set(group.map((account) => account.roomId).filter((id): id is string => !!id))],
                 saved: group.some((account) => account.saved),
+                // Once each, however many networks published it: the same number from three is one fact.
+                details: [
+                    ...new Map(
+                        group.flatMap((account) => account.details ?? []).map((d) => [`${d.kind}:${d.value}`, d]),
+                    ).values(),
+                ],
             };
         })
         .sort((a, b) => a.name.localeCompare(b.name));

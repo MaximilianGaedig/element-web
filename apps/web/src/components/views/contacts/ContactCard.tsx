@@ -47,6 +47,13 @@ interface Props {
     onRename?: (person: Person, name: string) => void;
 }
 
+/** What to call each kind of published detail. */
+const DETAIL_LABEL = {
+    phone: "contacts|phone",
+    email: "contacts|email",
+    handle: "contacts|handle",
+} as const;
+
 /** A row of the card: what it is on the left, what it says on the right. */
 function Fact({ label, value }: { label: string; value: string }): JSX.Element {
     return (
@@ -153,10 +160,21 @@ export function ContactCard({ person, onBack, onMessage, onCall, onSeparate, nic
                 )}
             </div>
 
-            {!!person.keys.length && (
-                <section className="mx_ContactCard_section" aria-label={_t("contacts|identifiers")}>
-                    {person.keys.map((key) => (
-                        <Fact key={key} label={_t("contacts|number")} value={readKey(key)} />
+            {/*
+             * Everything the networks published, grouped by what it is.
+             *
+             * `details` rather than `keys`: keys are matching only and drop a username, which is unique to
+             * one network and useless for tying accounts together but is still a fact about the person -
+             * and dropping it is most of why this card had so little on it.
+             */}
+            {!!person.details.length && (
+                <section className="mx_ContactCard_section" aria-label={_t("contacts|details")}>
+                    {person.details.map((detail) => (
+                        <Fact
+                            key={`${detail.kind}:${detail.value}`}
+                            label={_t(DETAIL_LABEL[detail.kind])}
+                            value={detail.value}
+                        />
                     ))}
                 </section>
             )}
@@ -176,6 +194,8 @@ export function ContactCard({ person, onBack, onMessage, onCall, onSeparate, nic
                     >
                         <span className="mx_ContactCard_factLabel">{account.network}</span>
                         <span className="mx_ContactCard_factValue">{account.name || readKey(account.remoteId)}</span>
+                        {/* What the network shows to tell people of the same name apart. */}
+                        {account.context && <span className="mx_ContactCard_factNote">{account.context}</span>}
                     </button>
                 ))}
             </section>

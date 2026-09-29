@@ -7,7 +7,7 @@ Please see LICENSE files in the repository root for full details.
 
 import { describe, expect, it } from "vitest";
 
-import { emailKey, identityKeys, phoneKey, readKey } from "./identity";
+import { identityDetails, emailKey, identityKeys, phoneKey, readKey } from "./identity";
 
 describe("recognising one person across networks", () => {
     it("reads a phone number the same way however it was written", () => {
@@ -53,5 +53,37 @@ describe("recognising one person across networks", () => {
     it("shows a key as the number or address itself", () => {
         expect(readKey("tel:+441632960123")).toBe("+441632960123");
         expect(readKey("mailto:alice@example.org")).toBe("alice@example.org");
+    });
+});
+
+describe("identityDetails", () => {
+    it("keeps a username, which is worth showing even though it cannot match", () => {
+        expect(identityDetails(["@adaklein"])).toEqual([{ kind: "handle", value: "@adaklein" }]);
+    });
+
+    it("names a phone and an address for what they are, without their schemes", () => {
+        expect(identityDetails(["tel:+441632960123", "mailto:Ada@Example.COM"])).toEqual([
+            { kind: "phone", value: "+441632960123" },
+            { kind: "email", value: "ada@example.com" },
+        ]);
+    });
+
+    it("reads a bare number and a bare address too", () => {
+        expect(identityDetails(["+44 1632 960 123", "ada@example.com"])).toEqual([
+            { kind: "phone", value: "+441632960123" },
+            { kind: "email", value: "ada@example.com" },
+        ]);
+    });
+
+    it("says the same thing once, however many ways it was published", () => {
+        expect(identityDetails(["tel:+441632960123", "+441632960123", "+44 1632 960 123"])).toEqual([
+            { kind: "phone", value: "+441632960123" },
+        ]);
+    });
+
+    it("drops nothing but the empty and the malformed", () => {
+        expect(identityDetails(["", "   ", undefined as unknown as string, "ok"])).toEqual([
+            { kind: "handle", value: "ok" },
+        ]);
     });
 });

@@ -25,10 +25,39 @@ const person = (over: Partial<Person> = {}): Person => ({
     keys: ["tel:+49170"],
     rooms: ["!sig:e"],
     saved: true,
+    details: [{ kind: "phone", value: "+49170" }],
     ...over,
 });
 
 describe("ContactCard", () => {
+    it("shows every kind of detail a network published, not only what could be matched", () => {
+        render(
+            <ContactCard
+                person={person({
+                    details: [
+                        { kind: "phone", value: "+49170" },
+                        { kind: "email", value: "ada@example.com" },
+                        { kind: "handle", value: "@adaklein" },
+                    ],
+                })}
+                onBack={() => {}}
+                onMessage={() => {}}
+            />,
+        );
+        expect(screen.getByText("+49170")).toBeInTheDocument();
+        expect(screen.getByText("ada@example.com")).toBeInTheDocument();
+        // The username: no use for matching, still a fact about the person.
+        expect(screen.getByText("@adaklein")).toBeInTheDocument();
+        expect(screen.getByText("Username")).toBeInTheDocument();
+    });
+
+    it("shows the line a network uses to tell people of the same name apart", () => {
+        const p = person();
+        p.accounts[0].context = "Works at Acme";
+        render(<ContactCard person={p} onBack={() => {}} onMessage={() => {}} />);
+        expect(screen.getByText("Works at Acme")).toBeInTheDocument();
+    });
+
     it("says which networks the person is on, which is why they are one row", () => {
         render(<ContactCard person={person()} onBack={() => {}} onMessage={() => {}} />);
         expect(screen.getByRole("heading", { name: "Ada Klein" })).toBeInTheDocument();

@@ -164,6 +164,7 @@ describe("names the reader gave", () => {
         keys: [],
         rooms: [],
         saved: false,
+        details: [],
     });
     const names = (client: MatrixClient): unknown => (read(client) as { names?: unknown }).names;
 

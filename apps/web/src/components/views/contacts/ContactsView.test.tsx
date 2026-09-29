@@ -38,6 +38,7 @@ const person = (name: string, saved = false): Person => ({
     keys: [],
     rooms: [`!${name}:e`],
     saved,
+    details: [],
 });
 
 const call = (over: Partial<Call> = {}): Call => ({

@@ -84,3 +84,41 @@ export function identityKeys(identifiers: readonly string[] | undefined): Identi
 
 /** How a key reads to a person: the number or address itself, without the scheme. */
 export const readKey = (key: IdentityKey): string => key.replace(/^tel:/, "").replace(/^mailto:/, "");
+
+/**
+ * What a published identifier is, for showing it.
+ *
+ * Matching and showing are different jobs. `identityKeys` is deliberately strict because a wrong match
+ * merges two people invisibly; a card has no such risk and every published fact about somebody is worth
+ * showing. So a username, which is unique only within one network and useless for matching, still belongs
+ * on the card - under the name of the network that published it.
+ */
+export type DetailKind = "phone" | "email" | "handle";
+
+export interface ContactDetail {
+    kind: DetailKind;
+    /** As it should read: a number without its scheme, an address, a handle. */
+    value: string;
+}
+
+/** Everything a network published about one account, kept for showing rather than for matching. */
+export function identityDetails(raw: readonly string[] | undefined): ContactDetail[] {
+    const out: ContactDetail[] = [];
+    const seen = new Set<string>();
+    for (const one of raw ?? []) {
+        if (typeof one !== "string" || !one.trim()) continue;
+        const trimmed = one.trim();
+        const phone = phoneKey(trimmed);
+        const email = trimmed.toLowerCase().startsWith("mailto:") ? emailKey(trimmed.slice(7)) : emailKey(trimmed);
+        const detail: ContactDetail = phone
+            ? { kind: "phone", value: phone.slice("tel:".length) }
+            : email
+              ? { kind: "email", value: email.slice("mailto:".length) }
+              : { kind: "handle", value: trimmed };
+        const key = `${detail.kind}:${detail.value}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        out.push(detail);
+    }
+    return out;
+}
