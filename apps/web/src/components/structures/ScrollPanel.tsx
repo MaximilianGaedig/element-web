@@ -15,6 +15,7 @@ import Timer from "../../utils/Timer";
 import { getKeyBindingsManager } from "../../KeyBindingsManager";
 import { KeyBindingAction } from "../../accessibility/KeyboardShortcuts";
 import { SDKContext } from "../../contexts/SDKContext";
+import { isOverscrolled } from "../../utils/overscroll";
 
 // The amount of extra scroll distance to allow prior to unfilling.
 // See getExcessHeight.
@@ -276,10 +277,7 @@ export default class ScrollPanel extends React.Component<IProps> {
     // True while the scroller is past one of its ends, which on a touch screen means a rubber-band
     // bounce is running. Writing scrollTop then cuts the bounce short and the timeline visibly jumps,
     // so the writes below wait: the bounce ends where it started, and the next update pins it again.
-    private isOverscrolled = (): boolean => {
-        const sn = this.getScrollNode();
-        return sn.scrollTop < 0 || sn.scrollTop > sn.scrollHeight - sn.clientHeight;
-    };
+    private isOverscrolled = (): boolean => isOverscrolled(this.getScrollNode());
 
     // returns the vertical height in the given direction that can be removed from
     // the content box (which has a height of scrollHeight, see checkFillState) without
