@@ -478,7 +478,9 @@ describe("Spotlight Dialog", () => {
             const content = document.querySelector("#mx_SpotlightDialog_content")!;
             const options = content.querySelectorAll("li.mx_SpotlightDialog_option");
             expect(options.length).toBeGreaterThanOrEqual(2);
-            expect(options[0]).toHaveTextContent(testDMUserId);
+            // Alice comes back as the chat that already exists with her, named as only that room is, rather
+            // than as a Matrix ID to start one from - so the room's name is what says this row is hers.
+            expect(options[0]).toHaveTextContent(testDM.name);
             expect(options[1]).toHaveTextContent("Bob Wonder");
         });
     });

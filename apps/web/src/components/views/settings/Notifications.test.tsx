@@ -305,6 +305,9 @@ describe("<Notifications />", () => {
         setPushRuleEnabled: vi.fn(),
         setPushRuleActions: vi.fn(),
         getRooms: vi.fn().mockReturnValue([]),
+        // Reading a room's unread state walks its events, and the fork's hiding rules look each event's
+        // room up on the client - so a client that lists rooms has to be able to return them too.
+        getRoom: vi.fn().mockReturnValue(null),
         getAccountData: vi.fn().mockImplementation((eventType) => {
             if (eventType.startsWith(LOCAL_NOTIFICATION_SETTINGS_PREFIX.name)) {
                 return new MatrixEvent({
@@ -1172,6 +1175,7 @@ describe("<Notifications />", () => {
         it("clears all notifications", async () => {
             const room = new Room("room123", mockClient, "@alice:example.org");
             mockClient.getRooms.mockReset().mockReturnValue([room]);
+            mockClient.getRoom.mockImplementation((roomId) => (roomId === room.roomId ? room : null));
 
             const message = mkMessage({
                 event: true,

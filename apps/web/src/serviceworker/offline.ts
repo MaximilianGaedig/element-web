@@ -28,11 +28,14 @@ const MANIFEST_KEY = "__offline_manifest__";
 const SHELL_KEY = "__index__";
 
 /*
- * A development build, decided once. Webpack substitutes this at build time, so the production
- * worker carries the literal `false` and none of the dev branches below survive into it.
+ * A development build, read where it is used rather than decided once at import.
+ *
+ * Webpack still substitutes process.env.NODE_ENV at each call, so the production worker carries the
+ * literal `false` and none of the dev branches below survive into it. What changes is that the value is
+ * no longer fixed before a test can set it, which is why both dev-mode tests took the production path.
  */
 // oxlint-disable-next-line node/no-process-env
-const IS_DEV = process.env.NODE_ENV === "development";
+const isDev = (): boolean => process.env.NODE_ENV === "development";
 
 /** Media larger than this streams from the network each time rather than filling the cache. */
 const MAX_MEDIA_BYTES = 50 * 1024 * 1024;
@@ -132,7 +135,7 @@ async function appCacheReady(cache: Cache): Promise<boolean> {
 /** Answers an app request per {@link classifyAppRequest}; the network as before until a build is cached. */
 export async function respondApp(event: FetchEventLike, kind: AppRequestKind): Promise<Response> {
     // This origin may still have a production app cached from before the dev server started.
-    if (IS_DEV) return fetch(event.request);
+    if (isDev()) return fetch(event.request);
     const cache = await caches.open(APP_CACHE);
     if (!(await appCacheReady(cache))) {
         if (kind === "shell") event.waitUntil(syncAppCache());
@@ -203,7 +206,7 @@ let appSync: Promise<void> | undefined;
  */
 export function syncAppCache(): Promise<void> {
     // The dev server can expose a leftover production manifest through its static directory.
-    if (IS_DEV) return Promise.resolve();
+    if (isDev()) return Promise.resolve();
     appSync ??= doSyncAppCache()
         .catch((e) => console.warn("[ServiceWorker] Offline cache update failed", e))
         .finally(() => (appSync = undefined));
