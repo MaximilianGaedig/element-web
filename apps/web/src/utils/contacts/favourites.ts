@@ -65,3 +65,27 @@ export function favourites(client: MatrixClient, { limit = 12 }: { limit?: numbe
             avatarUrl: room.getMxcAvatarUrl() ?? room.getAvatarFallbackMember()?.getMxcAvatarUrl() ?? undefined,
         }));
 }
+
+/**
+ * Whether any of a person's chats is a favourite: the tag is per room, a person may have several.
+ *
+ * Optional all the way down. This is read during render, and a room that is known by id but not yet
+ * loaded has no tags to speak of - reading through that threw, which blanks the panel rather than
+ * losing a star.
+ */
+export function isFavourite(client: MatrixClient, roomIds: readonly string[]): boolean {
+    return roomIds.some((id) => !!client.getRoom(id)?.tags?.[FAVOURITE_TAG]);
+}
+
+/**
+ * Marks or unmarks every chat with somebody.
+ *
+ * All of them, not the first: a person reachable on three networks is one person to the reader, and a
+ * favourite that showed only their Signal chat would be a different answer depending on which network
+ * they happened to be reached on last.
+ */
+export async function setFavourite(client: MatrixClient, roomIds: readonly string[], on: boolean): Promise<void> {
+    await Promise.all(
+        roomIds.map((id) => (on ? client.setRoomTag(id, FAVOURITE_TAG, {}) : client.deleteRoomTag(id, FAVOURITE_TAG))),
+    );
+}

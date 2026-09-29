@@ -383,3 +383,13 @@ Please see LICENSE files in the repository root for full details.
     color: var(--cpd-color-text-secondary);
     font: var(--cpd-font-body-xs-regular);
 }
+
+/* The favourite star sits with the card's own chrome, beside the edit control. */
+.mx_ContactCard_favourite {
+    margin-inline-start: auto;
+}
+
+/* With a star present, the edit control no longer needs to claim the space itself. */
+.mx_ContactCard_favourite + .mx_ContactCard_edit {
+    margin-inline-start: 0;
+}

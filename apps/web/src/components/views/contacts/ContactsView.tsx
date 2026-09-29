@@ -26,7 +26,7 @@ import BackIcon from "@vector-im/compound-design-tokens/assets/web/icons/chevron
 
 import { _t } from "../../../languageHandler";
 import { type Call, callHistory, missedCalls, unknownCallers } from "../../../utils/contacts/calls";
-import { type Favourite, favourites } from "../../../utils/contacts/favourites";
+import { type Favourite, favourites, isFavourite, setFavourite } from "../../../utils/contacts/favourites";
 import { sectionsOf } from "../../../utils/contacts/sections";
 import { fuzzyMatch } from "../../../utils/search/fuzzy";
 import {
@@ -344,6 +344,14 @@ export function ContactsView({ initialTab = "people", onFinished }: Props): JSX.
         [client, again],
     );
 
+    /** Marks or unmarks every chat with them, so one person is one answer. */
+    const favourite = useCallback(
+        (person: Person, on: boolean): void => {
+            void setFavourite(client, person.rooms, on).then(again);
+        },
+        [client, again],
+    );
+
     /** Records that the person being linked and the one just chosen are one, and opens the result. */
     const linkTo = useCallback(
         (other: Person): void => {
@@ -553,6 +561,8 @@ export function ContactsView({ initialTab = "people", onFinished }: Props): JSX.
                     onRename={rename}
                     onLink={() => setLinking(open)}
                     onCall={callPerson}
+                    favourite={isFavourite(client, open.rooms)}
+                    onFavourite={open.rooms.length ? favourite : undefined}
                 />
             </div>
         );

@@ -133,6 +133,31 @@ describe("ContactCard", () => {
         expect(onRename).not.toHaveBeenCalled();
     });
 
+    it("marks and unmarks a favourite, saying which it is", async () => {
+        const onFavourite = vi.fn();
+        const { rerender } = render(
+            <ContactCard person={person()} onBack={() => {}} onMessage={() => {}} onFavourite={onFavourite} />,
+        );
+        const add = screen.getByRole("button", { name: "Add to favourites" });
+        expect(add).toHaveAttribute("aria-pressed", "false");
+        await userEvent.click(add);
+        expect(onFavourite).toHaveBeenCalledWith(expect.objectContaining({ name: "Ada Klein" }), true);
+
+        rerender(
+            <ContactCard
+                person={person()}
+                onBack={() => {}}
+                onMessage={() => {}}
+                favourite
+                onFavourite={onFavourite}
+            />,
+        );
+        const remove = screen.getByRole("button", { name: "Remove from favourites" });
+        expect(remove).toHaveAttribute("aria-pressed", "true");
+        await userEvent.click(remove);
+        expect(onFavourite).toHaveBeenLastCalledWith(expect.anything(), false);
+    });
+
     it("offers to separate only a merge the reader made", () => {
         const { rerender } = render(<ContactCard person={person()} onBack={() => {}} onMessage={() => {}} />);
         expect(screen.queryByRole("button", { name: "Separate" })).not.toBeInTheDocument();

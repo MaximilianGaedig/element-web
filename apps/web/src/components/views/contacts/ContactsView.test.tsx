@@ -26,7 +26,7 @@ import { Action } from "../../../dispatcher/actions";
 const member = { userId: "@ada:e", name: "Ada" };
 const client = {
     getSafeUserId: () => "@me:e",
-    getRoom: () => ({ getMember: () => member }),
+    getRoom: () => ({ getMember: () => member, tags: {} }),
     getAccountData: () => undefined,
     getVisibleRooms: () => [],
 } as unknown as MatrixClient;

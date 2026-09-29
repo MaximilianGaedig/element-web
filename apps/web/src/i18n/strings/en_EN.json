@@ -782,6 +782,7 @@
         "calls": "Calls",
         "details": "Details",
         "email": "Email",
+        "favourite": "Add to favourites",
         "favourites": "Favourites",
         "handle": "Username",
         "index": "Jump to a letter",
@@ -799,7 +800,8 @@
         "same_person": "Also on %(networks)s under this name",
         "search_people": "Search people",
         "separate": "Separate",
-        "title": "People and calls"
+        "title": "People and calls",
+        "unfavourite": "Remove from favourites"
     },
     "create_room": {
         "action_create_room": "Create room",

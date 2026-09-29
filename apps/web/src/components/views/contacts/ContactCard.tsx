@@ -25,6 +25,8 @@ import ChatIcon from "@vector-im/compound-design-tokens/assets/web/icons/chat";
 import VoiceCallIcon from "@vector-im/compound-design-tokens/assets/web/icons/voice-call";
 import VideoCallIcon from "@vector-im/compound-design-tokens/assets/web/icons/video-call";
 import EditIcon from "@vector-im/compound-design-tokens/assets/web/icons/edit";
+import FavouriteIcon from "@vector-im/compound-design-tokens/assets/web/icons/favourite";
+import FavouriteSolidIcon from "@vector-im/compound-design-tokens/assets/web/icons/favourite-solid";
 
 import { _t } from "../../../languageHandler";
 import { type Person } from "../../../utils/contacts/people";
@@ -52,6 +54,9 @@ interface Props {
      * bridge here: nothing is detected, so the reader has to be able to say so.
      */
     onLink?: () => void;
+    /** Whether they are a favourite, and how to change it; absent when there is no chat to mark. */
+    favourite?: boolean;
+    onFavourite?: (person: Person, on: boolean) => void;
 }
 
 /** What to call each kind of published detail. */
@@ -80,6 +85,8 @@ export function ContactCard({
     nickname,
     onRename,
     onLink,
+    favourite,
+    onFavourite,
 }: Props): JSX.Element {
     const [editing, setEditing] = useState(false);
     const [calling, setCalling] = useState(false);
@@ -100,6 +107,17 @@ export function ContactCard({
                 <IconButton aria-label={_t("action|back")} onClick={onBack} size="32px">
                     <BackIcon />
                 </IconButton>
+                {onFavourite && !editing && (
+                    <IconButton
+                        aria-label={favourite ? _t("contacts|unfavourite") : _t("contacts|favourite")}
+                        aria-pressed={!!favourite}
+                        onClick={() => onFavourite(person, !favourite)}
+                        size="32px"
+                        className="mx_ContactCard_favourite"
+                    >
+                        {favourite ? <FavouriteSolidIcon /> : <FavouriteIcon />}
+                    </IconButton>
+                )}
                 {onRename && !editing && (
                     <IconButton
                         aria-label={_t("contacts|rename")}

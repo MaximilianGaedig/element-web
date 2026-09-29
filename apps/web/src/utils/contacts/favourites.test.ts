@@ -8,7 +8,7 @@ Please see LICENSE files in the repository root for full details.
 import { describe, expect, it, vi, afterEach } from "vitest";
 import { type MatrixClient, type Room } from "matrix-js-sdk/src/matrix";
 
-import { favourites } from "./favourites";
+import { favourites, isFavourite, setFavourite } from "./favourites";
 import DMRoomMap from "../DMRoomMap";
 
 const room = (roomId: string, name: string, tags: Record<string, Record<string, unknown>>, avatar?: string): Room =>
@@ -71,5 +71,39 @@ describe("favourites", () => {
         const many = Array.from({ length: 20 }, (_, at) => room(`!${at}:e`, `P${at}`, { "m.favourite": {} }));
         dms(...many.map((one) => one.roomId));
         expect(favourites(clientWith(...many), { limit: 3 })).toHaveLength(3);
+    });
+});
+
+describe("marking a person a favourite", () => {
+    const clientWithRooms = (...rooms: Room[]): MatrixClient =>
+        ({
+            getRoom: (id: string) => rooms.find((r) => r.roomId === id) ?? null,
+            setRoomTag: vi.fn().mockResolvedValue(undefined),
+            deleteRoomTag: vi.fn().mockResolvedValue(undefined),
+        }) as unknown as MatrixClient;
+
+    it("counts them a favourite when any of their chats is one", () => {
+        const client = clientWithRooms(room("!a:e", "Ada", {}), room("!b:e", "Ada", { "m.favourite": {} }));
+        expect(isFavourite(client, ["!a:e", "!b:e"])).toBe(true);
+        expect(isFavourite(client, ["!a:e"])).toBe(false);
+    });
+
+    /*
+     * Every chat, not the first: one person reachable on three networks is still one person, and a
+     * favourite that covered only one of them would answer differently depending on where they were
+     * last reached.
+     */
+    it("marks every chat with them, not just one", async () => {
+        const client = clientWithRooms(room("!a:e", "Ada", {}), room("!b:e", "Ada", {}));
+        await setFavourite(client, ["!a:e", "!b:e"], true);
+        expect(client.setRoomTag).toHaveBeenCalledTimes(2);
+        expect(client.setRoomTag).toHaveBeenCalledWith("!a:e", "m.favourite", {});
+        expect(client.setRoomTag).toHaveBeenCalledWith("!b:e", "m.favourite", {});
+    });
+
+    it("unmarks every chat with them too", async () => {
+        const client = clientWithRooms(room("!a:e", "Ada", { "m.favourite": {} }));
+        await setFavourite(client, ["!a:e"], false);
+        expect(client.deleteRoomTag).toHaveBeenCalledWith("!a:e", "m.favourite");
     });
 });
