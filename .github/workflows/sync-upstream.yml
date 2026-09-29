@@ -60,13 +60,17 @@ jobs:
                   # One branch per day: a sync that keeps conflicting updates its own branch rather
                   # than opening a new pull request every six hours.
                   BRANCH="sync-upstream/$(date -u +%Y-%m-%d)"
-                  git checkout -B "$BRANCH"
+                  # Commit the conflicted merge where we stand, then push HEAD at the branch. Not a
+                  # checkout: git refuses to switch branches with an unresolved index, which is exactly
+                  # the state this step runs in, so a checkout fails precisely when it is needed.
                   git add -A
                   git commit -m "Merge upstream develop (conflicts left for review)" --no-edit || true
-                  git push --force-with-lease origin "$BRANCH"
+                  # Asked already today, so somebody may be resolving that branch: leave it alone
+                  # rather than pushing over their work.
                   if [ -n "$(gh pr list --head "$BRANCH" --json number --jq '.[].number')" ]; then
                       exit 0
                   fi
+                  git push origin "HEAD:refs/heads/$BRANCH"
                   {
                       printf '%s\n\n' "The scheduled sync could not merge upstream cleanly, $BEHIND commits behind."
                       printf '%s\n\n' "The conflict markers are left in this branch on purpose, so what disagreed is visible."
