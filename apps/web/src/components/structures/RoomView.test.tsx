@@ -299,8 +299,12 @@ describe("RoomView", () => {
         await expect(screen.findByTestId("right-panel")).resolves.toBeTruthy();
         // Now rerender with hideRightPanel=true
         rerender(<RoomView threepidInvite={undefined} forceTimeline={false} hideRightPanel={true} />);
-        // Check that the right panel is not rendered
-        await expect(screen.findByTestId("right-panel")).rejects.toThrow();
+        /*
+         * Gone, but not at once: MainSplit keeps a closed panel mounted while it slides out (.25s, the
+         * Telegram-style right column), so this waits for the slide rather than asserting it has already
+         * happened - which would pass only on a build without the animation.
+         */
+        await waitFor(() => expect(screen.queryByTestId("right-panel")).not.toBeInTheDocument());
         expect(asFragment()).toMatchSnapshot();
     });
 
@@ -594,17 +598,23 @@ describe("RoomView", () => {
         vi.spyOn(cli.getCrypto()!, "getUserDeviceInfo").mockResolvedValue(
             new Map([["user@example.com", new Map<string, any>()]]),
         );
+        // The header only shields a DM, so the room has to be one for there to be anything to assert on.
+        vi.spyOn(DMRoomMap.shared(), "getUserIdForRoomId").mockReturnValue("user@example.com");
 
+        /*
+         * What the header draws, not E2EIcon: the header has its own shield and E2EIcon is no longer in it,
+         * so the old selector could only ever be null and said nothing either way. This still covers what
+         * this test is for and RoomHeader's own tests are not - that a crypto event out here reaches it.
+         */
         const { container } = await renderRoomView();
-        // We no longer show the grey shield for encrypted rooms, so it should not be there.
-        await waitFor(() => expect(container.querySelector(".mx_E2EIcon")).not.toBeInTheDocument());
+        // We no longer show the grey shield for encrypted rooms, so there is no shield to start with.
+        await waitFor(() => expect(container.querySelector(".mx_RoomHeader_icon.mx_Verified")).toBeNull());
+        expect(container.querySelector(".mx_RoomHeader_icon.mx_Untrusted")).toBeNull();
 
         const verificationStatus = new UserVerificationStatus(true, true, false);
         vi.spyOn(cli.getCrypto()!, "getUserVerificationStatus").mockResolvedValue(verificationStatus);
         cli.emit(CryptoEvent.UserTrustStatusChanged, cli.getSafeUserId(), verificationStatus);
-        await waitFor(() =>
-            expect(container.querySelector(".mx_E2EIcon")).toHaveAccessibleName("Everyone in this room is verified"),
-        );
+        await waitFor(() => expect(container.querySelector(".mx_RoomHeader_icon.mx_Verified")).toBeInTheDocument());
     });
 
     describe("video rooms", () => {
@@ -689,8 +699,8 @@ describe("RoomView", () => {
                     view_call: false,
                 }),
             );
-            // Right panel should be gone
-            expect(screen.queryByRole("complementary")).toBe(null);
+            // Right panel should be gone, once it has finished sliding out
+            await waitFor(() => expect(screen.queryByRole("complementary")).toBe(null));
             // Opening the right panel again should just show the room summary
             act(() => stores.rightPanelStore.show(room.roomId));
             await findByRole(await screen.findByRole("complementary"), "heading", { name: room.roomId });
@@ -734,8 +744,8 @@ describe("RoomView", () => {
                     metricsTrigger: undefined,
                 }),
             );
-            // Right panel should be gone
-            expect(screen.queryByRole("complementary")).toBe(null);
+            // Right panel should be gone, once it has finished sliding out
+            await waitFor(() => expect(screen.queryByRole("complementary")).toBe(null));
         });
     });
 
