@@ -24,6 +24,10 @@ env:
     # fetchdep.sh needs to know our PR number
     PR_NUMBER: ${{ github.event.pull_request.number }}
     NX_DEFAULT_OUTPUT_STYLE: stream-without-prefixes
+    # A vitest worker holds every fixture its test files built, and RoomListStoreV3's suite alone stands up
+    # around seventy room list stores with their clients and rooms. Past the default old space the worker
+    # aborts on SIGABRT, which kills the whole shard and reports no failing test at all.
+    NODE_OPTIONS: --max-old-space-size=4096
 
 permissions: {}
 
