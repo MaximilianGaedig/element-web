@@ -218,9 +218,15 @@ export function TgProfile({
         <div className="mx_TgProfile" data-testid="tg-profile">
             <header className="mx_TgProfile_header">
                 <RoomAvatar room={room} size="120px" viewAvatarOnClick className="mx_TgProfile_avatar" />
-                <div className="mx_TgProfile_name" title={name}>
+                {/*
+                 * A heading, not a styled div. Element's own summary card gives this panel one, and
+                 * replacing the card's body with this took it away - so in the Telegram layout the
+                 * panel had no heading at all, and nothing reading the page aloud could say whose
+                 * profile it was. Styled here, so it looks the same as it did.
+                 */}
+                <h2 className="mx_TgProfile_name" title={name}>
                     {name}
-                </div>
+                </h2>
                 <div className="mx_TgProfile_subtitle">{subtitle}</div>
             </header>
 

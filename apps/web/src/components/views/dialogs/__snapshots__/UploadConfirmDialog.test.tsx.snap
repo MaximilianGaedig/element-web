@@ -35,10 +35,10 @@ exports[`<UploadConfirmDialog /> > should display image preview 1`] = `
           class="mx_UploadConfirmDialog_previewInner"
         >
           <div
-            class="_container_b6h8l_1"
+            class="mx_MediaPreviewGroup _container_b6h8l_1"
           >
             <div
-              class="_tile_1vd22_1"
+              class="mx_MediaPreviewTile _tile_1vd22_1"
             >
               <div
                 class="_image_13lno_85 _tallBannerImage_13lno_109"

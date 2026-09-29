@@ -84,10 +84,10 @@ exports[`MBodyFactory > renderMBody shows the preview tile for m.file in File 1`
     class="mx_EventTile_content"
   >
     <div
-      class="_container_b6h8l_1"
+      class="mx_MediaPreviewGroup _container_b6h8l_1"
     >
       <div
-        class="_tile_1vd22_1"
+        class="mx_MediaPreviewTile _tile_1vd22_1"
       >
         <div
           class="_below_1vd22_9"
@@ -160,10 +160,10 @@ exports[`MBodyFactory > renderMBody shows the preview tile for m.file in Room 1`
     class="mx_EventTile_content"
   >
     <div
-      class="_container_b6h8l_1"
+      class="mx_MediaPreviewGroup _container_b6h8l_1"
     >
       <div
-        class="_tile_1vd22_1"
+        class="mx_MediaPreviewTile _tile_1vd22_1"
       >
         <div
           class="_below_1vd22_9"

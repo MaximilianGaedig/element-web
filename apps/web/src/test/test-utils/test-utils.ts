@@ -677,6 +677,10 @@ export function mkStubRoom(
     const stubTimeline = {
         getEvents: (): MatrixEvent[] => [],
         getState: (): RoomState | undefined => state,
+        // A real EventTimeline has this, and the cast below claims this object is one. Anything that
+        // renders a room may ask how far back it can page - shared media does, on mount - and without
+        // it the call is a TypeError from inside a component rather than a missing token.
+        getPaginationToken: (): string | null => null,
     } as unknown as EventTimeline;
 
     const eventEmitter = new EventEmitter();
