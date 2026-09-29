@@ -31,7 +31,16 @@ import { _t } from "../../../languageHandler";
 import { useStuck } from "../../../hooks/useStuck";
 import { scrollParentOf } from "../../../utils/scrollParent";
 import { listOffsets, listWindow } from "../../../utils/listWindow";
-import { mediaRows, type MediaRow, type MediaSection, sectionAt, visibleRows } from "../../../utils/sharedMediaLayout";
+import {
+    mediaRows,
+    type MediaRow,
+    type MediaSection,
+    monthAt,
+    type MonthSpan,
+    rowAtTime,
+    sectionAt,
+    visibleRows,
+} from "../../../utils/sharedMediaLayout";
 import BaseCard from "./BaseCard";
 import AccessibleButton from "../elements/AccessibleButton";
 import IconizedContextMenu, {
@@ -938,10 +947,21 @@ function DateScrubber({
     rows,
     scroll,
     seek,
+    months,
+    onPickMonth,
 }: {
     rows: MediaRow[];
     scroll: { top: number; viewport: number; content: number; offset: number };
     seek: (top: number) => void;
+    /**
+     * What the whole history holds per month, from the server's index. With this the handle
+     * addresses history that has never been loaded, which is the difference between scrubbing the
+     * column and scrubbing the chat. Empty in an encrypted room, or against a homeserver with no
+     * index, and then everything below falls back to naming what is loaded.
+     */
+    months: MonthSpan[];
+    /** Called once the handle is let go on a month, to go and fetch it. */
+    onPickMonth: (month: MonthSpan) => void;
 }): JSX.Element | null {
     const track = useRef<HTMLDivElement>(null);
     // Where the finger is, while it is down. The handle follows this rather than the scroll
@@ -965,7 +985,13 @@ function DateScrubber({
     useEffect(() => {
         if (held === null) return;
         const move = (e: PointerEvent): void => to(e.clientY);
-        const up = (): void => setHeld(null);
+        const up = (): void => {
+            // On release, not during the drag: a fetch per pointermove would be a request every
+            // frame, and the reader has not chosen a month until they stop moving.
+            const picked = monthAt(months, held);
+            if (picked) onPickMonth(picked);
+            setHeld(null);
+        };
         window.addEventListener("pointermove", move);
         window.addEventListener("pointerup", up);
         window.addEventListener("pointercancel", up);
@@ -974,13 +1000,16 @@ function DateScrubber({
             window.removeEventListener("pointerup", up);
             window.removeEventListener("pointercancel", up);
         };
-    }, [held, to]);
+    }, [held, to, months, onPickMonth]);
 
-    // Nothing to scrub when the whole column already fits.
-    if (span <= 0) return null;
-    const at = held ?? Math.min(1, Math.max(0, scroll.top / span));
-    // Where that lands in the column itself, which starts below the chrome.
-    const under = sectionAt(rows, Math.max(0, at * span - scroll.offset))?.section;
+    // Nothing to scrub when the whole column already fits - unless the server says there is more
+    // history than the column is showing, which is exactly when this is worth having.
+    if (span <= 0 && !months.length) return null;
+    const at = held ?? (span > 0 ? Math.min(1, Math.max(0, scroll.top / span)) : 0);
+    // The month under the handle: from the server's counts where we have them, so the label is
+    // right for history that is not loaded, and from the column itself otherwise.
+    const overall = monthAt(months, at);
+    const under = overall ?? sectionAt(rows, Math.max(0, at * span - scroll.offset))?.section;
     return (
         <div
             ref={track}
@@ -997,7 +1026,10 @@ function DateScrubber({
         >
             <div className="mx_SharedMedia_scrubberHandle" style={{ insetBlockStart: `${at * 100}%` }}>
                 {held !== null && under && (
-                    <span className="mx_SharedMedia_scrubberDate">{monthLabel(under.time)}</span>
+                    <span className="mx_SharedMedia_scrubberDate">
+                        {/* A month's before_ts is its newest item's own time, so it names the month. */}
+                        {monthLabel("month" in under ? under.before_ts : under.time)}
+                    </span>
                 )}
             </div>
         </div>
@@ -1009,14 +1041,42 @@ function MediaGrid({
     selection,
     total,
     onNearEnd,
+    months,
+    onSeekDate,
 }: {
     items: MatrixEvent[];
     selection: Selection;
     total?: number;
     /** Called when the window reaches the last row there is, so the next page can be fetched. */
     onNearEnd: () => void;
+    /** What the whole history holds per month, for the scrubber. Empty without a server index. */
+    months: MonthSpan[];
+    /** Fetches a month and returns once it is in, so the column can then be scrolled to it. */
+    onSeekDate: (ts: number) => Promise<void>;
 }): JSX.Element {
     const { ref, rows, height, window: shown, month, scroll, seek } = useGridLayout(items, total);
+
+    /*
+     * Go to the month the scrubber was let go on: fetch that stretch, then put it under the top of
+     * the column.
+     *
+     * The scroll has to wait for the fetch, because until it lands there is no row to scroll to -
+     * rowAtTime reads the rows the grid actually holds. `rows` is captured per render and the fetch
+     * makes new ones, so the position is worked out in an effect once they arrive rather than here.
+     */
+    const [goingTo, setGoingTo] = useState<number | null>(null);
+    const pickMonth = useCallback(
+        (picked: MonthSpan) => {
+            void onSeekDate(picked.before_ts).then(() => setGoingTo(picked.before_ts));
+        },
+        [onSeekDate],
+    );
+    useEffect(() => {
+        if (goingTo === null) return;
+        const row = rowAtTime(rows, items, goingTo);
+        seek(rows[row]?.top ?? 0);
+        setGoingTo(null);
+    }, [goingTo, rows, items, seek]);
     /*
      * With room reserved at the bottom for what has not loaded, the end of the column is nowhere
      * near the end of the rows - so reaching the last row is what asks for the next page, rather
@@ -1067,7 +1127,7 @@ function MediaGrid({
          * clipping, which is what the float and the stickiness each need.
          */
         <div className="mx_SharedMedia_column">
-            <DateScrubber rows={rows} scroll={scroll} seek={seek} />
+            <DateScrubber rows={rows} scroll={scroll} seek={seek} months={months} onPickMonth={pickMonth} />
             <div className="mx_SharedMedia_grid" ref={ref} style={{ height }}>
                 {/* The month at the top, but only once its own heading has scrolled away - otherwise the
                     two of them say the same thing one under the other. */}
@@ -1250,6 +1310,24 @@ function TabContent({
         return () => observer.disconnect();
     }, [loader, tab, done, items.length, loading]);
 
+    /*
+     * What the whole history holds per month, so the scrubber addresses the chat rather than the
+     * column. Asked per tab, once, and empty where the homeserver keeps no index - which is every
+     * encrypted room, and where the scrubber goes back to naming only what is loaded.
+     */
+    const [months, setMonths] = useState<MonthSpan[]>([]);
+    useEffect(() => {
+        let alive = true;
+        setMonths([]);
+        void loader.monthCounts(tab).then((found) => {
+            if (alive) setMonths(found);
+        });
+        return () => {
+            alive = false;
+        };
+    }, [loader, tab]);
+    const seekDate = useCallback((ts: number) => loader.seekTo(tab, ts), [loader, tab]);
+
     const room = loader.room;
     let list: JSX.Element | null = null;
     if (items.length) {
@@ -1260,6 +1338,8 @@ function TabContent({
                     selection={selection}
                     total={total}
                     onNearEnd={() => void loader.loadMore(tab)}
+                    months={months}
+                    onSeekDate={seekDate}
                 />
             );
         } else {

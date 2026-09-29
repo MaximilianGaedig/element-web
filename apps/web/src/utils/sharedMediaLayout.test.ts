@@ -8,7 +8,7 @@ Please see LICENSE files in the repository root for full details.
 import { describe, expect, it } from "vitest";
 import { MatrixEvent } from "matrix-js-sdk/src/matrix";
 
-import { mediaRows, monthKey, rowAtTime, sectionAt, visibleRows, type RowMetrics } from "./sharedMediaLayout";
+import { mediaRows, monthAt, monthKey, rowAtTime, sectionAt, visibleRows, type RowMetrics } from "./sharedMediaLayout";
 
 const METRICS: RowMetrics = { header: 30, cell: 100, gap: 1 };
 
@@ -153,5 +153,41 @@ describe("what has not loaded yet", () => {
         const { rows } = mediaRows(items, 3, METRICS, 9);
         const landed = rowAtTime(rows, items, new Date(2020, 0, 1).getTime());
         expect(rows[landed].kind).toBe("pending");
+    });
+});
+
+describe("monthAt", () => {
+    // Newest first, as the index reports them. March is most of the history by volume.
+    const months = [
+        { month: "2026-05", count: 10, before_ts: 500 },
+        { month: "2026-04", count: 10, before_ts: 400 },
+        { month: "2026-03", count: 80, before_ts: 300 },
+    ];
+
+    it("weights a month by what it holds, not by being a month", () => {
+        // The first tenth is May, the second April, and the remaining four fifths are March. By
+        // month count alone the handle would spend a third of the track on each, and move at a
+        // completely different speed from the column it is driving.
+        expect(monthAt(months, 0.05)?.month).toBe("2026-05");
+        expect(monthAt(months, 0.15)?.month).toBe("2026-04");
+        expect(monthAt(months, 0.5)?.month).toBe("2026-03");
+        expect(monthAt(months, 0.9)?.month).toBe("2026-03");
+    });
+
+    it("lands on a real month at either end, including exactly at the end", () => {
+        expect(monthAt(months, 0)?.month).toBe("2026-05");
+        expect(monthAt(months, 1)?.month).toBe("2026-03");
+    });
+
+    it("clamps a handle dragged past the track", () => {
+        expect(monthAt(months, -3)?.month).toBe("2026-05");
+        expect(monthAt(months, 42)?.month).toBe("2026-03");
+    });
+
+    it("says nothing when there is nothing to say", () => {
+        // Every encrypted room, and any homeserver without the index: the scrubber then falls back
+        // to describing what is loaded, so answering with a month here would be an invention.
+        expect(monthAt([], 0.5)).toBeUndefined();
+        expect(monthAt([{ month: "2026-05", count: 0, before_ts: 500 }], 0.5)).toBeUndefined();
     });
 });

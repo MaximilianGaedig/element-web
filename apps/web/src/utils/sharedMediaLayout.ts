@@ -137,13 +137,46 @@ export function visibleRows(
     return [Math.max(0, lo - overscan), Math.min(rows.length, end + overscan)];
 }
 
+/** One month of a room's media, as the server's index counts it. */
+export interface MonthSpan {
+    /** `YYYY-MM`, UTC. */
+    month: string;
+    count: number;
+    /** The time to open the list at, for this month. */
+    before_ts: number;
+}
+
+/**
+ * The month a scrubber handle at `at` (0 at the newest, 1 at the oldest) is pointing at.
+ *
+ * Weighted by how much each month holds, not by how many months there are: a month with four
+ * hundred photos in it is most of a year's scrolling, and a scrubber that gave it the same slice
+ * as a month with three would move at a completely different speed from the column it drives.
+ *
+ * The months come from the server's index, so this addresses the whole history - including the
+ * part that has never been loaded, which is the point. Returns undefined when there are no counts,
+ * which is every encrypted room and any homeserver without the index.
+ */
+export function monthAt(months: readonly MonthSpan[], at: number): MonthSpan | undefined {
+    const total = months.reduce((sum, month) => sum + month.count, 0);
+    if (!months.length || total <= 0) return undefined;
+    // Clamped rather than trusted: a pointer can be dragged past either end of the track.
+    const target = Math.min(1, Math.max(0, at)) * total;
+    let seen = 0;
+    for (const month of months) {
+        seen += month.count;
+        if (target < seen) return month;
+    }
+    // Exactly at the far end lands on the oldest month rather than nothing.
+    return months[months.length - 1];
+}
+
 /**
  * Where to scroll to land on `time`: the first row at or before it, which is the month heading when
  * the date falls in a month the grid holds.
  *
  * The grid runs newest first, so "at or before" means further down the column.
  */
-/** @knipignore Where the date scrubber will land a jump (MEO-7); pinned by tests until it does. */
 export function rowAtTime(rows: readonly MediaRow[], items: readonly MatrixEvent[], time: number): number {
     for (let i = 0; i < rows.length; i++) {
         const row = rows[i];
