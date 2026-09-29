@@ -45,6 +45,7 @@ import Modal from "../../Modal";
 import dis from "../../dispatcher/dispatcher";
 import { Action } from "../../dispatcher/actions";
 import Timer from "../../utils/Timer";
+import { pendingEventsToShow } from "../../utils/room/pendingEvents";
 import shouldHideEvent from "../../shouldHideEvent";
 import MessagePanel from "./MessagePanel";
 import { type IScrollState } from "./ScrollPanel";
@@ -1618,33 +1619,30 @@ class TimelinePanel extends React.Component<IProps, IState> {
         // should use this list, so that they don't advance into pending events.
         const liveEvents = [...events];
 
-        // if we're at the end of the live timeline, append the pending events
-        if (!this.timelineWindow!.canPaginate(EventTimeline.FORWARDS)) {
-            const pendingEvents = this.props.timelineSet.getPendingEvents();
-            // Pending events are the whole room's, so a filtered timeline set is handed events its
-            // own filter would never accept. Without this every message being sent flickers through
-            // panels like the file panel until its remote echo arrives and the filter rejects it.
-            const filter = this.props.timelineSet.getFilter?.();
-            events.push(
-                ...pendingEvents.filter((event) => {
-                    if (filter && !filter.filterRoomTimeline([event]).length) {
-                        return false;
-                    }
+        // At the live end, everything in flight; away from it, only what failed (pendingEvents.ts).
+        const atLiveEnd = !this.timelineWindow!.canPaginate(EventTimeline.FORWARDS);
+        const pendingEvents = pendingEventsToShow(this.props.timelineSet.getPendingEvents(), atLiveEnd);
+        // Pending events are the whole room's, so a filtered timeline set is handed events its
+        // own filter would never accept. Without this every message being sent flickers through
+        // panels like the file panel until its remote echo arrives and the filter rejects it.
+        const filter = this.props.timelineSet.getFilter?.();
+        events.push(
+            ...pendingEvents.filter((event) => {
+                if (filter && !filter.filterRoomTimeline([event]).length) {
+                    return false;
+                }
 
-                    const { shouldLiveInRoom, threadId } = this.props.timelineSet.room!.eventShouldLiveIn(
-                        event,
-                        pendingEvents,
-                    );
+                const { shouldLiveInRoom, threadId } = this.props.timelineSet.room!.eventShouldLiveIn(
+                    event,
+                    pendingEvents,
+                );
 
-                    if (this.context.timelineRenderingType === TimelineRenderingType.Thread) {
-                        return threadId === this.context.threadId;
-                    }
-                    {
-                        return shouldLiveInRoom;
-                    }
-                }),
-            );
-        }
+                if (this.context.timelineRenderingType === TimelineRenderingType.Thread) {
+                    return threadId === this.context.threadId;
+                }
+                return shouldLiveInRoom;
+            }),
+        );
 
         return {
             events,
