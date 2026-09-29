@@ -69,14 +69,45 @@ Please see LICENSE files in the repository root for full details.
      * Two accounts that might be one person, above the list because it is a question rather than a row:
      * tinted so it does not read as somebody you can open, and gone as soon as it is answered either way.
      */
+    /*
+     * A question, stacked, because this now lives in the room list's column rather than a dialog.
+     *
+     * Side by side - face, sentence, two buttons - the sentence had perhaps six characters of room and
+     * arrived as an ellipsis, which is no use for a question whose whole job is to say which two people
+     * it means. The face and name keep their row; what it says and what you can answer sit under it.
+     */
     .mx_Contacts_suggestion {
         display: flex;
-        align-items: center;
+        flex-direction: column;
+        align-items: stretch;
         gap: var(--cpd-space-2x);
-        padding: var(--cpd-space-2x);
+        padding: var(--cpd-space-3x);
         margin-bottom: var(--cpd-space-2x);
         border-radius: var(--cpd-space-3x);
         background: var(--cpd-color-bg-subtle-secondary);
+    }
+
+    .mx_Contacts_suggestionWho {
+        display: flex;
+        align-items: center;
+        gap: var(--cpd-space-2x);
+        min-width: 0;
+    }
+
+    /* The sentence wraps here rather than being cut: it names the networks, which is the whole point. */
+    .mx_Contacts_suggestion .mx_Contacts_detail {
+        overflow: visible;
+        white-space: normal;
+        text-overflow: clip;
+    }
+
+    .mx_Contacts_suggestionActions {
+        display: flex;
+        gap: var(--cpd-space-2x);
+
+        > * {
+            flex: 1;
+        }
     }
 
     /* The list and the letters beside it: the list scrolls, the index stays put next to it. */

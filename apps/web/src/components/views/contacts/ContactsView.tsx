@@ -221,19 +221,21 @@ function SuggestionCard({
     const networks = [...new Set(suggestion.people.flatMap((one) => one.accounts.map((a) => a.network)))];
     return (
         <div className="mx_Contacts_suggestion">
-            <Face name={suggestion.people[0].name} avatarUrl={suggestion.people[0].avatarUrl} />
-            <span className="mx_Contacts_rowText">
+            {/* Who it is on its own row; what it says and what you can answer beneath. Side by side in
+                this column the sentence had no room and arrived as an ellipsis. */}
+            <div className="mx_Contacts_suggestionWho">
+                <Face name={suggestion.people[0].name} avatarUrl={suggestion.people[0].avatarUrl} />
                 <span className="mx_Contacts_name">{suggestion.people[0].name}</span>
-                <span className="mx_Contacts_detail">
-                    {_t("contacts|same_person", { networks: networks.join(", ") })}
-                </span>
-            </span>
-            <Button kind="primary" size="md" onClick={() => onMerge(suggestion)}>
-                {_t("contacts|merge")}
-            </Button>
-            <Button kind="secondary" size="md" onClick={() => onDismiss(suggestion)}>
-                {_t("contacts|not_same_person")}
-            </Button>
+            </div>
+            <span className="mx_Contacts_detail">{_t("contacts|same_person", { networks: networks.join(", ") })}</span>
+            <div className="mx_Contacts_suggestionActions">
+                <Button kind="primary" size="md" onClick={() => onMerge(suggestion)}>
+                    {_t("contacts|merge")}
+                </Button>
+                <Button kind="secondary" size="md" onClick={() => onDismiss(suggestion)}>
+                    {_t("contacts|not_same_person")}
+                </Button>
+            </div>
         </div>
     );
 }
