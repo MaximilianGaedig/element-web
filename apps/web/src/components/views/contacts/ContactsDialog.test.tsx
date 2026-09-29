@@ -20,6 +20,7 @@ import * as peopleModule from "../../../utils/contacts/people";
 import * as callsModule from "../../../utils/contacts/calls";
 import * as favouritesModule from "../../../utils/contacts/favourites";
 import dis from "../../../dispatcher/dispatcher";
+import { MatrixClientPeg } from "../../../MatrixClientPeg";
 import { Action } from "../../../dispatcher/actions";
 
 const member = { userId: "@ada:e", name: "Ada" };
@@ -29,11 +30,6 @@ const client = {
     getAccountData: () => undefined,
     getVisibleRooms: () => [],
 } as unknown as MatrixClient;
-
-vi.mock("../../../contexts/MatrixClientContext", async (importOriginal) => ({
-    ...(await importOriginal<object>()),
-    useMatrixClientContext: () => client,
-}));
 
 const person = (name: string, saved = false): Person => ({
     id: name,
@@ -61,6 +57,12 @@ const open = (): RenderResult => render(<ContactsDialog onFinished={() => {}} />
 
 beforeEach(() => {
     vi.restoreAllMocks();
+    /*
+     * The peg, as the dialog reads it. Stubbing MatrixClientContext instead is what let a null client
+     * reach production: Modal gives a dialog no such provider, so that context is always null there,
+     * and a test which stubs it proves the one thing the dialog never does.
+     */
+    vi.spyOn(MatrixClientPeg, "safeGet").mockReturnValue(client);
     vi.spyOn(peopleModule, "allPeople").mockResolvedValue([]);
     vi.spyOn(peopleModule, "manualLinks").mockReturnValue([]);
     vi.spyOn(peopleModule, "dismissedSuggestions").mockReturnValue([]);

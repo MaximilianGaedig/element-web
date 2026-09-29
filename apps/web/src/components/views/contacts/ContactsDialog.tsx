@@ -42,7 +42,7 @@ import {
     unlinkAccounts,
 } from "../../../utils/contacts/people";
 import { readKey } from "../../../utils/contacts/identity";
-import { useMatrixClientContext } from "../../../contexts/MatrixClientContext";
+import { MatrixClientPeg } from "../../../MatrixClientPeg";
 import BaseAvatar from "../avatars/BaseAvatar";
 import { mediaFromMxc } from "../../../customisations/Media";
 import { DirectoryMember, startDmOnFirstMessage } from "../../../utils/direct-messages";
@@ -234,7 +234,15 @@ function SuggestionCard({
 }
 
 export function ContactsDialog({ initialTab = "people", onFinished }: Props): JSX.Element {
-    const client = useMatrixClientContext();
+    /*
+     * The peg, not the context.
+     *
+     * Modal renders each dialog into its own React root (Modal.tsx) and provides SDKContext, i18n and
+     * tooltips there but not MatrixClientContext - so useMatrixClientContext() reads the context's
+     * default, which is `null as any`. The type says MatrixClient, so nothing warns, and the first
+     * client.getVisibleRooms() throws during render. Every other dialog here uses the peg for this reason.
+     */
+    const client = MatrixClientPeg.safeGet();
     const [tab, setTab] = useState(initialTab);
     const [query, setQuery] = useState("");
     const [onlyMissed, setOnlyMissed] = useState(false);
