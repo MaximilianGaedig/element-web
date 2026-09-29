@@ -342,7 +342,7 @@ export function TextualBodyFactory(props: Readonly<IBodyProps>): JSX.Element {
                     {bubbleTimelineEnabled() ? (
                         <TgWebPage previews={previews} sender={props.mxEvent.getSender() ?? ""} collapse={collapse} />
                     ) : (
-                        <MediaPreviewGroupPreview vm={mediaPreviewVm} />
+                        <MediaPreviewGroupPreview vm={mediaPreviewVm} className="mx_TextualBody_urlPreviews" />
                     )}
                     <BridgeButtons mxEvent={props.mxEvent} inhibitInteraction={props.inhibitInteraction} />
                     {/* Fork: what the message asks of you - a time to put in the calendar, a number to

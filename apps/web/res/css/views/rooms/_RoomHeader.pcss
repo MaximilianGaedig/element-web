@@ -37,6 +37,9 @@ Please see LICENSE files in the repository root for full details.
     gap: var(--cpd-space-3x);
     text-align: left;
     padding: 0;
+    /* Without this, this flex item reports its unshrunk content width to
+       mx_RoomHeader which breaks its max-width. */
+    min-width: 0;
 }
 
 .mx_RoomHeader_info {
@@ -46,6 +49,7 @@ Please see LICENSE files in the repository root for full details.
     display: flex;
     flex-direction: column;
     justify-content: center;
+    /* See mx_RoomHeader_infoWrapper min-width comment above. */
     min-width: 0;
     flex: 1;
     overflow: hidden;
@@ -94,6 +98,12 @@ Please see LICENSE files in the repository root for full details.
     display: flex;
     gap: var(--cpd-space-1-5x);
     align-items: center;
+    min-width: 0;
+}
+
+.mx_RoomHeader_userStatus {
+    flex-shrink: 1;
+    min-width: 0;
 }
 
 .mx_RoomHeader_icon {
