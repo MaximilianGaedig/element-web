@@ -52,6 +52,8 @@ import { DirectoryMember, startDmOnFirstMessage } from "../../../utils/direct-me
 import dis from "../../../dispatcher/dispatcher";
 import { Action } from "../../../dispatcher/actions";
 import { type ViewRoomPayload } from "../../../dispatcher/payloads/ViewRoomPayload";
+import { CallType } from "matrix-js-sdk/src/webrtc/call";
+import { SDKContextClass } from "../../../contexts/SDKContextClass.ts";
 import { type ViewUserPayload } from "../../../dispatcher/payloads/ViewUserPayload";
 import { formatRelativeTime } from "../../../DateUtils";
 import Spinner from "../elements/Spinner";
@@ -447,6 +449,33 @@ export function ContactsView({ initialTab = "people", onFinished }: Props): JSX.
         [onFinished],
     );
 
+    /**
+     * Place a call in the chat the reader picked.
+     *
+     * Viewed first, then placed: a call belongs to a room, and the room has to be the one on screen for
+     * the call UI to have anywhere to live. Which network it goes over is decided by which chat this is -
+     * that chat's bridge carries it - so the choice was already made in the menu.
+     */
+    const callPerson = useCallback(
+        (_person: Person, roomId: string, video: boolean): void => {
+            dis.dispatch<ViewRoomPayload>({
+                action: Action.ViewRoom,
+                room_id: roomId,
+                metricsTrigger: undefined,
+            });
+            // Forced through Matrix calling, as the room header does for a bridged DM: those rooms carry
+            // the bridge bot as a third member, which the handler counting members cannot tell from a group.
+            void SDKContextClass.instance.legacyCallHandler.placeCall(
+                roomId,
+                video ? CallType.Video : CallType.Voice,
+                undefined,
+                true,
+            );
+            onFinished();
+        },
+        [onFinished],
+    );
+
     /** A call is somewhere to go: the call itself, in the chat it happened in. */
     const openCall = useCallback(
         (call: Call): void => {
@@ -523,6 +552,7 @@ export function ContactsView({ initialTab = "people", onFinished }: Props): JSX.
                     nickname={chosenName(client, open)}
                     onRename={rename}
                     onLink={() => setLinking(open)}
+                    onCall={callPerson}
                 />
             </div>
         );

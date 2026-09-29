@@ -75,9 +75,37 @@ describe("ContactCard", () => {
     });
 
     it("offers no call where no chat exists to hold one", () => {
-        const onCall = vi.fn();
-        render(<ContactCard person={person({ rooms: [] })} onBack={() => {}} onMessage={() => {}} onCall={onCall} />);
+        const nowhere = person();
+        // Per account, not per person: which chat is picked decides which network carries the call.
+        for (const account of nowhere.accounts) delete account.roomId;
+        render(<ContactCard person={nowhere} onBack={() => {}} onMessage={() => {}} onCall={vi.fn()} />);
         expect(screen.queryByRole("button", { name: "Voice call" })).not.toBeInTheDocument();
+    });
+
+    /*
+     * The iOS question is not "call?" but "call on what?". Somebody reachable on three networks has three
+     * ways to be called, and the menu is where that is chosen - one entry per chat that exists, because a
+     * call placed in a chat is carried by that chat's bridge.
+     */
+    it("asks which network to call on", async () => {
+        const p = person();
+        p.accounts[1].roomId = "!wa:e";
+        render(<ContactCard person={p} onBack={() => {}} onMessage={() => {}} onCall={vi.fn()} />);
+
+        await userEvent.click(screen.getByRole("button", { name: "Voice call" }));
+        expect(await screen.findByText("Voice call on Signal")).toBeInTheDocument();
+        expect(screen.getByText("Video call on WhatsApp")).toBeInTheDocument();
+    });
+
+    it("calls in the chat that was chosen, not simply the first", async () => {
+        const onCall = vi.fn();
+        const p = person();
+        p.accounts[1].roomId = "!wa:e";
+        render(<ContactCard person={p} onBack={() => {}} onMessage={() => {}} onCall={onCall} />);
+
+        await userEvent.click(screen.getByRole("button", { name: "Voice call" }));
+        await userEvent.click(await screen.findByText("Video call on WhatsApp"));
+        expect(onCall).toHaveBeenCalledWith(expect.objectContaining({ name: "Ada Klein" }), "!wa:e", true);
     });
 
     it("shows the name the reader gave them, with the network's own beneath it", () => {

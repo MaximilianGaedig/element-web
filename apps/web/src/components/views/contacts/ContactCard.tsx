@@ -19,7 +19,7 @@ Please see LICENSE files in the repository root for full details.
  */
 
 import React, { type JSX, useState } from "react";
-import { Button, IconButton, Form } from "@vector-im/compound-web";
+import { Button, IconButton, Form, Menu, MenuItem } from "@vector-im/compound-web";
 import BackIcon from "@vector-im/compound-design-tokens/assets/web/icons/chevron-left";
 import ChatIcon from "@vector-im/compound-design-tokens/assets/web/icons/chat";
 import VoiceCallIcon from "@vector-im/compound-design-tokens/assets/web/icons/voice-call";
@@ -38,8 +38,8 @@ interface Props {
     onBack: () => void;
     /** Open the chat with them, on the account given or on whichever one can. */
     onMessage: (person: Person, mxid?: string) => void;
-    /** Place a call, where the chat that would carry it exists. */
-    onCall?: (person: Person, video: boolean) => void;
+    /** Place a call in one of their chats; the bridge for that chat carries it to that network. */
+    onCall?: (person: Person, roomId: string, video: boolean) => void;
     /** Undo a merge the reader made; absent when there is no merge of theirs to undo. */
     onSeparate?: (person: Person) => void;
     /** The name the reader gave them, if they gave one, and how to change it. */
@@ -82,11 +82,12 @@ export function ContactCard({
     onLink,
 }: Props): JSX.Element {
     const [editing, setEditing] = useState(false);
+    const [calling, setCalling] = useState(false);
     const [draft, setDraft] = useState(nickname ?? person.name);
     const url = person.avatarUrl ? mediaFromMxc(person.avatarUrl).getSquareThumbnailHttp(96) : null;
     const shown = nickname || person.name;
     // Only where a chat exists: a call needs somewhere to happen, and starting one is not what this is.
-    const callable = !!onCall && person.rooms.length > 0;
+    const reachable = onCall ? person.accounts.filter((account) => !!account.roomId) : [];
 
     const save = (): void => {
         onRename?.(person, draft.trim());
@@ -156,23 +157,42 @@ export function ContactCard({
                 <IconButton aria-label={_t("action|message")} onClick={() => onMessage(person)} size="40px">
                     <ChatIcon />
                 </IconButton>
-                {callable && (
-                    <>
-                        <IconButton
-                            aria-label={_t("voip|voice_call")}
-                            onClick={() => onCall?.(person, false)}
-                            size="40px"
-                        >
-                            <VoiceCallIcon />
-                        </IconButton>
-                        <IconButton
-                            aria-label={_t("voip|video_call")}
-                            onClick={() => onCall?.(person, true)}
-                            size="40px"
-                        >
-                            <VideoCallIcon />
-                        </IconButton>
-                    </>
+                {/*
+                 * One way to call per chat that exists, rather than one call button.
+                 *
+                 * A person reachable on three networks can be called on any of them, and which one is the
+                 * question - so the button opens into the list of them, the way iOS asks before dialling.
+                 * A chat is the honest unit: no bridge declares whether it carries calls, but a call
+                 * placed in a chat goes over Matrix and that chat's bridge takes it from there.
+                 */}
+                {reachable.length > 0 && (
+                    <Menu
+                        open={calling}
+                        onOpenChange={setCalling}
+                        title={_t("contacts|call_how")}
+                        showTitle={true}
+                        align="center"
+                        trigger={
+                            <IconButton aria-label={_t("voip|voice_call")} size="40px">
+                                <VoiceCallIcon />
+                            </IconButton>
+                        }
+                    >
+                        {reachable.map((account) => (
+                            <React.Fragment key={account.roomId}>
+                                <MenuItem
+                                    Icon={VoiceCallIcon}
+                                    label={_t("contacts|call_voice_on", { network: account.network })}
+                                    onSelect={() => onCall?.(person, account.roomId!, false)}
+                                />
+                                <MenuItem
+                                    Icon={VideoCallIcon}
+                                    label={_t("contacts|call_video_on", { network: account.network })}
+                                    onSelect={() => onCall?.(person, account.roomId!, true)}
+                                />
+                            </React.Fragment>
+                        ))}
+                    </Menu>
                 )}
             </div>
 

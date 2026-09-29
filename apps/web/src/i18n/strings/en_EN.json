@@ -771,10 +771,13 @@
     "console_wait": "Wait!",
     "contacts": {
         "call_declined": "Declined",
+        "call_how": "Call with",
         "call_incoming": "Incoming",
         "call_missed": "Missed",
         "call_outgoing": "Outgoing",
         "call_unknown": "Not in contacts",
+        "call_video_on": "Video call on %(network)s",
+        "call_voice_on": "Voice call on %(network)s",
         "caller_info": "Show %(name)s",
         "calls": "Calls",
         "details": "Details",
