@@ -375,9 +375,9 @@ export function ContactsView({ initialTab = "people", onFinished }: Props): JSX.
     const listRef = useRef<HTMLDivElement>(null);
     const jumpTo = useCallback((letter: string): void => {
         const list = listRef.current;
-        const heading = list?.querySelector<HTMLElement>(`[data-letter="${letter}"]`);
-        if (list && heading) {
-            list.scrollTop += heading.getBoundingClientRect().top - list.getBoundingClientRect().top;
+        const section = list?.querySelector<HTMLElement>(`[data-section="${letter}"]`);
+        if (list && section) {
+            list.scrollTop += section.getBoundingClientRect().top - list.getBoundingClientRect().top;
         }
     }, []);
 
@@ -540,7 +540,17 @@ export function ContactsView({ initialTab = "people", onFinished }: Props): JSX.
                                 <p className="mx_Contacts_empty">{_t("contacts|no_people")}</p>
                             )}
                             {(query ? [{ letter: "", items: shown }] : sections).map((section) => (
-                                <React.Fragment key={section.letter}>
+                                /*
+                                 * A section around each letter, not a bare heading in the list.
+                                 *
+                                 * The headings are sticky, and siblings sticking to the same top in one
+                                 * containing block all pin at zero and overlap - so an earlier letter is
+                                 * still "at the top" while a later one covers it, and measuring it to
+                                 * scroll there returns no distance at all. The index could go forwards
+                                 * and never back. Inside its own section a heading sticks within that
+                                 * section, which also makes the next one push it out as iOS does.
+                                 */
+                                <div className="mx_Contacts_section" data-section={section.letter} key={section.letter}>
                                     {section.letter && (
                                         <h3 className="mx_Contacts_letter" data-letter={section.letter}>
                                             {section.letter}
@@ -558,7 +568,7 @@ export function ContactsView({ initialTab = "people", onFinished }: Props): JSX.
                                             }
                                         />
                                     ))}
-                                </React.Fragment>
+                                </div>
                             ))}
                         </div>
                         {/* Nothing to jump between under one letter, so the index only appears above that. */}

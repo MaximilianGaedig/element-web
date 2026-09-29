@@ -365,3 +365,15 @@ Please see LICENSE files in the repository root for full details.
     justify-content: center;
     padding-bottom: var(--cpd-space-6x);
 }
+
+/*
+ * One section per letter, so its heading sticks within it.
+ *
+ * Bare headings sharing the list as their containing block all pin to the same top and overlap, which
+ * both looks wrong and makes them unmeasurable: an earlier letter reports itself at the top while a
+ * later one covers it, so the index could scroll forwards and never back.
+ */
+.mx_Contacts_section {
+    display: flex;
+    flex-direction: column;
+}
