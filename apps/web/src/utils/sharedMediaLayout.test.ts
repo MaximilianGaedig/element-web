@@ -8,7 +8,17 @@ Please see LICENSE files in the repository root for full details.
 import { describe, expect, it } from "vitest";
 import { MatrixEvent } from "matrix-js-sdk/src/matrix";
 
-import { mediaRows, monthAt, monthKey, rowAtTime, sectionAt, visibleRows, type RowMetrics } from "./sharedMediaLayout";
+import {
+    mediaRows,
+    monthAt,
+    monthKey,
+    rowAtTime,
+    scrubberTrackHeight,
+    scrubberUsable,
+    sectionAt,
+    visibleRows,
+    type RowMetrics,
+} from "./sharedMediaLayout";
 
 const METRICS: RowMetrics = { header: 30, cell: 100, gap: 1 };
 
@@ -189,5 +199,54 @@ describe("monthAt", () => {
         // to describing what is loaded, so answering with a month here would be an invention.
         expect(monthAt([], 0.5)).toBeUndefined();
         expect(monthAt([{ month: "2026-05", count: 0, before_ts: 500 }], 0.5)).toBeUndefined();
+    });
+});
+
+/*
+ * The rule the scrubber and the scrollbar have to share.
+ *
+ * They did not: the scrollbar was hidden as soon as a scrolling box was found, while the handle
+ * decided for itself, so there were states with no scrollbar and no working scrubber. Exported from
+ * the panel and tested here because it is the agreement, not the drawing.
+ */
+describe("scrubberUsable", () => {
+    const month = { month: "2026-09", count: 4, before_ts: 1 };
+
+    it("is usable when there is something to scroll", () => {
+        expect(scrubberUsable(400, [])).toBe(true);
+    });
+
+    it("is usable with nothing loaded to scroll but an index saying there is more", () => {
+        expect(scrubberUsable(0, [month])).toBe(true);
+    });
+
+    it("is not usable when the column fits and nothing says otherwise", () => {
+        expect(scrubberUsable(0, [])).toBe(false);
+        expect(scrubberUsable(-120, [])).toBe(false);
+    });
+});
+
+describe("scrubberTrackHeight", () => {
+    /*
+     * The bug: the track is sticky inside a column that starts below the tabs and header, so at the top
+     * of the list a full-viewport track hung below the fold and only part of it could be dragged - which
+     * reached only part of the history.
+     */
+    it("leaves off however much chrome is still above the column", () => {
+        expect(scrubberTrackHeight({ viewport: 800, offset: 120, top: 0 })).toBe(680);
+    });
+
+    it("takes the whole viewport once that chrome has scrolled away", () => {
+        expect(scrubberTrackHeight({ viewport: 800, offset: 120, top: 120 })).toBe(800);
+        expect(scrubberTrackHeight({ viewport: 800, offset: 120, top: 900 })).toBe(800);
+    });
+
+    it("shrinks as the chrome scrolls, rather than jumping", () => {
+        expect(scrubberTrackHeight({ viewport: 800, offset: 120, top: 40 })).toBe(720);
+        expect(scrubberTrackHeight({ viewport: 800, offset: 120, top: 80 })).toBe(760);
+    });
+
+    it("never goes negative, whatever it is handed", () => {
+        expect(scrubberTrackHeight({ viewport: 100, offset: 500, top: 0 })).toBe(0);
     });
 });

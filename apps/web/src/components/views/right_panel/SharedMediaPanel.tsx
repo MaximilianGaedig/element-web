@@ -38,6 +38,8 @@ import {
     monthAt,
     type MonthSpan,
     rowAtTime,
+    scrubberTrackHeight,
+    scrubberUsable,
     sectionAt,
     visibleRows,
 } from "../../../utils/sharedMediaLayout";
@@ -851,6 +853,8 @@ function useGridLayout(
      */
     scroll: { top: number; viewport: number; content: number; offset: number };
     seek: (top: number) => void;
+    /** Hides the native scrollbar, for as long as the scrubber is standing in for it. */
+    setScrubbed: (on: boolean) => void;
 } {
     const ref = useRef<HTMLDivElement>(null);
     const [width, setWidth] = useState(0);
@@ -884,20 +888,12 @@ function useGridLayout(
             });
         };
         measure();
-        /*
-         * The scrubber replaces the scrollbar rather than joining it: two things to drag down the
-         * same edge, one of which names the month and one of which does not, is a choice nobody
-         * wants to make. Marked on the box itself rather than by naming a container, because which
-         * element scrolls depends on where the grid is being shown.
-         */
-        box?.setAttribute("data-mx-scrubbed", "");
         box?.addEventListener("scroll", measure, { passive: true });
         // Both matter: the panel is resizable, and the column's width sets every row's height.
         const observer = typeof ResizeObserver === "undefined" ? undefined : new ResizeObserver(measure);
         observer?.observe(el);
         if (box) observer?.observe(box);
         return () => {
-            box?.removeAttribute("data-mx-scrubbed");
             box?.removeEventListener("scroll", measure);
             observer?.disconnect();
         };
@@ -925,6 +921,20 @@ function useGridLayout(
         if (box) box.scrollTop = top;
     }, []);
 
+    /*
+     * The scrubber replaces the scrollbar rather than joining it: two things to drag down the same
+     * edge, one of which names the month and one of which does not, is a choice nobody wants to make.
+     * Marked on the box itself rather than by naming a container, because which element scrolls
+     * depends on where the grid is being shown - and only while the scrubber is really there to
+     * replace it, or the reader is left with neither.
+     */
+    const setScrubbed = useCallback((on: boolean) => {
+        const box = scrollParentOf(ref.current);
+        if (!box) return;
+        if (on) box.setAttribute("data-mx-scrubbed", "");
+        else box.removeAttribute("data-mx-scrubbed");
+    }, []);
+
     return {
         ref,
         rows,
@@ -933,6 +943,7 @@ function useGridLayout(
         month: sectionAt(rows, Math.max(0, scroll.top - scroll.offset)),
         scroll,
         seek,
+        setScrubbed,
     };
 }
 
@@ -977,7 +988,11 @@ function DateScrubber({
             if (!box || box.height <= 0) return;
             const at = Math.min(1, Math.max(0, (clientY - box.top) / box.height));
             setHeld(at);
-            seek(at * span);
+            // Only where there is something to scroll. With the column fitting, span is zero or
+            // negative and this drove scrollTop to the top on every move while the handle followed
+            // the finger - the picture of a scrubber that does nothing. The month is still picked on
+            // release, which is the part that matters when the history is not loaded.
+            if (span > 0) seek(at * span);
         },
         [seek, span],
     );
@@ -1002,9 +1017,7 @@ function DateScrubber({
         };
     }, [held, to, months, onPickMonth]);
 
-    // Nothing to scrub when the whole column already fits - unless the server says there is more
-    // history than the column is showing, which is exactly when this is worth having.
-    if (span <= 0 && !months.length) return null;
+    if (!scrubberUsable(span, months)) return null;
     const at = held ?? (span > 0 ? Math.min(1, Math.max(0, scroll.top / span)) : 0);
     // The month under the handle: from the server's counts where we have them, so the label is
     // right for history that is not loaded, and from the column itself otherwise.
@@ -1014,10 +1027,16 @@ function DateScrubber({
         <div
             ref={track}
             className="mx_SharedMedia_scrubber"
-            // As long as what can be seen, pinned to it: dragging the handle from one end of the
-            // track to the other then covers the whole column, however tall it is. Sized to the
-            // column instead, most of it would be off screen and only part of the history reachable.
-            style={{ height: scroll.viewport }}
+            /*
+             * As long as what can be *seen of it*, which is not the same as the viewport.
+             *
+             * The track is sticky inside the column, and the column starts below the tabs and the
+             * header - so until those have scrolled away its top sits that far down, and a track a
+             * full viewport tall hangs that far below the fold. The reader could then only drag the
+             * part still on screen, which covered only part of the history: the scrubber did not
+             * stretch across the whole timespan. Take off however much of the chrome is still above.
+             */
+            style={{ height: scrubberTrackHeight(scroll) }}
             data-dragging={held !== null || undefined}
             onPointerDown={(e) => {
                 e.preventDefault();
@@ -1054,7 +1073,14 @@ function MediaGrid({
     /** Fetches a month and returns once it is in, so the column can then be scrolled to it. */
     onSeekDate: (ts: number) => Promise<void>;
 }): JSX.Element {
-    const { ref, rows, height, window: shown, month, scroll, seek } = useGridLayout(items, total);
+    const { ref, rows, height, window: shown, month, scroll, seek, setScrubbed } = useGridLayout(items, total);
+
+    // The scrollbar goes only while the thing replacing it is usable, by the scrubber's own rule.
+    const usable = scrubberUsable(scroll.content - scroll.viewport, months);
+    useEffect(() => {
+        setScrubbed(usable);
+        return () => setScrubbed(false);
+    }, [usable, setScrubbed]);
 
     /*
      * Go to the month the scrubber was let go on: fetch that stretch, then put it under the top of

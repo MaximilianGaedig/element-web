@@ -211,3 +211,28 @@ export function sectionAt(
     const visible = !heading || heading.top + heading.height > scrollTop;
     return { section: row.section, headingVisible: visible };
 }
+
+/**
+ * Whether the scrubber can actually move the column.
+ *
+ * It replaces the native scrollbar, and the scrollbar is hidden on the strength of that, so the two
+ * have to agree. They did not: the attribute went on as soon as a scrolling box was found while the
+ * handle decided for itself, which left states with no scrollbar and nothing that worked. It needs
+ * either something to scroll, or an index saying there is history beyond what is loaded.
+ */
+export function scrubberUsable(span: number, months: { month: string }[]): boolean {
+    return span > 0 || months.length > 0;
+}
+
+/**
+ * How tall the scrubber's track is: what can be seen *of it*, not the whole viewport.
+ *
+ * The track is sticky inside the column, and the column starts below the tabs and header, so until
+ * those have scrolled away its top sits that far down. Given the full viewport it hung that far below
+ * the fold, and the reader could drag only the part still on screen - which reached only part of the
+ * history. That is the scrubber not stretching across the whole timespan.
+ */
+export function scrubberTrackHeight(scroll: { viewport: number; offset: number; top: number }): number {
+    const chromeStillAbove = Math.max(0, scroll.offset - scroll.top);
+    return Math.max(0, scroll.viewport - chromeStillAbove);
+}
