@@ -7,7 +7,13 @@
 
 .toast {
     position: absolute;
-    bottom: var(--cpd-space-4x);
+    /*
+     * A variable so a host that floats something else along this edge can lift the toast clear of it,
+     * with the same default when nothing does. Element Web's room list puts a pill of whole-list
+     * actions here, and the two landed on the same band - the toast has the higher z-index, so it
+     * simply hid the pill.
+     */
+    bottom: var(--mx-room-list-toast-bottom, var(--cpd-space-4x));
     left: var(--cpd-space-3x);
     right: var(--cpd-space-3x);
     width: fit-content;
