@@ -31,6 +31,8 @@ import { sectionsOf } from "../../../utils/contacts/sections";
 import { fuzzyMatch } from "../../../utils/search/fuzzy";
 import {
     type Person,
+    chosenName,
+    namePerson,
     type Suggestion,
     accountsOf,
     allPeople,
@@ -42,6 +44,7 @@ import {
     unlinkAccounts,
 } from "../../../utils/contacts/people";
 import { readKey } from "../../../utils/contacts/identity";
+import { ContactCard } from "./ContactCard";
 import { MatrixClientPeg } from "../../../MatrixClientPeg";
 import BaseAvatar from "../avatars/BaseAvatar";
 import { mediaFromMxc } from "../../../customisations/Media";
@@ -254,6 +257,8 @@ export function ContactsView({ initialTab = "people", onFinished }: Props): JSX.
     const [query, setQuery] = useState("");
     const [onlyMissed, setOnlyMissed] = useState(false);
     const [onlyUnknown, setOnlyUnknown] = useState(false);
+    /* The person whose card is open, if one is: the list and one of its rows are one column's two depths. */
+    const [open, setOpen] = useState<Person>();
     /*
      * The list and the decisions behind it, read together.
      *
@@ -322,6 +327,13 @@ export function ContactsView({ initialTab = "people", onFinished }: Props): JSX.
         [client, again],
     );
 
+    const rename = useCallback(
+        (person: Person, name: string): void => {
+            void namePerson(client, person, name).then(again);
+        },
+        [client, again],
+    );
+
     const separate = useCallback(
         (person: Person): void => {
             void unlinkAccounts(client, accountsOf([person])).then(again);
@@ -369,10 +381,16 @@ export function ContactsView({ initialTab = "people", onFinished }: Props): JSX.
         }
     }, []);
 
-    /** A person is somewhere to go: the chat that exists, else a new one with whichever account can. */
-    const openPerson = useCallback(
-        (person: Person): void => {
-            const existing = person.rooms[0];
+    /**
+     * A chat with them, on the account asked for or on whichever one can.
+     *
+     * Reached from the card rather than from the row: a row that jumped straight into a conversation left
+     * nowhere to see who somebody is, which is most of what a contact list is for.
+     */
+    const messagePerson = useCallback(
+        (person: Person, mxid?: string): void => {
+            const wanted = mxid ? person.accounts.find((one) => one.mxid === mxid) : undefined;
+            const existing = wanted?.roomId ?? person.rooms[0];
             if (existing) {
                 dis.dispatch<ViewRoomPayload>({
                     action: Action.ViewRoom,
@@ -382,7 +400,7 @@ export function ContactsView({ initialTab = "people", onFinished }: Props): JSX.
                 onFinished();
                 return;
             }
-            const account = person.accounts.find((one) => one.mxid);
+            const account = wanted ?? person.accounts.find((one) => one.mxid);
             if (!account?.mxid) return;
             void startDmOnFirstMessage(client, [
                 new DirectoryMember({
@@ -443,6 +461,26 @@ export function ContactsView({ initialTab = "people", onFinished }: Props): JSX.
         },
         [client, onFinished],
     );
+
+    /*
+     * The card instead of the list, not over it. Same reasoning as contacts replacing the room list:
+     * one column, one thing in it, and back returns the way it came.
+     */
+    if (open) {
+        const linked = open.accounts.some((a) => a.mxid && state?.linked.has(a.mxid));
+        return (
+            <div className="mx_Contacts mx_ContactsView">
+                <ContactCard
+                    person={open}
+                    onBack={() => setOpen(undefined)}
+                    onMessage={messagePerson}
+                    onSeparate={linked ? separate : undefined}
+                    nickname={chosenName(client, open)}
+                    onRename={rename}
+                />
+            </div>
+        );
+    }
 
     return (
         <div className="mx_Contacts mx_ContactsView">
@@ -512,7 +550,7 @@ export function ContactsView({ initialTab = "people", onFinished }: Props): JSX.
                                         <PersonRow
                                             key={person.id}
                                             person={person}
-                                            onOpen={openPerson}
+                                            onOpen={setOpen}
                                             onSeparate={
                                                 person.accounts.some((a) => a.mxid && state?.linked.has(a.mxid))
                                                     ? separate

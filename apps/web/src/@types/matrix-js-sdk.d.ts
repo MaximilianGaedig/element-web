@@ -64,7 +64,7 @@ declare module "matrix-js-sdk/src/types" {
     export interface AccountDataEvents {
         // What the reader decided about accounts no identifier ties together (utils/contacts): which
         // ones are one person, and which pairings they turned down so they stop being offered.
-        "im.mxg.contact_links": { links?: string[][]; dismissed?: string[][] };
+        "im.mxg.contact_links": { links?: string[][]; dismissed?: string[][]; names?: Record<string, string> };
         // Analytics account data event
         "im.vector.analytics": {
             id: string;

@@ -7,11 +7,14 @@
 
 // @vitest-environment happy-dom
 
-import { vi, describe, it, expect, beforeEach } from "vitest";
+import { vi, describe, it, expect, beforeEach, afterEach } from "vitest";
 import React from "react";
 import { render, screen } from "test-utils-rtl";
 import { clientAndSDKContextRenderOptions, createTestClient, TestSDKContext } from "test-utils";
 import userEvent from "@testing-library/user-event";
+
+import { setRoomListPanelView } from "../../../../utils/roomListPanelView";
+import { MatrixClientPeg } from "../../../../MatrixClientPeg";
 
 import { RoomListPanel } from "./RoomListPanel";
 import { shouldShowComponent } from "../../../../customisations/helpers/UIComponents";
@@ -48,11 +51,30 @@ describe("<RoomListPanel />", () => {
         );
     }
 
+    afterEach(() => setRoomListPanelView("rooms"));
+
     beforeEach(() => {
         vi.clearAllMocks();
 
         // By default, we consider shouldShowComponent(UIComponent.FilterContainer) should return true
         vi.mocked(shouldShowComponent).mockReturnValue(true);
+    });
+
+    it("renders the pill of whole-list actions over the list", () => {
+        renderComponent();
+        const pill = screen.getByRole("toolbar", { name: "Everything in this list" });
+        expect(pill).toBeInTheDocument();
+        expect(screen.getByRole("button", { name: "People" })).toBeInTheDocument();
+        expect(screen.getByRole("button", { name: "Calls" })).toBeInTheDocument();
+    });
+
+    it("shows contacts in place of the list once the pill asks for them", async () => {
+        // ContactsView reads the peg, as every dialog here does; this test only cares that it replaces.
+        vi.spyOn(MatrixClientPeg, "safeGet").mockReturnValue(client);
+        renderComponent();
+        await userEvent.click(screen.getByRole("button", { name: "People" }));
+        // The list's own search goes with the list: one column, one thing in it.
+        expect(screen.queryByRole("button", { name: "Search Ctrl K" })).toBeNull();
     });
 
     it("should render the RoomListSearch component when UIComponent.FilterContainer is at true", () => {

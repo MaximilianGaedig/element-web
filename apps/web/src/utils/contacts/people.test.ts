@@ -11,7 +11,11 @@ import { type MatrixClient } from "matrix-js-sdk/src/matrix";
 
 import {
     type Account,
+    type Person,
     LINKS_EVENT_TYPE,
+    chosenName,
+    chosenNames,
+    namePerson,
     accountsOf,
     dismissSuggestion,
     dismissedSuggestions,
@@ -149,5 +153,53 @@ describe("what the reader decides about people nothing ties together", () => {
         expect(dismissedSuggestions(client)).toEqual([]);
         await dismissSuggestion(client, ["@a:example.org", "@b:example.org"]);
         expect(read(client).links).toEqual([]);
+    });
+});
+
+describe("names the reader gave", () => {
+    const personOf = (...accounts: Account[]): Person => ({
+        id: accounts[0].mxid!,
+        name: "Ada",
+        accounts,
+        keys: [],
+        rooms: [],
+        saved: false,
+    });
+    const names = (client: MatrixClient): unknown => (read(client) as { names?: unknown }).names;
+
+    it("writes the name against every one of their Matrix IDs", async () => {
+        const client = clientWith();
+        const person = personOf(account("Signal", "@sig:e", "Ada"), account("WhatsApp", "@wa:e", "Ada"));
+        await namePerson(client, person, "Mum");
+        expect(names(client)).toEqual({ "@sig:e": "Mum", "@wa:e": "Mum" });
+    });
+
+    /*
+     * The point of keying on the Matrix IDs rather than the Person's id: that id is the first identity key
+     * where there is one and a Matrix ID otherwise, so it moves the day a bridge starts publishing numbers.
+     * A name typed before that day still has to be found after it.
+     */
+    it("finds the name again after the person is regrouped", () => {
+        const client = clientWith({ names: { "@wa:e": "Mum" } });
+        const regrouped = personOf(account("Signal", "@sig:e", "Ada"), account("WhatsApp", "@wa:e", "Ada"));
+        expect(chosenName(client, regrouped)).toBe("Mum");
+    });
+
+    it("clears the name when handed nothing", async () => {
+        const client = clientWith({ names: { "@sig:e": "Mum" } });
+        await namePerson(client, personOf(account("Signal", "@sig:e", "Ada")), "");
+        expect(names(client)).toEqual({});
+    });
+
+    it("keeps the links and refusals it was not asked to change", async () => {
+        const client = clientWith({ links: [["@a:e", "@b:e"]], dismissed: [["@c:e", "@d:e"]] });
+        await namePerson(client, personOf(account("Signal", "@sig:e", "Ada")), "Mum");
+        expect(read(client).links).toEqual([["@a:e", "@b:e"]]);
+        expect(read(client).dismissed).toEqual([["@c:e", "@d:e"]]);
+    });
+
+    it("ignores stored names that are not names", () => {
+        const client = clientWith({ names: { "@sig:e": 42, "@wa:e": "Mum", "@x:e": "" } });
+        expect(chosenNames(client)).toEqual({ "@wa:e": "Mum" });
     });
 });

@@ -46,7 +46,13 @@ function byReadersOrder(a: Room, b: Room): number {
 
 /** The favourite direct chats, in the order the reader put them in. */
 export function favourites(client: MatrixClient, { limit = 12 }: { limit?: number } = {}): Favourite[] {
-    const dms = DMRoomMap.shared().getRoomIds();
+    /*
+     * Before DMRoomMap.makeShared has run there is no map, and shared() hands back undefined rather than
+     * saying so. Reading through it threw during render, which is a blank panel rather than a missing row -
+     * and with no map there is no honest answer anyway, so there are no favourites yet.
+     */
+    const dms = DMRoomMap.shared()?.getRoomIds();
+    if (!dms) return [];
     return client
         .getVisibleRooms()
         .filter((room) => dms.has(room.roomId) && room.tags[FAVOURITE_TAG])

@@ -29,6 +29,11 @@ const dms = (...roomIds: string[]): void => {
 afterEach(() => vi.restoreAllMocks());
 
 describe("favourites", () => {
+    it("has none before the DM map exists, rather than throwing into the render", () => {
+        vi.spyOn(DMRoomMap, "shared").mockReturnValue(undefined as unknown as DMRoomMap);
+        expect(favourites(clientWith(room("!dm:e", "Ada", { "m.favourite": {} })))).toEqual([]);
+    });
+
     it("takes only favourite direct chats", () => {
         dms("!dm:e", "!plain:e");
         const found = favourites(

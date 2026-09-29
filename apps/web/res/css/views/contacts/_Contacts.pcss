@@ -251,3 +251,117 @@ Please see LICENSE files in the repository root for full details.
     max-height: none;
     flex: 1;
 }
+
+/*
+ * The contact card: face and name, what you can do, then what is known.
+ *
+ * Sectioned as iOS does it - grouped inset blocks with a label beside each value - because the point of
+ * the card is that one person has several of these, and a flat list of rows would not say so.
+ */
+.mx_ContactCard {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    flex: 1;
+    overflow-y: auto;
+}
+
+.mx_ContactCard_edit {
+    margin-inline-start: auto;
+}
+
+.mx_ContactCard_head {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--cpd-space-2x);
+    padding: var(--cpd-space-4x) 0;
+}
+
+.mx_ContactCard_name {
+    margin: 0;
+    text-align: center;
+    font: var(--cpd-font-heading-md-semibold);
+}
+
+/* What the network calls them, once the reader has called them something else. */
+.mx_ContactCard_alias {
+    color: var(--cpd-color-text-secondary);
+    font: var(--cpd-font-body-sm-regular);
+}
+
+.mx_ContactCard_rename {
+    width: 100%;
+}
+
+.mx_ContactCard_renameActions {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--cpd-space-2x);
+    margin-top: var(--cpd-space-2x);
+}
+
+/* Round targets in a row, the way iOS puts the actions under the name. */
+.mx_ContactCard_actions {
+    display: flex;
+    justify-content: center;
+    gap: var(--cpd-space-4x);
+    padding-bottom: var(--cpd-space-4x);
+}
+
+.mx_ContactCard_section {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: var(--cpd-space-4x);
+    border-radius: var(--cpd-space-3x);
+    background: var(--cpd-color-bg-subtle-secondary);
+    overflow: hidden;
+}
+
+.mx_ContactCard_fact,
+.mx_ContactCard_account {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    width: 100%;
+    padding: var(--cpd-space-3x);
+    border: none;
+    background: transparent;
+    color: var(--cpd-color-text-primary);
+    text-align: start;
+    font: inherit;
+
+    /* A hairline between rows, as the grouped lists have, but not under the last. */
+    & + & {
+        border-top: 1px solid var(--cpd-color-bg-subtle-primary);
+    }
+}
+
+.mx_ContactCard_account {
+    cursor: pointer;
+
+    &:disabled {
+        cursor: default;
+        opacity: 0.6;
+    }
+
+    &:hover:not(:disabled),
+    &:focus-visible {
+        background: var(--cpd-color-bg-subtle-primary);
+    }
+}
+
+.mx_ContactCard_factLabel {
+    color: var(--cpd-color-text-secondary);
+    font: var(--cpd-font-body-sm-regular);
+}
+
+.mx_ContactCard_factValue {
+    font: var(--cpd-font-body-md-regular);
+}
+
+.mx_ContactCard_foot {
+    display: flex;
+    justify-content: center;
+    padding-bottom: var(--cpd-space-6x);
+}

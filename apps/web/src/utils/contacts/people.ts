@@ -154,6 +154,8 @@ interface Decisions {
     links?: unknown;
     /** Groups the reader said are *not* one person, so the suggestion stops being offered. */
     dismissed?: unknown;
+    /** Names the reader gave people, against one of their Matrix IDs. */
+    names?: unknown;
 }
 
 const decisions = (client: MatrixClient): Decisions =>
@@ -182,11 +184,56 @@ export function dismissedSuggestions(client: MatrixClient): string[][] {
  * Both halves go through their readers on the way out rather than the stored content being spread
  * straight back, so anything malformed that got in there is dropped rather than written again.
  */
-async function decide(client: MatrixClient, next: { links?: string[][]; dismissed?: string[][] }): Promise<void> {
+async function decide(
+    client: MatrixClient,
+    next: { links?: string[][]; dismissed?: string[][]; names?: Record<string, string> },
+): Promise<void> {
     await client.setAccountData(LINKS_EVENT_TYPE, {
         links: next.links ?? manualLinks(client),
         dismissed: next.dismissed ?? dismissedSuggestions(client),
+        names: next.names ?? chosenNames(client),
     });
+}
+
+/**
+ * Names the reader gave people, keyed by one of the person's Matrix IDs.
+ *
+ * Against a Matrix ID rather than the Person's own id: that id is the first identity key when there is
+ * one and a Matrix ID when there is not, so it changes the day a bridge starts publishing numbers, and
+ * a name the reader typed should not be lost to that.
+ */
+export function chosenNames(client: MatrixClient): Record<string, string> {
+    const raw = decisions(client).names;
+    if (!raw || typeof raw !== "object" || Array.isArray(raw)) return {};
+    return Object.fromEntries(
+        Object.entries(raw as Record<string, unknown>).filter(
+            (entry): entry is [string, string] => typeof entry[1] === "string" && !!entry[1],
+        ),
+    );
+}
+
+/** The name the reader gave this person, if they gave one: the first of their accounts that has one. */
+export function chosenName(client: MatrixClient, person: Person): string | undefined {
+    const names = chosenNames(client);
+    for (const account of person.accounts) {
+        if (account.mxid && names[account.mxid]) return names[account.mxid];
+    }
+    return undefined;
+}
+
+/**
+ * Records the name the reader gave this person, or clears it when handed nothing.
+ *
+ * Written against every one of their Matrix IDs, so the name survives the person being regrouped: a
+ * merge that splits, or an identifier that arrives later, still finds it.
+ */
+export async function namePerson(client: MatrixClient, person: Person, name: string): Promise<void> {
+    const names = { ...chosenNames(client) };
+    for (const mxid of accountsOf([person])) {
+        if (name) names[mxid] = name;
+        else delete names[mxid];
+    }
+    await decide(client, { names });
 }
 
 /** Records that these accounts are one person, folding in any link they were already part of. */
