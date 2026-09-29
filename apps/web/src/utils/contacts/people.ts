@@ -121,44 +121,67 @@ async function contactsFromBridges(client: MatrixClient): Promise<Account[]> {
  * Read from the rooms rather than asked for, so this half works with no bridge reachable at all - and so the
  * list still has everybody the reader actually talks to when a network is down.
  */
-function contactsFromChats(client: MatrixClient): Account[] {
-    const accounts: Account[] = [];
+async function contactsFromChats(client: MatrixClient): Promise<Account[]> {
     const dmMap = DMRoomMap.shared();
+    const found: { room: Room; otherId: string }[] = [];
     for (const room of client.getVisibleRooms()) {
         const info = getBridgeInfo(room);
-        const otherId = (info ? getBridgedDmUserId(room) : undefined) ?? dmMap.getUserIdForRoomId(room.roomId);
+        const otherId = (info ? getBridgedDmUserId(room) : undefined) ?? dmMap?.getUserIdForRoomId(room.roomId);
         if (!otherId || otherId === client.getSafeUserId()) continue;
+        found.push({ room, otherId });
+    }
+    /*
+     * All the profiles at once, not one per row as the list is built: these are independent requests and
+     * the list cannot be shown until the last of them anyway. Cached per ghost, so the rebuild that
+     * follows every decision the reader makes costs nothing.
+     */
+    const identifiers = await Promise.all(found.map(({ otherId }) => profileIdentifiers(client, otherId)));
+    return found.map(({ room, otherId }, at) => {
+        const info = getBridgeInfo(room);
         const member = room.getMember(otherId);
-        accounts.push({
+        return {
             network: info ? info.networkName : "Matrix",
             mxid: otherId,
             remoteId: otherId,
             name: member?.rawDisplayName ?? undefined,
             avatarUrl: member?.getMxcAvatarUrl() ?? undefined,
             roomId: room.roomId,
-            // Identifiers come from the profile where the homeserver keeps extended fields; a chat alone
-            // carries none, so these accounts merge only through a bridge's contact list or a manual link.
-            keys: identityKeys(profileIdentifiers(room, otherId)),
-            details: identityDetails(profileIdentifiers(room, otherId)),
-        });
-    }
-    return accounts;
+            keys: identityKeys(identifiers[at]),
+            details: identityDetails(identifiers[at]),
+        };
+    });
 }
 
+/** Where mautrix writes what a network knows somebody by, as an MSC4133 extended profile field. */
+const IDENTIFIERS_KEY = "com.beeper.bridge.identifiers";
+
 /**
- * Identifiers a ghost publishes in its profile.
+ * Identifiers a ghost publishes, read from its profile.
  *
- * mautrix writes them as extended profile fields (MSC4133) when the homeserver supports it and
- * `matrix.ghost_extra_profile_info` is on, and they arrive on the member event, so they are readable here
- * without a profile fetch per person. Absent everywhere else, which is why this returns nothing rather than
- * guessing from the Matrix ID - see identity.ts on why guessing is worse than knowing nothing.
+ * Not from the member event: that carries `displayname`, `avatar_url` and `membership` and nothing else,
+ * which is why this found nothing for months while the bridges were publishing numbers all along. mautrix
+ * writes them as extended profile fields (MSC4133) under `com.beeper.bridge.identifiers` - the
+ * `com.beeper.bridge.` prefix matters, an unprefixed `identifiers` is never written by anything.
+ *
+ * A request per person, so the answers are kept: a contact list is rebuilt whenever the reader decides
+ * something, and re-asking the server for facts that do not change would be a request per ghost per time.
  */
-function profileIdentifiers(room: Room, userId: string): string[] {
-    const content = room.getMember(userId)?.events?.member?.getContent() as
-        | { "identifiers"?: unknown; "com.beeper.identifiers"?: unknown }
-        | undefined;
-    const raw = content?.identifiers ?? content?.["com.beeper.identifiers"];
-    return Array.isArray(raw) ? raw.filter((one): one is string => typeof one === "string") : [];
+const profileCache = new Map<string, Promise<string[]>>();
+
+async function profileIdentifiers(client: MatrixClient, userId: string): Promise<string[]> {
+    const held = profileCache.get(userId);
+    if (held) return held;
+    const asked = client
+        .getExtendedProfile(userId)
+        .then((profile) => {
+            const raw = (profile as Record<string, unknown>)[IDENTIFIERS_KEY];
+            return Array.isArray(raw) ? raw.filter((one): one is string => typeof one === "string") : [];
+        })
+        // A ghost whose profile cannot be read is a person without published identifiers, not an error:
+        // the list is built from several sources and one of them being quiet is ordinary.
+        .catch(() => []);
+    profileCache.set(userId, asked);
+    return asked;
 }
 
 /** What the reader has decided about people the client could not merge on its own. */
@@ -374,6 +397,6 @@ export function accountsOf(people: Person[]): string[] {
 
 /** Everybody you know, merged, with the links you made applied. */
 export async function allPeople(client: MatrixClient): Promise<Person[]> {
-    const [fromBridges, fromChats] = [await contactsFromBridges(client), contactsFromChats(client)];
+    const [fromBridges, fromChats] = await Promise.all([contactsFromBridges(client), contactsFromChats(client)]);
     return groupAccounts([...fromBridges, ...fromChats], manualLinks(client));
 }

@@ -5,7 +5,7 @@ SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only OR LicenseRef-Element-Com
 Please see LICENSE files in the repository root for full details.
 */
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { type MatrixClient } from "matrix-js-sdk/src/matrix";
 
@@ -17,6 +17,7 @@ import {
     chosenNames,
     namePerson,
     accountsOf,
+    allPeople,
     dismissSuggestion,
     dismissedSuggestions,
     groupAccounts,
@@ -25,6 +26,7 @@ import {
     sameNameSuggestions,
     unlinkAccounts,
 } from "./people";
+import DMRoomMap from "../DMRoomMap";
 
 const account = (network: string, mxid: string, name: string, keys: string[] = [], roomId?: string): Account => ({
     network,
@@ -202,5 +204,45 @@ describe("names the reader gave", () => {
     it("ignores stored names that are not names", () => {
         const client = clientWith({ names: { "@sig:e": 42, "@wa:e": "Mum", "@x:e": "" } });
         expect(chosenNames(client)).toEqual({ "@wa:e": "Mum" });
+    });
+});
+
+describe("identifiers a ghost publishes", () => {
+    /*
+     * The key and the place both matter, and both were wrong: the client read `identifiers` off the
+     * member event, while mautrix writes `com.beeper.bridge.identifiers` into the MSC4133 profile. The
+     * member event carries displayname, avatar_url and membership and nothing else, so months of
+     * published phone numbers were read as no identifiers at all - which is why nothing ever merged.
+     */
+    it("reads com.beeper.bridge.identifiers from the profile, not the member event", async () => {
+        const room = {
+            roomId: "!dm:e",
+            getMember: () => ({ rawDisplayName: "Ada", getMxcAvatarUrl: () => null }),
+            currentState: { getStateEvents: () => [] },
+        };
+        const client = {
+            getSafeUserId: () => "@me:e",
+            getVisibleRooms: () => [room],
+            getRooms: () => [],
+            getExtendedProfile: vi.fn().mockResolvedValue({
+                "com.beeper.bridge.identifiers": ["tel:+48735449421", "telegram:ada"],
+                "displayname": "Ada",
+            }),
+            getAccountData: () => undefined,
+        } as unknown as MatrixClient;
+        vi.spyOn(DMRoomMap, "shared").mockReturnValue({
+            getUserIdForRoomId: () => "@signal_x:e",
+            getRoomIds: () => new Set(["!dm:e"]),
+        } as unknown as DMRoomMap);
+
+        const people = await allPeople(client);
+        expect(client.getExtendedProfile).toHaveBeenCalledWith("@signal_x:e");
+        // The number becomes a key, so this person can be matched with the same number elsewhere...
+        expect(people[0].keys).toEqual(["tel:+48735449421"]);
+        // ...and the handle is kept for showing, though it can never match.
+        expect(people[0].details).toEqual([
+            { kind: "phone", value: "+48735449421" },
+            { kind: "handle", value: "telegram:ada" },
+        ]);
     });
 });
