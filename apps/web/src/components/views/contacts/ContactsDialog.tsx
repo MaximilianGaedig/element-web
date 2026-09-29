@@ -16,15 +16,18 @@ Please see LICENSE files in the repository root for full details.
  * are lists of things to open: a person opens the chat with them, a call jumps to the call in its chat.
  */
 
-import React, { type JSX, useCallback, useEffect, useMemo, useState } from "react";
+import React, { type JSX, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@vector-im/compound-web";
 import UserProfileIcon from "@vector-im/compound-design-tokens/assets/web/icons/user-profile";
 import VoiceCallIcon from "@vector-im/compound-design-tokens/assets/web/icons/voice-call";
 import VideoCallIcon from "@vector-im/compound-design-tokens/assets/web/icons/video-call";
+import InfoIcon from "@vector-im/compound-design-tokens/assets/web/icons/info";
 
 import { _t } from "../../../languageHandler";
 import BaseDialog from "../dialogs/BaseDialog";
-import { type Call, callHistory, missedCalls } from "../../../utils/contacts/calls";
+import { type Call, callHistory, missedCalls, unknownCallers } from "../../../utils/contacts/calls";
+import { type Favourite, favourites } from "../../../utils/contacts/favourites";
+import { sectionsOf } from "../../../utils/contacts/sections";
 import { fuzzyMatch } from "../../../utils/search/fuzzy";
 import {
     type Person,
@@ -46,6 +49,7 @@ import { DirectoryMember, startDmOnFirstMessage } from "../../../utils/direct-me
 import dis from "../../../dispatcher/dispatcher";
 import { Action } from "../../../dispatcher/actions";
 import { type ViewRoomPayload } from "../../../dispatcher/payloads/ViewRoomPayload";
+import { type ViewUserPayload } from "../../../dispatcher/payloads/ViewUserPayload";
 import { formatRelativeTime } from "../../../DateUtils";
 import Spinner from "../elements/Spinner";
 
@@ -120,7 +124,37 @@ function PersonRow({
     );
 }
 
-function CallRow({ call, onOpen }: { call: Call; onOpen: (call: Call) => void }): JSX.Element {
+/**
+ * One of the reader's favourites, as a face to reach for.
+ *
+ * Above the calls rather than in them: a phone's call list opens on the people you reach for most, because
+ * the list underneath is ordered by when a call happened, which is the wrong order for finding somebody.
+ */
+function FavouriteCard({
+    favourite,
+    onOpen,
+}: {
+    favourite: Favourite;
+    onOpen: (favourite: Favourite) => void;
+}): JSX.Element {
+    return (
+        <button type="button" className="mx_ContactsDialog_favourite" onClick={() => onOpen(favourite)}>
+            <Face name={favourite.name} avatarUrl={favourite.avatarUrl} />
+            <span className="mx_ContactsDialog_favouriteName">{favourite.name}</span>
+        </button>
+    );
+}
+
+function CallRow({
+    call,
+    onOpen,
+    onInfo,
+}: {
+    call: Call;
+    onOpen: (call: Call) => void;
+    /** The caller, rather than the call: who they are, not what happened. */
+    onInfo: (call: Call) => void;
+}): JSX.Element {
     const what = call.outgoing
         ? _t("contacts|call_outgoing")
         : call.outcome === "missed"
@@ -132,20 +166,35 @@ function CallRow({ call, onOpen }: { call: Call; onOpen: (call: Call) => void })
         .filter(Boolean)
         .join(" · ");
 
+    /*
+     * A call row answers two questions, so it is two controls: the row goes to the call in the chat it
+     * happened in, and the one beside it goes to the person who made it. Outside the row for the same
+     * reason the merge action is (see PersonRow): a button cannot hold another button.
+     */
     return (
-        <button
-            type="button"
-            className={`mx_ContactsDialog_row${call.outcome === "missed" && !call.outgoing ? " mx_ContactsDialog_row_missed" : ""}`}
-            onClick={() => onOpen(call)}
-        >
-            <Face name={call.name} avatarUrl={call.avatarUrl} />
-            <span className="mx_ContactsDialog_rowText">
-                <span className="mx_ContactsDialog_name">{call.name}</span>
-                <span className="mx_ContactsDialog_detail">{detail}</span>
-            </span>
-            <span className="mx_ContactsDialog_when">{formatRelativeTime(new Date(call.ts))}</span>
-            {call.video ? <VideoCallIcon aria-hidden /> : <VoiceCallIcon aria-hidden />}
-        </button>
+        <div className="mx_ContactsDialog_rowWith">
+            <button
+                type="button"
+                className={`mx_ContactsDialog_row${call.outcome === "missed" && !call.outgoing ? " mx_ContactsDialog_row_missed" : ""}`}
+                onClick={() => onOpen(call)}
+            >
+                <Face name={call.name} avatarUrl={call.avatarUrl} />
+                <span className="mx_ContactsDialog_rowText">
+                    <span className="mx_ContactsDialog_name">{call.name}</span>
+                    <span className="mx_ContactsDialog_detail">{detail}</span>
+                </span>
+                <span className="mx_ContactsDialog_when">{formatRelativeTime(new Date(call.ts))}</span>
+                {call.video ? <VideoCallIcon aria-hidden /> : <VoiceCallIcon aria-hidden />}
+            </button>
+            <Button
+                kind="tertiary"
+                size="md"
+                Icon={InfoIcon}
+                iconOnly
+                aria-label={_t("contacts|caller_info", { name: call.name })}
+                onClick={() => onInfo(call)}
+            />
+        </div>
     );
 }
 
@@ -189,6 +238,7 @@ export function ContactsDialog({ initialTab = "people", onFinished }: Props): JS
     const [tab, setTab] = useState(initialTab);
     const [query, setQuery] = useState("");
     const [onlyMissed, setOnlyMissed] = useState(false);
+    const [onlyUnknown, setOnlyUnknown] = useState(false);
     /*
      * The list and the decisions behind it, read together.
      *
@@ -223,7 +273,25 @@ export function ContactsDialog({ initialTab = "people", onFinished }: Props): JS
     const again = useCallback(() => setAt((n) => n + 1), []);
 
     const calls = useMemo(() => callHistory(client), [client]);
-    const shownCalls = useMemo(() => (onlyMissed ? missedCalls(calls) : calls), [calls, onlyMissed]);
+    const favourited = useMemo(() => favourites(client), [client]);
+
+    /*
+     * Both filters narrow, in either order, because they ask different things: "who rang while I was out"
+     * and "who that I do not know rang". Answering them together is the useful question a phone's filter
+     * cannot ask, and costs nothing here.
+     */
+    const shownCalls = useMemo(() => {
+        const saved = new Set(
+            (state?.people ?? [])
+                .filter((person) => person.saved)
+                .flatMap((person) => person.accounts.map((account) => account.mxid))
+                .filter((mxid): mxid is string => !!mxid),
+        );
+        let narrowed = calls;
+        if (onlyMissed) narrowed = missedCalls(narrowed);
+        if (onlyUnknown) narrowed = unknownCallers(narrowed, saved);
+        return narrowed;
+    }, [calls, onlyMissed, onlyUnknown, state]);
 
     const merge = useCallback(
         (suggestion: Suggestion): void => {
@@ -265,6 +333,27 @@ export function ContactsDialog({ initialTab = "people", onFinished }: Props): JS
         [people, query],
     );
 
+    /*
+     * Letters only when the list is the whole list.
+     *
+     * A search is ranked by how well each person matches, so letters down its edge would point at an order
+     * that is not there; without a query the list is alphabetical and the letters are how it is navigated.
+     */
+    const sections = useMemo(() => sectionsOf(shown, (person) => person.name), [shown]);
+
+    /*
+     * The index scrolls the list's own scroller, so the dialog around it does not move - and by measured
+     * offset rather than scrollIntoView, which would scroll every scroller between here and the document.
+     */
+    const listRef = useRef<HTMLDivElement>(null);
+    const jumpTo = useCallback((letter: string): void => {
+        const list = listRef.current;
+        const heading = list?.querySelector<HTMLElement>(`[data-letter="${letter}"]`);
+        if (list && heading) {
+            list.scrollTop += heading.getBoundingClientRect().top - list.getBoundingClientRect().top;
+        }
+    }, []);
+
     /** A person is somewhere to go: the chat that exists, else a new one with whichever account can. */
     const openPerson = useCallback(
         (person: Person): void => {
@@ -292,6 +381,19 @@ export function ContactsDialog({ initialTab = "people", onFinished }: Props): JS
         [client, onFinished],
     );
 
+    /** A favourite is somewhere to go: the chat with them, which is where calling them starts. */
+    const openFavourite = useCallback(
+        (favourite: Favourite): void => {
+            dis.dispatch<ViewRoomPayload>({
+                action: Action.ViewRoom,
+                room_id: favourite.roomId,
+                metricsTrigger: undefined,
+            });
+            onFinished();
+        },
+        [onFinished],
+    );
+
     /** A call is somewhere to go: the call itself, in the chat it happened in. */
     const openCall = useCallback(
         (call: Call): void => {
@@ -305,6 +407,26 @@ export function ContactsDialog({ initialTab = "people", onFinished }: Props): JS
             onFinished();
         },
         [onFinished],
+    );
+
+    /**
+     * The caller behind a call: their card, which here is a member of the room the call was in.
+     *
+     * The room has to be viewed for the card to have somewhere to open, so both go out together - the room
+     * without the call highlighted, because this is a question about the person and not about that call.
+     */
+    const openCaller = useCallback(
+        (call: Call): void => {
+            dis.dispatch<ViewRoomPayload>({
+                action: Action.ViewRoom,
+                room_id: call.roomId,
+                metricsTrigger: undefined,
+            });
+            const member = client.getRoom(call.roomId)?.getMember(call.userId);
+            if (member) dis.dispatch<ViewUserPayload>({ action: Action.ViewUser, member });
+            onFinished();
+        },
+        [client, onFinished],
     );
 
     return (
@@ -342,37 +464,65 @@ export function ContactsDialog({ initialTab = "people", onFinished }: Props): JS
                         onChange={(event) => setQuery(event.target.value)}
                         autoFocus
                     />
-                    <div className="mx_ContactsDialog_list">
-                        {people === undefined && <Spinner />}
-                        {/* Only while nothing is typed: a search is a question about one person. */}
-                        {!query &&
-                            state?.suggestions.map((suggestion) => (
-                                <SuggestionCard
-                                    key={accountsOf(suggestion.people).join(",")}
-                                    suggestion={suggestion}
-                                    onMerge={merge}
-                                    onDismiss={dismiss}
-                                />
+                    <div className="mx_ContactsDialog_listWithIndex">
+                        <div className="mx_ContactsDialog_list" ref={listRef}>
+                            {people === undefined && <Spinner />}
+                            {/* Only while nothing is typed: a search is a question about one person. */}
+                            {!query &&
+                                state?.suggestions.map((suggestion) => (
+                                    <SuggestionCard
+                                        key={accountsOf(suggestion.people).join(",")}
+                                        suggestion={suggestion}
+                                        onMerge={merge}
+                                        onDismiss={dismiss}
+                                    />
+                                ))}
+                            {people !== undefined && !shown.length && (
+                                <p className="mx_ContactsDialog_empty">{_t("contacts|no_people")}</p>
+                            )}
+                            {(query ? [{ letter: "", items: shown }] : sections).map((section) => (
+                                <React.Fragment key={section.letter}>
+                                    {section.letter && (
+                                        <h3 className="mx_ContactsDialog_letter" data-letter={section.letter}>
+                                            {section.letter}
+                                        </h3>
+                                    )}
+                                    {section.items.map((person) => (
+                                        <PersonRow
+                                            key={person.id}
+                                            person={person}
+                                            onOpen={openPerson}
+                                            onSeparate={
+                                                person.accounts.some((a) => a.mxid && state?.linked.has(a.mxid))
+                                                    ? separate
+                                                    : undefined
+                                            }
+                                        />
+                                    ))}
+                                </React.Fragment>
                             ))}
-                        {people !== undefined && !shown.length && (
-                            <p className="mx_ContactsDialog_empty">{_t("contacts|no_people")}</p>
+                        </div>
+                        {/* Nothing to jump between under one letter, so the index only appears above that. */}
+                        {!query && sections.length > 1 && (
+                            <nav className="mx_ContactsDialog_index" aria-label={_t("contacts|index")}>
+                                {sections.map((section) => (
+                                    <button key={section.letter} type="button" onClick={() => jumpTo(section.letter)}>
+                                        {section.letter}
+                                    </button>
+                                ))}
+                            </nav>
                         )}
-                        {shown.map((person) => (
-                            <PersonRow
-                                key={person.id}
-                                person={person}
-                                onOpen={openPerson}
-                                onSeparate={
-                                    person.accounts.some((a) => a.mxid && state?.linked.has(a.mxid))
-                                        ? separate
-                                        : undefined
-                                }
-                            />
-                        ))}
                     </div>
                 </>
             ) : (
                 <>
+                    {!!favourited.length && (
+                        <div className="mx_ContactsDialog_favourites" aria-label={_t("contacts|favourites")}>
+                            {favourited.map((favourite) => (
+                                <FavouriteCard key={favourite.roomId} favourite={favourite} onOpen={openFavourite} />
+                            ))}
+                        </div>
+                    )}
                     <div className="mx_ContactsDialog_filters">
                         <Button
                             kind={onlyMissed ? "primary" : "tertiary"}
@@ -382,15 +532,28 @@ export function ContactsDialog({ initialTab = "people", onFinished }: Props): JS
                         >
                             {_t("contacts|call_missed")}
                         </Button>
+                        <Button
+                            kind={onlyUnknown ? "primary" : "tertiary"}
+                            size="md"
+                            aria-pressed={onlyUnknown}
+                            onClick={() => setOnlyUnknown((only) => !only)}
+                        >
+                            {_t("contacts|call_unknown")}
+                        </Button>
                     </div>
                     <div className="mx_ContactsDialog_list">
                         {!shownCalls.length && (
                             <p className="mx_ContactsDialog_empty">
-                                {onlyMissed ? _t("contacts|no_missed_calls") : _t("contacts|no_calls")}
+                                {onlyMissed || onlyUnknown ? _t("contacts|no_calls_matching") : _t("contacts|no_calls")}
                             </p>
                         )}
                         {shownCalls.map((call) => (
-                            <CallRow key={`${call.roomId}:${call.eventId}`} call={call} onOpen={openCall} />
+                            <CallRow
+                                key={`${call.roomId}:${call.eventId}`}
+                                call={call}
+                                onOpen={openCall}
+                                onInfo={openCaller}
+                            />
                         ))}
                     </div>
                 </>

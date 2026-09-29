@@ -51,6 +51,8 @@ export interface Account {
     keys: IdentityKey[];
     /** Which login answered, so a chat is started on the right account of the right network. */
     login?: BridgeLogin;
+    /** Whether the network's own contact list holds them, rather than only a chat existing. */
+    saved?: boolean;
 }
 
 /** One person, however many networks that turns out to be. */
@@ -63,6 +65,8 @@ export interface Person {
     keys: IdentityKey[];
     /** The chats that exist with them, across networks. */
     rooms: string[];
+    /** Whether any network's contact list holds them, which is what "in your contacts" means here. */
+    saved: boolean;
 }
 
 /** Accounts that might be the same person but say nothing that proves it. */
@@ -91,6 +95,8 @@ async function contactsFromBridges(client: MatrixClient): Promise<Account[]> {
                 roomId: contact.dm_room_mxid,
                 keys: identityKeys(contact.identifiers),
                 login,
+                // This half of the list *is* the network's address book, so everyone in it is saved.
+                saved: true,
             });
         }
     }
@@ -267,6 +273,7 @@ export function groupAccounts(accounts: Account[], links: string[][] = []): Pers
                 accounts: group,
                 keys,
                 rooms: [...new Set(group.map((account) => account.roomId).filter((id): id is string => !!id))],
+                saved: group.some((account) => account.saved),
             };
         })
         .sort((a, b) => a.name.localeCompare(b.name));

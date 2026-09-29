@@ -79,6 +79,92 @@ Please see LICENSE files in the repository root for full details.
         background: var(--cpd-color-bg-subtle-secondary);
     }
 
+    /* The list and the letters beside it: the list scrolls, the index stays put next to it. */
+    .mx_ContactsDialog_listWithIndex {
+        display: flex;
+        align-items: stretch;
+        gap: var(--cpd-space-1x);
+        min-height: 0;
+
+        .mx_ContactsDialog_list {
+            flex: 1;
+            min-width: 0;
+        }
+    }
+
+    /*
+     * One letter per section, as a column down the edge of the list.
+     *
+     * Small and tight on purpose: it is a ruler for the list rather than a set of buttons, so it stays out
+     * of the way of the names until it is aimed at.
+     */
+    .mx_ContactsDialog_index {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        flex-shrink: 0;
+        padding: 0 var(--cpd-space-1x);
+
+        button {
+            padding: 0;
+            border: none;
+            background: transparent;
+            color: var(--cpd-color-text-secondary);
+            font: var(--cpd-font-body-xs-medium);
+            line-height: 1.15;
+            cursor: pointer;
+
+            &:hover,
+            &:focus-visible {
+                color: var(--cpd-color-text-primary);
+            }
+        }
+    }
+
+    /* Sticky, so the reader can always see which letter the names under the cursor belong to. */
+    .mx_ContactsDialog_letter {
+        position: sticky;
+        top: 0;
+        z-index: 1;
+        margin: 0;
+        padding: var(--cpd-space-1x) var(--cpd-space-2x);
+        background: var(--cpd-color-bg-canvas-default);
+        color: var(--cpd-color-text-secondary);
+        font: var(--cpd-font-body-sm-medium);
+    }
+
+    /* A row of faces above the calls: scrolled sideways, so a long list of favourites costs no height. */
+    .mx_ContactsDialog_favourites {
+        display: flex;
+        gap: var(--cpd-space-3x);
+        overflow-x: auto;
+        padding-bottom: var(--cpd-space-2x);
+        margin-bottom: var(--cpd-space-2x);
+    }
+
+    .mx_ContactsDialog_favourite {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: var(--cpd-space-1x);
+        /* Wide enough for a face and a first name under it, and the same width whichever name it is. */
+        width: 64px;
+        flex-shrink: 0;
+        padding: 0;
+        border: none;
+        background: transparent;
+        color: var(--cpd-color-text-primary);
+        cursor: pointer;
+    }
+
+    .mx_ContactsDialog_favouriteName {
+        max-width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        font: var(--cpd-font-body-xs-regular);
+    }
+
     .mx_ContactsDialog_filters {
         display: flex;
         gap: var(--cpd-space-2x);

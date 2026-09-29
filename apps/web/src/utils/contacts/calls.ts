@@ -137,3 +137,16 @@ export function callHistory(client: MatrixClient, { limit = 200 }: { limit?: num
 /** The calls nobody answered, which is the list people actually open a call list for. */
 export const missedCalls = (calls: Call[]): Call[] =>
     calls.filter((call) => !call.outgoing && call.outcome === "missed");
+
+/**
+ * Calls from somebody no address book holds.
+ *
+ * "Not in your contacts" is a question about the contact list, so it is asked there: `saved` on a Person is
+ * true only when a network's own contact list named them, which is a published fact rather than a guess from
+ * whether a chat happens to exist. Everyone else - a chat with a stranger, a Matrix ID nobody saved - is
+ * unknown, which is the same line a phone draws and for the same reason.
+ *
+ * Outgoing calls are left out: the reader knows who they rang.
+ */
+export const unknownCallers = (calls: Call[], saved: ReadonlySet<string>): Call[] =>
+    calls.filter((call) => !call.outgoing && !saved.has(call.userId));
