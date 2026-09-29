@@ -31,6 +31,11 @@ export interface TelegramSendStateInput {
     bridgeDelivered?: boolean;
     /** Whether anyone other than us has a read receipt at or after this event. */
     readByOthers?: boolean;
+    /**
+     * Whether the client can see that this room's bridge is not connected to its network. Only ever
+     * set from a bridge that says so itself, never inferred from silence.
+     */
+    bridgeDown?: boolean;
 }
 
 /** Maps Matrix/bridge state to tweb's sending status. */
@@ -39,6 +44,7 @@ export function getTelegramSendState({
     bridgeStatus,
     bridgeDelivered,
     readByOthers,
+    bridgeDown,
 }: TelegramSendStateInput): TelegramSendState {
     if (eventSendStatus === EventStatus.NOT_SENT || eventSendStatus === EventStatus.CANCELLED) return "error";
     if (eventSendStatus && eventSendStatus !== EventStatus.SENT) return "sending";
@@ -50,6 +56,15 @@ export function getTelegramSendState({
     // (delivered_to_users, from the network's delivery receipt) and the only thing that
     // earns the second tick — as in WhatsApp, where those are two different marks.
     if (bridgeDelivered) return "delivered";
+    /*
+     * Nothing from the bridge, and the bridge itself says it is not connected: the message is sitting
+     * in a queue, not on the other network. "Sent" is a claim only our own homeserver can support, and
+     * claiming it here is what made an unbridged message look identical to a delivered one.
+     *
+     * Last, so anything the bridge actually reported wins over what we inferred, and so a message
+     * somebody has demonstrably read is never walked back to sending.
+     */
+    if (bridgeDown && bridgeStatus === undefined) return "sending";
     return "sent";
 }
 

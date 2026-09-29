@@ -82,6 +82,22 @@ export function bridgeLoginsIn(client: MatrixClient): BridgeLogin[] {
 }
 
 /**
+ * The health of the bridge this room comes through, or undefined where the client cannot say.
+ *
+ * Undefined covers two different things on purpose: a room that is not bridged at all, and a bridge
+ * that publishes no login state. Neither is evidence of a problem, and a caller that treats "do not
+ * know" as "down" would mark every message in an ordinary Matrix room.
+ */
+export function bridgeHealthOf(client: MatrixClient, room: Room): LoginHealth | undefined {
+    const bots = getBridgeBots(room);
+    if (!bots.size) return undefined;
+    for (const login of bridgeLoginsIn(client)) {
+        if (login.botId && bots.has(login.botId)) return login.health;
+    }
+    return undefined;
+}
+
+/**
  * The bridges your chats come through that publish no login state (the legacy Discord bridge, or a bridge
  * that is not logged in at all, so has no login to describe): one entry each, with their chat with you so
  * you can open it. Bridges already in `known` are left out.

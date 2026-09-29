@@ -46,6 +46,25 @@ describe("getTelegramSendState", () => {
         expect(getTelegramSendState({ bridgeStatus: "FAIL_PERMANENT", readByOthers: true })).toBe("error");
     });
 
+    it("does not claim sent when the bridge says it is not connected", () => {
+        // The complaint this came from: a message the bridge never got looked exactly like one that
+        // arrived, because our own homeserver accepting it is all "sent" ever meant.
+        expect(getTelegramSendState({ bridgeDown: true })).toBe("sending");
+        expect(getTelegramSendState({ eventSendStatus: EventStatus.SENT, bridgeDown: true })).toBe("sending");
+    });
+
+    it("lets anything the bridge actually said beat a guess from its health", () => {
+        // A bridge can report on a message and be disconnected a moment later; what it said about
+        // this message still stands. Only silence is filled in from the health.
+        expect(getTelegramSendState({ bridgeStatus: "SUCCESS", bridgeDown: true })).toBe("sent");
+        expect(getTelegramSendState({ bridgeDelivered: true, bridgeStatus: "SUCCESS", bridgeDown: true })).toBe(
+            "delivered",
+        );
+        expect(getTelegramSendState({ bridgeStatus: "FAIL_PERMANENT", bridgeDown: true })).toBe("error");
+        // And a message somebody has demonstrably read is never walked back to sending.
+        expect(getTelegramSendState({ readByOthers: true, bridgeDown: true })).toBe("read");
+    });
+
     it("prefers read over delivered", () => {
         expect(getTelegramSendState({ bridgeStatus: "SUCCESS", readByOthers: true })).toBe("read");
         expect(getTelegramSendState({ readByOthers: true })).toBe("read");

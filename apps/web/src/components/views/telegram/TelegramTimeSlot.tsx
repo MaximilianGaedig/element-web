@@ -5,13 +5,39 @@ SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only OR LicenseRef-Element-Com
 Please see LICENSE files in the repository root for full details.
 */
 
-import React, { type JSX, type ReactNode } from "react";
+import React, { type JSX, type ReactNode, useContext, useEffect, useState } from "react";
 import { type EventStatus, type MatrixEvent } from "matrix-js-sdk/src/matrix";
 
 import TelegramTime from "./TelegramTime";
 import DisappearingMessageBadge from "../bridge/DisappearingMessageBadge";
 import { useMessageSendStatus } from "../bridge/MessageSendStatus";
 import { getTelegramSendState, getTelegramTimePlacement } from "../../../utils/telegram/telegramTime";
+import MatrixClientContext from "../../../contexts/MatrixClientContext";
+import { bridgeHealthOf } from "../../../utils/bridgeLogins";
+import { onBridgeStatusChange } from "../../../utils/chatHistory";
+
+/**
+ * Whether this event's room comes through a bridge that says it is not connected.
+ *
+ * Watched rather than read once: a bridge that drops while the timeline is open should change what
+ * the messages under it claim, and one that comes back should change it straight back.
+ */
+function useBridgeDown(mxEvent: MatrixEvent): boolean {
+    const client = useContext(MatrixClientContext);
+    const roomId = mxEvent.getRoomId();
+    const [down, setDown] = useState(false);
+    useEffect(() => {
+        const room = roomId ? client?.getRoom(roomId) : undefined;
+        if (!client || !room) return;
+        const read = (): void => {
+            const health = bridgeHealthOf(client, room);
+            setDown(health === "disconnected" || health === "problem");
+        };
+        read();
+        return onBridgeStatusChange(client, read);
+    }, [client, roomId]);
+    return down;
+}
 
 interface Props {
     mxEvent: MatrixEvent;
@@ -36,12 +62,14 @@ export default function TelegramTimeSlot({
     onDisappeared,
 }: Props): JSX.Element {
     const bridgeStatus = useMessageSendStatus(mxEvent);
+    const bridgeDown = useBridgeDown(mxEvent);
     const sendState = isOwnEvent
         ? getTelegramSendState({
               eventSendStatus,
               bridgeStatus: bridgeStatus?.status,
               bridgeDelivered: !!bridgeStatus?.delivered_to_users?.length,
               readByOthers,
+              bridgeDown,
           })
         : undefined;
     return (
