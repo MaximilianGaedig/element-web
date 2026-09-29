@@ -50,7 +50,7 @@ import { type IReadReceiptPosition } from "../views/rooms/ReadReceiptMarker";
 import { haveRendererForEvent } from "../../events/EventTileFactory";
 import { editorRoomKey } from "../../Editing";
 import { hasThreadSummary } from "../../utils/EventUtils";
-import { isOneToOneRoom, bubbleTimelineEnabled } from "../../utils/telegram/telegramLayout";
+import { isOneToOneRoom, bubbleTimelineEnabled, telegramTicksShown } from "../../utils/telegram/telegramLayout";
 import { getBridgeBots } from "../../utils/bridge/bridgeInfo";
 import { getEventIdsReadByOthers, type ReadReceiptsStyle } from "../../utils/telegram/telegramTime";
 import { type BaseGrouper } from "./grouper/BaseGrouper";
@@ -395,7 +395,12 @@ export default class MessagePanel extends React.Component<IProps, IState> {
      * groups when the "ticks" receipt style is chosen.
      */
     private get telegramTicks(): boolean {
-        return this.telegramBubbles && (this.state.readReceiptsStyle === "ticks" || this.isTelegramOneToOne());
+        return telegramTicksShown({
+            room: this.props.room ?? null,
+            layout: this.props.layout,
+            bubbles: this.state.telegramLayout,
+            readReceiptsStyle: this.state.readReceiptsStyle,
+        });
     }
 
     /** Telegram-style layout in a one-to-one chat (incl. bridged DMs) with bubbles: like Telegram, no avatars/names. */

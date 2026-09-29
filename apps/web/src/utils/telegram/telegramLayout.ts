@@ -9,6 +9,7 @@ import { type Room } from "matrix-js-sdk/src/matrix";
 
 import SettingsStore from "../../settings/SettingsStore";
 import { ImageSize } from "../../settings/enums/ImageSize";
+import { Layout } from "../../settings/enums/Layout";
 import UIStore from "../../stores/UIStore";
 import { getBridgeBots, getBridgeInfo } from "../bridge/bridgeInfo";
 import { BACKFILL_EVENT_TYPE } from "../chatHistory";
@@ -69,6 +70,33 @@ export function humanMemberCount(room: Room): number {
         if (membership === "join" || membership === "invite") count--;
     }
     return count;
+}
+
+/**
+ * Whether messages carry Telegram's ticks.
+ *
+ * Load-bearing beyond decoration: the ticks are where a failed send shows itself ("error"), and the
+ * Telegram layout suppresses Element's "some messages have not been sent" banner on the strength of
+ * that. Both sides have to ask the same question or a failure shows nowhere at all - which is what
+ * happened on the default settings, where readReceiptsStyle is "avatars" and a group chat therefore
+ * had no ticks and no banner.
+ *
+ * Pure, and takes what it needs, so the timeline can pass its own reactive state and the status bar
+ * can pass freshly read settings.
+ */
+export function telegramTicksShown({
+    room,
+    layout,
+    bubbles,
+    readReceiptsStyle,
+}: {
+    room: Room | null;
+    layout: Layout | undefined;
+    bubbles: boolean;
+    readReceiptsStyle: string;
+}): boolean {
+    if (!room || !bubbles || layout !== Layout.Bubble) return false;
+    return readReceiptsStyle === "ticks" || isOneToOneRoom(room);
 }
 
 /**
