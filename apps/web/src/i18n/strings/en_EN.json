@@ -136,63 +136,6 @@
         "zoom_in": "Zoom in",
         "zoom_out": "Zoom out"
     },
-    "ai": {
-        "a_sticker": "a sticker",
-        "ask": "Ask about this chat",
-        "asks_left": {
-            "one": ", 1 ask left today",
-            "other": ", %(count)s asks left today"
-        },
-        "catch_up": "What did I miss",
-        "cite": "Message %(number)s",
-        "digest": "What needs me",
-        "digest_nothing": "Nothing unread.",
-        "failed": "Could not ask: %(reason)s",
-        "go_to_message": "Go to this message",
-        "looking_around": "Reading what came of it…",
-        "looking_chats": "Finding the right chat…",
-        "looking_messages": "Searching your chats…",
-        "looking_web": "Asking the web…",
-        "no_answer": "It did not manage an answer this time.",
-        "no_open_questions": "Nothing here was left unanswered.",
-        "only_you": "Only you can see this",
-        "open_questions": "Answer open questions",
-        "reading_questions": "Looking for what was asked…",
-        "replies": "Suggested replies",
-        "send": "Send to chat",
-        "sent": "Sent",
-        "sent_by": " — %(model)s, %(seconds)ss",
-        "sent_digest": {
-            "one": "Sent 1 message from %(chats)s chats",
-            "other": "Sent %(count)s messages from %(chats)s chats"
-        },
-        "sent_looked": " — then it looked at: %(tools)s",
-        "sent_messages": {
-            "one": "1 message from this chat",
-            "other": "%(count)s messages from this chat"
-        },
-        "sent_more": {
-            "one": "…and 1 more",
-            "other": "…and %(count)s more"
-        },
-        "sent_pictures": {
-            "one": ", and 1 picture to look at",
-            "other": ", and %(count)s pictures to look at"
-        },
-        "sent_style": {
-            "one": ", and 1 of your own messages as a writing sample",
-            "other": ", and %(count)s of your own messages as a writing sample"
-        },
-        "sources": "Sources",
-        "sources_more": {
-            "one": "and %(count)s more",
-            "other": "and %(count)s more"
-        },
-        "thinking": "Thinking…",
-        "unsure": "This may not be the whole answer — what it found did not cover it.",
-        "what_can_be_done": "What can be done with this",
-        "what_was_sent": "What was sent to the model"
-    },
     "analytics": {
         "accept_button": "That's fine",
         "bullet_1": "We <Bold>don't</Bold> record or profile any account data",

@@ -26,12 +26,6 @@ vi.mock("../../../utils/telegram/telegramLayout", async (importOriginal) => ({
     floatingBarsEnabled: () => false,
 }));
 
-// These cases exercise composer controls independently of the account's AI configuration.
-vi.mock("../../../utils/ai/asking", async (importOriginal) => ({
-    ...(await importOriginal<typeof import("../../../utils/ai/asking")>()),
-    canAsk: () => false,
-}));
-
 describe("MessageComposerButtons", () => {
     // @ts-ignore - we're deliberately not implementing the whole interface here, but
     // can't use Partial<> for types because it'll annoy TS more than it helps.

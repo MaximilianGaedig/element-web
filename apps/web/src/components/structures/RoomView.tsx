@@ -106,8 +106,6 @@ import EditorStateTransfer from "../../utils/EditorStateTransfer";
 import ErrorDialog from "../views/dialogs/ErrorDialog";
 import UploadBar from "./UploadBar";
 import MessageComposer from "../views/rooms/MessageComposer";
-import { AiStatus } from "../views/ai/AiStatus";
-import { AiReplies } from "../views/ai/AiReplies";
 import JumpToBottomButton from "../views/rooms/JumpToBottomButton";
 import TopUnreadMessagesBar from "../views/rooms/TopUnreadMessagesBar";
 import { fetchInitialEvent } from "../../utils/EventUtils";
@@ -2585,15 +2583,6 @@ export class RoomView extends React.Component<IRoomProps, IRoomState> {
         if (showComposer) {
             messageComposer = (
                 <>
-                    {/* Fork: everything that floats directly above the box you type in. It is one
-                        element because the Telegram layout floats the composer over the timeline and
-                        reserves the space it takes (TgChatChrome): anything above the composer has to be
-                        measured with it, or it ends up behind the composer with the messages running
-                        under it. Asking about this chat, and replies drafted for it. */}
-                    <div className="mx_TgComposerAbove">
-                        <AiStatus />
-                        <AiReplies room={this.state.room} />
-                    </div>
                     <MessageComposer
                         room={this.state.room}
                         e2eStatus={this.state.e2eStatus}

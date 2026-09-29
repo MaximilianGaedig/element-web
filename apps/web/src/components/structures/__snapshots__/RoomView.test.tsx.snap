@@ -1517,9 +1517,6 @@ exports[`RoomView > should hide the header when hideHeader=true 1`] = `
           </div>
         </div>
         <div
-          class="mx_TgComposerAbove"
-        />
-        <div
           aria-label="Message composer"
           class="mx_MessageComposer mx_MessageComposer_tg"
           role="region"
@@ -2050,9 +2047,6 @@ exports[`RoomView > should hide the pinned message banner when hidePinnedMessage
           </div>
         </div>
         <div
-          class="mx_TgComposerAbove"
-        />
-        <div
           aria-label="Message composer"
           class="mx_MessageComposer mx_MessageComposer_tg"
           role="region"
@@ -2582,9 +2576,6 @@ exports[`RoomView > should hide the right panel when hideRightPanel=true 1`] = `
             />
           </div>
         </div>
-        <div
-          class="mx_TgComposerAbove"
-        />
         <div
           aria-label="Message composer"
           class="mx_MessageComposer mx_MessageComposer_tg"
@@ -3364,9 +3355,6 @@ exports[`RoomView > should not display the timeline when the room encryption is 
             />
           </div>
         </div>
-        <div
-          class="mx_TgComposerAbove"
-        />
         <div
           aria-label="Message composer"
           class="mx_MessageComposer mx_MessageComposer_tg"

@@ -12,7 +12,6 @@ import { shouldShowComponent } from "../../../../customisations/helpers/UICompon
 import { UIComponent } from "../../../../settings/UIFeature";
 import { RoomListSearch } from "./RoomListSearch";
 import { HistoryStatusMini } from "../../telegram/TgHistoryChip";
-import { AiDigest } from "../../ai/AiDigest";
 import FoundIcon from "@vector-im/compound-design-tokens/assets/web/icons/search";
 import { Button } from "@vector-im/compound-web";
 import { RoomListView } from "./RoomListView";
@@ -90,11 +89,9 @@ export const RoomListPanel: React.FC<RoomListPanelProps> = ({ activeSpace }) => 
                 </div>
             )}
             <RoomListHeaderView vm={vm} />
-            {/* Fork: the two things that are about every chat rather than about one of them. What is
-                waiting for you, asked for and never automatic; and what the chats turned out to contain,
-                which was read here in idle time and never left the device. */}
+            {/* Fork: what the chats turned out to contain, which was read here in idle time and never
+                left the device. */}
             <div className="mx_RoomListPanel_tools">
-                <AiDigest />
                 <Button
                     kind="secondary"
                     size="md"
