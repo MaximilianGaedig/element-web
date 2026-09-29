@@ -7,6 +7,8 @@ Please see LICENSE files in the repository root for full details.
 
 import React, { type JSX, type RefObject, useEffect } from "react";
 
+import { setChromeMetric } from "../../../utils/telegram/tgLayout/chromeMetrics";
+
 interface Props {
     /** The room body (.mx_RoomView_body), which holds the header, timeline, status area and composer. */
     body: RefObject<HTMLDivElement | null>;
@@ -22,16 +24,9 @@ export function TgChatChrome({ body }: Props): JSX.Element {
     useEffect(() => {
         const el = body.current;
         if (!el || typeof ResizeObserver === "undefined") return;
-        /*
-         * These pad the message list, so writing one moves every message: a sub-pixel change (a rect is
-         * fractional, and the header's own text reflows as a chat's status changes) would shift the
-         * timeline under a finger that is scrolling it. Whole pixels only, and only when the value it
-         * would write is not the one already there.
-         */
-        const set = (name: string, px: number): void => {
-            const value = `${Math.round(px)}px`;
-            if (el.style.getPropertyValue(name) !== value) el.style.setProperty(name, value);
-        };
+        // These pad the message list, so writing one moves every message. setChromeMetric decides
+        // when that is worth doing; see the note there for why a fraction is not.
+        const set = (name: string, px: number): void => void setChromeMetric(el, name, px);
         /*
          * Growing the composer grows the padding under the last message, which moves the timeline out
          * from under it. The scroll panel would put that right on its own, but only after the browser has

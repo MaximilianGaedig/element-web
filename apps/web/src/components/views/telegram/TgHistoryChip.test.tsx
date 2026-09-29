@@ -78,6 +78,19 @@ describe("the bridge status chips", () => {
         expect(screen.getByRole("button", { name: "All 10 chats imported" })).toBeInTheDocument();
     });
 
+    it("still says how far the import got when a bridge is not connected", () => {
+        // The whole point of the chip: the network logging out used to hide how far it had got, so
+        // the only sign of progress vanished at exactly the moment something had gone wrong.
+        vi.mocked(bridgeLoginsIn).mockReturnValue([{ network: "telegram", health: "disconnected" }] as never);
+        imports(10, 4);
+        show(<HistoryStatusChip />);
+        const chip = screen.getByRole("button");
+        expect(chip).toHaveTextContent("not connected");
+        expect(chip).toHaveTextContent("6 of 10 chats");
+        // And the percentage, which is the shortest form of the same answer, is just as true here.
+        expect(chip).toHaveTextContent("%");
+    });
+
     it("stays out of the way when there is nothing bridged at all", () => {
         imports(0, 0);
         show(<HistoryStatusMini />);
