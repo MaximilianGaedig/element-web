@@ -31,7 +31,7 @@ import { Button } from "@vector-im/compound-web";
 import { _t, _td } from "../../../languageHandler";
 import BaseDialog from "./BaseDialog";
 import Spinner from "../elements/Spinner";
-import { type Collected, collectedOf } from "../../../utils/detect/collected";
+import { type Collected, collectedOf, counts as collectedCounts, sectionTotal } from "../../../utils/detect/collected";
 import { MatrixClientPeg } from "../../../MatrixClientPeg";
 import dis from "../../../dispatcher/dispatcher";
 import { Action } from "../../../dispatcher/actions";
@@ -96,6 +96,22 @@ export default function FoundDialog({ onFinished }: Props): JSX.Element {
 
     const counts = useMemo(() => ({ shown: rows?.length ?? 0, past: past.length }), [rows, past]);
 
+    /*
+     * How much each section holds, read from the store rather than from the loaded rows.
+     *
+     * Only the open section's rows are loaded, so without this the other tabs cannot say whether
+     * they are worth opening - and the first question about a list of what your chats contain is
+     * which of these lists has anything in it. Counted by the index, so it costs no rows.
+     */
+    const [byKind, setByKind] = useState<Partial<Record<Collected["kind"], number>>>({});
+    useEffect(() => {
+        let gone = false;
+        void collectedCounts(client.getSafeUserId()).then((found) => !gone && setByKind(found));
+        return () => {
+            gone = true;
+        };
+    }, [client, rows]);
+
     /** Where it came from: the chat, at the message, which is the only way to check any of this. */
     const goTo = (row: Collected): void => {
         dis.dispatch<ViewRoomPayload>({
@@ -153,7 +169,7 @@ export default function FoundDialog({ onFinished }: Props): JSX.Element {
             contentId="mx_FoundDialog_content"
         >
             <nav className="mx_FoundDialog_sections">
-                {SECTIONS.map(({ id, label: sectionLabel, icon: Icon }) => (
+                {SECTIONS.map(({ id, label: sectionLabel, icon: Icon, kinds }) => (
                     <Button
                         key={id}
                         kind={id === section ? "primary" : "secondary"}
@@ -164,6 +180,11 @@ export default function FoundDialog({ onFinished }: Props): JSX.Element {
                     >
                         <Icon />
                         {_t(sectionLabel)}
+                        {/* A section with nothing in it says nothing rather than "0", which reads as
+                            a number worth looking at. */}
+                        {sectionTotal(byKind, kinds) > 0 && (
+                            <span className="mx_FoundDialog_sectionCount">{sectionTotal(byKind, kinds)}</span>
+                        )}
                     </Button>
                 ))}
             </nav>

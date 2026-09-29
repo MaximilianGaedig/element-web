@@ -9,6 +9,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import "fake-indexeddb/auto";
 
 import { type Detected } from "./entities";
+// Imported directly, unlike the rest: sectionTotal is pure arithmetic over a count map, so it needs
+// neither a database nor the module reset the store's own tests do.
+import { sectionTotal } from "./collected";
 
 /**
  * An arrangement still to come, relative to whenever this runs.
@@ -127,5 +130,25 @@ describe("what the chats turned out to contain", () => {
         await store.remember(me, fakeEvent("$one"), [aParcel()]);
         await store.remember(me, fakeEvent("$two"), [aDate()]);
         expect(await store.counts(me)).toMatchObject({ parcel: 1, datetime: 1 });
+    });
+});
+
+describe("sectionTotal", () => {
+    it("adds up the kinds a section covers", () => {
+        // "On the way" is flights and parcels together, so a section's total is not one kind's
+        // count. Reporting one of them would say there is nothing on the way while a parcel is out.
+        expect(sectionTotal({ flight: 2, parcel: 3 }, ["flight", "parcel"])).toBe(5);
+        expect(sectionTotal({ parcel: 3 }, ["flight", "parcel"])).toBe(3);
+    });
+
+    it("is zero for a section with nothing in it", () => {
+        // Zero is what hides the count: a section showing "0" reads as a number worth looking at.
+        expect(sectionTotal({}, ["datetime"])).toBe(0);
+        expect(sectionTotal({ phone: 4 }, ["datetime"])).toBe(0);
+    });
+
+    it("counts only the kinds asked for", () => {
+        // The store holds every kind; a section must not inherit another section's number.
+        expect(sectionTotal({ datetime: 7, phone: 4, url: 99 }, ["datetime"])).toBe(7);
     });
 });

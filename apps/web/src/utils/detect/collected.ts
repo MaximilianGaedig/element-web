@@ -241,7 +241,20 @@ export async function collectedOf(
 }
 
 /** How many of each kind there are, for a view that says so before it is opened. */
-/** @knipignore Written for the collected-things view (MEO-47); pinned by tests until it lands. */
+/**
+ * What a group of kinds holds between them, from {@link counts}.
+ *
+ * A section of the collected view can cover more than one kind - "on the way" is flights and
+ * parcels - so its total is not any single kind's count. Reporting one of them would say there is
+ * nothing on the way while a parcel is out.
+ */
+export function sectionTotal(
+    byKind: Partial<Record<Collected["kind"], number>>,
+    kinds: readonly Collected["kind"][],
+): number {
+    return kinds.reduce((sum, kind) => sum + (byKind[kind] ?? 0), 0);
+}
+
 export async function counts(userId: string): Promise<Partial<Record<Collected["kind"], number>>> {
     const db = await database(userId);
     if (!db) return {};

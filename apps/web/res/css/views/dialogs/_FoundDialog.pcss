@@ -22,6 +22,21 @@ Please see LICENSE files in the repository root for full details.
         margin-block-end: var(--cpd-space-3x);
     }
 
+    /*
+     * How many each section holds, beside its name.
+     *
+     * A pill rather than parentheses, so the eye can compare the numbers down the row without
+     * reading the labels - which is what somebody scanning for "where is there anything" is doing.
+     */
+    .mx_FoundDialog_sectionCount {
+        margin-inline-start: var(--cpd-space-1x);
+        padding-inline: var(--cpd-space-1x);
+        border-radius: 99px;
+        background: var(--cpd-color-bg-subtle-primary);
+        color: var(--cpd-color-text-secondary);
+        font: var(--cpd-font-body-xs-medium);
+    }
+
     .mx_FoundDialog_section {
         flex: 0 0 auto;
         white-space: nowrap;
