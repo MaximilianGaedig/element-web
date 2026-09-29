@@ -773,13 +773,12 @@ export class MessageComposer extends React.Component<IProps, IState> {
 
         return (
             <div className={classes} ref={this.ref} role="region" aria-label={_t("a11y|message_composer")}>
-                {telegram &&
-                    canSendMessages && (
-                        // Telegram iOS: the + button is its own island left of the input.
-                        <div className="mx_TgComposerIsland mx_TgComposerIsland_attach">
-                            <MessageComposerButtons {...composerButtonsProps} telegramSlot="attach" />
-                        </div>
-                    )}
+                {telegram && canSendMessages && (
+                    // Telegram iOS: the + button is its own island left of the input.
+                    <div className="mx_TgComposerIsland mx_TgComposerIsland_attach">
+                        <MessageComposerButtons {...composerButtonsProps} telegramSlot="attach" />
+                    </div>
+                )}
                 <div className="mx_MessageComposer_wrapper">
                     <MessageComposerUrlPreviewWrapper urlPreviewVm={this.props.urlPreviewVm} />
                     <UserIdentityWarning room={this.props.room} key={this.props.room.roomId} />
@@ -825,23 +824,22 @@ export class MessageComposer extends React.Component<IProps, IState> {
                         </div>
                     </div>
                 </div>
-                {telegram &&
-                    canSendMessages && (
-                        // Telegram iOS: the microphone is its own island right of the input; it slides away
-                        // while there is text (the send button then sits in the input).
-                        <div
-                            className={classNames("mx_TgComposerIsland mx_TgComposerIsland_mic", {
-                                mx_TgComposerIsland_hidden: showSendButton,
-                            })}
-                            aria-hidden={showSendButton}
-                        >
-                            <TelegramSendButton
-                                mode="record"
-                                onSend={this.sendMessage}
-                                onRecord={this.onRecordStartEndClick}
-                            />
-                        </div>
-                    )}
+                {telegram && canSendMessages && (
+                    // Telegram iOS: the microphone is its own island right of the input; it slides away
+                    // while there is text (the send button then sits in the input).
+                    <div
+                        className={classNames("mx_TgComposerIsland mx_TgComposerIsland_mic", {
+                            mx_TgComposerIsland_hidden: showSendButton,
+                        })}
+                        aria-hidden={showSendButton}
+                    >
+                        <TelegramSendButton
+                            mode="record"
+                            onSend={this.sendMessage}
+                            onRecord={this.onRecordStartEndClick}
+                        />
+                    </div>
+                )}
             </div>
         );
     }

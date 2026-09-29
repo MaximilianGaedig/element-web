@@ -59,7 +59,7 @@ export const RoomListItemContent = memo(function RoomListItemContent({
                         {item.name}
                         {renderRoomPath?.(item.room)}
                         {item.userStatus && (
-                            <Tooltip description={item.userStatus.text}>
+                            <Tooltip description={item.userStatus.text} maxWidth="30ch" maxLines={1}>
                                 <Text as="span" className={styles.userStatusEmoji}>
                                     {item.userStatus.emoji}
                                 </Text>
