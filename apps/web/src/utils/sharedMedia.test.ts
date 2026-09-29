@@ -99,6 +99,62 @@ describe("SharedMediaLoader with the server's media index", () => {
         return { loader: new SharedMediaLoader(client, room), authedRequest };
     }
 
+    it("opens the list at a date instead of paging back to it", async () => {
+        const march = msg({ msgtype: "m.image", body: "march", url: "mxc://x/m" }, 300);
+        const { loader, authedRequest } = setup({ media: [{ chunk: [march.event], end: "t-march" }] });
+
+        await loader.seekTo("media", 350);
+
+        // The server is told where to start, so a year back costs one request rather than a page
+        // for every month in between.
+        expect(authedRequest.mock.calls[0][2]).toMatchObject({ kind: "media", before_ts: "350" });
+        expect(loader.state("media").items.map((e) => e.getId())).toEqual([march.getId()]);
+    });
+
+    it("a seek does not move where paging continues from", async () => {
+        const march = msg({ msgtype: "m.image", body: "march", url: "mxc://x/m" }, 300);
+        const newest = msg({ msgtype: "m.image", body: "newest", url: "mxc://x/n" }, 900);
+        const { loader, authedRequest } = setup({
+            media: [
+                { chunk: [march.event], end: "t-march" },
+                { chunk: [newest.event], end: undefined },
+            ],
+        });
+
+        // Seek first, so that if it moved the paging token the very next page would start from it.
+        await loader.seekTo("media", 350);
+        await loader.loadMore("media");
+
+        const firstPage = authedRequest.mock.calls.find((c: any) => !("before_ts" in c[2]));
+        // Paging still begins at the newest item, because a seek is a window onto the middle of the
+        // history rather than a step through it.
+        expect(firstPage![2]).not.toHaveProperty("from");
+        // And both arrive in one list, in time order, however they got there.
+        expect(loader.state("media").items.map((e) => e.getContent().body)).toEqual(["newest", "march"]);
+    });
+
+    it("a short seek does not declare the tab finished", async () => {
+        const march = msg({ msgtype: "m.image", body: "march", url: "mxc://x/m" }, 300);
+        const { loader } = setup({ media: [{ chunk: [march.event], end: undefined }] });
+
+        await loader.seekTo("media", 350);
+
+        // A seek into the middle of the history comes back short by its nature. Reading that as
+        // "nothing left" would stop the list ever loading more.
+        expect(loader.state("media").done).toBe(false);
+    });
+
+    it("asks the server what each month holds, once, so the scrubber can be sized", async () => {
+        const months = [{ month: "2026-03", count: 12, before_ts: 350 }];
+        const { loader, authedRequest } = setup({ media: [{ chunk: [], months } as any] });
+
+        expect(await loader.monthCounts("media")).toEqual(months);
+        // Kept: a scrubber whose length changes while it is being dragged is worse than none.
+        expect(await loader.monthCounts("media")).toEqual(months);
+        expect(authedRequest).toHaveBeenCalledTimes(1);
+        expect(authedRequest.mock.calls[0][2]).toMatchObject({ months: "true" });
+    });
+
     it("finishing one tab leaves the others to load: the index answers each kind on its own", async () => {
         const img = msg({ msgtype: "m.image", body: "a", url: "mxc://x/a" }, 100);
         const voice = msg({ "msgtype": "m.audio", "body": "v.ogg", "org.matrix.msc3245.voice": {} }, 50);

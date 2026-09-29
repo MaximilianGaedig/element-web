@@ -35,6 +35,18 @@ export const SHARED_MEDIA_TABS: SharedMediaTab[] = ["media", "files", "links", "
 const MEDIA_INDEX_FEATURE = "im.mxg.media_index";
 const MEDIA_INDEX_PREFIX = "/_matrix/client/unstable/im.mxg.media_index";
 
+/**
+ * One month of a room's media of one kind, as the server's index reports it
+ * (tuwunel `api::client::media_index::MonthCount`).
+ */
+export interface MonthCount {
+    /** `YYYY-MM`, UTC. */
+    month: string;
+    count: number;
+    /** Pass to {@link SharedMediaLoader.seekTo} to open the list at this month. */
+    before_ts: number;
+}
+
 /** tweb appSearchSuper LOAD_COUNT. */
 export const SHARED_MEDIA_PAGE = 50;
 /** Most requests one "load more" may make while it finds nothing for the tab (links scan text). */
@@ -147,6 +159,8 @@ export class SharedMediaLoader {
     private restored?: Promise<void>;
     /** Where each tab got to in the server's media index, and which tabs it has exhausted. */
     private readonly indexTokens = new Map<SharedMediaTab, string | undefined>();
+    /** What the server said each tab holds per month, once asked. */
+    private readonly months = new Map<SharedMediaTab, MonthCount[]>();
     private readonly indexDone = new Set<SharedMediaTab>();
     /** Whether the homeserver has a media index, once asked. */
     private indexSupported?: boolean;
@@ -309,14 +323,82 @@ export class SharedMediaLoader {
         return this.indexSupported;
     }
 
-    /** One page of a tab from the server's media index. */
-    private async fetchIndexPage(tab: SharedMediaTab): Promise<void> {
+    /**
+     * How many items each month holds, newest month first, straight from the server's index.
+     *
+     * Asked for once per tab and kept: it is what sizes and labels the scrubber, and a scrubber
+     * whose length changes while it is being dragged is worse than no scrubber. The server reads
+     * this from the index alone, so it costs no event fetches however long the history is.
+     *
+     * Empty where the homeserver keeps no index, which is also the encrypted case - there the
+     * scrubber can only describe what has been loaded, which is what it did before this existed.
+     */
+    public async monthCounts(tab: SharedMediaTab): Promise<MonthCount[]> {
+        const known = this.months.get(tab);
+        if (known) return known;
+        if (!(await this.hasServerIndex())) return [];
+        try {
+            const path = utils.encodeUri("/rooms/$roomId/media", { $roomId: this.room.roomId });
+            const res = await this.client.http.authedRequest<{ months?: MonthCount[] }>(
+                Method.Get,
+                path,
+                { kind: tab, months: "true" },
+                undefined,
+                { prefix: MEDIA_INDEX_PREFIX },
+            );
+            const months = res.months ?? [];
+            if (!this.destroyed) this.months.set(tab, months);
+            return months;
+        } catch (e) {
+            logger.warn("Shared media: failed to read the month counts", e);
+            return [];
+        }
+    }
+
+    /**
+     * Loads the stretch around `ts` directly, rather than paging back to it from the newest item.
+     *
+     * This is the whole point of the index carrying each item's time: seeking a year back costs one
+     * request instead of a page for every month in between. What comes back is merged by timestamp
+     * like anything else ({@link add}), so a list built by seeking and a list built by paging are
+     * the same list - the reader can scrub to March, scroll up into February, and the two meet.
+     *
+     * Paging is left exactly where it was: `from` continues to walk back from the newest item, so a
+     * seek adds to the list without deciding where "the end" is.
+     */
+    public async seekTo(tab: SharedMediaTab, ts: number): Promise<void> {
+        if (this.loadingTabs.has(tab) || !(await this.hasServerIndex())) return;
+        this.loadingTabs.add(tab);
+        this.emit();
+        try {
+            await this.fetchIndexPage(tab, ts);
+        } catch (e) {
+            logger.warn("Shared media: failed to seek to a date", e);
+        } finally {
+            this.loadingTabs.delete(tab);
+            if (!this.destroyed) this.emit();
+        }
+    }
+
+    /**
+     * One page of a tab from the server's media index.
+     *
+     * With `beforeTs` it starts at the newest item sent at or before that time and does not touch
+     * the tab's paging token: a seek is a window onto the middle of the history, not a step through
+     * it, and letting it move `from` would make the next "load more" continue from wherever the
+     * reader happened to scrub to.
+     */
+    private async fetchIndexPage(tab: SharedMediaTab, beforeTs?: number): Promise<void> {
         const from = this.indexTokens.get(tab);
         const path = utils.encodeUri("/rooms/$roomId/media", { $roomId: this.room.roomId });
         const res = await this.client.http.authedRequest<{ chunk: IRoomEvent[]; end?: string }>(
             Method.Get,
             path,
-            { kind: tab, limit: String(SHARED_MEDIA_PAGE), ...(from ? { from } : {}) },
+            {
+                kind: tab,
+                limit: String(SHARED_MEDIA_PAGE),
+                ...(beforeTs !== undefined ? { before_ts: String(beforeTs) } : from ? { from } : {}),
+            },
             undefined,
             { prefix: MEDIA_INDEX_PREFIX },
         );
@@ -325,8 +407,13 @@ export class SharedMediaLoader {
         const events = res.chunk.map((raw) => mapper(raw));
         for (const ev of events) this.add(ev);
         historyIndexer.add(events); // keep them, so the tab fills even without the server
-        this.indexTokens.set(tab, res.end);
-        if (!res.end || res.chunk.length === 0) this.indexDone.add(tab);
+        // A seek says nothing about how far the paging has got, so it leaves both alone. Marking a
+        // tab done because a seek into the middle of the history came back short would stop the
+        // list loading anything more.
+        if (beforeTs === undefined) {
+            this.indexTokens.set(tab, res.end);
+            if (!res.end || res.chunk.length === 0) this.indexDone.add(tab);
+        }
         this.emit(); // each page shows as it arrives, rather than only when the load stops
     }
 
