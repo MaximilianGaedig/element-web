@@ -174,7 +174,7 @@ async function profileIdentifiers(client: MatrixClient, userId: string): Promise
     const asked = client
         .getExtendedProfile(userId)
         .then((profile) => {
-            const raw = (profile as Record<string, unknown>)[IDENTIFIERS_KEY];
+            const raw = profile[IDENTIFIERS_KEY];
             return Array.isArray(raw) ? raw.filter((one): one is string => typeof one === "string") : [];
         })
         // A ghost whose profile cannot be read is a person without published identifiers, not an error:
