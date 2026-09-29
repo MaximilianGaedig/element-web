@@ -19,6 +19,9 @@ Please see LICENSE files in the repository root for full details.
 
 html[data-tg-tail="telegram"] {
     --tg-tail-shape: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 11 20"><g transform="translate(9 -14)" fill-rule="evenodd"><path d="M-6 16h6v17c-.193-2.84-.876-5.767-2.05-8.782-.904-2.325-2.446-4.485-4.625-6.48A1 1 0 01-6 16z" transform="matrix(1 0 0 -1 0 49)"/></g></svg>');
+    /* The same shape mirrored, for the outgoing side. Flipping the element instead would flip
+       whatever is painted in it, which shows a media tail's picture backwards. */
+    --tg-tail-shape-end: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 11 20"><g transform="translate(11 0) scale(-1 1)"><g transform="translate(9 -14)" fill-rule="evenodd"><path d="M-6 16h6v17c-.193-2.84-.876-5.767-2.05-8.782-.904-2.325-2.446-4.485-4.625-6.48A1 1 0 01-6 16z" transform="matrix(1 0 0 -1 0 49)"/></g></g></svg>');
     --tg-tail-width: 11px;
     --tg-tail-height: 20px;
     /* tweb _chatBubble.scss: the tail overlaps the bubble's squared corner by this much. */
@@ -29,6 +32,7 @@ html[data-tg-tail="telegram"] {
 
 html[data-tg-tail="imessage"] {
     --tg-tail-shape: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 11 20"><path d="M11 7c0 6.2-3.4 10.6-8.6 12.6-.9.3-.6 1 .3.9 3.4-.4 6.2-1.6 8.3-3.6z"/></svg>');
+    --tg-tail-shape-end: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 11 20"><g transform="translate(11 0) scale(-1 1)"><path d="M11 7c0 6.2-3.4 10.6-8.6 12.6-.9.3-.6 1 .3.9 3.4-.4 6.2-1.6 8.3-3.6z"/></g></svg>');
     --tg-tail-width: 11px;
     --tg-tail-height: 20px;
     /* Apple keeps the bubble's corner round and hangs the tail outside it. */
@@ -74,7 +78,12 @@ html:is([data-tg-tail="telegram"], [data-tg-tail="imessage"]) .mx_RoomView_body[
          */
         &.mx_EventTile_tgMediaLine::after {
             background-image: var(--tg-media-tail, none);
-            background-size: cover;
+            /*
+             * At the size the bubble is showing the picture, so the tail holds the few pixels next
+             * to the corner rather than the whole picture shrunk into an 11x20 box. Falls back to
+             * cover for media whose event did not say how big it is.
+             */
+            background-size: var(--tg-media-tail-size, cover);
         }
     }
 
@@ -89,6 +98,11 @@ html:is([data-tg-tail="telegram"], [data-tg-tail="imessage"]) .mx_RoomView_body[
             /* Grows out of the picture's bottom start corner, so that is the part it continues. */
             background-position: bottom left;
         }
+
+        /* Square the picture there too, or a rounded notch shows where the tail meets it. */
+        :is(.mx_MediaBody, .mx_MImageBody, .mx_MVideoBody, .mx_ImageBody_container) {
+            border-end-start-radius: var(--tg-tail-corner);
+        }
     }
 
     .mx_EventTile_tgBubble.mx_EventTile_tgOwn:not(:has(.mx_EventTile_bigEmoji))[data-last-in-section="true"]
@@ -97,9 +111,16 @@ html:is([data-tg-tail="telegram"], [data-tg-tail="imessage"]) .mx_RoomView_body[
 
         &::after {
             inset-inline-end: var(--tg-tail-offset);
-            transform: translateY(1px) scaleX(-1);
+            transform: translateY(1px);
+            /* The mirrored shape rather than a flipped element: flipping would mirror the picture
+               painted in it as well, and a photo does not survive being shown backwards. */
+            mask-image: var(--tg-tail-shape-end, var(--tg-tail-shape));
             /* Mirrored with the tail, so the picture reads the right way round in it. */
             background-position: bottom right;
+        }
+
+        :is(.mx_MediaBody, .mx_MImageBody, .mx_MVideoBody, .mx_ImageBody_container) {
+            border-end-end-radius: var(--tg-tail-corner);
         }
     }
 }

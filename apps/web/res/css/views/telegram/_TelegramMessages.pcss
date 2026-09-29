@@ -366,6 +366,12 @@ Please see LICENSE files in the repository root for full details.
         background: var(--event-tile-bubble-other-background);
 
         /*
+         * The bubble shows as a hairline around the picture, as tweb's does: the picture is inset
+         * by a pixel rather than running to the very edge.
+         */
+        padding: 1px;
+
+        /*
          * The line's height is the picture's height and nothing else. As a block it was four pixels
          * taller than what it held, which showed as a strip of bubble under every photo; as a column
          * it can only be as tall as its content. Everything else in the line - the time, the action
