@@ -12,37 +12,28 @@ Please see LICENSE files in the repository root for full details.
  * one and untouched for a day on another. The answer that is useful is the most awake of them - "on
  * Telegram, now" is the same fact as "about", and the other accounts being quiet says nothing against it.
  *
- * Read from the ghosts' own Matrix presence, which is where the bridges put it. Presence only: none of
- * these networks publishes a last-seen time that can be trusted for somebody who is offline, so nothing
- * here ever says how long ago - it says which state, and only the bridges' own transitions move it.
+ * Each account is read exactly as the room list reads it ({@link presenceInfo}), so a face that has a
+ * green dot or a "12m" tag in the chat list has the same one here. Contacts only decide which account wins.
  */
 
-import { type MatrixClient } from "matrix-js-sdk/src/matrix";
+import { type MatrixClient, type User, UserEvent } from "matrix-js-sdk/src/matrix";
+import { useCallback, useEffect, useState } from "react";
 
 import { type Person } from "./people";
+import { type PresenceInfo, presenceInfo } from "../presence/activity";
+import { presenceNow, usePresenceNow } from "../presence/clock";
+import { useEventEmitter } from "../../hooks/useEventEmitter";
 
-/** The states worth showing, most awake first - which is also the order they are chosen in. */
-const RANK = ["online", "unavailable", "offline"] as const;
+export interface PersonPresence {
+    info: PresenceInfo;
+    /** The network that said it, for "active now on WhatsApp". */
+    network: string;
+}
 
-export type Presence = (typeof RANK)[number];
-
-/** How long a network's own idea of "active" keeps counting as about, once it stops being updated. */
-const STILL_ABOUT = 5 * 60 * 1000;
-
-/** What one account says, or nothing when its network says nothing about that person. */
-function presenceOf(client: MatrixClient, mxid: string): Presence | undefined {
-    const user = client.getUser(mxid);
-    if (!user?.presence) return undefined;
-    if (user.presence === "online") {
-        /*
-         * An `online` that stopped being refreshed is not news any more. Bridges send presence and not a
-         * last-seen time, so a ghost left online by a bridge that went away would otherwise stay lit for
-         * as long as the client is open; `lastActiveAgo` is the one number that can retire it.
-         */
-        const ago = user.lastActiveAgo ?? 0;
-        return ago > STILL_ABOUT ? "unavailable" : "online";
-    }
-    return user.presence === "unavailable" ? "unavailable" : "offline";
+/** Online beats everything; otherwise the most recent activity; an account that says nothing loses. */
+function awaker(a: PresenceInfo, b: PresenceInfo): boolean {
+    if (a.online !== b.online) return a.online;
+    return (a.lastActive ?? -Infinity) > (b.lastActive ?? -Infinity);
 }
 
 /**
@@ -51,20 +42,44 @@ function presenceOf(client: MatrixClient, mxid: string): Presence | undefined {
  * Nothing is not the same as offline: a network that has never reported is silent, and drawing somebody as
  * away because a bridge does not do presence at all would be this screen inventing a fact.
  */
-export function personPresence(client: MatrixClient, person: Person): Presence | undefined {
-    let best: Presence | undefined;
+export function personPresence(client: MatrixClient, person: Person, now = presenceNow()): PersonPresence | undefined {
+    let best: PersonPresence | undefined;
     for (const account of person.accounts) {
         if (!account.mxid) continue;
-        const said = presenceOf(client, account.mxid);
-        if (!said) continue;
-        if (!best || RANK.indexOf(said) < RANK.indexOf(best)) best = said;
+        const info = presenceInfo(client.getUser(account.mxid), now);
+        if (!info || (!info.online && info.lastActive === undefined)) continue;
+        if (!best || awaker(info, best.info)) best = { info, network: account.network };
     }
     return best;
 }
 
-/** Which network is the one they are about on, for saying where rather than only whether. */
-export function presenceNetwork(client: MatrixClient, person: Person): string | undefined {
-    const best = personPresence(client, person);
-    if (!best) return undefined;
-    return person.accounts.find((account) => account.mxid && presenceOf(client, account.mxid) === best)?.network;
+function samePresence(a: PersonPresence | undefined, b: PersonPresence | undefined): boolean {
+    return (
+        a?.network === b?.network &&
+        a?.info.online === b?.info.online &&
+        a?.info.lastActive === b?.info.lastActive &&
+        a?.info.minutes === b?.info.minutes
+    );
+}
+
+/** {@link personPresence}, live on the same presence events and shared clock as the room list. */
+export function usePersonPresence(client: MatrixClient, person: Person | undefined): PersonPresence | undefined {
+    const now = usePresenceNow();
+    const read = useCallback(
+        (at: number) => (person ? personPresence(client, person, at) : undefined),
+        [client, person],
+    );
+    const [presence, setPresence] = useState(() => read(now));
+    const update = (): void => {
+        const next = read(presenceNow());
+        setPresence((prev) => (samePresence(prev, next) ? prev : next));
+    };
+    useEffect(update, [read, now]);
+    const onUser = (_ev: unknown, user?: User): void => {
+        if (user && person?.accounts.some((account) => account.mxid === user.userId)) update();
+    };
+    useEventEmitter(client, UserEvent.LastPresenceTs, onUser);
+    useEventEmitter(client, UserEvent.Presence, onUser);
+    useEventEmitter(client, UserEvent.CurrentlyActive, onUser);
+    return presence;
 }

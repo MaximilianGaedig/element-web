@@ -19,9 +19,10 @@ import { type MatrixClient } from "matrix-js-sdk/src/matrix";
 
 import BaseAvatar from "../avatars/BaseAvatar";
 import { mediaFromMxc } from "../../../customisations/Media";
-import PresenceIconView from "../rooms/MemberList/tiles/common/PresenceIconView";
+import { ActivityDot } from "../avatars/ActivityDot";
 import { NetworkLogo } from "./NetworkLogo";
-import { type Presence } from "../../../utils/contacts/presence";
+import { hasPresenceBadge, type PresenceInfo } from "../../../utils/presence/activity";
+import { _t } from "../../../languageHandler";
 
 export function ContactFace({
     client,
@@ -40,10 +41,14 @@ export function ContactFace({
     id?: string;
     avatarUrl?: string;
     roomId?: string;
-    presence?: Presence;
+    /** The room list's own presence reading, drawn with the room list's own badge. */
+    presence?: PresenceInfo;
     size?: number;
     selected?: boolean;
 }): JSX.Element {
+    const badge = !selected && hasPresenceBadge(presence);
+    // The "12m" tag is wider than the dot and has its own cut-out, as in the room list.
+    const mask = presence?.online ? " mx_RoomAvatarView_RoomAvatar_presence" : " mx_RoomAvatarView_RoomAvatar_recent";
     const url = avatarUrl ? mediaFromMxc(avatarUrl).getSquareThumbnailHttp(size * 2) : null;
     /*
      * The room list's own composition, not an imitation of it.
@@ -59,7 +64,7 @@ export function ContactFace({
             style={{ "--room-avatar-size": `${size}px` } as React.CSSProperties}
         >
             <BaseAvatar
-                className={`mx_RoomAvatarView_RoomAvatar${presence && !selected ? " mx_RoomAvatarView_RoomAvatar_presence" : ""}`}
+                className={`mx_RoomAvatarView_RoomAvatar${badge ? mask : ""}`}
                 name={name}
                 idName={id ?? name}
                 url={url ?? undefined}
@@ -67,8 +72,12 @@ export function ContactFace({
             />
             {/* Bottom-left, as the room list puts a network, so the two lists mark one the same way. */}
             {!selected && <NetworkLogo client={client} roomId={roomId} size={Math.round(size / 2.6)} />}
-            {!selected && presence && (
-                <PresenceIconView className="mx_RoomAvatarView_PresenceDecoration" presenceState={presence} />
+            {badge && (
+                <ActivityDot
+                    info={presence}
+                    className="mx_RoomAvatarView_PresenceDecoration"
+                    label={_t("presence|online")}
+                />
             )}
         </span>
     );

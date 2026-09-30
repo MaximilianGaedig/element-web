@@ -40,6 +40,10 @@ const client = {
     getVisibleRooms: () => [],
     // Presence is read per account, so a client without it is one the rows cannot be built from.
     getUser: () => null,
+    // ...and kept live off the client's presence events, as the room list keeps its own.
+    on: () => undefined,
+    off: () => undefined,
+    removeListener: () => undefined,
     // Blocking is the homeserver's ignore list, which the rows read to know whether somebody is on it.
     getIgnoredUsers: () => [],
     // A card asks the crypto whether it has checked who somebody is, and the server which rooms are shared.

@@ -65,7 +65,7 @@ import {
 import { readKey } from "../../../utils/contacts/identity";
 import { ContactCard } from "./ContactCard";
 import { ContactFace } from "./ContactFace";
-import { type Presence, personPresence, presenceNetwork } from "../../../utils/contacts/presence";
+import { usePersonPresence } from "../../../utils/contacts/presence";
 import { type SharedRoom, askSharedRooms, callsWith, sharedRooms } from "../../../utils/contacts/shared";
 import { filingName, splitName } from "../../../utils/contacts/names";
 import { publishedCardOf } from "../../../utils/contacts/publish";
@@ -175,7 +175,6 @@ function PersonRowMenu({
 function PersonRow({
     client,
     person,
-    presence,
     onOpen,
     menu,
     selected,
@@ -184,8 +183,6 @@ function PersonRow({
 }: {
     client: MatrixClient;
     person: Person;
-    /** The most awake thing any of their networks says, or nothing when none of them says anything. */
-    presence?: Presence;
     onOpen: (person: Person) => void;
     /** The person's own menu, rendered around this row so it anchors to it. */
     menu: (row: JSX.Element, person: Person) => JSX.Element;
@@ -201,6 +198,8 @@ function PersonRow({
      * accounts are deduplicated here rather than in the list, so the same person cannot read as four
      * networks in one row and one in another.
      */
+    // The most awake thing any of their networks says, read the way the room list reads it.
+    const presence = usePersonPresence(client, person)?.info;
     const networks = [...new Map(person.accounts.map((account) => [account.network, account])).values()];
 
     const row = (
@@ -680,6 +679,7 @@ export function ContactsView({ tab, onFinished }: Props): JSX.Element {
     const [onlyUnknown, setOnlyUnknown] = useState(false);
     /* The person whose card is open, if one is: the list and one of its rows are one column's two depths. */
     const [open, setOpen] = useState<Person>();
+    const openPresence = usePersonPresence(client, open);
     /*
      * Who is picked, and whose menu is open.
      *
@@ -1523,8 +1523,7 @@ export function ContactsView({ tab, onFinished }: Props): JSX.Element {
                         favourite={isFavourite(client, open.rooms)}
                         onFavourite={open.rooms.length ? (person, on) => favourite([person], on) : undefined}
                         menu={personMenu(<></>, open)}
-                        presence={personPresence(client, open)}
-                        presenceOn={presenceNetwork(client, open)}
+                        presence={openPresence}
                         calls={callsWith(calls, open)}
                         groups={groups}
                         verification={verification}
@@ -1943,7 +1942,6 @@ export function ContactsView({ tab, onFinished }: Props): JSX.Element {
                                                 key={person.id}
                                                 client={client}
                                                 person={person}
-                                                presence={personPresence(client, person)}
                                                 onOpen={setOpen}
                                                 menu={personMenu}
                                                 selected={picked.has(person.id)}

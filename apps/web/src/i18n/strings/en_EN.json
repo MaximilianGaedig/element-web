@@ -770,7 +770,6 @@
     "console_scam_warning": "If someone told you to copy/paste something here, there is a high likelihood you're being scammed!",
     "console_wait": "Wait!",
     "contacts": {
-        "about": "Active now",
         "about_on": "Active now on %(network)s",
         "add_address": "add address",
         "add_birthday": "add birthday",
@@ -786,7 +785,6 @@
         "add_url": "add URL",
         "address": "Address",
         "all_contacts": "All",
-        "away": "Away",
         "birthday": "Birthday",
         "block": "Block this caller",
         "call": "Call",
@@ -908,7 +906,6 @@
         "no_people": "Nobody here yet",
         "not_same_person": "Different people",
         "notes": "Notes",
-        "offline": "Offline",
         "on_networks": "Also on",
         "open_card": "Contact details",
         "open_on": "Open in %(network)s",

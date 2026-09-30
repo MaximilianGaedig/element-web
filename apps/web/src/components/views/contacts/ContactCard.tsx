@@ -44,9 +44,11 @@ import { type Revision } from "../../../utils/contacts/history";
 import { type Tone } from "../../../utils/contacts/tones";
 import { ContactEditor } from "./ContactEditor";
 import { ContactHistory } from "./ContactHistory";
-import { type Presence } from "../../../utils/contacts/presence";
+import { type PersonPresence } from "../../../utils/contacts/presence";
+import { formatPresence } from "../../../utils/presence/lastSeen";
 import { type Verification } from "../../../utils/contacts/verification";
-import PresenceIconView from "../rooms/MemberList/tiles/common/PresenceIconView";
+import { ActivityDot } from "../avatars/ActivityDot";
+import { useSettingValue } from "../../../hooks/useSettings";
 import { type SharedRoom } from "../../../utils/contacts/shared";
 import { type Call } from "../../../utils/contacts/calls";
 import BaseAvatar from "../avatars/BaseAvatar";
@@ -56,8 +58,8 @@ interface Props {
     /** The person's own menu, the same one the list rows open, shown with the card's chrome. */
     menu?: React.ReactNode;
     /** The most awake thing any of their networks says, and which network says it. */
-    presence?: Presence;
-    presenceOn?: string;
+    /** The most awake of their accounts, read the way the room list reads it. */
+    presence?: PersonPresence;
     /** The last few calls with them, whichever account they were with. */
     calls?: Call[];
     /** The groups you are both in. */
@@ -160,7 +162,6 @@ export function ContactCard({
     onUnlinkAccount,
     linkedIds,
     presence,
-    presenceOn,
     calls,
     groups,
     onOpenRoom,
@@ -186,6 +187,11 @@ export function ContactCard({
     // Only where a chat exists: a call needs somewhere to happen, and starting one is not what this is.
     const reachable = onCall ? person.accounts.filter((account) => !!account.roomId) : [];
     const email = person.details.find((detail) => detail.kind === "email")?.value;
+    // The same words the chat header says ("last seen 5 minutes ago"), plus where when they are about now.
+    const showTwelveHour = useSettingValue("showTwelveHourTimestamps");
+    const presenceText = presence?.info.online
+        ? _t("contacts|about_on", { network: presence.network })
+        : formatPresence(presence?.info, { showTwelveHour });
 
     const save = (): void => {
         onRename?.(person, draft.trim());
@@ -359,16 +365,10 @@ export function ContactCard({
                                 {_t(`contacts|verify_${verification}`)}
                             </button>
                         )}
-                        {presence && (
-                            <span className="mx_ContactCard_presence" data-presence={presence}>
-                                <PresenceIconView presenceState={presence} />
-                                {presence === "online"
-                                    ? presenceOn
-                                        ? _t("contacts|about_on", { network: presenceOn })
-                                        : _t("contacts|about")
-                                    : presence === "unavailable"
-                                      ? _t("contacts|away")
-                                      : _t("contacts|offline")}
+                        {presenceText && (
+                            <span className="mx_ContactCard_presence" data-online={presence?.info.online || undefined}>
+                                <ActivityDot info={presence?.info} />
+                                {presenceText}
                             </span>
                         )}
                     </div>
