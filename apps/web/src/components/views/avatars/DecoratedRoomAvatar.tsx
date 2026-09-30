@@ -8,25 +8,16 @@ Please see LICENSE files in the repository root for full details.
 
 import React, { type JSX } from "react";
 import classNames from "classnames";
-import {
-    EventType,
-    JoinRule,
-    type MatrixEvent,
-    type Room,
-    RoomEvent,
-    type User,
-    UserEvent,
-} from "matrix-js-sdk/src/matrix";
-import { UnstableValue } from "matrix-js-sdk/src/NamespacedValue";
+import { EventType, JoinRule, type MatrixEvent, type Room, RoomEvent } from "matrix-js-sdk/src/matrix";
 import { Tooltip } from "@vector-im/compound-web";
 import { PublicIcon } from "@vector-im/compound-design-tokens/assets/web/icons";
 
 import RoomAvatar from "./RoomAvatar";
+import { ActivityDot } from "./ActivityDot";
+import { Presence, useDmPresence } from "./WithPresenceIndicator";
 import { NotificationBadge } from "../rooms/NotificationBadge/NotificationBadge";
 import { RoomNotificationStateStore } from "../../../stores/notifications/RoomNotificationStateStore";
 import { type NotificationState } from "../../../stores/notifications/NotificationState";
-import { isPresenceEnabled } from "../../../utils/presence";
-import { MatrixClientPeg } from "../../../MatrixClientPeg";
 import { _t } from "../../../languageHandler";
 import DMRoomMap from "../../../utils/DMRoomMap";
 import { type IOOBData } from "../../../stores/ThreepidInviteStore";
@@ -54,38 +45,66 @@ interface IState {
     icon: Icon;
 }
 
-const BUSY_PRESENCE_NAME = new UnstableValue("busy", "org.matrix.msc3026.busy");
-
 enum Icon {
     // Note: the names here are used in CSS class names
     None = "NONE", // ... except this one
     Globe = "GLOBE",
-    PresenceOnline = "ONLINE",
-    PresenceAway = "AWAY",
-    PresenceOffline = "OFFLINE",
-    PresenceBusy = "BUSY",
 }
 
 function tooltipText(variant: Icon): string | undefined {
     switch (variant) {
         case Icon.Globe:
             return _t("room|header|room_is_public");
-        case Icon.PresenceOnline:
-            return _t("presence|online");
-        case Icon.PresenceAway:
-            return _t("presence|away");
-        case Icon.PresenceOffline:
-            return _t("presence|offline");
-        case Icon.PresenceBusy:
-            return _t("presence|busy");
     }
+}
+
+/**
+ * A DM's face with its person's presence drawn the way the room list draws it - the one indicator, a dot
+ * or the "5m" tag cut into the avatar - rather than Element's older online/away/offline/busy icons.
+ */
+function DmFace({
+    room,
+    size,
+    oobData,
+    viewAvatarOnClick,
+}: {
+    room: Room;
+    size: string;
+    oobData?: IOOBData;
+    viewAvatarOnClick?: boolean;
+}): JSX.Element {
+    const { presence, info } = useDmPresence(room);
+    const badge = presence === Presence.Online;
+    // The "12m" tag is wider than the dot and has its own cut-out, as in the room list.
+    const mask = !badge
+        ? ""
+        : info?.online
+          ? " mx_RoomAvatarView_RoomAvatar_presence"
+          : " mx_RoomAvatarView_RoomAvatar_recent";
+    return (
+        <span className="mx_RoomAvatarView" style={{ "--room-avatar-size": size } as React.CSSProperties}>
+            <RoomAvatar
+                className={`mx_RoomAvatarView_RoomAvatar${mask}`}
+                room={room}
+                size={size}
+                oobData={oobData}
+                viewAvatarOnClick={viewAvatarOnClick}
+            />
+            {badge && (
+                <ActivityDot
+                    info={info}
+                    className="mx_RoomAvatarView_PresenceDecoration"
+                    label={_t("presence|online")}
+                />
+            )}
+        </span>
+    );
 }
 
 /**
  * @deprecated Use {@link DecoratedRoomAvatarView} instead.
  */
 export default class DecoratedRoomAvatar extends React.PureComponent<IProps, IState> {
-    private _dmUser: User | null = null;
     private isUnmounted = false;
     private isWatchingTimeline = false;
 
@@ -101,29 +120,14 @@ export default class DecoratedRoomAvatar extends React.PureComponent<IProps, ISt
     public componentWillUnmount(): void {
         this.isUnmounted = true;
         if (this.isWatchingTimeline) this.props.room.off(RoomEvent.Timeline, this.onRoomTimeline);
-        this.dmUser = null; // clear listeners, if any
     }
 
     private get isPublicRoom(): boolean {
         return this.props.room.getJoinRule() === JoinRule.Public;
     }
 
-    private get dmUser(): User | null {
-        return this._dmUser;
-    }
-
-    private set dmUser(val: User | null) {
-        const oldUser = this._dmUser;
-        this._dmUser = val;
-        if (oldUser && oldUser !== this._dmUser) {
-            oldUser.off(UserEvent.CurrentlyActive, this.onPresenceUpdate);
-            oldUser.off(UserEvent.Presence, this.onPresenceUpdate);
-        }
-        if (this._dmUser && oldUser !== this._dmUser) {
-            this._dmUser.on(UserEvent.CurrentlyActive, this.onPresenceUpdate);
-            this._dmUser.on(UserEvent.Presence, this.onPresenceUpdate);
-        }
-    }
+    /** Whether this is a DM, which shows its person's presence (DmFace) instead of an icon. */
+    private isDm = false;
 
     private onRoomTimeline = (ev: MatrixEvent, room?: Room): void => {
         if (this.isUnmounted) return;
@@ -137,32 +141,6 @@ export default class DecoratedRoomAvatar extends React.PureComponent<IProps, ISt
         }
     };
 
-    private onPresenceUpdate = (): void => {
-        if (this.isUnmounted) return;
-
-        const newIcon = this.getPresenceIcon();
-        if (newIcon !== this.state.icon) this.setState({ icon: newIcon });
-    };
-
-    private getPresenceIcon(): Icon {
-        if (!this.dmUser) return Icon.None;
-
-        let icon = Icon.None;
-
-        const isOnline = this.dmUser.currentlyActive || this.dmUser.presence === "online";
-        if (BUSY_PRESENCE_NAME.matches(this.dmUser.presence)) {
-            icon = Icon.PresenceBusy;
-        } else if (isOnline) {
-            icon = Icon.PresenceOnline;
-        } else if (this.dmUser.presence === "offline") {
-            icon = Icon.PresenceOffline;
-        } else if (this.dmUser.presence === "unavailable") {
-            icon = Icon.PresenceAway;
-        }
-
-        return icon;
-    }
-
     private calculateIcon(): Icon {
         let icon = Icon.None;
 
@@ -170,10 +148,7 @@ export default class DecoratedRoomAvatar extends React.PureComponent<IProps, ISt
         const otherUserId = DMRoomMap.shared().getUserIdForRoomId(this.props.room.roomId);
         if (otherUserId && getJoinedNonFunctionalMembers(this.props.room).length === 2) {
             // Track presence, if available
-            if (isPresenceEnabled(this.props.room.client)) {
-                this.dmUser = MatrixClientPeg.safeGet().getUser(otherUserId);
-                icon = this.getPresenceIcon();
-            }
+            this.isDm = true;
         } else {
             // Track publicity
             icon = this.isPublicRoom ? Icon.Globe : Icon.None;
@@ -223,12 +198,21 @@ export default class DecoratedRoomAvatar extends React.PureComponent<IProps, ISt
 
         return (
             <div className={classes} {...props}>
-                <RoomAvatar
-                    room={this.props.room}
-                    size={this.props.size}
-                    oobData={this.props.oobData}
-                    viewAvatarOnClick={this.props.viewAvatarOnClick}
-                />
+                {this.isDm ? (
+                    <DmFace
+                        room={this.props.room}
+                        size={this.props.size}
+                        oobData={this.props.oobData}
+                        viewAvatarOnClick={this.props.viewAvatarOnClick}
+                    />
+                ) : (
+                    <RoomAvatar
+                        room={this.props.room}
+                        size={this.props.size}
+                        oobData={this.props.oobData}
+                        viewAvatarOnClick={this.props.viewAvatarOnClick}
+                    />
+                )}
                 {icon && (
                     <Tooltip label={tooltipText(this.state.icon)!} placement="bottom">
                         {icon}

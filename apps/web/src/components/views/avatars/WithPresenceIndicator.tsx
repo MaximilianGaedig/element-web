@@ -6,16 +6,14 @@ SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only OR LicenseRef-Element-Com
 Please see LICENSE files in the repository root for full details.
 */
 
-import React, { type JSX, type ReactNode, useEffect, useState } from "react";
-import { ClientEvent, type Room, RoomMember, RoomStateEvent, type User } from "matrix-js-sdk/src/matrix";
+import React, { type ReactNode, useEffect, useState } from "react";
+import { ClientEvent, type Room, RoomMember, RoomStateEvent } from "matrix-js-sdk/src/matrix";
 
 import { isPresenceEnabled } from "../../../utils/presence";
 import DMRoomMap from "../../../utils/DMRoomMap";
 import { getJoinedNonFunctionalMembers } from "../../../utils/room/getJoinedNonFunctionalMembers";
 import { useEventEmitter } from "../../../hooks/useEventEmitter";
-import { BUSY_PRESENCE_NAME } from "../rooms/PresenceLabel";
 import { getBridgedDmUserId } from "../../../utils/bridge/bridgeInfo";
-import AvatarPresenceIconView from "../rooms/MemberList/tiles/common/PresenceIconView";
 import { hasPresenceBadge, type PresenceInfo, usePresenceInfo } from "../../../utils/presence/activity";
 import { ActivityDot } from "./ActivityDot";
 import { _t } from "../../../languageHandler";
@@ -57,39 +55,17 @@ export const useDmMember = (room?: Room): RoomMember | null => {
     return dmMember;
 };
 
-function getPresenceFromUser(user: User | null | undefined): Presence | null {
-    if (!user) return null;
-
-    const presence = user.presence;
-    const isOnline = user.currentlyActive || presence === "online";
-    if (BUSY_PRESENCE_NAME.matches(presence)) {
-        return Presence.Busy;
-    }
-    if (isOnline) {
-        return Presence.Online;
-    }
-    if (presence === "offline") {
-        return Presence.Offline;
-    }
-    if (presence === "unavailable") {
-        return Presence.Away;
-    }
-
-    return null;
-}
-
 /**
- * Presence for decorations: busy stays busy; otherwise online while the user is online or has a
- * recently-active tag (see presenceTag), and nothing at all for away/offline, so there is no grey dot.
+ * Presence for decorations: online while the user is online or has a recently-active tag (see
+ * presenceTag), and nothing at all otherwise - busy, away and offline included - so every avatar shows the
+ * one indicator (ActivityDot) and never Element's older grey and busy icons.
  * `info` is the one {@link usePresenceInfo} result, so the decoration and the tag always agree.
  */
 export const usePresence = (room: Room, member: RoomMember | null, info: PresenceInfo | undefined): Presence | null => {
-    const user = member ? room.client.getUser(member.userId) : null;
     const joined = getJoinedNonFunctionalMembers(room).length;
     // Fewer than 2 joined members means the (sliding sync) member list isn't loaded yet; trust m.direct.
     const isOneToOne = joined === 2 || !!getBridgedDmUserId(room) || (joined < 2 && !!member);
     if (!isOneToOne || !isPresenceEnabled(room.client)) return null;
-    if (getPresenceFromUser(user) === Presence.Busy) return Presence.Busy;
     return hasPresenceBadge(info) ? Presence.Online : null;
 };
 
@@ -103,12 +79,7 @@ export const useDmPresence = (room: Room): { presence: Presence | null; info: Pr
 const WithPresenceIndicator: React.FC<Props> = ({ room, children }) => {
     const { presence, info } = useDmPresence(room);
 
-    let icon: JSX.Element | null | undefined;
-    if (presence === Presence.Online) {
-        icon = <ActivityDot info={info} label={_t("presence|online")} />;
-    } else if (presence) {
-        icon = <AvatarPresenceIconView presenceState={presence} />;
-    }
+    const icon = presence === Presence.Online ? <ActivityDot info={info} label={_t("presence|online")} /> : null;
 
     if (!presence) return <>{children}</>;
 

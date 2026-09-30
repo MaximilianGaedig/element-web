@@ -130,23 +130,25 @@ describe("MemberListView and MemberlistHeaderView", () => {
             rendered = await renderMemberList(true);
         });
 
-        it("Memberlist is re-rendered on unreachable presence event", async () => {
+        // Presence is drawn with the one indicator everywhere: a member going away loses their dot.
+        it("Memberlist is re-rendered on a presence event", async () => {
             const { root, defaultUsers } = rendered;
+            const dots = (): number => root.container.querySelectorAll(".mx_ActivityDot").length;
+            await waitFor(() => expect(dots()).toBeGreaterThan(0));
+            const before = dots();
             await act(async () => {
-                defaultUsers[0].user?.setPresenceEvent(
+                const user = defaultUsers[0].user!;
+                user.currentlyActive = false;
+                user.lastActiveAgo = undefined as unknown as number;
+                user.setPresenceEvent(
                     new MatrixEvent({
                         type: "m.presence",
                         sender: defaultUsers[0].userId,
-                        content: {
-                            presence: "io.element.unreachable",
-                            currently_active: false,
-                        },
+                        content: { presence: "offline", currently_active: false },
                     }),
                 );
             });
-            await waitFor(() => {
-                expect(root.container.querySelector(".mx_PresenceIconView_unavailable")).not.toBeNull();
-            });
+            await waitFor(() => expect(dots()).toBe(before - 1));
         });
 
         it("should prevent default form submission", async () => {

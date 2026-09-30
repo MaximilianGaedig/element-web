@@ -92,11 +92,6 @@ exports[`<UserInfo /> > with crypto enabled > renders <BasicUserInfo /> 1`] = `
               @user:example.com
             </div>
           </h1>
-          <div
-            class="mx_PresenceLabel mx_UserInfo_profileStatus"
-          >
-            Unknown
-          </div>
           <p
             class="_typography_6v6n8_153 _font-body-sm-semibold_6v6n8_36 mx_UserInfo_profile_mxid"
           >
@@ -402,11 +397,6 @@ exports[`<UserInfo /> > with crypto enabled > should render a deactivate button 
               @user:example.com
             </div>
           </h1>
-          <div
-            class="mx_PresenceLabel mx_UserInfo_profileStatus"
-          >
-            Unknown
-          </div>
           <p
             class="_typography_6v6n8_153 _font-body-sm-semibold_6v6n8_36 mx_UserInfo_profile_mxid"
           >

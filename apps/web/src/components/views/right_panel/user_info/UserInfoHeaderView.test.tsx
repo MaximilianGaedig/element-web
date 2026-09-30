@@ -10,7 +10,7 @@ Please see LICENSE files in the repository root for full details.
 import { describe, it, expect, beforeEach, vi, type Mocked } from "vitest";
 import { type MatrixClient } from "matrix-js-sdk/src/matrix";
 import { type CryptoApi } from "matrix-js-sdk/src/crypto-api";
-import { Device, RoomMember } from "matrix-js-sdk/src/matrix";
+import { Device, RoomMember, User } from "matrix-js-sdk/src/matrix";
 import { fireEvent, render, screen } from "test-utils-rtl";
 import React from "react";
 
@@ -180,8 +180,14 @@ describe("<UserInfoHeaderView />", () => {
             userIdentifier: null,
         });
 
+        // The one presence reading (what the room list and the contacts show), not Element's own label.
+        const online = new User(defaultUserId);
+        online.presence = "online";
+        online.currentlyActive = true;
+        vi.spyOn(mockClient, "getUser").mockReturnValue(online);
+
         renderComponent({ hideVerificationSection: false });
-        expect(screen.getByText("Online")).toBeInTheDocument();
+        expect(screen.getByText("online")).toBeInTheDocument();
     });
 
     it("should be able to click on member avatar", () => {

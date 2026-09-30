@@ -109,6 +109,11 @@ export async function renderMemberList(
         if (roomId === memberListRoom.roomId) return memberListRoom;
         else return null;
     };
+    // Presence is read from the client's users, as the room list reads it.
+    const usersById = new Map(
+        [...adminUsers, ...moderatorUsers, ...defaultUsers].map((member) => [member.userId, member.user!]),
+    );
+    client.getUser = (userId) => usersById.get(userId) ?? null;
     memberListRoom.currentState = {
         members: {},
         getMember: vi.fn(),

@@ -11,9 +11,9 @@ import { useCreateAutoDisposedViewModel, DisambiguatedProfileView } from "@eleme
 import { type RoomMember } from "../../../../../models/rooms/RoomMember";
 import { useMemberTileViewModel } from "../../../../viewmodels/memberlist/tiles/MemberTileViewModel";
 import { E2EIconView } from "./common/E2EIconView";
-import AvatarPresenceIconView from "./common/PresenceIconView";
-import BaseAvatar from "../../../avatars/BaseAvatar";
-import { _t } from "../../../../../languageHandler";
+import { ContactFace } from "../../../contacts/ContactFace";
+import { usePresenceInfo } from "../../../../../utils/presence/activity";
+import { useMatrixClientContext } from "../../../../../contexts/MatrixClientContext";
 import { MemberTileView } from "./common/MemberTileView";
 import { InvitedIconView } from "./common/InvitedIconView";
 import { type MemberWithSeparator } from "../../../../viewmodels/memberlist/MemberListViewModel";
@@ -37,14 +37,20 @@ interface IProps {
 export function RoomMemberTileView(props: IProps): JSX.Element {
     const vm = useMemberTileViewModel(props);
     const member = vm.member;
+    /*
+     * Presence drawn the way the room list and the contacts draw it - a dot, or the "5m" tag, cut into the
+     * face - from the same reading, rather than Element's older icon beside the avatar.
+     */
+    const client = useMatrixClientContext();
+    const presence = usePresenceInfo(client, vm.showPresence ? member.userId : undefined);
     const av = (
-        <BaseAvatar
-            size="32px"
+        <ContactFace
+            client={client}
             name={member.name}
-            idName={member.userId}
-            title={member.displayUserId}
-            url={member.avatarThumbnailUrl}
-            altText={_t("common|user_avatar")}
+            id={member.userId}
+            thumbnailUrl={member.avatarThumbnailUrl}
+            presence={presence}
+            size={32}
         />
     );
     const name = vm.name;
@@ -66,12 +72,6 @@ export function RoomMemberTileView(props: IProps): JSX.Element {
     }, [disambiguatedProfileVM, userStatus]);
     const nameJSX = <DisambiguatedProfileView vm={disambiguatedProfileVM} className="mx_DisambiguatedProfile" />;
 
-    const presenceState = member.presenceState;
-    let presenceJSX: JSX.Element | undefined;
-    if (vm.showPresence && presenceState) {
-        presenceJSX = <AvatarPresenceIconView presenceState={presenceState} />;
-    }
-
     let iconJsx;
     if (vm.e2eStatus) {
         iconJsx = <E2EIconView status={vm.e2eStatus} />;
@@ -85,7 +85,6 @@ export function RoomMemberTileView(props: IProps): JSX.Element {
             onClick={vm.onClick}
             onFocus={(e) => props.onFocus(props.item, e)}
             avatarJsx={av}
-            presenceJsx={presenceJSX}
             nameJsx={nameJSX}
             userLabel={vm.userLabel}
             ariaLabel={name}

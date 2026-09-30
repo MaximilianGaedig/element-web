@@ -154,7 +154,8 @@ describe("usePresence", () => {
         ["online", Presence.Online],
         ["offline", null],
         ["unavailable", null],
-        ["busy", Presence.Busy],
+        // Busy with nothing recent to show is nothing, like away and offline: one indicator everywhere.
+        ["busy", null],
     ])("returns correct presence for user with '%s' presence state", (presenceStr, expectedPresence) => {
         user.presence = presenceStr;
         const { result } = renderHook(() => usePresenceOf(room, member));

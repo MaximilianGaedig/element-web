@@ -10,7 +10,7 @@ Please see LICENSE files in the repository root for full details.
 
 import { vi, describe, it, expect, beforeEach, afterEach } from "vitest";
 import { render, waitFor } from "test-utils-rtl";
-import { JoinRule, type MatrixClient, PendingEventOrdering, Room, RoomMember } from "matrix-js-sdk/src/matrix";
+import { JoinRule, type MatrixClient, PendingEventOrdering, Room, RoomMember, User } from "matrix-js-sdk/src/matrix";
 import React from "react";
 import userEvent from "@testing-library/user-event";
 import { stubClient } from "test-utils";
@@ -72,6 +72,7 @@ describe("DecoratedRoomAvatar", () => {
         expect(asFragment()).toMatchSnapshot();
     });
 
+    // The one presence indicator, as the room list draws it, rather than Element's older icons.
     it("shows the presence indicator in a DM room that also has functional members", async () => {
         const DM_USER_ID = "@bob:foo.bar";
         const dmRoomMap = {
@@ -80,23 +81,16 @@ describe("DecoratedRoomAvatar", () => {
             },
         } as unknown as DMRoomMap;
         vi.spyOn(DMRoomMap, "shared").mockReturnValue(dmRoomMap);
-        vi.spyOn(DecoratedRoomAvatar.prototype as any, "getPresenceIcon").mockImplementation(() => "ONLINE");
         vi.spyOn(room, "getMember").mockReturnValue(new RoomMember(room.roomId, DM_USER_ID));
+        const user = new User(DM_USER_ID);
+        user.presence = "online";
+        user.currentlyActive = true;
+        vi.spyOn(room.client, "getUser").mockReturnValue(user);
 
-        const { container, asFragment } = renderComponent();
+        const { container } = renderComponent();
 
-        const presence = container.querySelector(".mx_DecoratedRoomAvatar_icon")!;
-        expect(presence).toBeVisible();
-        await userEvent.hover(presence!);
-
-        // wait for the tooltip to open
-        const tooltip = await waitFor(() => {
-            const tooltip = document.getElementById(presence.getAttribute("aria-labelledby")!);
-            expect(tooltip).toBeVisible();
-            return tooltip;
-        });
-        expect(tooltip).toHaveTextContent("Online");
-
-        expect(asFragment()).toMatchSnapshot();
+        await waitFor(() => expect(container.querySelector(".mx_ActivityDot")).toBeVisible());
+        expect(container.querySelector(".mx_ActivityDot")).toHaveAttribute("aria-label", "Online");
+        expect(container.querySelector(".mx_DecoratedRoomAvatar_icon")).toBeNull();
     });
 });

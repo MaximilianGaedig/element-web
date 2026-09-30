@@ -5,7 +5,7 @@ SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only OR LicenseRef-Element-Com
 Please see LICENSE files in the repository root for full details.
 */
 
-import React, { type JSX, type ReactNode, useContext } from "react";
+import React, { type JSX, useContext } from "react";
 import { type MatrixClient, type Room } from "matrix-js-sdk/src/matrix";
 import { Text } from "@vector-im/compound-web";
 
@@ -43,10 +43,18 @@ export function DmLastSeenSubtitle({ room }: { room: Room }): JSX.Element | null
 }
 
 /** Shows the last-seen text in user info when there is one, otherwise `fallback` (Element's label). */
-export function LastSeenLabel({ userId, fallback }: { userId: string; fallback: ReactNode }): JSX.Element {
+export function LastSeenLabel({ userId }: { userId: string }): JSX.Element | null {
     const client = useContext(MatrixClientContext);
     const text = useLastSeen(client, userId);
-    // Element's own label already covers "online"; only replace it when the bridge says more.
-    if (!text || text === _t("bridge|last_seen_online")) return <>{fallback}</>;
-    return <div className="mx_PresenceLabel mx_UserInfo_profileStatus mx_LastSeen">{text}</div>;
+    // The one presence reading everywhere, "online" included: Element's own label read the same presence
+    // in other words, so a person was "Online" here and "online" or "5m" everywhere else.
+    if (!text) return null;
+    return (
+        <div
+            className="mx_PresenceLabel mx_UserInfo_profileStatus mx_LastSeen"
+            data-online={text === _t("bridge|last_seen_online")}
+        >
+            {text}
+        </div>
+    );
 }

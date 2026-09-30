@@ -13,7 +13,6 @@ import { Flex, LinkedText, StatusTextView } from "@element-hq/web-shared-compone
 import { useUserfoHeaderViewModel } from "../../../viewmodels/right_panel/user_info/UserInfoHeaderViewModel";
 import MemberAvatar from "../../avatars/MemberAvatar";
 import { Container, type Member, type IDevice } from "../UserInfo";
-import PresenceLabel from "../../rooms/PresenceLabel";
 import { LastSeenLabel } from "../../bridge/LastSeen";
 import CopyableText from "../../elements/CopyableText";
 import { UserInfoHeaderVerificationView } from "./UserInfoHeaderVerificationView";
@@ -44,20 +43,7 @@ export const UserInfoHeaderView: React.FC<UserInfoHeaderViewProps> = ({
     let presenceLabel: JSX.Element | undefined;
 
     if (vm.showPresence) {
-        presenceLabel = (
-            <LastSeenLabel
-                userId={member.userId}
-                fallback={
-                    <PresenceLabel
-                        activeAgo={vm.precenseInfo.lastActiveAgo}
-                        currentlyActive={vm.precenseInfo.currentlyActive}
-                        presenceState={vm.precenseInfo.state}
-                        className="mx_UserInfo_profileStatus"
-                        coloured
-                    />
-                }
-            />
-        );
+        presenceLabel = <LastSeenLabel userId={member.userId} />;
     }
 
     return (

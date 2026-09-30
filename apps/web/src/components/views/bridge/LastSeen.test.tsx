@@ -231,19 +231,20 @@ describe("Telegram-style last seen", () => {
             );
         });
 
-        it("user info shows last seen, but keeps Element's label without a last-active time", () => {
+        it("user info shows last seen, and nothing when there is nothing to say", () => {
             setPresence("offline", 5 * 60 * 1000);
             const renderLabel = (): JSX.Element => (
                 <MatrixClientContext.Provider value={client}>
-                    <LastSeenLabel userId={GHOST} fallback={<span>Offline</span>} />
+                    <LastSeenLabel userId={GHOST} />
                 </MatrixClientContext.Provider>
             );
-            const { rerender } = render(renderLabel());
+            const { container, rerender } = render(renderLabel());
             expect(screen.getByText("last seen 5 minutes ago")).toBeInTheDocument();
 
+            // No last-active time: no reading, and no other label in its place.
             setPresence("offline");
             rerender(renderLabel());
-            expect(screen.getByText("Offline")).toBeInTheDocument();
+            expect(container).toBeEmptyDOMElement();
         });
     });
 });

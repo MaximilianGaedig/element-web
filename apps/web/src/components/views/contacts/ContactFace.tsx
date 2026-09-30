@@ -29,6 +29,7 @@ export function ContactFace({
     name,
     id,
     avatarUrl,
+    thumbnailUrl,
     /** The chat whose network badges the face; the first of theirs, as the row's subject. */
     roomId,
     network,
@@ -41,6 +42,8 @@ export function ContactFace({
     name: string;
     id?: string;
     avatarUrl?: string;
+    /** A thumbnail already made from the avatar, where only that is at hand (the member list's model). */
+    thumbnailUrl?: string;
     roomId?: string;
     /** Their network, badging the face when there is no chat to read it from. */
     network?: string;
@@ -52,7 +55,7 @@ export function ContactFace({
     const badge = !selected && hasPresenceBadge(presence);
     // The "12m" tag is wider than the dot and has its own cut-out, as in the room list.
     const mask = presence?.online ? " mx_RoomAvatarView_RoomAvatar_presence" : " mx_RoomAvatarView_RoomAvatar_recent";
-    const url = avatarUrl ? mediaFromMxc(avatarUrl).getSquareThumbnailHttp(size * 2) : null;
+    const url = thumbnailUrl ?? (avatarUrl ? mediaFromMxc(avatarUrl).getSquareThumbnailHttp(size * 2) : null);
     /*
      * The room list's own composition, not an imitation of it.
      *
