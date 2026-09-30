@@ -78,6 +78,8 @@ export interface RoomListItemViewSnapshot {
      * replies to), shown in front of the preview text as Telegram's chat list does.
      */
     messagePreviewThumbnail?: string;
+    /** Fork: the thumbnail is of the message being replied to, so it gets a reply arrow in front. */
+    messagePreviewThumbnailIsReply?: boolean;
     /** The MSC4426 user status of the other user in a DM room, if any */
     userStatus?: UserStatus;
     /** Notification decoration data */

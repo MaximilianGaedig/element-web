@@ -8,6 +8,7 @@
 import React, { type JSX, memo, type ReactNode } from "react";
 import { Text, Tooltip } from "@vector-im/compound-web";
 import classNames from "classnames";
+import ReplyIcon from "@vector-im/compound-design-tokens/assets/web/icons/reply";
 
 import { Flex } from "../../../../core/utils/Flex";
 import { useViewModel } from "../../../../core/viewmodel";
@@ -69,6 +70,15 @@ export const RoomListItemContent = memo(function RoomListItemContent({
 
                     {item.messagePreview && (
                         <Text as="div" size="sm" className={styles.preview} title={item.messagePreview}>
+                            {item.messagePreviewThumbnail && item.messagePreviewThumbnailIsReply && (
+                                <ReplyIcon
+                                    className={styles.previewReplyIcon}
+                                    width="14px"
+                                    height="14px"
+                                    aria-hidden={true}
+                                    data-testid="preview-reply-icon"
+                                />
+                            )}
                             {item.messagePreviewThumbnail && (
                                 <img
                                     className={styles.previewThumbnail}

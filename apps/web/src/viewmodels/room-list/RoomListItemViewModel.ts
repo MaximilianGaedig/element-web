@@ -258,6 +258,7 @@ export class RoomListItemViewModel
             // Preserve message preview - it's managed separately by loadAndSetMessagePreview
             messagePreview: this.snapshot.current.messagePreview,
             messagePreviewThumbnail: this.snapshot.current.messagePreviewThumbnail,
+            messagePreviewThumbnailIsReply: this.snapshot.current.messagePreviewThumbnailIsReply,
         });
     }
 
@@ -271,19 +272,25 @@ export class RoomListItemViewModel
      * Returns undefined if previews are disabled or couldn't be loaded.
      */
     private async loadMessagePreview(): Promise<
-        Pick<RoomListItemViewSnapshot, "messagePreview" | "messagePreviewThumbnail">
+        Pick<RoomListItemViewSnapshot, "messagePreview" | "messagePreviewThumbnail" | "messagePreviewThumbnailIsReply">
     > {
         const shouldShowMessagePreview = SettingsStore.getValue("RoomList.showMessagePreview");
         if (!shouldShowMessagePreview) {
-            return { messagePreview: undefined, messagePreviewThumbnail: undefined };
+            return {
+                messagePreview: undefined,
+                messagePreviewThumbnail: undefined,
+                messagePreviewThumbnailIsReply: undefined,
+            };
         }
 
         const messagePreviewTag = this.getMessagePreviewTag();
         const preview = await MessagePreviewStore.instance.getPreviewForRoom(this.props.room, messagePreviewTag);
+        // Fork: the photo the preview is about, in front of its text (previewThumbnail.ts).
+        const thumbnail = previewThumbnail(preview?.event, this.props.room);
         return {
             messagePreview: preview?.text,
-            // Fork: the photo the preview is about, in front of its text (previewThumbnail.ts).
-            messagePreviewThumbnail: previewThumbnail(preview?.event, this.props.room),
+            messagePreviewThumbnail: thumbnail?.src,
+            messagePreviewThumbnailIsReply: thumbnail?.isReply,
         };
     }
 

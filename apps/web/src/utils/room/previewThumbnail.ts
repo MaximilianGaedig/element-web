@@ -36,9 +36,19 @@ function thumbnailOf(event: MatrixEvent): string | undefined {
     return media.getSquareThumbnailHttp(SIZE) ?? undefined;
 }
 
-export function previewThumbnail(event: MatrixEvent | undefined, room: Room): string | undefined {
+export interface PreviewThumbnail {
+    src: string;
+    /** The picture is the one the message replies to, not the message's own. */
+    isReply: boolean;
+}
+
+export function previewThumbnail(event: MatrixEvent | undefined, room: Room): PreviewThumbnail | undefined {
     if (!event) return undefined;
-    if (hasPicture(event)) return thumbnailOf(event);
+    if (hasPicture(event)) {
+        const src = thumbnailOf(event);
+        return src ? { src, isReply: false } : undefined;
+    }
     const repliedTo = event.replyEventId ? room.findEventById(event.replyEventId) : undefined;
-    return repliedTo && hasPicture(repliedTo) ? thumbnailOf(repliedTo) : undefined;
+    const src = repliedTo && hasPicture(repliedTo) ? thumbnailOf(repliedTo) : undefined;
+    return src ? { src, isReply: true } : undefined;
 }

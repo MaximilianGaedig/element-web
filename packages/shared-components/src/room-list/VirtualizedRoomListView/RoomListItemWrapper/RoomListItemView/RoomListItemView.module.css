@@ -135,6 +135,12 @@
     object-fit: cover;
 }
 
+/* In front of a replied-to photo's thumbnail: this message answers that photo, it isn't one. */
+.previewReplyIcon {
+    flex-shrink: 0;
+    color: var(--cpd-color-icon-secondary);
+}
+
 .ellipsis,
 .roomName {
     white-space: nowrap;

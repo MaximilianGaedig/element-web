@@ -24,8 +24,9 @@ const roomWith = (...events: MatrixEvent[]): Room =>
 const photo = message({ msgtype: "m.image", body: "photo.jpg", url: "mxc://e/photo" }, "$photo");
 
 describe("previewThumbnail", () => {
-    it("shows the last message's own photo", () => {
-        expect(previewThumbnail(photo, roomWith())).toContain("photo");
+    it("shows the last message's own photo, not as a reply", () => {
+        expect(previewThumbnail(photo, roomWith())?.src).toContain("photo");
+        expect(previewThumbnail(photo, roomWith())?.isReply).toBe(false);
     });
 
     it("shows a video's poster frame, and nothing for a video without one", () => {
@@ -36,18 +37,20 @@ describe("previewThumbnail", () => {
             info: { thumbnail_url: "mxc://e/poster" },
         });
         const without = message({ msgtype: "m.video", body: "v", url: "mxc://e/video" });
-        expect(previewThumbnail(withPoster, roomWith())).toContain("poster");
+        expect(previewThumbnail(withPoster, roomWith())?.src).toContain("poster");
         expect(previewThumbnail(without, roomWith())).toBeUndefined();
     });
 
     /* "nice!" under somebody's photo is about the photo. */
-    it("shows the photo a reply is to, when that photo is loaded", () => {
+    it("shows the photo a reply is to, marked as a reply, when that photo is loaded", () => {
         const reply = message({
             "msgtype": "m.text",
             "body": "nice!",
             "m.relates_to": { "m.in_reply_to": { event_id: "$photo" } },
         });
-        expect(previewThumbnail(reply, roomWith(photo))).toContain("photo");
+        expect(previewThumbnail(reply, roomWith(photo))?.src).toContain("photo");
+        // Marked, so the row shows it is a reply to that photo rather than a photo itself.
+        expect(previewThumbnail(reply, roomWith(photo))?.isReply).toBe(true);
         expect(previewThumbnail(reply, roomWith())).toBeUndefined();
     });
 

@@ -128,6 +128,20 @@ describe("<RoomListItemView />", () => {
         expect(container.querySelector('[aria-label="More Options"]')).not.toBeNull();
     });
 
+    it("marks a thumbnail of the replied-to photo with a reply arrow", () => {
+        const { container } = render(
+            <Default messagePreviewThumbnail="https://example.org/thumb.png" messagePreviewThumbnailIsReply={true} />,
+        );
+        expect(container.querySelector("img")).not.toBeNull();
+        expect(screen.getByTestId("preview-reply-icon")).toBeInTheDocument();
+    });
+
+    it("shows a message's own photo without a reply arrow", () => {
+        const { container } = render(<Default messagePreviewThumbnail="https://example.org/thumb.png" />);
+        expect(container.querySelector("img")).not.toBeNull();
+        expect(screen.queryByTestId("preview-reply-icon")).toBeNull();
+    });
+
     it("should hide hover menu when showMoreOptionsMenu is false", () => {
         const { container } = render(<WithoutHoverMenu />);
         expect(container.querySelector('[aria-label="More Options"]')).toBeNull();
