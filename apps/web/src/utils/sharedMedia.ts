@@ -424,8 +424,9 @@ export class SharedMediaLoader {
      * Paging is left exactly where it was: `from` continues to walk back from the newest item, so a
      * seek adds to the list without deciding where "the end" is.
      */
-    public async seekTo(tab: SharedMediaTab, ts: number): Promise<void> {
-        if (this.loadingTabs.has(tab) || !(await this.hasServerIndex())) return;
+    /** Returns whether it asked the server, so a caller can try again when it was busy. */
+    public async seekTo(tab: SharedMediaTab, ts: number): Promise<boolean> {
+        if (this.loadingTabs.has(tab) || !(await this.hasServerIndex())) return false;
         this.loadingTabs.add(tab);
         this.emit();
         try {
@@ -437,6 +438,7 @@ export class SharedMediaLoader {
             this.loadingTabs.delete(tab);
             if (!this.destroyed) this.emit();
         }
+        return true;
     }
 
     /**

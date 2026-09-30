@@ -10,6 +10,8 @@ import { MatrixEvent } from "matrix-js-sdk/src/matrix";
 
 import {
     anchorAt,
+    placeholderTarget,
+    sparseRows,
     anchoredTop,
     mediaRows,
     monthAt,
@@ -295,5 +297,52 @@ describe("holding the view still while rows arrive above it", () => {
         const anchor = anchorAt(mediaRows(one, 3, METRICS).rows, one, 1)!;
         const other = [at(2026, 4, 1)];
         expect(anchoredTop(mediaRows(other, 3, METRICS).rows, other, anchor)).toBeUndefined();
+    });
+});
+
+describe("the whole history laid out before it loads (sparse)", () => {
+    const utc = (y: number, m: number, d: number): MatrixEvent =>
+        new MatrixEvent({
+            type: "m.room.message",
+            event_id: `$s${++n}`,
+            room_id: "!r:x",
+            sender: "@a:x",
+            origin_server_ts: Date.UTC(y, m - 1, d, 12),
+            content: { msgtype: "m.image", body: "a", url: "mxc://x/a" },
+        });
+    const months = [
+        { month: "2026-09", count: 4, before_ts: Date.UTC(2026, 8, 28) },
+        { month: "2025-03", count: 3, before_ts: Date.UTC(2025, 2, 20) },
+    ];
+
+    // The headings and cells are all there before anything loads, so nothing moves when it does.
+    it("lays out every month the server counts, placeholders and all", () => {
+        const { rows, height } = sparseRows([], months, 3, METRICS);
+        expect(rows.map((r) => r.kind)).toEqual(["header", "pending", "pending", "header", "pending"]);
+        expect(rows.filter((r) => r.kind === "pending").map((r) => (r as { count: number }).count)).toEqual([3, 1, 3]);
+
+        const sept = [utc(2026, 9, 28), utc(2026, 9, 20)];
+        const after = sparseRows(sept, months, 3, METRICS);
+        // Same height, same rows: what loaded took the place of its placeholders.
+        expect(after.height).toBe(height);
+        expect(after.rows.map((r) => r.top)).toEqual(rows.map((r) => r.top));
+        expect(after.rows[1]).toMatchObject({ kind: "cells", indices: [0, 1], placeholders: 1 });
+    });
+
+    it("loads the month on screen: its newest, or just before the oldest of it held", () => {
+        const { rows } = sparseRows([], months, 3, METRICS);
+        const march = rows.findIndex((r) => r.section?.key === "2025-03");
+        expect(placeholderTarget(rows, [], months, [march, march + 2])).toBe(months[1].before_ts);
+
+        const sept = [utc(2026, 9, 28), utc(2026, 9, 20)];
+        const part = sparseRows(sept, months, 3, METRICS);
+        expect(placeholderTarget(part.rows, sept, months, [0, 3])).toBe(Date.UTC(2026, 8, 20, 12) - 1);
+    });
+
+    it("keeps an item from a month the counts do not have yet", () => {
+        const newer = [utc(2026, 10, 2)];
+        const { rows } = sparseRows(newer, months, 3, METRICS);
+        expect(rows[0]).toMatchObject({ kind: "header", section: { key: "2026-10" } });
+        expect(rows[1]).toMatchObject({ kind: "cells", indices: [0] });
     });
 });

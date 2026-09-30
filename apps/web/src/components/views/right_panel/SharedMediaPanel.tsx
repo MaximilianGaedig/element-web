@@ -33,6 +33,8 @@ import { scrollParentOf } from "../../../utils/scrollParent";
 import { listOffsets, listWindow } from "../../../utils/listWindow";
 import {
     mediaRows,
+    placeholderTarget,
+    sparseRows,
     type MediaRow,
     type MediaSection,
     monthAt,
@@ -846,6 +848,8 @@ function monthLabel(time: number): string {
 function useGridLayout(
     items: MatrixEvent[],
     total?: number,
+    /** The server's count per month: with it the whole history is laid out as it will look. */
+    months: MonthSpan[] = [],
 ): {
     ref: React.RefObject<HTMLDivElement | null>;
     rows: MediaRow[];
@@ -922,10 +926,12 @@ function useGridLayout(
      * the reader as pages arrive, the scrollbar misreports how much there is, and the scrubber can
      * only reach what has already been fetched - the opposite of what it is for.
      */
-    const { rows, height } = useMemo(
-        () => mediaRows(items, GRID_COLUMNS, { header: MONTH_HEADER, cell, gap: GRID_GAP }, total),
-        [items, cell, total],
-    );
+    const { rows, height } = useMemo(() => {
+        const metrics = { header: MONTH_HEADER, cell, gap: GRID_GAP };
+        return months.length
+            ? sparseRows(items, months, GRID_COLUMNS, metrics)
+            : mediaRows(items, GRID_COLUMNS, metrics, total);
+    }, [items, cell, total, months]);
     /*
      * Held still while rows arrive above what is being looked at.
      *
@@ -1030,6 +1036,13 @@ function DateScrubber({
     // Everything the box can scroll, which includes the tabs and header above the column.
     const span = scroll.content - scroll.viewport;
     const track = scrubberTrackHeight(scroll);
+    /*
+     * With the server's counts the column is the whole history (sparseRows), so a position on the bar
+     * is a real position: the month under it is read off the rows, and letting go needs no fetch and
+     * no scroll of its own - the placeholders there load themselves. Without them the bar stands for
+     * history the column does not hold, and letting go fetches the month and scrolls to it.
+     */
+    const sparse = months.length > 0;
 
     // Shown while scrolling, and for two seconds after, as Telegram's activity timer does.
     const first = useRef(true);
@@ -1069,7 +1082,7 @@ function DateScrubber({
         const up = (): void => {
             window.clearTimeout(drag.current?.timer);
             // On release, not during the drag: a fetch per pointermove would be a request every frame.
-            if (drag.current?.moved) {
+            if (drag.current?.moved && !sparse) {
                 const picked = monthAt(months, held);
                 if (picked) onPickMonth(picked);
             }
@@ -1085,12 +1098,12 @@ function DateScrubber({
             window.removeEventListener("pointerup", up);
             window.removeEventListener("pointercancel", up);
         };
-    }, [held, months, onPickMonth, seek, span, track]);
+    }, [held, months, onPickMonth, seek, span, track, sparse]);
 
     if (!scrubberWorthIt(scroll.viewport, scroll.content, months)) return null;
     // The month at the bar: from the server's counts where we have them, so the label is right for
     // history that is not loaded, and from the column itself otherwise.
-    const overall = monthAt(months, at);
+    const overall = sparse ? undefined : monthAt(months, at);
     const under = overall ?? sectionAt(rows, Math.max(0, at * span - scroll.offset))?.section;
     const lineTop = scrubberLineTop(at, track);
     const dragging = held !== null;
@@ -1152,9 +1165,9 @@ function MediaGrid({
     /** What the whole history holds per month, for the scrubber. Empty without a server index. */
     months: MonthSpan[];
     /** Fetches a month and returns once it is in, so the column can then be scrolled to it. */
-    onSeekDate: (ts: number) => Promise<void>;
+    onSeekDate: (ts: number) => Promise<boolean>;
 }): JSX.Element {
-    const { ref, rows, height, window: shown, month, scroll, seek, setScrubbed } = useGridLayout(items, total);
+    const { ref, rows, height, window: shown, month, scroll, seek, setScrubbed } = useGridLayout(items, total, months);
 
     // The scrollbar goes only while the thing replacing it is usable, by the scrubber's own rule.
     const usable = scrubberWorthIt(scroll.viewport, scroll.content, months);
@@ -1189,8 +1202,30 @@ function MediaGrid({
      * near the end of the rows - so reaching the last row is what asks for the next page, rather
      * than something at the very bottom that a reader would have to scroll past the gap to meet.
      */
+    /*
+     * With the server's counts every month is already laid out, placeholders and all, so what is on
+     * screen is what gets loaded: the month those placeholders belong to, wherever the reader has
+     * scrolled or scrubbed to. One request at a time, and never the same one twice in a row.
+     */
+    const sparse = months.length > 0;
+    // What is on screen first; then a screen either side, so it is there before the reader is.
+    const around = visibleRows(rows, Math.max(0, scroll.top - scroll.offset - scroll.viewport), scroll.viewport * 3);
+    const target = sparse
+        ? (placeholderTarget(rows, items, months, shown) ?? placeholderTarget(rows, items, months, around))
+        : undefined;
+    const asked = useRef<number | undefined>(undefined);
+    useEffect(() => {
+        if (target === undefined || asked.current === target) return;
+        asked.current = target;
+        // Turned away while another load ran: forgotten, so the next arrival (a change of items) asks again.
+        void onSeekDate(target).then((ran) => {
+            if (!ran && asked.current === target) asked.current = undefined;
+        });
+    }, [target, onSeekDate, items]);
+
     const lastReal = rows.reduce((last, row, i) => (row.kind === "pending" ? last : i), -1);
-    const atEnd = lastReal >= 0 && shown[1] > lastReal;
+    // Paging from the top is for a layout without the counts; the sparse one loads what is on screen.
+    const atEnd = !sparse && lastReal >= 0 && shown[1] > lastReal;
     // Through a ref, and keyed on how much there is rather than on the callback: an identity that
     // changes each render would ask for the next page on every render, for ever.
     const nearEnd = useRef(onNearEnd);
@@ -1285,6 +1320,9 @@ function MediaGrid({
                                     drag={drag}
                                     onRange={range}
                                 />
+                            ))}
+                            {Array.from({ length: row.placeholders ?? 0 }, (_, i) => (
+                                <span key={`p${i}`} className="mx_SharedMedia_pending" aria-hidden />
                             ))}
                         </div>
                     ),

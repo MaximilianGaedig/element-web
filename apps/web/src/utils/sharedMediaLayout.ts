@@ -30,7 +30,15 @@ export interface MediaSection {
 
 export type MediaRow =
     | { kind: "header"; section: MediaSection; top: number; height: number }
-    | { kind: "cells"; indices: number[]; section: MediaSection; top: number; height: number }
+    | {
+          kind: "cells";
+          indices: number[];
+          section: MediaSection;
+          top: number;
+          height: number;
+          /** Cells after the loaded ones still to come, in a row that is part loaded (sparseRows). */
+          placeholders?: number;
+      }
     /** Room held for what has not been fetched yet, drawn as placeholders. */
     | { kind: "pending"; count: number; section?: MediaSection; top: number; height: number };
 
@@ -310,6 +318,101 @@ export function anchoredTop(
     for (const row of rows) {
         if (row.kind !== "cells") continue;
         if (row.indices.some((index) => items[index]?.getId() === anchor.eventId)) return row.top - anchor.delta;
+    }
+    return undefined;
+}
+
+/** A month as the server counts it, `YYYY-MM` in UTC, and the key the items are grouped under for it. */
+function utcMonthKey(ts: number): string {
+    const d = new Date(ts);
+    return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
+}
+
+/** A time inside a `YYYY-MM` UTC month that names that month in any timezone: its middle. */
+function utcMonthMiddle(key: string): number {
+    const [year, month] = key.split("-").map(Number);
+    return Date.UTC(year, month - 1, 15);
+}
+
+/**
+ * The whole history laid out as it will look, before most of it has loaded - Telegram's sparse grid.
+ *
+ * The server says how many items each month holds, so every month gets its heading and as many cells
+ * as it will have: the loaded ones first (a month loads from its newest down) and placeholders for the
+ * rest. Nothing moves when a month arrives, because its cells were already there. Laid out as one
+ * block of placeholders instead, the headings appeared as the items did and pushed everything below
+ * them down - the list jumped just as a scroll came to rest - and the placeholders stood for no month
+ * in particular, so there was no telling which month to load for them.
+ *
+ * Months are the server's UTC months, so the counts and the cells agree; an item in a month the
+ * counts do not have yet (sent since they were read) gets its month all the same.
+ */
+export function sparseRows(
+    items: readonly MatrixEvent[],
+    months: readonly MonthSpan[],
+    columns: number,
+    metrics: RowMetrics,
+): { rows: MediaRow[]; height: number } {
+    const loaded = new Map<string, number[]>();
+    items.forEach((item, i) => {
+        const key = utcMonthKey(item.getTs());
+        const list = loaded.get(key);
+        if (list) list.push(i);
+        else loaded.set(key, [i]);
+    });
+    const counts = new Map<string, number>(months.map((m) => [m.month, m.count]));
+    const keys = [...new Set([...counts.keys(), ...loaded.keys()])].sort().reverse();
+
+    const rows: MediaRow[] = [];
+    let top = 0;
+    for (const key of keys) {
+        const indices = loaded.get(key) ?? [];
+        const count = Math.max(counts.get(key) ?? 0, indices.length);
+        if (!count) continue;
+        const section: MediaSection = { key, time: utcMonthMiddle(key) };
+        rows.push({ kind: "header", section, top, height: metrics.header });
+        top += metrics.header;
+        for (let start = 0; start < count; start += columns) {
+            const here = indices.slice(start, start + columns);
+            const cells = Math.min(columns, count - start);
+            if (here.length) {
+                const placeholders = cells - here.length;
+                rows.push({
+                    kind: "cells",
+                    indices: here,
+                    section,
+                    top,
+                    height: metrics.cell,
+                    ...(placeholders ? { placeholders } : {}),
+                });
+            } else {
+                rows.push({ kind: "pending", count: cells, section, top, height: metrics.cell });
+            }
+            top += metrics.cell + metrics.gap;
+        }
+    }
+    return { rows, height: Math.max(0, top - (rows.length ? metrics.gap : 0)) };
+}
+
+/**
+ * Where to load from for the placeholders on screen: the first month in view with cells still to come,
+ * and the time to ask the server for - that month's newest if none of it has loaded, or just before the
+ * oldest of it held so far.
+ */
+export function placeholderTarget(
+    rows: readonly MediaRow[],
+    items: readonly MatrixEvent[],
+    months: readonly MonthSpan[],
+    window: readonly [number, number],
+): number | undefined {
+    for (let i = window[0]; i < window[1]; i++) {
+        const row = rows[i];
+        if (!row || (row.kind !== "pending" && !(row.kind === "cells" && row.placeholders))) continue;
+        const key = row.section?.key;
+        if (!key) continue;
+        const held = items.filter((item) => utcMonthKey(item.getTs()) === key);
+        if (held.length) return Math.min(...held.map((item) => item.getTs())) - 1;
+        return months.find((m) => m.month === key)?.before_ts;
     }
     return undefined;
 }
