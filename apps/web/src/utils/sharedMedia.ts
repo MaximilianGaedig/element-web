@@ -21,6 +21,7 @@ import { logger } from "matrix-js-sdk/src/logger";
 
 import { isAnimatedSticker } from "./bridge/animatedMedia";
 import { parsePermalink } from "./permalinks/Permalinks";
+import SdkConfig from "../SdkConfig";
 import { stripPlainReply } from "./Reply";
 import { getPerMessageProfile } from "./bridge/perMessageProfile";
 import { getRoomHistoryState, mediaPage, setRoomHistoryState } from "./history/db";
@@ -70,8 +71,30 @@ export function isVoice(content: Record<string, any>): boolean {
  * isn't part of the text); a link to a message is still a link somebody shared.
  */
 function isPillLink(url: string): boolean {
-    const parts = parsePermalink(url);
-    return !!parts && !parts.eventId && !!(parts.userId || parts.roomIdOrAlias);
+    let parsed: URL;
+    try {
+        parsed = new URL(url);
+    } catch {
+        return false;
+    }
+    if (parsed.hostname !== "matrix.to") {
+        // The app's own permalinks (config permalink_prefix) come out of its own link builder, so they parse.
+        const prefix = SdkConfig.get("permalink_prefix");
+        if (!prefix || !url.startsWith(prefix)) return false;
+        const parts = parsePermalink(url);
+        return !!parts && !parts.eventId && !!(parts.userId || parts.roomIdOrAlias);
+    }
+    // matrix.to/#/<entity>[/<event>]: read the entity's sigil here, since parsePermalink logs an error for
+    // every kind of link it doesn't know (groups, bare "#/", other clients' extensions).
+    let path: string;
+    try {
+        path = decodeURIComponent(parsed.hash.replace(/^#\/?/, "").split("?")[0]);
+    } catch {
+        return false;
+    }
+    const [entity = "", event = ""] = path.split("/");
+    if (entity.startsWith("@")) return true;
+    return (entity.startsWith("!") || entity.startsWith("#")) && !event.startsWith("$");
 }
 
 /** The URLs in a text message, as tweb's inputMessagesFilterUrl matches them (links in the text). */

@@ -77,6 +77,14 @@ describe("sharedMediaTab", () => {
         expect(extractLinks(msg({ msgtype: "m.text", body: "see https://matrix.to/#/!r:x/$ev" }))).toHaveLength(1);
     });
 
+    it("reads links of kinds it doesn't know without logging errors", () => {
+        const error = vi.spyOn(console, "error");
+        // matrix.to links that aren't a person, a room or a message, e.g. old community links.
+        expect(extractLinks(msg({ msgtype: "m.text", body: "https://matrix.to/#/+community:x" }))).toHaveLength(1);
+        expect(extractLinks(msg({ msgtype: "m.text", body: "https://matrix.to/#/" }))).toHaveLength(1);
+        expect(error).not.toHaveBeenCalled();
+    });
+
     it("leaves out the links of the message a reply quotes", () => {
         const reply = msg({
             "msgtype": "m.text",
