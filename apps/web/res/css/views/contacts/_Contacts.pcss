@@ -1313,8 +1313,12 @@ Please see LICENSE files in the repository root for full details.
     color: var(--cpd-color-text-primary);
     font: var(--cpd-font-body-md-regular);
 
-    &:focus-visible {
-        box-shadow: inset 0 0 0 2px var(--cpd-color-border-focused);
+    /*
+     * No ring: a text field shows :focus-visible on a plain click too, so every field tapped got a blue box.
+     * The caret says where typing goes; a faint tint says which row it is in.
+     */
+    &:focus {
+        background: var(--cpd-color-bg-subtle-primary);
     }
 }
 
@@ -1351,7 +1355,8 @@ Please see LICENSE files in the repository root for full details.
     width: 7.5rem;
     max-width: 40%;
     padding-inline-start: var(--cpd-space-2x);
-    color: var(--cpd-color-text-action-accent);
+    /* Element's colour for a label, not iOS's tint: the layout is iOS's, the look stays Element's. */
+    color: var(--cpd-color-text-secondary);
     font: var(--cpd-font-body-sm-regular);
     cursor: pointer;
 
