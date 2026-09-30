@@ -120,6 +120,16 @@ Please see LICENSE files in the repository root for full details.
             align-items: center;
         }
 
+        /* The bio: their own words, so kept as written (line breaks and all) and centred like the name. */
+        .mx_UserInfo_bio {
+            margin: var(--cpd-space-1x) 0;
+            max-inline-size: 100%;
+            color: var(--cpd-color-text-primary);
+            text-align: center;
+            white-space: pre-wrap;
+            overflow-wrap: anywhere;
+        }
+
         /** Overrides for the copy to clipboard button **/
         .mx_CopyableText {
             align-items: center;

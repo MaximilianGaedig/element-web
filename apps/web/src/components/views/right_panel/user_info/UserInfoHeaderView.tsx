@@ -8,7 +8,7 @@ Please see LICENSE files in the repository root for full details.
 import React, { type JSX } from "react";
 import { type User, type RoomMember } from "matrix-js-sdk/src/matrix";
 import { Heading, Tooltip, Text } from "@vector-im/compound-web";
-import { Flex, StatusTextView } from "@element-hq/web-shared-components";
+import { Flex, LinkedText, StatusTextView } from "@element-hq/web-shared-components";
 
 import { useUserfoHeaderViewModel } from "../../../viewmodels/right_panel/user_info/UserInfoHeaderViewModel";
 import MemberAvatar from "../../avatars/MemberAvatar";
@@ -18,6 +18,8 @@ import { LastSeenLabel } from "../../bridge/LastSeen";
 import CopyableText from "../../elements/CopyableText";
 import { UserInfoHeaderVerificationView } from "./UserInfoHeaderVerificationView";
 import { useUserStatus } from "../../../../hooks/useUserStatus";
+import { useBiography } from "../../../../utils/profile/biography";
+import { useMatrixClientContext } from "../../../../contexts/MatrixClientContext";
 
 export interface UserInfoHeaderViewProps {
     member: Member;
@@ -36,6 +38,8 @@ export const UserInfoHeaderView: React.FC<UserInfoHeaderViewProps> = ({
     const avatarUrl = (member as User).avatarUrl;
     const displayName = (member as RoomMember).rawDisplayName;
     const userStatus = useUserStatus(member.userId);
+    // Their bio, which the bridges carry over from the network (Telegram's bio, WhatsApp's About).
+    const bio = useBiography(useMatrixClientContext(), [member.userId]);
 
     let presenceLabel: JSX.Element | undefined;
 
@@ -91,6 +95,11 @@ export const UserInfoHeaderView: React.FC<UserInfoHeaderViewProps> = ({
                                 </Text>
                             </Flex>
                         </Tooltip>
+                    )}
+                    {bio && (
+                        <LinkedText size="sm" weight="regular" className="mx_UserInfo_bio" dir="auto">
+                            {bio}
+                        </LinkedText>
                     )}
                     <Text size="sm" weight="semibold" className="mx_UserInfo_profile_mxid">
                         <CopyableText getTextToCopy={() => vm.userIdentifier} border={false}>

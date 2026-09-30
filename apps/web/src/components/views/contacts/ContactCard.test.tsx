@@ -11,8 +11,10 @@ import React from "react";
 import { render, screen } from "test-utils-rtl";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
+import { type MatrixClient } from "matrix-js-sdk/src/matrix";
 
 import { ContactCard } from "./ContactCard";
+import { MatrixClientPeg } from "../../../MatrixClientPeg";
 import { type Person } from "../../../utils/contacts/people";
 
 const person = (over: Partial<Person> = {}): Person => ({
@@ -49,6 +51,18 @@ describe("ContactCard", () => {
         // The username: no use for matching, still a fact about the person.
         expect(screen.getByText("@adaklein")).toBeInTheDocument();
         expect(screen.getByText("Username")).toBeInTheDocument();
+    });
+
+    // The bridges carry a network's bio into the profile (MSC4440); the card shows it under the name.
+    it("shows their bio from whichever account has one", async () => {
+        vi.spyOn(MatrixClientPeg, "get").mockReturnValue({
+            getExtendedProfile: async (mxid: string) =>
+                mxid === person().accounts[1]?.mxid
+                    ? { "gay.fomx.biography": { "m.text": [{ body: "Builds boats" }] } }
+                    : {},
+        } as unknown as MatrixClient);
+        render(<ContactCard person={person()} onBack={() => {}} onMessage={() => {}} />);
+        expect(await screen.findByText("Builds boats")).toBeInTheDocument();
     });
 
     // The label was the raw key "action|message", which no catalogue has.

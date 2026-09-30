@@ -150,6 +150,23 @@ describe("<UserInfoHeaderView />", () => {
         expect(screen.getByText("paris")).toBeInTheDocument();
     });
 
+    // A network's bio, which the bridge put in the profile's MSC4440 field.
+    it("should render the bio from the profile", async () => {
+        vi.mocked(useUserfoHeaderViewModel).mockReturnValue({
+            onMemberAvatarClick: vi.fn(),
+            precenseInfo: { lastActiveAgo: undefined, currentlyActive: undefined, state: undefined },
+            showPresence: false,
+            timezoneInfo: null,
+            userIdentifier: null,
+        });
+        (mockClient as unknown as { getExtendedProfile: unknown }).getExtendedProfile = vi
+            .fn()
+            .mockResolvedValue({ "gay.fomx.biography": { "m.text": [{ body: "Bio from Telegram" }] } });
+
+        renderComponent({ hideVerificationSection: false });
+        expect(await screen.findByText("Bio from Telegram")).toBeInTheDocument();
+    });
+
     it("should render correct presence label", () => {
         vi.mocked(useUserfoHeaderViewModel).mockReturnValue({
             onMemberAvatarClick: vi.fn(),

@@ -1079,6 +1079,16 @@ Please see LICENSE files in the repository root for full details.
  */
 
 /* In the card the same dot sits beside the words, where there is room for both. */
+/* Their bio under the name, as a profile shows it: their own words, line breaks kept. */
+.mx_ContactCard_bio {
+    margin: 0;
+    max-inline-size: 100%;
+    color: var(--cpd-color-text-primary);
+    text-align: center;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
 .mx_ContactCard_presence {
     display: flex;
     align-items: center;

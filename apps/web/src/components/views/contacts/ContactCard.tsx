@@ -49,6 +49,9 @@ import { formatPresence } from "../../../utils/presence/lastSeen";
 import { type Verification } from "../../../utils/contacts/verification";
 import { ActivityDot } from "../avatars/ActivityDot";
 import { useSettingValue } from "../../../hooks/useSettings";
+import { useBiography } from "../../../utils/profile/biography";
+import { MatrixClientPeg } from "../../../MatrixClientPeg";
+import { LinkedText } from "@element-hq/web-shared-components";
 import { type SharedRoom } from "../../../utils/contacts/shared";
 import { type Call } from "../../../utils/contacts/calls";
 import BaseAvatar from "../avatars/BaseAvatar";
@@ -188,6 +191,11 @@ export function ContactCard({
     const reachable = onCall ? person.accounts.filter((account) => !!account.roomId) : [];
     const email = person.details.find((detail) => detail.kind === "email")?.value;
     // The same words the chat header says ("last seen 5 minutes ago"), plus where when they are about now.
+    // Their bio, from whichever of their accounts has one: the bridges carry it over from the network.
+    const bio = useBiography(
+        MatrixClientPeg.get() ?? undefined,
+        person.accounts.map((account) => account.mxid),
+    );
     const showTwelveHour = useSettingValue("showTwelveHourTimestamps");
     const presenceText = presence?.info.online
         ? _t("contacts|about_on", { network: presence.network })
@@ -370,6 +378,11 @@ export function ContactCard({
                                 <ActivityDot info={presence?.info} />
                                 {presenceText}
                             </span>
+                        )}
+                        {bio && (
+                            <LinkedText className="mx_ContactCard_bio" size="sm" dir="auto">
+                                {bio}
+                            </LinkedText>
                         )}
                     </div>
 
