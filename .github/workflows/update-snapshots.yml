@@ -1,0 +1,52 @@
+# Regenerates the shared components' snapshots on the machine CI tests on, and uploads the changed files.
+#
+# Pixel baselines and the DOM snapshots of virtualised lists depend on the browser build and its font and
+# scrollbar metrics, so they come out differently on an arm64 workstation than on CI's x86_64 Ubuntu. They
+# have to be generated here and committed from the artifact, after reviewing what changed.
+name: Update snapshots
+on:
+    workflow_dispatch: {}
+permissions: {}
+jobs:
+    update:
+        runs-on: ubuntu-24.04
+        permissions:
+            contents: read
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+              with:
+                  persist-credentials: false
+
+            - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+            - name: pnpm cache
+              uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+              with:
+                  node-version: "lts/*"
+                  cache: "pnpm"
+
+            - name: Install Deps (layered)
+              run: "./scripts/layered.sh"
+
+            - name: Setup playwright
+              uses: ./.github/actions/setup-playwright
+              with:
+                  write-cache: false
+
+            - name: Update the shared components' snapshots
+              run: |
+                  pnpm nx run-many -t test:unit:prepare -p
+                  pnpm vitest run --project "@element-hq/web-shared-components*" -u || true
+
+            - name: Collect what changed
+              run: |
+                  git status --porcelain -- packages/shared-components | tee changed.txt
+                  git status --porcelain -z -- packages/shared-components | tr '\0' '\n' | sed -E 's/^.. //' | grep -v '^$' > files.txt || true
+                  tar -czf snapshots.tgz -T files.txt changed.txt
+
+            - name: Upload
+              uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+              with:
+                  name: updated-snapshots
+                  path: snapshots.tgz
+                  retention-days: 3
