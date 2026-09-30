@@ -135,25 +135,42 @@ async function contactsFromChats(client: MatrixClient): Promise<Account[]> {
      * the list cannot be shown until the last of them anyway. Cached per ghost, so the rebuild that
      * follows every decision the reader makes costs nothing.
      */
-    const identifiers = await Promise.all(found.map(({ otherId }) => profileIdentifiers(client, otherId)));
+    const facts = await Promise.all(found.map(({ otherId }) => profileFacts(client, otherId)));
     return found.map(({ room, otherId }, at) => {
         const info = getBridgeInfo(room);
         const member = room.getMember(otherId);
+        const published = facts[at];
         return {
-            network: info ? info.networkName : "Matrix",
+            // The profile's own answer first: a network that publishes no identifiers - Discord - still says
+            // which network it is and which account, so its rows read as an account rather than a bare mxid.
+            network: published.network ?? (info ? info.networkName : "Matrix"),
             mxid: otherId,
-            remoteId: otherId,
+            remoteId: published.remoteId ?? otherId,
             name: member?.rawDisplayName ?? undefined,
             avatarUrl: member?.getMxcAvatarUrl() ?? undefined,
             roomId: room.roomId,
-            keys: identityKeys(identifiers[at]),
-            details: identityDetails(identifiers[at]),
+            keys: identityKeys(published.identifiers),
+            details: identityDetails(published.identifiers),
         };
     });
 }
 
-/** Where mautrix writes what a network knows somebody by, as an MSC4133 extended profile field. */
+/** Where mautrix writes what a network knows about a ghost, as MSC4133 extended profile fields. */
 const IDENTIFIERS_KEY = "com.beeper.bridge.identifiers";
+const NETWORK_KEY = "com.beeper.bridge.network";
+const REMOTE_ID_KEY = "com.beeper.bridge.remote_id";
+
+/** What a ghost's profile says about it, beyond the display name and avatar every member event carries. */
+interface ProfileFacts {
+    identifiers: string[];
+    network?: string;
+    remoteId?: string;
+}
+
+const strings = (raw: unknown): string[] =>
+    Array.isArray(raw) ? raw.filter((one): one is string => typeof one === "string") : [];
+
+const text = (raw: unknown): string | undefined => (typeof raw === "string" && raw.length > 0 ? raw : undefined);
 
 /**
  * Identifiers a ghost publishes, read from its profile.
@@ -166,20 +183,23 @@ const IDENTIFIERS_KEY = "com.beeper.bridge.identifiers";
  * A request per person, so the answers are kept: a contact list is rebuilt whenever the reader decides
  * something, and re-asking the server for facts that do not change would be a request per ghost per time.
  */
-const profileCache = new Map<string, Promise<string[]>>();
+const profileCache = new Map<string, Promise<ProfileFacts>>();
 
-async function profileIdentifiers(client: MatrixClient, userId: string): Promise<string[]> {
+const NOTHING_PUBLISHED: ProfileFacts = { identifiers: [] };
+
+async function profileFacts(client: MatrixClient, userId: string): Promise<ProfileFacts> {
     const held = profileCache.get(userId);
     if (held) return held;
     const asked = client
         .getExtendedProfile(userId)
-        .then((profile) => {
-            const raw = profile[IDENTIFIERS_KEY];
-            return Array.isArray(raw) ? raw.filter((one): one is string => typeof one === "string") : [];
-        })
+        .then((profile) => ({
+            identifiers: strings(profile[IDENTIFIERS_KEY]),
+            network: text(profile[NETWORK_KEY]),
+            remoteId: text(profile[REMOTE_ID_KEY]),
+        }))
         // A ghost whose profile cannot be read is a person without published identifiers, not an error:
         // the list is built from several sources and one of them being quiet is ordinary.
-        .catch(() => []);
+        .catch(() => NOTHING_PUBLISHED);
     profileCache.set(userId, asked);
     return asked;
 }

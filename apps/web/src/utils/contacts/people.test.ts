@@ -245,4 +245,37 @@ describe("identifiers a ghost publishes", () => {
             { kind: "handle", value: "telegram:ada" },
         ]);
     });
+
+    /*
+     * Discord publishes no identifiers at all, so a row built only from identifiers would say nothing
+     * about it. The same profile does say which network and which account, and those are read from the
+     * profile too rather than guessed from the mxid or from the room's bridge state event.
+     */
+    it("takes the network and the account id from the profile", async () => {
+        const room = {
+            roomId: "!dm:e",
+            getMember: () => ({ rawDisplayName: "Ada", getMxcAvatarUrl: () => null }),
+            currentState: { getStateEvents: () => [] },
+        };
+        const client = {
+            getSafeUserId: () => "@me:e",
+            getVisibleRooms: () => [room],
+            getRooms: () => [],
+            getExtendedProfile: vi.fn().mockResolvedValue({
+                "com.beeper.bridge.network": "discord",
+                "com.beeper.bridge.remote_id": "212938191",
+            }),
+            getAccountData: () => undefined,
+        } as unknown as MatrixClient;
+        vi.spyOn(DMRoomMap, "shared").mockReturnValue({
+            getUserIdForRoomId: () => "@dc_212938191:e",
+            getRoomIds: () => new Set(["!dm:e"]),
+        } as unknown as DMRoomMap);
+
+        const people = await allPeople(client);
+        expect(people[0].accounts[0].network).toBe("discord");
+        expect(people[0].accounts[0].remoteId).toBe("212938191");
+        // Nothing to match on, so the row carries no keys rather than a made-up one.
+        expect(people[0].keys).toEqual([]);
+    });
 });
