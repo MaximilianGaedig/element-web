@@ -25,7 +25,8 @@ Please see LICENSE files in the repository root for full details.
 
 import { type MatrixClient, type MatrixEvent, type Room, EventType } from "matrix-js-sdk/src/matrix";
 
-import { getBridgeInfo } from "../bridge/bridgeInfo";
+import { getBridgeBots, getBridgeInfo } from "../bridge/bridgeInfo";
+import { isOneToOneRoom } from "../telegram/telegramLayout";
 import { getActionMessage } from "../bridge/actionMessage";
 
 /** How the call ended, as far as the timeline can say. */
@@ -77,6 +78,22 @@ function startsCall(event: MatrixEvent): boolean {
     );
 }
 
+/** How close a call event has to be to a bridge's line about a call for the two to be one call. */
+const SAME_CALL_MS = 2 * 60 * 1000;
+
+/** Whether a real call event (not a bridge's line) starts within SAME_CALL_MS of the event at `at`. */
+function hasCallEventNear(events: readonly MatrixEvent[], at: number): boolean {
+    const ts = events[at].getTs();
+    for (const step of [-1, 1]) {
+        for (let i = at + step; i >= 0 && i < events.length; i += step) {
+            const other = events[i];
+            if (Math.abs(other.getTs() - ts) > SAME_CALL_MS) break;
+            if (startsCall(other) && !getActionMessage(other)) return true;
+        }
+    }
+    return false;
+}
+
 /** What a hangup says about how the call went. */
 function outcomeOf(hangup: MatrixEvent | undefined, answered: boolean): CallOutcome {
     if (answered) return "answered";
@@ -96,15 +113,24 @@ function callsIn(client: MatrixClient, room: Room): Call[] {
     /*
      * Whether this room is a group, decided once for the room rather than per call: a call's own events
      * do not say how many people the room has, and the answer cannot change between two calls in it.
+     * Asked the bridge-aware way: a bridged DM holds the bridge's bot too, and counting members made
+     * every call in one a "group call".
      */
-    const group = room.getJoinedMemberCount() + room.getInvitedMemberCount() > 2;
+    const group = !isOneToOneRoom(room);
+    const bots = getBridgeBots(room);
     const calls: Call[] = [];
 
     for (let at = events.length - 1; at >= from; at--) {
         const event = events[at];
         if (!startsCall(event) || event.isRedacted()) continue;
+        /*
+         * The bridge's line about a call it also bridged as a real call (Element Call's ring, a legacy
+         * invite) is the same call told twice: the call event, which knows who and how, is the one kept.
+         */
+        if (getActionMessage(event) && hasCallEventNear(events, at)) continue;
+        const fromBot = bots.has(event.getSender() ?? "");
         const userId = event.getSender() ?? "";
-        const member = room.getMember(userId);
+        const member = fromBot ? null : room.getMember(userId);
         const callId = event.getContent().call_id;
 
         /*
@@ -149,7 +175,7 @@ function callsIn(client: MatrixClient, room: Room): Call[] {
             eventId: event.getId()!,
             roomId: room.roomId,
             userId,
-            name: member?.rawDisplayName ?? userId,
+            name: fromBot ? room.name : (member?.rawDisplayName ?? userId),
             avatarUrl: member?.getMxcAvatarUrl() ?? undefined,
             network,
             ts: event.getTs(),
@@ -158,7 +184,8 @@ function callsIn(client: MatrixClient, room: Room): Call[] {
                 !!event.getContent().offer?.sdp?.includes("m=video") || getActionMessage(event)?.call_type === "video",
             outcome: declined ? "declined" : outcomeOf(hangup, answered),
             group,
-            title: group ? room.name : (member?.rawDisplayName ?? userId),
+            // A line the bridge had to send as its bot names nobody: the chat is who it was with.
+            title: group || fromBot ? room.name : (member?.rawDisplayName ?? userId),
             seconds: answer && hangup ? Math.max(0, Math.round((hangup.getTs() - answer.getTs()) / 1000)) : undefined,
         });
     }
