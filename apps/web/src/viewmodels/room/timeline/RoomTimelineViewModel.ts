@@ -32,6 +32,7 @@ import { haveRendererForEvent, pickFactory } from "../../../events/EventTileFact
 import shouldHideEvent from "../../../shouldHideEvent";
 import SettingsStore from "../../../settings/SettingsStore";
 import { clearRoomNotification } from "../../../utils/notifications";
+import { pendingEventsToShow } from "../../../utils/room/pendingEvents";
 import { hasThreadSummary } from "../../../utils/EventUtils";
 import { getPerMessageProfile } from "../../../utils/bridge/perMessageProfile";
 
@@ -1353,15 +1354,19 @@ export class RoomTimelineViewModel
          * A message you just sent is not in the timeline yet: until the server echoes it back the
          * room holds it as a pending event, and the window knows nothing about it. Without these
          * the message only appears once the round trip finishes, which reads as the app having
-         * swallowed it. They belong at the live end, and only there — at any other scroll position
-         * they would be messages from the future.
+         * swallowed it. At the live end they all belong; away from it, only the ones that failed
+         * (pendingEventsToShow) - a failed message never arrives by scrolling, and after a gappy sync
+         * the window says it can page forward while the reader is at the bottom, which left failed
+         * messages nowhere on screen.
          */
-        const pending = this.timelineWindow.canPaginate(Direction.Forward)
-            ? []
-            : this.opts.room.getPendingEvents().filter((event) => {
-                  const id = event.getId();
-                  return !!id && !this.timelineWindow.getEvents().some((e) => e.getId() === id);
-              });
+        const windowIds = new Set(this.timelineWindow.getEvents().map((e) => e.getId()));
+        const pending = pendingEventsToShow(
+            this.opts.room.getPendingEvents(),
+            !this.timelineWindow.canPaginate(Direction.Forward),
+        ).filter((event) => {
+            const id = event.getId();
+            return !!id && !windowIds.has(id);
+        });
         const events: MatrixEvent[] = [...this.timelineWindow.getEvents(), ...pending];
         const items: TimelineItem[] = [];
         let lastDate: string | null = null;

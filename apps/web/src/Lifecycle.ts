@@ -21,6 +21,7 @@ import UserActivity from "./UserActivity";
 import Presence from "./Presence";
 import { PresencePoller } from "./utils/presence/PresencePoller";
 import { PresenceSyncLoop } from "./utils/presence/PresenceSyncLoop";
+import { UnsentResender } from "./utils/room/unsentResender";
 import dis from "./dispatcher/dispatcher";
 import DMRoomMap from "./utils/DMRoomMap";
 import Modal from "./Modal";
@@ -1079,6 +1080,9 @@ async function startMatrixClient(
     if (!SettingsStore.getValue("lowBandwidth")) {
         void Presence.start();
     }
+    // Messages that did not go out are sent again when the connection is back (unsentResender.ts).
+    UnsentResender.start(client);
+
     // Simplified sliding sync delivers no presence: run a presence-only /sync long-poll beside it,
     // falling back to polling /presence for DM partners while that keeps failing. The v2 sync delivers
     // only changes, so it gets everyone's current presence once instead.
@@ -1200,6 +1204,7 @@ export function stopMatrixClient(unsetClient = true): void {
     Presence.stop();
     PresenceSyncLoop.stop();
     PresencePoller.stop();
+    UnsentResender.stop();
     ActiveWidgetStore.instance.stop();
     IntegrationManagers.sharedInstance().stopWatching();
     Mjolnir.sharedInstance().stop();

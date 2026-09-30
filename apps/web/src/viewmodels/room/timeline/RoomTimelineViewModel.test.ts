@@ -9,6 +9,7 @@
 
 import { vi, describe, it, expect, beforeEach, afterEach } from "vitest";
 import {
+    EventStatus,
     Direction,
     EventType,
     MatrixEvent,
@@ -288,6 +289,30 @@ describe("RoomTimelineViewModel", () => {
             room.emit(RoomEvent.LocalEchoUpdated, sending, room, undefined, undefined);
 
             await vi.waitFor(() => expect(eventKeys(vm.getSnapshot().items)).toContain("~local-echo"));
+        });
+
+        /*
+         * After a gappy sync the window says it can page forward while the reader is at the bottom. A
+         * message that failed to send never arrives by paging, so it has to be shown anyway - it used to
+         * be dropped here, leaving the reader's own messages nowhere on screen.
+         */
+        it("shows a message that failed to send even when the window can page forward", async () => {
+            seedTimeline([makeMessage("$a")]);
+            const vm = await createStartedViewModel();
+            vi.spyOn((vm as any).timelineWindow, "canPaginate").mockImplementation(
+                (...args: unknown[]) => args[0] === Direction.Forward,
+            );
+
+            const failed = makeMessage("~failed");
+            failed.status = EventStatus.NOT_SENT;
+            const sending = makeMessage("~in-flight");
+            sending.status = EventStatus.SENDING;
+            vi.spyOn(room, "getPendingEvents").mockReturnValue([failed, sending]);
+            room.emit(RoomEvent.LocalEchoUpdated, failed, room, undefined, undefined);
+
+            await vi.waitFor(() => expect(eventKeys(vm.getSnapshot().items)).toContain("~failed"));
+            // One merely in flight still belongs only at the live end.
+            expect(eventKeys(vm.getSnapshot().items)).not.toContain("~in-flight");
         });
     });
 
