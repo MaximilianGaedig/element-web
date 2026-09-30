@@ -231,6 +231,17 @@ describe("<NewTimelinePanel />", () => {
         expect(messages[1].querySelector(".mx_NewTimelinePanel_senderAvatar")).not.toBeNull();
     });
 
+    it("gives our own messages no avatar in a group bubble timeline, but keeps read receipt avatars", () => {
+        vi.spyOn(room, "getInvitedAndJoinedMemberCount").mockReturnValue(3);
+        const mine = mkMessage({ room: ROOM_ID, user: client.getSafeUserId(), msg: "mine", event: true });
+        room.getUnfilteredTimelineSet().addLiveEvent(mine, { addToState: false });
+        withItems([{ key: mine.getId()!, kind: "event", continuation: false, lastInSection: true } as TimelineItem]);
+
+        renderPanel({ layout: Layout.Bubble });
+
+        expect(tileProps.current[0]).toMatchObject({ hideAvatar: true, telegramTicks: false });
+    });
+
     it("gives the edit state only to the message being edited", () => {
         const other = mkMessage({ room: ROOM_ID, user: USER_ID, msg: "other", event: true });
         room.getUnfilteredTimelineSet().addLiveEvent(other, { addToState: false });

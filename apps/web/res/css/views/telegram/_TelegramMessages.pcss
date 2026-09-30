@@ -116,6 +116,43 @@ Please see LICENSE files in the repository root for full details.
 }
 
 /*
+ * Someone else's name, inside their bubble above the text (tweb .bubble .name): the peer's colour,
+ * bold, two pixels under the message text with four more of line height, cut short rather than wrapped.
+ */
+.mx_EventTile_tgName {
+    /* The slots around it are display: contents, so it is an item of the bubble's flex row: a row of its own. */
+    flex-basis: 100%;
+    max-width: 100%;
+    overflow: hidden;
+    font-size: calc(var(--cpd-font-size-body-md) - 2px);
+    line-height: calc(var(--cpd-font-size-body-md) + 2px);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    user-select: none;
+
+    .mx_DisambiguatedProfile {
+        display: inline;
+        font: inherit;
+        font-weight: 500;
+    }
+
+    .mx_DisambiguatedProfile .mx_DisambiguatedProfile_displayName {
+        font: inherit;
+        font-weight: 500;
+    }
+
+    [data-testid="event-tile-line"]:has(> * > &) {
+        flex-wrap: wrap;
+        row-gap: 0;
+    }
+
+    /* In a picture's bubble the name keeps the text's padding, as tweb's does above a photo. */
+    .mx_EventTile_tgMediaLine & {
+        padding: 4px 8px;
+    }
+}
+
+/*
  * Link previews the way iMessage draws them: a card the width of the message, tinted a shade of the
  * bubble it sits in rather than a panel colour of its own, and clipped to the bubble's own corners
  * instead of carrying a smaller radius and a border inside them.

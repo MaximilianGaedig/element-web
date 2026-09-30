@@ -1367,6 +1367,16 @@ export class UnwrappedEventTile extends React.Component<EventTileProps, IState> 
             </>
         );
 
+        /*
+         * Telegram draws someone else's name inside their bubble, above the reply and the text (tweb
+         * .bubble .name). Element's own place for it is a row above the bubble, where a short first
+         * message fits beside the name and lands at the far end of the row.
+         */
+        const nameInBubble =
+            telegramTime && !rootState.isOwnEvent && sender ? (
+                <div className="mx_EventTile_tgName">{sender}</div>
+            ) : undefined;
+
         // Footer slots.
         const footer = hasFooter ? (
             <EventTileFooter
@@ -1450,11 +1460,27 @@ export class UnwrappedEventTile extends React.Component<EventTileProps, IState> 
                 }}
                 slots={{
                     avatar,
-                    sender,
-                    body,
+                    sender: nameInBubble ? undefined : sender,
+                    body:
+                        nameInBubble && !replyChain ? (
+                            <>
+                                {nameInBubble}
+                                {body}
+                            </>
+                        ) : (
+                            body
+                        ),
                     timestamp: timestampSlot,
                     padlock,
-                    replyChain,
+                    replyChain:
+                        nameInBubble && replyChain ? (
+                            <>
+                                {nameInBubble}
+                                {replyChain}
+                            </>
+                        ) : (
+                            replyChain
+                        ),
                     actionBar,
                     footer,
                     threadInfo,

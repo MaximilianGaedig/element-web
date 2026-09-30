@@ -18,8 +18,14 @@ Please see LICENSE files in the repository root for full details.
     .mx_NewTimelinePanel_senderMessage {
         position: relative;
 
+        /*
+         * tweb puts the bubble 2.875rem from the avatar's edge; the line then pulls itself back by
+         * Element's line margin, which without this ate tweb's gap and slid the bubble under the avatar.
+         */
         [data-testid="event-tile"] {
-            --event-tile-bubble-margin-inline-start: calc(8px + 2.875rem);
+            --event-tile-bubble-margin-inline-start: calc(
+                8px + 2.875rem - var(--event-tile-bubble-line-margin-inline-start, 0px)
+            );
         }
 
         [data-testid="event-tile-slot-avatar"] {

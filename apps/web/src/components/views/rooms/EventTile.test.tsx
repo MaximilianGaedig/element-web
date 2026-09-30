@@ -916,6 +916,22 @@ describe("EventTile", () => {
             expect(time.querySelector(".mx_TelegramTime_status")).toBeNull();
         });
 
+        it("draws someone else's name inside their Telegram-style bubble, above the text", () => {
+            const { container } = getComponent({
+                layout: Layout.Bubble,
+                telegramBubbles: true,
+                mxEvent: makeTimestampedMessage(),
+            });
+            const line = container.querySelector('[data-testid="event-tile-line"]')!;
+            const name = line.querySelector(".mx_EventTile_tgName");
+            expect(name!.querySelector(".mx_DisambiguatedProfile_displayName")).toBeInTheDocument();
+            // Before the body, and no longer in a row of its own outside the bubble.
+            expect(name!.compareDocumentPosition(line.querySelector(".mx_EventTile_body")!)).toBe(
+                Node.DOCUMENT_POSITION_FOLLOWING,
+            );
+            expect(container.querySelector('[data-testid="event-tile-slot-sender"]')).toBeNull();
+        });
+
         it("shows tweb's sending status on our own Telegram-style messages instead of the sent receipt", () => {
             const { container } = getComponent({
                 layout: Layout.Bubble,

@@ -20,7 +20,7 @@ import { EventType, type MatrixClient, type RelationType, type Relations, type R
 import { RoomTimelineViewModel } from "../../viewmodels/room/timeline/RoomTimelineViewModel";
 import { useMatrixClientContext } from "../../contexts/MatrixClientContext";
 import { LegacyEventTileAdapter } from "../views/rooms/LegacyEventTileAdapter";
-import { isOneToOneRoom, bubbleTimelineEnabled } from "../../utils/telegram/telegramLayout";
+import { isOneToOneRoom, bubbleTimelineEnabled, telegramTicksShown } from "../../utils/telegram/telegramLayout";
 import MemberAvatar from "../views/avatars/MemberAvatar";
 import PerMessageProfileAvatar from "../views/bridge/PerMessageProfileAvatar";
 import type { GetRelationsForEvent } from "../views/rooms/EventTile";
@@ -69,6 +69,8 @@ interface RenderItemContext {
     hideAvatar: boolean;
     /** Whether the tiles are being drawn as Telegram bubbles; the tile cannot tell on its own. */
     telegramBubbles: boolean;
+    /** Whether our messages carry ticks rather than readers' avatars (telegramTicksShown). */
+    telegramTicks: boolean;
     myUserId: string;
 }
 
@@ -127,6 +129,8 @@ function renderTimelineItem(item: TimelineItem, ctx: RenderItemContext): ReactNo
              * only the timeline can make.
              */
             const type = mxEvent.getType();
+            // Which side a bubble is on already says it is ours, so our own messages carry no avatar.
+            const own = ctx.telegramBubbles && mxEvent.getSender() === ctx.myUserId;
             const groupAvatar =
                 ctx.telegramBubbles &&
                 !ctx.hideAvatar &&
@@ -151,9 +155,9 @@ function renderTimelineItem(item: TimelineItem, ctx: RenderItemContext): ReactNo
                     isTwelveHour={ctx.isTwelveHour}
                     alwaysShowTimestamps={ctx.alwaysShowTimestamps}
                     hideSender={ctx.hideSender}
-                    hideAvatar={ctx.hideAvatar || groupAvatar}
+                    hideAvatar={ctx.hideAvatar || groupAvatar || own}
                     telegramBubbles={ctx.telegramBubbles}
-                    telegramTicks={ctx.hideAvatar}
+                    telegramTicks={ctx.telegramTicks}
                 />
             );
             if (!groupAvatar) return tile;
@@ -212,6 +216,13 @@ export function NewTimelinePanel({
     const telegramBubbles = effectiveLayout === Layout.Bubble && bubbleTimelineEnabled();
     const isDirectBubbleChat = effectiveLayout === Layout.Bubble && isOneToOneRoom(room);
     const hideAvatar = isDirectBubbleChat && telegramBubbles;
+    const readReceiptsStyle = useSettingValue("readReceiptsStyle");
+    const telegramTicks = telegramTicksShown({
+        room,
+        layout: effectiveLayout,
+        bubbles: telegramBubbles,
+        readReceiptsStyle,
+    });
 
     // Creating the view model does nothing on its own — it starts listening only
     // when start() is called in the effect below. React can build one of these and
@@ -307,6 +318,7 @@ export function NewTimelinePanel({
                 hideSender: isDirectBubbleChat,
                 hideAvatar,
                 telegramBubbles,
+                telegramTicks,
                 myUserId: client.getSafeUserId(),
             }),
         [
@@ -323,6 +335,7 @@ export function NewTimelinePanel({
             isDirectBubbleChat,
             hideAvatar,
             telegramBubbles,
+            telegramTicks,
             client,
         ],
     );
