@@ -65,9 +65,7 @@ export function textToneOf(client: MatrixClient, person: Person): Tone | undefin
  * call on Signal and the default when they call on WhatsApp would be the merge failing out loud.
  */
 export async function setRingtone(client: MatrixClient, person: Person, tone?: Tone): Promise<void> {
-    await Promise.all(
-        person.rooms.map((roomId) => client.setRoomAccountData(roomId, RINGTONE_EVENT_TYPE, tone ?? {})),
-    );
+    await Promise.all(person.rooms.map((roomId) => client.setRoomAccountData(roomId, RINGTONE_EVENT_TYPE, tone ?? {})));
 }
 
 /** The same for the text tone, through the setting Notifier already reads. */

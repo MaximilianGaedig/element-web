@@ -21,7 +21,6 @@ import { Button, IconButton, Menu, MenuItem, MenuTitle } from "@vector-im/compou
 import UserProfileIcon from "@vector-im/compound-design-tokens/assets/web/icons/user-profile";
 import VoiceCallIcon from "@vector-im/compound-design-tokens/assets/web/icons/voice-call";
 import VideoCallIcon from "@vector-im/compound-design-tokens/assets/web/icons/video-call";
-import InfoIcon from "@vector-im/compound-design-tokens/assets/web/icons/info";
 import ChatIcon from "@vector-im/compound-design-tokens/assets/web/icons/chat";
 import VoiceMissedIcon from "@vector-im/compound-design-tokens/assets/web/icons/voice-call-missed-solid";
 import VoiceDeclinedIcon from "@vector-im/compound-design-tokens/assets/web/icons/voice-call-declined-solid";
@@ -31,11 +30,13 @@ import VideoDeclinedIcon from "@vector-im/compound-design-tokens/assets/web/icon
 import VideoOutgoingIcon from "@vector-im/compound-design-tokens/assets/web/icons/video-call-outgoing-solid";
 import BackIcon from "@vector-im/compound-design-tokens/assets/web/icons/chevron-left";
 import ChevronIcon from "@vector-im/compound-design-tokens/assets/web/icons/chevron-down";
+import ChevronRightIcon from "@vector-im/compound-design-tokens/assets/web/icons/chevron-right";
 import CheckIcon from "@vector-im/compound-design-tokens/assets/web/icons/check";
 import OverflowIcon from "@vector-im/compound-design-tokens/assets/web/icons/overflow-horizontal";
 import GroupIcon from "@vector-im/compound-design-tokens/assets/web/icons/group";
 import ImportIcon from "@vector-im/compound-design-tokens/assets/web/icons/download";
 import ListIcon from "@vector-im/compound-design-tokens/assets/web/icons/list-bulleted";
+import PlusIcon from "@vector-im/compound-design-tokens/assets/web/icons/plus";
 import DeleteIcon from "@vector-im/compound-design-tokens/assets/web/icons/delete";
 import ExportIcon from "@vector-im/compound-design-tokens/assets/web/icons/share";
 import CloseIcon from "@vector-im/compound-design-tokens/assets/web/icons/close";
@@ -63,12 +64,19 @@ import {
 } from "../../../utils/contacts/people";
 import { readKey } from "../../../utils/contacts/identity";
 import { ContactCard } from "./ContactCard";
-import { NetworkLogo } from "./NetworkLogo";
-import PresenceIconView from "../rooms/MemberList/tiles/common/PresenceIconView";
+import { ContactFace } from "./ContactFace";
 import { type Presence, personPresence, presenceNetwork } from "../../../utils/contacts/presence";
 import { callsWith, sharedRooms } from "../../../utils/contacts/shared";
 import { chosenColour, nameOrder, setColour, setNameOrder } from "../../../utils/contacts/appearance";
-import { allCards, cardFor, fullName, saveCard } from "../../../utils/contacts/card";
+import {
+    type ContactCard as ContactCardFields,
+    allCards,
+    cardFor,
+    fullName,
+    saveCard,
+    saveLooseCard,
+} from "../../../utils/contacts/card";
+import { ContactEditor } from "./ContactEditor";
 import { type Discovered, discoverOnMatrix, lookupQuery } from "../../../utils/contacts/discover";
 import { historyFor, recordRevision } from "../../../utils/contacts/history";
 import { ringtoneOf, setRingtone, setTextTone, textToneOf, uploadTone } from "../../../utils/contacts/tones";
@@ -89,6 +97,7 @@ import { SDKContextClass } from "../../../contexts/SDKContextClass.ts";
 import { type ViewUserPayload } from "../../../dispatcher/payloads/ViewUserPayload";
 import Spinner from "../elements/Spinner";
 import { useLongPress } from "../../../hooks/useLongPress";
+import { useLeaving } from "../../../hooks/useLeaving";
 import { useSlidingIndicator } from "../../../hooks/useSlidingIndicator";
 
 const AVATAR_SIZE = "32px";
@@ -171,16 +180,13 @@ function PersonRow({
     onToggle: (person: Person) => void;
 }): JSX.Element {
     /*
-     * What to say under the name, and never what the logos at the end of the row already say.
+     * Which networks they are on, once each.
      *
-     * Their number when a network published one - that is the thing that made these accounts one person -
-     * and otherwise what a network calls them, which is a fact the row does not have anywhere else. Naming
-     * the networks here as well was the same answer twice on one line.
+     * Once each because a person with four Telegram chats is on Telegram, not on Telegram four times - the
+     * accounts are deduplicated here rather than in the list, so the same person cannot read as four
+     * networks in one row and one in another.
      */
-    const handle = person.accounts.map((account) => account.name).find((name) => name && name !== person.name);
-    const detail = person.keys.length ? readKey(person.keys[0]) : handle;
-    /* One chat per network, so a network's logo is shown once however many chats there are on it. */
-    const perNetwork = new Map(person.accounts.filter((a) => a.roomId).map((a) => [a.network, a.roomId!]));
+    const networks = [...new Map(person.accounts.map((account) => [account.network, account])).values()];
 
     const row = (
         <button
@@ -199,15 +205,15 @@ function PersonRow({
              * as they are picking things out of it.
              */}
             <span className="mx_Contacts_faceWith">
-                <Face name={person.name} avatarUrl={person.avatarUrl} />
-                {/*
-                 * Whether they are about, drawn by the same component the room list uses: presence has one
-                 * set of colours and shapes across this client, and a dot of this screen's own making was
-                 * a second answer to a question already answered.
-                 */}
-                {!selecting && presence && (
-                    <PresenceIconView className="mx_Contacts_presence" presenceState={presence} />
-                )}
+                <ContactFace
+                    client={client}
+                    name={person.name}
+                    id={person.id}
+                    avatarUrl={person.avatarUrl}
+                    roomId={networks[0]?.roomId}
+                    presence={selecting ? undefined : presence}
+                    selected={selecting}
+                />
                 {selecting && (
                     <span className="mx_Contacts_tick" data-selected={selected || undefined} aria-hidden="true">
                         {selected && <CheckIcon width="14" height="14" />}
@@ -216,16 +222,16 @@ function PersonRow({
             </span>
             <span className="mx_Contacts_rowText">
                 <span className="mx_Contacts_name">{person.name}</span>
-                {detail && <span className="mx_Contacts_detail">{detail}</span>}
-            </span>
-            {/*
-             * The networks as their own logos rather than as two-letter pills: the mark says Telegram or
-             * WhatsApp at a glance, where "TG" has to be read and learned first.
-             */}
-            <span className="mx_Contacts_networks">
-                {[...perNetwork].map(([network, roomId]) => (
-                    <NetworkLogo key={network} client={client} roomId={roomId} size={18} />
-                ))}
+                {/*
+                 * The networks, under the name, rather than a number.
+                 *
+                 * A number is already the thing the row is filed and searched by and reads as noise under
+                 * every name; which networks somebody is on is the fact this list exists to carry, and it
+                 * is what the reader picks between when they message or ring them.
+                 */}
+                {networks.length > 1 && (
+                    <span className="mx_Contacts_detail">{networks.map((account) => account.network).join(" · ")}</span>
+                )}
             </span>
         </button>
     );
@@ -328,28 +334,27 @@ function CallRow({
     client,
     call,
     onOpen,
-    onInfo,
     onCallBack,
     onMessage,
+    onInfo,
     menuOpen,
     onMenu,
 }: {
     client: MatrixClient;
     call: Call;
     onOpen: (call: Call) => void;
-    /** The caller, rather than the call: who they are, not what happened. */
-    onInfo: (call: Call) => void;
     onCallBack: (call: Call, video: boolean) => void;
     onMessage: (call: Call) => void;
+    /** The caller, rather than the call: who they are, not what happened. */
+    onInfo: (call: Call) => void;
     menuOpen: boolean;
     onMenu: (open: boolean) => void;
 }): JSX.Element {
     const missed = call.outcome === "missed" && !call.outgoing;
     /*
-     * Nothing the row already shows: the network is the logo at the end, and which way the call went and
-     * how it ended is the coloured mark at the start. Spelling "Missed" out beside a red missed-call arrow
-     * is the same fact twice, on the line with the least room for it, so what is left is how long it ran
-     * and - when it was one - that it was a group.
+     * How long it ran, and whether it was a group. Not the direction or the outcome: the coloured mark in
+     * front of this says both, and not the network either - the face carries that, as it does in the room
+     * list.
      */
     const detail = [
         call.seconds !== undefined ? readDuration(call.seconds) : undefined,
@@ -359,9 +364,11 @@ function CallRow({
         .join(" · ");
 
     /*
-     * A call row answers three questions, so the row itself takes only the first: it goes to the call in
-     * the chat it happened in. Who rang is the info button, which is what an info button means; everything
-     * that can be done about it is the menu, reachable by right-click, by long press, or by its control.
+     * One row, one control.
+     *
+     * The info button sat beside the row on its own surface and did what the row did; the menu is the only
+     * thing here that does anything else, so it is the only thing beside the name - and it sits where the
+     * network logo used to, which is the end of the row a thumb reaches.
      */
     const held = useLongPress(useCallback(() => onMenu(true), [onMenu]));
     return (
@@ -378,7 +385,15 @@ function CallRow({
                 className={`mx_Contacts_row${missed ? " mx_Contacts_row_missed" : ""}`}
                 onClick={() => onOpen(call)}
             >
-                <Face name={call.title} avatarUrl={call.avatarUrl} />
+                <span className="mx_Contacts_faceWith">
+                    <ContactFace
+                        client={client}
+                        name={call.title}
+                        id={call.userId}
+                        avatarUrl={call.avatarUrl}
+                        roomId={call.roomId}
+                    />
+                </span>
                 <span className="mx_Contacts_rowText">
                     <span className="mx_Contacts_name">{call.title}</span>
                     <span className="mx_Contacts_detail">
@@ -387,15 +402,7 @@ function CallRow({
                     </span>
                 </span>
                 <span className="mx_Contacts_when">{timeOfDay(call.ts)}</span>
-                <NetworkLogo client={client} roomId={call.roomId} size={18} />
             </button>
-            <IconButton
-                size="24px"
-                aria-label={_t("contacts|caller_info", { name: call.title })}
-                onClick={() => onInfo(call)}
-            >
-                <InfoIcon />
-            </IconButton>
             <Menu
                 title={call.title}
                 showTitle={false}
@@ -495,7 +502,13 @@ function SuggestionCard({
                     <span className="mx_Contacts_suggestionFaces">
                         {suggestion.people.slice(0, 3).map((one) => (
                             <span className="mx_Contacts_suggestionFace" key={one.id}>
-                                <Face name={one.name} avatarUrl={one.avatarUrl} />
+                                <ContactFace
+                                    client={client}
+                                    name={one.name}
+                                    id={one.id}
+                                    avatarUrl={one.avatarUrl}
+                                    roomId={one.accounts.find((account) => account.roomId)?.roomId}
+                                />
                             </span>
                         ))}
                     </span>
@@ -550,8 +563,13 @@ function SuggestionCard({
                                         {picked && <CheckIcon width="14" height="14" />}
                                     </span>
                                     <span className="mx_Contacts_faceWith">
-                                        <Face name={person.name} avatarUrl={person.avatarUrl} />
-                                        <NetworkLogo client={client} roomId={account.roomId} size={14} />
+                                        <ContactFace
+                                            client={client}
+                                            name={person.name}
+                                            id={person.id}
+                                            avatarUrl={person.avatarUrl}
+                                            roomId={account.roomId}
+                                        />
                                     </span>
                                     <span className="mx_Contacts_rowText">
                                         <span className="mx_Contacts_name">{account.name || person.name}</span>
@@ -603,6 +621,9 @@ export function ContactsView({ tab, onFinished }: Props): JSX.Element {
     /* Which of the reader's own lists is showing, or all of them. */
     const [listId, setListId] = useState<string>();
     const [naming, setNaming] = useState(false);
+    /* Writing somebody down who is not in any chat yet: a card with nothing but what is typed. */
+    const [adding, setAdding] = useState(false);
+    const [reviewing, setReviewing] = useState(false);
     const [newListName, setNewListName] = useState("");
     /* The file input is hidden and clicked by the menu item: a file button cannot live inside a menu. */
     const fileRef = useRef<HTMLInputElement>(null);
@@ -1088,6 +1109,21 @@ export function ContactsView({ tab, onFinished }: Props): JSX.Element {
         downloadVCard("contacts.vcf", toVCards(cards));
     }, [client, people]);
 
+    /*
+     * A person written down rather than found: somebody whose number the reader has and whose chat they do
+     * not. Stored as a card of its own, which is where an imported vCard that matched nobody goes, so the
+     * two arrive in the same place.
+     */
+    const addPerson = useCallback(
+        (fields: ContactCardFields): void => {
+            void saveLooseCard(client, fields).then(() => {
+                setAdding(false);
+                again();
+            });
+        },
+        [client, again],
+    );
+
     /** Somewhere to go: a room, at a particular event when one is named. */
     const openRoom = useCallback((roomId: string, eventId?: string): void => {
         dis.dispatch<ViewRoomPayload>({
@@ -1150,6 +1186,22 @@ export function ContactsView({ tab, onFinished }: Props): JSX.Element {
             if (member) dis.dispatch<ViewUserPayload>({ action: Action.ViewUser, member });
         },
         [client],
+    );
+
+    /*
+     * Going back plays the way coming in did.
+     *
+     * The layer is held on screen for the length of the outgoing animation rather than being dropped the
+     * moment the state clears - otherwise back has nothing to animate, because the thing that would have
+     * animated is already gone.
+     */
+    const {
+        render: cardShown,
+        leaving: cardLeaving,
+        leave: closeCard,
+    } = useLeaving(
+        !!open,
+        useCallback(() => setOpen(undefined), []),
     );
 
     const toggle = useCallback((person: Person): void => {
@@ -1232,527 +1284,652 @@ export function ContactsView({ tab, onFinished }: Props): JSX.Element {
     );
 
     /*
-     * The card instead of the list, not over it. Same reasoning as contacts replacing the room list:
-     * one column, one thing in it, and back returns the way it came.
+     * The duplicates, on a screen of their own: every set found, each openable to see the cards, and one
+     * control that takes all of them at once - which is what a reader who trusts the matching wants and
+     * what answering them one at a time is not.
      */
-    if (open) {
+    if (reviewing) {
+        const suggestions = state?.suggestions ?? [];
         return (
             <div className="mx_Contacts mx_ContactsView">
-                <ContactCard
-                    person={open}
-                    onBack={() => setOpen(undefined)}
-                    onMessage={messagePerson}
-                    nickname={chosenName(client, open)}
-                    onRename={rename}
-                    onCall={callPerson}
-                    favourite={isFavourite(client, open.rooms)}
-                    onFavourite={open.rooms.length ? (person, on) => favourite([person], on) : undefined}
-                    menu={personMenu(<></>, open)}
-                    presence={personPresence(client, open)}
-                    presenceOn={presenceNetwork(client, open)}
-                    calls={callsWith(calls, open)}
-                    groups={sharedRooms(client, open)}
-                    onOpenRoom={openRoom}
-                    onUnlinkAccount={unlinkOne}
-                    linkedIds={state?.linked}
-                    colour={chosenColour(client, open)}
-                    onColour={(next) => void setColour(client, open, next).then(again)}
-                    card={cardFor(client, open)}
-                    onCard={(next) => {
-                        /*
-                         * What it said before is kept first, then the change is written: a record taken
-                         * after the write has nothing to record, and one taken and then not followed by a
-                         * write claims a change that never happened.
-                         */
-                        const was = cardFor(client, open);
-                        void recordRevision(client, open, was, "edit")
-                            .then(() => saveCard(client, open, next))
-                            .then(again);
-                    }}
-                    ringtone={ringtoneOf(client, open)}
-                    textTone={textToneOf(client, open)}
-                    onTone={(which, file) => {
-                        const set = which === "ring" ? setRingtone : setTextTone;
-                        if (!file) {
-                            void set(client, open, undefined).then(again);
-                            return;
-                        }
-                        void uploadTone(client, file)
-                            .then((tone) => set(client, open, tone))
-                            .then(again);
-                    }}
-                    history={historyFor(client, open)}
-                    onRestore={(revision) => {
-                        const was = cardFor(client, open);
-                        void recordRevision(client, open, was, "restore")
-                            .then(() => saveCard(client, open, revision.was))
-                            .then(again);
-                    }}
-                    onExport={() =>
-                        downloadVCard(`${open.name}.vcf`, toVCard(cardForExport(open, cardFor(client, open))))
-                    }
-                    onPhoto={(file) => {
-                        /*
-                         * Uploaded to the reader's own media and kept as an mxc: URI, not inlined: a photo
-                         * in account data is sent to every device on every sync, which is not what account
-                         * data is for.
-                         */
-                        const was = cardFor(client, open);
-                        void client
-                            .uploadContent(file, { type: file.type })
-                            .then(({ content_uri: photoUrl }) =>
-                                recordRevision(client, open, was, "edit").then(() =>
-                                    saveCard(client, open, { ...was, photoUrl }),
-                                ),
-                            )
-                            .then(again);
-                    }}
-                />
+                <div className="mx_ContactsView_header">
+                    <IconButton aria-label={_t("action|back")} onClick={() => setReviewing(false)} size="32px">
+                        <BackIcon />
+                    </IconButton>
+                    <h2 className="mx_ContactsView_title">{_t("contacts|duplicates_title")}</h2>
+                    <span />
+                </div>
+                <div className="mx_Contacts_list">
+                    {!suggestions.length && <p className="mx_Contacts_empty">{_t("contacts|duplicates_none")}</p>}
+                    {suggestions.map((suggestion) => (
+                        <SuggestionCard
+                            key={accountsOf(suggestion.people).join(",")}
+                            client={client}
+                            suggestion={suggestion}
+                            onMerge={merge}
+                            onDismiss={dismiss}
+                        />
+                    ))}
+                </div>
+                {!!suggestions.length && (
+                    <div className="mx_Contacts_reviewActions">
+                        <Button
+                            kind="primary"
+                            size="lg"
+                            onClick={() => {
+                                for (const suggestion of suggestions) merge(suggestion, accountsOf(suggestion.people));
+                                setReviewing(false);
+                            }}
+                        >
+                            {_t("contacts|merge_all")}
+                        </Button>
+                        <Button
+                            kind="tertiary"
+                            size="lg"
+                            onClick={() => {
+                                for (const suggestion of suggestions) dismiss(suggestion);
+                                setReviewing(false);
+                            }}
+                        >
+                            {_t("contacts|ignore_all")}
+                        </Button>
+                    </div>
+                )}
             </div>
         );
     }
 
+    /*
+     * The card instead of the list, not over it. Same reasoning as contacts replacing the room list:
+     * one column, one thing in it, and back returns the way it came.
+     */
+    /*
+     * The card as a layer over the list, not in place of it.
+     *
+     * Returning the card instead of the list unmounted the list, and a list that unmounts comes back at the
+     * top: opening somebody near the bottom and pressing back put the reader at A again, every time. The
+     * list stays mounted underneath and keeps its scroll; the card sits on top of it.
+     */
+    const card =
+        cardShown && open ? (
+            <div className="mx_Contacts_layer" data-leaving={cardLeaving || undefined}>
+                <div className="mx_Contacts mx_ContactsView">
+                    <ContactCard
+                        person={open}
+                        onBack={closeCard}
+                        onMessage={messagePerson}
+                        nickname={chosenName(client, open)}
+                        onRename={rename}
+                        onCall={callPerson}
+                        favourite={isFavourite(client, open.rooms)}
+                        onFavourite={open.rooms.length ? (person, on) => favourite([person], on) : undefined}
+                        menu={personMenu(<></>, open)}
+                        presence={personPresence(client, open)}
+                        presenceOn={presenceNetwork(client, open)}
+                        calls={callsWith(calls, open)}
+                        groups={sharedRooms(client, open)}
+                        onOpenRoom={openRoom}
+                        onUnlinkAccount={unlinkOne}
+                        linkedIds={state?.linked}
+                        colour={chosenColour(client, open)}
+                        onColour={(next) => void setColour(client, open, next).then(again)}
+                        card={cardFor(client, open)}
+                        onCard={(next) => {
+                            /*
+                             * What it said before is kept first, then the change is written: a record taken
+                             * after the write has nothing to record, and one taken and then not followed by a
+                             * write claims a change that never happened.
+                             */
+                            const was = cardFor(client, open);
+                            void recordRevision(client, open, was, "edit")
+                                .then(() => saveCard(client, open, next))
+                                .then(again);
+                        }}
+                        ringtone={ringtoneOf(client, open)}
+                        textTone={textToneOf(client, open)}
+                        onTone={(which, file) => {
+                            const set = which === "ring" ? setRingtone : setTextTone;
+                            if (!file) {
+                                void set(client, open, undefined).then(again);
+                                return;
+                            }
+                            void uploadTone(client, file)
+                                .then((tone) => set(client, open, tone))
+                                .then(again);
+                        }}
+                        history={historyFor(client, open)}
+                        onRestore={(revision) => {
+                            const was = cardFor(client, open);
+                            void recordRevision(client, open, was, "restore")
+                                .then(() => saveCard(client, open, revision.was))
+                                .then(again);
+                        }}
+                        onExport={() =>
+                            downloadVCard(`${open.name}.vcf`, toVCard(cardForExport(open, cardFor(client, open))))
+                        }
+                        onPhoto={(file) => {
+                            /*
+                             * Uploaded to the reader's own media and kept as an mxc: URI, not inlined: a photo
+                             * in account data is sent to every device on every sync, which is not what account
+                             * data is for.
+                             */
+                            const was = cardFor(client, open);
+                            void client
+                                .uploadContent(file, { type: file.type })
+                                .then(({ content_uri: photoUrl }) =>
+                                    recordRevision(client, open, was, "edit").then(() =>
+                                        saveCard(client, open, { ...was, photoUrl }),
+                                    ),
+                                )
+                                .then(again);
+                        }}
+                    />
+                </div>
+            </div>
+        ) : null;
+
     return (
         <div className="mx_Contacts mx_ContactsView">
-            <div className="mx_ContactsView_header">
-                <IconButton aria-label={_t("action|back")} onClick={onFinished} size="32px">
-                    <BackIcon />
-                </IconButton>
-                <h2 className="mx_ContactsView_title">{_t("contacts|title")}</h2>
-                {/*
-                 * Bringing an address book in and handing it back out, which is what keeps this list from
-                 * being a dead end: the file a phone exports goes in here, and what is here goes back to a
-                 * phone the same way.
-                 */}
-                <Menu
-                    title={_t("contacts|title")}
-                    showTitle={false}
-                    open={managing}
-                    onOpenChange={setManaging}
-                    align="end"
-                    trigger={
-                        <IconButton aria-label={_t("common|options")} size="32px">
-                            <OverflowIcon />
-                        </IconButton>
-                    }
-                >
-                    <MenuItem
-                        hideChevron
-                        Icon={ImportIcon}
-                        label={_t("contacts|import_vcf")}
-                        onSelect={() => fileRef.current?.click()}
-                    />
-                    <MenuItem
-                        hideChevron
-                        Icon={ExportIcon}
-                        label={_t("contacts|export_all_vcf")}
-                        onSelect={exportAll}
-                    />
-                    <MenuItem
-                        hideChevron
-                        Icon={ListIcon}
-                        label={_t("contacts|new_list")}
-                        onSelect={() => setNaming(true)}
-                    />
-                    <MenuItem
-                        hideChevron
-                        Icon={UserProfileIcon}
-                        label={_t("contacts|discover")}
-                        onSelect={() => discover(false)}
-                    />
-                    {!!list && (
+            {/*
+             * What is under a layer is out of reach while the layer is up.
+             *
+             * The list stays mounted so it keeps its scroll, which means its controls are still in the
+             * document under the card - two Back buttons, two searches, a whole list a keyboard can tab
+             * into behind something covering it. `inert` is what says "this is not reachable", and the
+             * wrapper uses display: contents so saying it costs the layout nothing.
+             */}
+            <div className="mx_Contacts_under" inert={!!card || adding || undefined}>
+                <div className="mx_ContactsView_header">
+                    <IconButton aria-label={_t("action|back")} onClick={onFinished} size="32px">
+                        <BackIcon />
+                    </IconButton>
+                    {/*
+                     * No title.
+                     *
+                     * "People and calls" named a screen the bar at the bottom already names, and put the one
+                     * control up here immediately beside the words rather than at the edge where it belongs.
+                     */}
+                    {/*
+                     * Bringing an address book in and handing it back out, which is what keeps this list from
+                     * being a dead end: the file a phone exports goes in here, and what is here goes back to a
+                     * phone the same way.
+                     */}
+                    <Menu
+                        title={_t("contacts|title")}
+                        showTitle={false}
+                        open={managing}
+                        onOpenChange={setManaging}
+                        align="end"
+                        trigger={
+                            <IconButton aria-label={_t("common|options")} size="32px">
+                                <OverflowIcon />
+                            </IconButton>
+                        }
+                    >
                         <MenuItem
                             hideChevron
-                            Icon={DeleteIcon}
-                            kind="critical"
-                            label={_t("contacts|delete_list")}
-                            onSelect={() => {
-                                void removeList(client, list.id).then(again);
-                                setListId(undefined);
-                            }}
+                            Icon={ImportIcon}
+                            label={_t("contacts|import_vcf")}
+                            onSelect={() => fileRef.current?.click()}
                         />
-                    )}
-                    <MenuTitle title={_t("contacts|sort_by")} />
-                    <MenuItem
-                        hideChevron
-                        Icon={order === "first" ? CheckIcon : UserProfileIcon}
-                        label={_t("contacts|sort_first")}
-                        onSelect={() => void setNameOrder(client, "first").then(again)}
-                    />
-                    <MenuItem
-                        hideChevron
-                        Icon={order === "last" ? CheckIcon : UserProfileIcon}
-                        label={_t("contacts|sort_last")}
-                        onSelect={() => void setNameOrder(client, "last").then(again)}
-                    />
-                </Menu>
-                <input
-                    ref={fileRef}
-                    className="mx_Contacts_file"
-                    type="file"
-                    accept=".vcf,text/vcard,text/x-vcard"
-                    onChange={(event) => {
-                        const file = event.target.files?.[0];
-                        // Cleared either way, so choosing the same file twice in a row still reads it.
-                        event.target.value = "";
-                        void file?.text().then(importVCards);
-                    }}
-                />
-            </div>
-            {/* Naming a new list, in the column rather than in a dialog over it. */}
-            {naming && (
-                <form
-                    className="mx_Contacts_naming"
-                    onSubmit={(event) => {
-                        event.preventDefault();
-                        const name = newListName.trim();
-                        if (name) void addList(client, name).then(again);
-                        setNewListName("");
-                        setNaming(false);
-                    }}
-                >
+                        <MenuItem
+                            hideChevron
+                            Icon={ExportIcon}
+                            label={_t("contacts|export_all_vcf")}
+                            onSelect={exportAll}
+                        />
+                        <MenuItem
+                            hideChevron
+                            Icon={ListIcon}
+                            label={_t("contacts|new_list")}
+                            onSelect={() => setNaming(true)}
+                        />
+                        <MenuItem
+                            hideChevron
+                            Icon={UserProfileIcon}
+                            label={_t("contacts|discover")}
+                            onSelect={() => discover(false)}
+                        />
+                        {!!list && (
+                            <MenuItem
+                                hideChevron
+                                Icon={DeleteIcon}
+                                kind="critical"
+                                label={_t("contacts|delete_list")}
+                                onSelect={() => {
+                                    void removeList(client, list.id).then(again);
+                                    setListId(undefined);
+                                }}
+                            />
+                        )}
+                        <MenuTitle title={_t("contacts|sort_by")} />
+                        {/*
+                         * A choice, marked as one: a tick on the one in force and nothing on the other. Two
+                         * different icons read as two different actions rather than as one setting's two
+                         * positions.
+                         */}
+                        <MenuItem
+                            hideChevron
+                            Icon={order === "first" ? CheckIcon : undefined}
+                            label={_t("contacts|sort_first")}
+                            onSelect={() => void setNameOrder(client, "first").then(again)}
+                        />
+                        <MenuItem
+                            hideChevron
+                            Icon={order === "last" ? CheckIcon : undefined}
+                            label={_t("contacts|sort_last")}
+                            onSelect={() => void setNameOrder(client, "last").then(again)}
+                        />
+                    </Menu>
                     <input
-                        autoFocus
-                        value={newListName}
-                        placeholder={_t("contacts|list_name")}
-                        aria-label={_t("contacts|list_name")}
-                        onChange={(event) => setNewListName(event.target.value)}
+                        ref={fileRef}
+                        className="mx_Contacts_file"
+                        type="file"
+                        accept=".vcf,text/vcard,text/x-vcard"
+                        onChange={(event) => {
+                            const file = event.target.files?.[0];
+                            // Cleared either way, so choosing the same file twice in a row still reads it.
+                            event.target.value = "";
+                            void file?.text().then(importVCards);
+                        }}
                     />
-                    <Button kind="primary" size="md" type="submit">
-                        {_t("action|save")}
-                    </Button>
-                    <Button kind="secondary" size="md" type="button" onClick={() => setNaming(false)}>
-                        {_t("action|cancel")}
-                    </Button>
-                </form>
-            )}
-            {/*
-             * What a lookup would disclose, before it happens - and what it found, after.
-             *
-             * The count is the point of the first state: "this sends 214 phone numbers to ident.example" is
-             * the fact the reader needs, and it is not one they can work out from a list they cannot see.
-             */}
-            {discovering && (
-                <div className="mx_Contacts_discover">
-                    {discovering.found ? (
-                        <span>
-                            {discovering.found.length
-                                ? _t("contacts|discovered", { count: discovering.found.length })
-                                : _t("contacts|discovered_none")}
-                        </span>
-                    ) : discovering.problem ? (
-                        <span>{_t(`contacts|discover_${discovering.problem}`)}</span>
-                    ) : (
-                        <>
-                            <span>
-                                {_t("contacts|discover_warning", {
-                                    count: discovering.asked,
-                                    server: client.getIdentityServerUrl() ?? "",
-                                })}
-                            </span>
-                            <Button kind="primary" size="md" onClick={() => discover(true)}>
-                                {_t("contacts|discover_go")}
-                            </Button>
-                        </>
-                    )}
-                    <IconButton
-                        size="24px"
-                        aria-label={_t("action|dismiss")}
-                        onClick={() => setDiscovering(undefined)}
-                    >
-                        <CloseIcon />
-                    </IconButton>
                 </div>
-            )}
-            {/* What the import did, said once and dismissable, rather than a list that silently grew. */}
-            {imported && (
-                <button type="button" className="mx_Contacts_imported" onClick={() => setImported(undefined)}>
-                    {imported}
-                    <CloseIcon width="16" height="16" aria-hidden />
-                </button>
-            )}
-            {/*
-             * One search, whichever list is showing.
-             *
-             * Searching only the people was the half of it that happened to be built first; a call list
-             * that cannot be searched is the one place the reader is most likely to be looking for a name.
-             */}
-            <input
-                className="mx_Contacts_search"
-                type="search"
-                value={query}
-                placeholder={tab === "people" ? _t("contacts|search_people") : _t("contacts|search_calls")}
-                onChange={(event) => setQuery(event.target.value)}
-                autoFocus
-            />
-
-            {tab === "people" ? (
-                <>
-                    {/*
-                     * The reader's own lists, as a strip they scroll through: filing people into "family"
-                     * or "the band" is theirs and is seen by nobody else, which is what makes it different
-                     * from the rooms they happen to share. Only shown once there is one to choose.
-                     */}
-                    {!!lists.length && (
-                        <div className="mx_Contacts_lists" role="tablist" aria-label={_t("contacts|lists")}>
-                            <button type="button" role="tab" aria-selected={!list} onClick={() => setListId(undefined)}>
-                                {_t("contacts|all_contacts")}
-                            </button>
-                            {lists.map((one) => (
+                {/* Naming a new list, in the column rather than in a dialog over it. */}
+                {naming && (
+                    <form
+                        className="mx_Contacts_naming"
+                        onSubmit={(event) => {
+                            event.preventDefault();
+                            const name = newListName.trim();
+                            if (name) void addList(client, name).then(again);
+                            setNewListName("");
+                            setNaming(false);
+                        }}
+                    >
+                        <input
+                            autoFocus
+                            value={newListName}
+                            placeholder={_t("contacts|list_name")}
+                            aria-label={_t("contacts|list_name")}
+                            onChange={(event) => setNewListName(event.target.value)}
+                        />
+                        <Button kind="primary" size="md" type="submit">
+                            {_t("action|save")}
+                        </Button>
+                        <Button kind="secondary" size="md" type="button" onClick={() => setNaming(false)}>
+                            {_t("action|cancel")}
+                        </Button>
+                    </form>
+                )}
+                {/*
+                 * What a lookup would disclose, before it happens - and what it found, after.
+                 *
+                 * The count is the point of the first state: "this sends 214 phone numbers to ident.example" is
+                 * the fact the reader needs, and it is not one they can work out from a list they cannot see.
+                 */}
+                {discovering && (
+                    <div className="mx_Contacts_discover">
+                        {discovering.found ? (
+                            <span>
+                                {discovering.found.length
+                                    ? _t("contacts|discovered", { count: discovering.found.length })
+                                    : _t("contacts|discovered_none")}
+                            </span>
+                        ) : discovering.problem ? (
+                            <span>{_t(`contacts|discover_${discovering.problem}`)}</span>
+                        ) : (
+                            <>
+                                <span>
+                                    {_t("contacts|discover_warning", {
+                                        count: discovering.asked,
+                                        server: client.getIdentityServerUrl() ?? "",
+                                    })}
+                                </span>
+                                <Button kind="primary" size="md" onClick={() => discover(true)}>
+                                    {_t("contacts|discover_go")}
+                                </Button>
+                            </>
+                        )}
+                        <IconButton
+                            size="24px"
+                            aria-label={_t("action|dismiss")}
+                            onClick={() => setDiscovering(undefined)}
+                        >
+                            <CloseIcon />
+                        </IconButton>
+                    </div>
+                )}
+                {/* What the import did, said once and dismissable, rather than a list that silently grew. */}
+                {imported && (
+                    <button type="button" className="mx_Contacts_imported" onClick={() => setImported(undefined)}>
+                        {imported}
+                        <CloseIcon width="16" height="16" aria-hidden />
+                    </button>
+                )}
+                {tab === "people" ? (
+                    <>
+                        {/*
+                         * The reader's own lists, as a strip they scroll through: filing people into "family"
+                         * or "the band" is theirs and is seen by nobody else, which is what makes it different
+                         * from the rooms they happen to share. Only shown once there is one to choose.
+                         */}
+                        {!!lists.length && (
+                            <div className="mx_Contacts_lists" role="tablist" aria-label={_t("contacts|lists")}>
                                 <button
-                                    key={one.id}
                                     type="button"
                                     role="tab"
-                                    aria-selected={one.id === listId}
-                                    onClick={() => setListId(one.id)}
+                                    aria-selected={!list}
+                                    onClick={() => setListId(undefined)}
                                 >
-                                    {one.name}
+                                    {_t("contacts|all_contacts")}
                                 </button>
-                            ))}
-                        </div>
-                    )}
-                    {/*
-                     * What is picked, and what can be done to all of it at once. Merging several rows in
-                     * one go is the point: saying "these four are one person" was four separate two-step
-                     * picks before, and the bar also says how many are in hand, which a set of ticks does
-                     * not.
-                     */}
-                    {picked.size > 0 && (
-                        <div className="mx_Contacts_batch" role="toolbar" aria-label={_t("contacts|selected")}>
-                            <span className="mx_Contacts_batchCount">
-                                {_t("contacts|selected_count", { count: picked.size })}
-                            </span>
-                            <Button
-                                kind="primary"
-                                size="md"
-                                Icon={GroupIcon}
-                                disabled={picked.size < 2}
-                                onClick={() => mergePeople(pickedPeople)}
-                            >
-                                {_t("contacts|merge")}
-                            </Button>
-                            <IconButton
-                                size="32px"
-                                aria-label={_t("contacts|favourite")}
-                                tooltip={_t("contacts|favourite")}
-                                onClick={() => favourite(pickedPeople, true)}
-                            >
-                                <FavouriteIcon />
-                            </IconButton>
-                            <IconButton
-                                size="24px"
-                                aria-label={_t("action|cancel")}
-                                onClick={() => setPicked(new Set())}
-                            >
-                                <CloseIcon />
-                            </IconButton>
-                        </div>
-                    )}
-                    <div className="mx_Contacts_listWithIndex">
-                        <div className="mx_Contacts_list" ref={listRef}>
-                            {/*
-                             * The reader's own card, at the top and outside the letters.
-                             *
-                             * A phone's address book opens on you: it is the card you hand to other people
-                             * and the one you edit most, and filing it under its own initial makes you
-                             * scroll to find yourself among everyone else.
-                             */}
-                            {!query && (
-                                <button type="button" className="mx_Contacts_row mx_Contacts_me" onClick={openMe}>
-                                    <span className="mx_Contacts_faceWith">
-                                        <Face name={myName} avatarUrl={myAvatar} />
+                                {lists.map((one) => (
+                                    <button
+                                        key={one.id}
+                                        type="button"
+                                        role="tab"
+                                        aria-selected={one.id === listId}
+                                        onClick={() => setListId(one.id)}
+                                    >
+                                        {one.name}
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+                        {/*
+                         * What is picked, and what can be done to all of it at once. Merging several rows in
+                         * one go is the point: saying "these four are one person" was four separate two-step
+                         * picks before, and the bar also says how many are in hand, which a set of ticks does
+                         * not.
+                         */}
+                        {picked.size > 0 && (
+                            <div className="mx_Contacts_batch" role="toolbar" aria-label={_t("contacts|selected")}>
+                                <span className="mx_Contacts_batchCount">
+                                    {_t("contacts|selected_count", { count: picked.size })}
+                                </span>
+                                <Button
+                                    kind="primary"
+                                    size="md"
+                                    Icon={GroupIcon}
+                                    disabled={picked.size < 2}
+                                    onClick={() => mergePeople(pickedPeople)}
+                                >
+                                    {_t("contacts|merge")}
+                                </Button>
+                                <IconButton
+                                    size="32px"
+                                    aria-label={_t("contacts|favourite")}
+                                    tooltip={_t("contacts|favourite")}
+                                    onClick={() => favourite(pickedPeople, true)}
+                                >
+                                    <FavouriteIcon />
+                                </IconButton>
+                                <IconButton
+                                    size="24px"
+                                    aria-label={_t("action|cancel")}
+                                    onClick={() => setPicked(new Set())}
+                                >
+                                    <CloseIcon />
+                                </IconButton>
+                            </div>
+                        )}
+                        <div className="mx_Contacts_listWithIndex">
+                            <div className="mx_Contacts_list" ref={listRef}>
+                                {/*
+                                 * The reader's own card, at the top and outside the letters.
+                                 *
+                                 * A phone's address book opens on you: it is the card you hand to other people
+                                 * and the one you edit most, and filing it under its own initial makes you
+                                 * scroll to find yourself among everyone else.
+                                 */}
+                                {!query && (
+                                    <button type="button" className="mx_Contacts_row mx_Contacts_me" onClick={openMe}>
+                                        <span className="mx_Contacts_faceWith">
+                                            <Face name={myName} avatarUrl={myAvatar} />
+                                        </span>
+                                        <span className="mx_Contacts_rowText">
+                                            <span className="mx_Contacts_name">{myName}</span>
+                                            <span className="mx_Contacts_detail">{_t("contacts|my_card")}</span>
+                                        </span>
+                                    </button>
+                                )}
+                                {people === undefined && <Spinner />}
+                                {/*
+                                 * One line about the duplicates, not the duplicates themselves.
+                                 *
+                                 * A phone says "3 Duplicates Found" above the list and keeps the cards on a
+                                 * screen of their own, because deciding who is who is a job you sit down to -
+                                 * and a stack of unanswered questions in front of the address book makes the
+                                 * address book harder to use every time you open it.
+                                 */}
+                                {!query && !!state?.suggestions.length && (
+                                    <button
+                                        type="button"
+                                        className="mx_Contacts_duplicates"
+                                        onClick={() => setReviewing(true)}
+                                    >
+                                        <span className="mx_Contacts_rowText">
+                                            <span className="mx_Contacts_name">
+                                                {_t("contacts|duplicates_found", {
+                                                    count: state.suggestions.length,
+                                                })}
+                                            </span>
+                                            <span className="mx_Contacts_detail">{_t("contacts|duplicates_what")}</span>
+                                        </span>
+                                        <ChevronRightIcon width="20" height="20" aria-hidden />
+                                    </button>
+                                )}
+                                {people !== undefined && !shown.length && (
+                                    <p className="mx_Contacts_empty">{_t("contacts|no_people")}</p>
+                                )}
+                                {(query ? [{ letter: "", items: shown }] : sections).map((section) => (
+                                    /*
+                                     * A section around each letter, not a bare heading in the list.
+                                     *
+                                     * The headings are sticky, and siblings sticking to the same top in one
+                                     * containing block all pin at zero and overlap - so an earlier letter is
+                                     * still "at the top" while a later one covers it, and measuring it to
+                                     * scroll there returns no distance at all. The index could go forwards
+                                     * and never back. Inside its own section a heading sticks within that
+                                     * section, which also makes the next one push it out as iOS does.
+                                     */
+                                    <div
+                                        className="mx_Contacts_section"
+                                        data-section={section.letter}
+                                        key={section.letter}
+                                    >
+                                        {section.letter && (
+                                            <h3 className="mx_Contacts_letter" data-letter={section.letter}>
+                                                {section.letter}
+                                            </h3>
+                                        )}
+                                        {section.items.map((person) => (
+                                            <PersonRow
+                                                key={person.id}
+                                                client={client}
+                                                person={person}
+                                                presence={personPresence(client, person)}
+                                                onOpen={setOpen}
+                                                menu={personMenu}
+                                                selected={picked.has(person.id)}
+                                                selecting={picked.size > 0}
+                                                onToggle={toggle}
+                                            />
+                                        ))}
+                                    </div>
+                                ))}
+                            </div>
+                            {/* Nothing to jump between under one letter, so the index only appears above that. */}
+                            {!query && sections.length > 1 && (
+                                /*
+                                 * A ruler you drag, not a column of buttons.
+                                 *
+                                 * Which letter the finger is on is worked out from where in the strip it is
+                                 * rather than from what it is over, so the list follows a drag continuously and
+                                 * between the letters as well as on them - pressing each one in turn was the
+                                 * only way to move before, which on a touch screen is not how this is used.
+                                 * Pointer events, so a mouse, a finger and a pen all take the same path, and
+                                 * the pointer is captured so a drag that wanders off the strip keeps working.
+                                 */
+                                <nav
+                                    className="mx_Contacts_index"
+                                    aria-label={_t("contacts|index")}
+                                    title={_t("contacts|index_hint")}
+                                    onPointerDown={(event) => {
+                                        event.currentTarget.setPointerCapture(event.pointerId);
+                                        setDragging(true);
+                                        jumpToPoint(event.currentTarget, event.clientY);
+                                    }}
+                                    onPointerMove={(event) => {
+                                        if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+                                            jumpToPoint(event.currentTarget, event.clientY);
+                                        }
+                                    }}
+                                    onPointerUp={(event) => {
+                                        event.currentTarget.releasePointerCapture(event.pointerId);
+                                        setDragging(false);
+                                    }}
+                                    onPointerCancel={() => setDragging(false)}
+                                    data-dragging={dragging || undefined}
+                                >
+                                    {sections.map((section) => (
+                                        <span key={section.letter} aria-hidden="true">
+                                            {section.letter}
+                                        </span>
+                                    ))}
+                                    {/*
+                                     * The letters themselves are not buttons - a drag is not a press - so the
+                                     * keyboard gets its own way in: one control per letter, reachable and named,
+                                     * off screen but not hidden from assistive technology.
+                                     */}
+                                    <span className="mx_Contacts_indexKeys">
+                                        {sections.map((section) => (
+                                            <button
+                                                key={section.letter}
+                                                type="button"
+                                                onClick={() => jumpTo(section.letter)}
+                                            >
+                                                {section.letter}
+                                            </button>
+                                        ))}
                                     </span>
-                                    <span className="mx_Contacts_rowText">
-                                        <span className="mx_Contacts_name">{myName}</span>
-                                        <span className="mx_Contacts_detail">{_t("contacts|my_card")}</span>
-                                    </span>
-                                </button>
+                                </nav>
                             )}
-                            {people === undefined && <Spinner />}
-                            {/* Only while nothing is typed: a search is a question about one person. */}
-                            {!query &&
-                                state?.suggestions.map((suggestion) => (
-                                    <SuggestionCard
-                                        key={accountsOf(suggestion.people).join(",")}
-                                        client={client}
-                                        suggestion={suggestion}
-                                        onMerge={merge}
-                                        onDismiss={dismiss}
+                        </div>
+                    </>
+                ) : (
+                    <>
+                        {!!favourited.length && (
+                            <div className="mx_Contacts_favourites" aria-label={_t("contacts|favourites")}>
+                                {favourited.map((favourite) => (
+                                    <FavouriteCard
+                                        key={favourite.roomId}
+                                        favourite={favourite}
+                                        onOpen={openFavourite}
                                     />
                                 ))}
-                            {people !== undefined && !shown.length && (
-                                <p className="mx_Contacts_empty">{_t("contacts|no_people")}</p>
+                            </div>
+                        )}
+                        {/*
+                         * All, missed, or callers nobody saved: one control with three positions, the same
+                         * shape as the bar at the foot of the column. Two filled buttons that each toggled
+                         * read as two switches, and left "all calls" as the state of having pressed neither.
+                         */}
+                        <div className="mx_Contacts_filterBar">
+                            <CallFilter
+                                value={onlyMissed ? "missed" : onlyUnknown ? "unknown" : "all"}
+                                onChange={(next) => {
+                                    setOnlyMissed(next === "missed");
+                                    setOnlyUnknown(next === "unknown");
+                                }}
+                            />
+                            {/*
+                             * What the date in the search was taken to mean, said out loud and removable: a
+                             * list that silently narrowed itself to one day would read as a list that had lost
+                             * most of its calls.
+                             */}
+                            {when && (
+                                <button
+                                    type="button"
+                                    className="mx_Contacts_dateChip"
+                                    onClick={() => setQuery(query.replace(when.text, "").trim())}
+                                >
+                                    {when.date.toLocaleDateString(undefined, {
+                                        day: "numeric",
+                                        month: "long",
+                                        ...(when.hasTime ? { hour: "numeric", minute: "2-digit" } : {}),
+                                    })}
+                                    <CloseIcon width="16" height="16" aria-hidden />
+                                </button>
                             )}
-                            {(query ? [{ letter: "", items: shown }] : sections).map((section) => (
-                                /*
-                                 * A section around each letter, not a bare heading in the list.
-                                 *
-                                 * The headings are sticky, and siblings sticking to the same top in one
-                                 * containing block all pin at zero and overlap - so an earlier letter is
-                                 * still "at the top" while a later one covers it, and measuring it to
-                                 * scroll there returns no distance at all. The index could go forwards
-                                 * and never back. Inside its own section a heading sticks within that
-                                 * section, which also makes the next one push it out as iOS does.
-                                 */
-                                <div className="mx_Contacts_section" data-section={section.letter} key={section.letter}>
-                                    {section.letter && (
-                                        <h3 className="mx_Contacts_letter" data-letter={section.letter}>
-                                            {section.letter}
-                                        </h3>
-                                    )}
-                                    {section.items.map((person) => (
-                                        <PersonRow
-                                            key={person.id}
-                                            client={client}
-                                            person={person}
-                                            presence={personPresence(client, person)}
-                                            onOpen={setOpen}
-                                            menu={personMenu}
-                                            selected={picked.has(person.id)}
-                                            selecting={picked.size > 0}
-                                            onToggle={toggle}
-                                        />
-                                    ))}
+                        </div>
+                        <div className="mx_Contacts_list">
+                            {!shownCalls.length && (
+                                <p className="mx_Contacts_empty">
+                                    {query || onlyMissed || onlyUnknown
+                                        ? _t("contacts|no_calls_matching")
+                                        : _t("contacts|no_calls")}
+                                </p>
+                            )}
+                            {/*
+                             * A day per section, as a phone's recents list is: the rows carry the time of day
+                             * and the section carries the day, so "yesterday evening" is one heading and one
+                             * glance rather than the same date repeated down every row.
+                             */}
+                            {callDays.map(({ day, calls: ofDay }) => (
+                                <div className="mx_Contacts_section" data-section={day} key={day}>
+                                    <h3 className="mx_Contacts_letter">{day}</h3>
+                                    {ofDay.map((call) => {
+                                        const id = `${call.roomId}:${call.eventId}`;
+                                        return (
+                                            <CallRow
+                                                key={id}
+                                                client={client}
+                                                call={call}
+                                                onOpen={openCall}
+                                                onInfo={openCaller}
+                                                onCallBack={callBack}
+                                                onMessage={messageCaller}
+                                                menuOpen={menuFor === id}
+                                                onMenu={(next) => setMenuFor(next ? id : undefined)}
+                                            />
+                                        );
+                                    })}
                                 </div>
                             ))}
                         </div>
-                        {/* Nothing to jump between under one letter, so the index only appears above that. */}
-                        {!query && sections.length > 1 && (
-                            /*
-                             * A ruler you drag, not a column of buttons.
-                             *
-                             * Which letter the finger is on is worked out from where in the strip it is
-                             * rather than from what it is over, so the list follows a drag continuously and
-                             * between the letters as well as on them - pressing each one in turn was the
-                             * only way to move before, which on a touch screen is not how this is used.
-                             * Pointer events, so a mouse, a finger and a pen all take the same path, and
-                             * the pointer is captured so a drag that wanders off the strip keeps working.
-                             */
-                            <nav
-                                className="mx_Contacts_index"
-                                aria-label={_t("contacts|index")}
-                                title={_t("contacts|index_hint")}
-                                onPointerDown={(event) => {
-                                    event.currentTarget.setPointerCapture(event.pointerId);
-                                    setDragging(true);
-                                    jumpToPoint(event.currentTarget, event.clientY);
-                                }}
-                                onPointerMove={(event) => {
-                                    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
-                                        jumpToPoint(event.currentTarget, event.clientY);
-                                    }
-                                }}
-                                onPointerUp={(event) => {
-                                    event.currentTarget.releasePointerCapture(event.pointerId);
-                                    setDragging(false);
-                                }}
-                                onPointerCancel={() => setDragging(false)}
-                                data-dragging={dragging || undefined}
-                            >
-                                {sections.map((section) => (
-                                    <span key={section.letter} aria-hidden="true">
-                                        {section.letter}
-                                    </span>
-                                ))}
-                                {/*
-                                 * The letters themselves are not buttons - a drag is not a press - so the
-                                 * keyboard gets its own way in: one control per letter, reachable and named,
-                                 * off screen but not hidden from assistive technology.
-                                 */}
-                                <span className="mx_Contacts_indexKeys">
-                                    {sections.map((section) => (
-                                        <button
-                                            key={section.letter}
-                                            type="button"
-                                            onClick={() => jumpTo(section.letter)}
-                                        >
-                                            {section.letter}
-                                        </button>
-                                    ))}
-                                </span>
-                            </nav>
-                        )}
-                    </div>
-                </>
-            ) : (
-                <>
-                    {!!favourited.length && (
-                        <div className="mx_Contacts_favourites" aria-label={_t("contacts|favourites")}>
-                            {favourited.map((favourite) => (
-                                <FavouriteCard key={favourite.roomId} favourite={favourite} onOpen={openFavourite} />
-                            ))}
-                        </div>
-                    )}
-                    {/*
-                     * All, missed, or callers nobody saved: one control with three positions, the same
-                     * shape as the bar at the foot of the column. Two filled buttons that each toggled
-                     * read as two switches, and left "all calls" as the state of having pressed neither.
-                     */}
-                    <div className="mx_Contacts_filterBar">
-                        <CallFilter
-                            value={onlyMissed ? "missed" : onlyUnknown ? "unknown" : "all"}
-                            onChange={(next) => {
-                                setOnlyMissed(next === "missed");
-                                setOnlyUnknown(next === "unknown");
-                            }}
-                        />
-                        {/*
-                         * What the date in the search was taken to mean, said out loud and removable: a
-                         * list that silently narrowed itself to one day would read as a list that had lost
-                         * most of its calls.
-                         */}
-                        {when && (
-                            <button
-                                type="button"
-                                className="mx_Contacts_dateChip"
-                                onClick={() => setQuery(query.replace(when.text, "").trim())}
-                            >
-                                {when.date.toLocaleDateString(undefined, {
-                                    day: "numeric",
-                                    month: "long",
-                                    ...(when.hasTime ? { hour: "numeric", minute: "2-digit" } : {}),
-                                })}
-                                <CloseIcon width="16" height="16" aria-hidden />
-                            </button>
-                        )}
-                    </div>
-                    <div className="mx_Contacts_list">
-                        {!shownCalls.length && (
-                            <p className="mx_Contacts_empty">
-                                {query || onlyMissed || onlyUnknown
-                                    ? _t("contacts|no_calls_matching")
-                                    : _t("contacts|no_calls")}
-                            </p>
-                        )}
-                        {/*
-                         * A day per section, as a phone's recents list is: the rows carry the time of day
-                         * and the section carries the day, so "yesterday evening" is one heading and one
-                         * glance rather than the same date repeated down every row.
-                         */}
-                        {callDays.map(({ day, calls: ofDay }) => (
-                            <div className="mx_Contacts_section" data-section={day} key={day}>
-                                <h3 className="mx_Contacts_letter">{day}</h3>
-                                {ofDay.map((call) => {
-                                    const id = `${call.roomId}:${call.eventId}`;
-                                    return (
-                                        <CallRow
-                                            key={id}
-                                            client={client}
-                                            call={call}
-                                            onOpen={openCall}
-                                            onInfo={openCaller}
-                                            onCallBack={callBack}
-                                            onMessage={messageCaller}
-                                            menuOpen={menuFor === id}
-                                            onMenu={(next) => setMenuFor(next ? id : undefined)}
-                                        />
-                                    );
-                                })}
-                            </div>
-                        ))}
-                    </div>
-                </>
+                    </>
+                )}
+            </div>
+
+            {card}
+
+            {/* Somebody new: the same editor the card opens, with nothing in it yet. */}
+            {adding && (
+                <div className="mx_Contacts_adding">
+                    <ContactEditor card={{}} onCancel={() => setAdding(false)} onSave={addPerson} />
+                </div>
             )}
+
+            {/*
+             * The search, at the foot of the column with the control that adds somebody beside it.
+             *
+             * Both lists are searched, and both are reached with the thumb already at the bottom of the
+             * screen holding the bar - a search box at the top of a phone is the control furthest from the
+             * hand that uses it.
+             */}
+            <div className="mx_Contacts_find">
+                <input
+                    className="mx_Contacts_search"
+                    type="search"
+                    value={query}
+                    placeholder={tab === "people" ? _t("contacts|search_people") : _t("contacts|search_calls")}
+                    onChange={(event) => setQuery(event.target.value)}
+                />
+                <IconButton size="32px" aria-label={_t("contacts|add_contact")} onClick={() => setAdding(true)}>
+                    <PlusIcon />
+                </IconButton>
+            </div>
         </div>
     );
 }

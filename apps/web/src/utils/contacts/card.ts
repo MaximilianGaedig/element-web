@@ -164,7 +164,12 @@ const stored = (client: MatrixClient): Stored => client.getAccountData(CARD_EVEN
 export function cardFor(client: MatrixClient, person: Person): ContactCard | undefined {
     const cards = stored(client).cards ?? {};
     for (const account of person.accounts) {
-        const found = account.mxid ? cards[account.mxid] : undefined;
+        /*
+         * By Matrix ID for somebody with a chat, and by the card's own key for somebody who is only a
+         * card - an imported contact has no Matrix ID at all, and looking only by one would hide the very
+         * card that put them in the list.
+         */
+        const found = (account.mxid ? cards[account.mxid] : undefined) ?? cards[account.remoteId];
         if (found) return found;
     }
     return undefined;
@@ -187,9 +192,11 @@ export async function saveCard(client: MatrixClient, person: Person, card: Conta
     const cards = { ...stored(client).cards };
     const empty = isEmpty(card);
     for (const account of person.accounts) {
-        if (!account.mxid) continue;
-        if (empty) delete cards[account.mxid];
-        else cards[account.mxid] = card;
+        // Against their Matrix ID, or against the card's own key when that is all they have.
+        const key = account.mxid ?? (account.remoteId.startsWith("vcard:") ? account.remoteId : undefined);
+        if (!key) continue;
+        if (empty) delete cards[key];
+        else cards[key] = card;
     }
     await client.setAccountData(CARD_EVENT_TYPE, { cards });
 }
@@ -202,4 +209,17 @@ export function fullName(card: ContactCard): string {
     return [card.prefix, card.firstName, card.middleName, card.lastName, card.suffix]
         .filter((part) => part && part.trim())
         .join(" ");
+}
+
+/**
+ * A card for somebody with no chat and no Matrix ID: a person written down rather than found.
+ *
+ * Most of an address book is people you are not currently messaging, so a contact list that can only hold
+ * the ones with a chat is missing the point of being one. Stored under a key of its own, which is where an
+ * imported vCard that matched nobody goes too, so both arrive in the same place.
+ */
+export async function saveLooseCard(client: MatrixClient, card: ContactCard): Promise<void> {
+    if (isEmpty(card)) return;
+    const key = `vcard:${fullName(card) || card.nickname || card.phones?.[0]?.value || Date.now().toString(36)}`;
+    await client.setAccountData(CARD_EVENT_TYPE, { cards: { ...stored(client).cards, [key]: card } });
 }

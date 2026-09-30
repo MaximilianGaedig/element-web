@@ -85,6 +85,25 @@ Please see LICENSE files in the repository root for full details.
     }
 
     /*
+     * Where the marks go, which is where the room list puts them: the network in the bottom-left corner,
+     * presence in the bottom-right (see _BridgeInfo.pcss). Both ringed in the canvas colour so they read
+     * as badges on the face rather than as part of the picture.
+     */
+    .mx_Contacts_face {
+        position: relative;
+        display: flex;
+        flex-shrink: 0;
+
+        .mx_Contacts_networkLogo {
+            position: absolute;
+            inset-inline-start: -3px;
+            inset-block-end: -3px;
+            border-radius: 4px;
+            box-shadow: 0 0 0 2px var(--cpd-color-bg-canvas-default);
+        }
+    }
+
+    /*
      * The tick that says a row is picked, on the corner of the face: in the row it would be a column that
      * appears and disappears, which shifts every name in the list at the moment of picking one.
      */
@@ -115,21 +134,16 @@ Please see LICENSE files in the repository root for full details.
      * takes the first tap to appear and the second to work, so there it is simply always there - and a long
      * press on the row opens the same menu either way.
      */
+    /*
+     * The row's one control, at the end of the row and always there.
+     *
+     * It used to appear on hover as a little slab beside the row, on its own surface, with the row's
+     * hairline stopping short of it - three surfaces where there is one thing. It sits inside the row's
+     * own padding now, where the network logos used to be, and the hairline runs the full width under it.
+     */
     .mx_Contacts_more {
         flex-shrink: 0;
-    }
-
-    @media (hover: hover) {
-        .mx_Contacts_more {
-            opacity: 0;
-            transition: opacity 100ms ease;
-        }
-
-        .mx_Contacts_rowWith:hover .mx_Contacts_more,
-        .mx_Contacts_rowWith:focus-within .mx_Contacts_more,
-        .mx_Contacts_more[data-open] {
-            opacity: 1;
-        }
+        color: var(--cpd-color-icon-secondary);
     }
 
     /*
@@ -209,15 +223,54 @@ Please see LICENSE files in the repository root for full details.
     }
 
 
-    /* A row that has an action beside it: the row still takes the width, the action sits at the end. */
+    /*
+     * The row and its one control are one surface.
+     *
+     * The control cannot be inside the row - a button in a button is not markup a browser keeps - so the
+     * wrapper carries the padding, the hover and the hairline, and the two things inside it carry none of
+     * their own. Otherwise the line under a row stops wherever the button starts.
+     */
     .mx_Contacts_rowWith {
+        position: relative;
         display: flex;
         align-items: center;
-        gap: var(--cpd-space-1x);
+        padding-inline-end: var(--mx-contacts-gutter);
+
+        &:hover,
+        &:focus-within {
+            background: var(--cpd-color-bg-subtle-secondary);
+        }
 
         .mx_Contacts_row {
             min-width: 0;
+            padding-inline-end: var(--cpd-space-2x);
+
+            /* The wrapper draws it, across the whole row including the control. */
+            &:hover,
+            &:focus-visible {
+                background: transparent;
+            }
+
+            &::after {
+                display: none;
+            }
         }
+    }
+
+    /* Room at the end of every row for the letters floating over the list. */
+    .mx_Contacts_listWithIndex .mx_Contacts_rowWith,
+    .mx_Contacts_listWithIndex .mx_Contacts_letter {
+        padding-inline-end: calc(var(--mx-contacts-gutter) + var(--cpd-space-3x));
+    }
+
+    /* One hairline per row, under the text and running to the edge past the control. */
+    .mx_Contacts_rowWith:not(:last-child)::after {
+        content: "";
+        position: absolute;
+        inset-inline: var(--mx-contacts-separator-inset) 0;
+        bottom: 0;
+        height: 1px;
+        background: var(--mx-contacts-hairline);
     }
 
     /*
@@ -341,11 +394,17 @@ Please see LICENSE files in the repository root for full details.
         }
     }
 
-    /* The list and the letters beside it: the list scrolls, the index stays put next to it. */
+    /*
+     * The list, with the letters floating over it.
+     *
+     * Over rather than beside: a column of its own took width from every name and put the ruler outside
+     * the thing it rules. It sits on the inside edge of the list, vertically centred, and the rows keep
+     * enough room at their end that nothing runs under it.
+     */
     .mx_Contacts_listWithIndex {
+        position: relative;
         display: flex;
         align-items: stretch;
-        gap: var(--cpd-space-1x);
         min-height: 0;
 
         .mx_Contacts_list {
@@ -368,18 +427,19 @@ Please see LICENSE files in the repository root for full details.
      * which reads as the list moving on its own.
      */
     .mx_Contacts_index {
-        position: relative;
+        position: absolute;
+        inset-inline-end: var(--cpd-space-1x);
+        inset-block-start: 50%;
+        transform: translateY(-50%);
+        z-index: 2;
         display: flex;
         flex-direction: column;
         justify-content: center;
         /*
-         * As tall as its own letters, not as tall as the list.
-         *
-         * Stretched to the list's height the letters were spread almost fifty pixels apart and the strip
-         * took a drag over a lot of empty space, which is the same mismatch from the other side: what can
-         * be dragged has to be what is drawn.
+         * As tall as its own letters, and no taller: stretched to the list's height they were spread
+         * almost fifty pixels apart and the strip took a drag over mostly empty space, which is the same
+         * mismatch from the other side - what can be dragged has to be what is drawn.
          */
-        align-self: center;
         flex-shrink: 0;
         padding: 0 var(--cpd-space-1x);
         /* Dragged rather than scrolled, so the strip keeps the gesture instead of the list taking it. */
@@ -606,6 +666,7 @@ Please see LICENSE files in the repository root for full details.
  * below take the rest, which is what lets their own scroller reach the bottom of the screen.
  */
 .mx_ContactsView {
+    position: relative;
     display: flex;
     flex-direction: column;
     min-height: 0;
@@ -618,9 +679,11 @@ Please see LICENSE files in the repository root for full details.
     container: contactspanel / inline-size;
 }
 
+/* Back at one edge, the menu at the other, and nothing in between claiming to be a title. */
 .mx_ContactsView_header {
     display: flex;
     align-items: center;
+    justify-content: space-between;
     gap: var(--cpd-space-2x);
     padding: var(--cpd-space-2x) var(--mx-contacts-gutter);
 }
@@ -986,8 +1049,8 @@ Please see LICENSE files in the repository root for full details.
  */
 .mx_Contacts_presence {
     position: absolute;
-    inset-block-end: -1px;
-    inset-inline-end: -1px;
+    inset-block-end: -2px;
+    inset-inline-end: -2px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1151,45 +1214,93 @@ Please see LICENSE files in the repository root for full details.
 }
 
 /*
- * The editor: a column of grouped blocks, the same shape the card reads in, so switching between reading
- * and editing does not move anything the reader was looking at.
+ * The editor: grouped blocks of compact rows, with the two answers pinned at the top.
+ *
+ * It used to be a column of captioned boxes, every field of every kind shown at once, and the buttons at
+ * the foot of something taller than the screen - so saving meant scrolling past thirty empty inputs to
+ * find the control, and so did giving up. Now: the answers are always there, the three fields nearly every
+ * card has are open, and everything else is a line you press.
  */
 .mx_ContactEditor {
     display: flex;
     flex-direction: column;
-    gap: var(--cpd-space-4x);
+    gap: var(--cpd-space-3x);
     padding: 0 var(--mx-contacts-gutter) var(--cpd-space-6x);
+}
+
+.mx_ContactEditor_bar {
+    position: sticky;
+    inset-block-start: 0;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--cpd-space-2x);
+    padding: var(--cpd-space-2x) 0;
+    background: var(--cpd-color-bg-canvas-default);
 }
 
 .mx_ContactEditor_group {
     display: flex;
     flex-direction: column;
-    gap: var(--cpd-space-1x);
+    border-radius: var(--mx-contacts-inset-radius);
+    background: var(--cpd-color-bg-subtle-secondary);
+    overflow: hidden;
+}
 
-    h3 {
-        margin: 0 0 var(--cpd-space-1x);
-        color: var(--cpd-color-text-secondary);
-        font: var(--cpd-font-body-sm-semibold);
+.mx_ContactEditor_groupHead {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-height: var(--mx-contacts-row-height);
+    padding: 0 var(--cpd-space-3x);
+    border: none;
+    background: none;
+    color: var(--cpd-color-text-secondary);
+    font: var(--cpd-font-body-sm-semibold);
+    cursor: pointer;
+
+    svg {
+        color: var(--cpd-color-icon-secondary);
+        transition: transform 160ms ease;
     }
 
-    input,
-    select,
-    textarea {
-        box-sizing: border-box;
-        min-height: var(--mx-contacts-row-height);
-        padding: var(--cpd-space-2x) var(--cpd-space-3x);
-        border: 1px solid var(--cpd-color-border-interactive-secondary);
-        border-radius: var(--mx-contacts-inset-radius);
-        background: var(--cpd-color-bg-canvas-default);
-        color: var(--cpd-color-text-primary);
-        font: var(--cpd-font-body-md-regular);
+    &[aria-expanded="true"] svg {
+        transform: rotate(180deg);
     }
+}
+
+.mx_ContactEditor_groupBody {
+    display: flex;
+    flex-direction: column;
+    padding: var(--cpd-space-1x) 0 var(--cpd-space-2x);
+}
+
+/*
+ * A row, not a boxed field: the field's own name is its placeholder and the hairline between rows is what
+ * separates them, which is how a phone writes a form of thirty facts without being thirty boxes tall.
+ */
+.mx_ContactEditor_input,
+.mx_ContactEditor_row input,
+.mx_ContactEditor_row select,
+.mx_ContactEditor_label {
+    box-sizing: border-box;
+    min-height: 36px;
+    padding: var(--cpd-space-1x) var(--cpd-space-3x);
+    border: none;
+    background: transparent;
+    color: var(--cpd-color-text-primary);
+    font: var(--cpd-font-body-md-regular);
+}
+
+.mx_ContactEditor_input:not(:last-child),
+.mx_ContactEditor_row:not(:last-child) {
+    border-bottom: 1px solid var(--mx-contacts-hairline);
 }
 
 .mx_ContactEditor_field {
     display: flex;
     flex-direction: column;
-    gap: 2px;
 }
 
 .mx_ContactEditor_fieldLabel {
@@ -1200,7 +1311,6 @@ Please see LICENSE files in the repository root for full details.
 .mx_ContactEditor_row {
     display: flex;
     align-items: center;
-    gap: var(--cpd-space-2x);
 
     input:not(.mx_ContactEditor_label) {
         flex: 1;
@@ -1211,17 +1321,20 @@ Please see LICENSE files in the repository root for full details.
 /* Narrow enough to read as the label of the value beside it rather than as a field of its own. */
 .mx_ContactEditor_label {
     flex: 0 0 auto;
-    width: 9rem;
-    max-width: 40%;
+    width: 8rem;
+    max-width: 38%;
+    color: var(--cpd-color-text-secondary);
+    font: var(--cpd-font-body-sm-regular);
 }
 
 .mx_ContactEditor_address {
     display: flex;
     flex-direction: column;
-    gap: var(--cpd-space-1x);
-    padding: var(--cpd-space-3x);
-    border-radius: var(--mx-contacts-inset-radius);
-    background: var(--cpd-color-bg-subtle-secondary);
+    padding: var(--cpd-space-1x) 0;
+
+    & + & {
+        border-top: 1px solid var(--mx-contacts-hairline);
+    }
 }
 
 .mx_ContactEditor_remove {
@@ -1229,8 +1342,8 @@ Please see LICENSE files in the repository root for full details.
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
-    min-width: var(--mx-contacts-row-height);
-    min-height: var(--mx-contacts-row-height);
+    min-width: 36px;
+    min-height: 36px;
     border: none;
     background: none;
     color: var(--cpd-color-icon-secondary);
@@ -1243,15 +1356,18 @@ Please see LICENSE files in the repository root for full details.
 }
 
 .mx_ContactEditor_notes {
-    min-height: 6rem;
+    min-height: 5rem;
+    margin: 0 var(--cpd-space-3x);
+    padding: var(--cpd-space-2x);
+    border: none;
+    border-radius: var(--mx-contacts-inset-radius);
+    background: var(--cpd-color-bg-canvas-default);
+    color: var(--cpd-color-text-primary);
+    font: var(--cpd-font-body-md-regular);
     resize: vertical;
 }
 
-.mx_ContactEditor_actions {
-    display: flex;
-    justify-content: flex-end;
-    gap: var(--cpd-space-2x);
-}
+
 
 /* What a lookup would disclose, before it happens, and what it found after. */
 .mx_Contacts_discover {
@@ -1269,4 +1385,102 @@ Please see LICENSE files in the repository root for full details.
         flex: 1;
         min-width: 0;
     }
+}
+
+/* The search and the control that adds somebody, at the foot of the column above the bar. */
+.mx_Contacts_find {
+    display: flex;
+    align-items: center;
+    gap: var(--cpd-space-2x);
+    padding: var(--cpd-space-2x) var(--mx-contacts-gutter);
+    /* Clear of the bar that floats over this column. */
+    padding-bottom: var(--mx-room-list-toast-bottom, var(--cpd-space-8x));
+
+    .mx_Contacts_search {
+        flex: 1;
+        min-width: 0;
+        margin: 0;
+    }
+}
+
+/*
+ * One line about the duplicates, above the names, opening the screen that holds them.
+ *
+ * A phone puts this here and the cards themselves elsewhere: deciding who is who is a job you sit down to,
+ * and a stack of unanswered questions in front of the address book makes it harder to use every time.
+ */
+.mx_Contacts_duplicates {
+    display: flex;
+    align-items: center;
+    gap: var(--cpd-space-2x);
+    width: 100%;
+    box-sizing: border-box;
+    min-height: var(--mx-contacts-row-height);
+    padding: var(--cpd-space-2x) var(--mx-contacts-gutter);
+    margin-bottom: var(--cpd-space-2x);
+    border: none;
+    background: var(--cpd-color-bg-subtle-secondary);
+    color: var(--cpd-color-text-primary);
+    text-align: start;
+    cursor: pointer;
+
+    svg {
+        flex-shrink: 0;
+        color: var(--cpd-color-icon-secondary);
+    }
+}
+
+/* Merge all, or ignore all: the two answers to the whole screen. */
+.mx_Contacts_reviewActions {
+    display: flex;
+    flex-direction: column;
+    gap: var(--cpd-space-2x);
+    padding: var(--cpd-space-4x) var(--mx-contacts-gutter);
+    padding-bottom: var(--mx-room-list-toast-bottom, var(--cpd-space-8x));
+}
+
+/* The column's own contents, which a layer covers: laid out as if this wrapper were not there. */
+.mx_Contacts_under {
+    display: contents;
+}
+
+/*
+ * A screen over the column rather than in place of it.
+ *
+ * What is underneath keeps its scroll, which is the whole reason for the layer: swapping the list out for
+ * a card unmounted it, and a list that unmounts comes back at the top - so opening somebody near the
+ * bottom and pressing back put the reader at A again.
+ */
+.mx_Contacts_layer,
+.mx_Contacts_adding {
+    position: absolute;
+    inset: 0;
+    z-index: 4;
+    display: flex;
+    flex-direction: column;
+    background: var(--cpd-color-bg-canvas-default);
+    /*
+     * In from the side and back out again, on the animation a chat already uses when it takes over a
+     * handheld screen (mx_TgSheet_in/out in _TgHandheld.pcss and _TgPanes.pcss). The same motion and the
+     * same timings, because this is the same gesture: something covers the column, and back returns it.
+     */
+    animation: mx_TgSheet_in var(--tg-transition-standard-in, 200ms ease);
+}
+
+/* Going back: the layer leaves the way it came, and stops taking presses while it does. */
+.mx_Contacts_layer[data-leaving],
+.mx_Contacts_adding[data-leaving] {
+    animation: mx_TgSheet_out var(--tg-transition-standard-out, 150ms ease) forwards;
+    pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .mx_Contacts_layer,
+    .mx_Contacts_adding {
+        animation: none;
+    }
+}
+
+.mx_Contacts_adding {
+    overflow-y: auto;
 }

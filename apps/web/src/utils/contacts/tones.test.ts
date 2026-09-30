@@ -14,9 +14,7 @@ import { type Person } from "./people";
 const person = (...rooms: string[]): Person =>
     ({ id: "p", name: "Ada", accounts: [], keys: [], rooms, saved: false, details: [] }) as unknown as Person;
 
-const clientWith = (
-    tones: Record<string, unknown>,
-): { client: MatrixClient; written: [string, string, unknown][] } => {
+const clientWith = (tones: Record<string, unknown>): { client: MatrixClient; written: [string, string, unknown][] } => {
     const written: [string, string, unknown][] = [];
     const client = {
         getRoom: (roomId: string) =>

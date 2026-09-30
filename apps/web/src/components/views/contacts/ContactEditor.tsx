@@ -30,6 +30,7 @@ Please see LICENSE files in the repository root for full details.
 import React, { type JSX, useState } from "react";
 import { Button, Form } from "@vector-im/compound-web";
 import DeleteIcon from "@vector-im/compound-design-tokens/assets/web/icons/delete";
+import ChevronIcon from "@vector-im/compound-design-tokens/assets/web/icons/chevron-down";
 
 import { _t } from "../../../languageHandler";
 import {
@@ -47,30 +48,67 @@ import {
     URL_LABELS,
 } from "../../../utils/contacts/card";
 
-/** A text field with its name above it, which is every field on this form. */
+/**
+ * A text row: the name of the field is the placeholder, not a label stacked above it.
+ *
+ * A form of thirty fields, each a caption over a box with its own border and its own padding, is twice the
+ * height it needs to be and reads as thirty separate things. A phone writes them as rows in a grouped
+ * block - the field's name in the box until something is typed - so a card of ten facts is ten lines.
+ */
 function Field({
     label,
     value,
     onChange,
     type = "text",
-    placeholder,
 }: {
     label: string;
     value?: string;
     onChange: (value: string) => void;
     type?: string;
-    placeholder?: string;
 }): JSX.Element {
     return (
-        <label className="mx_ContactEditor_field">
-            <span className="mx_ContactEditor_fieldLabel">{label}</span>
-            <input
-                type={type}
-                value={value ?? ""}
-                placeholder={placeholder}
-                onChange={(event) => onChange(event.target.value)}
-            />
-        </label>
+        <input
+            className="mx_ContactEditor_input"
+            type={type}
+            value={value ?? ""}
+            placeholder={label}
+            aria-label={label}
+            onChange={(event) => onChange(event.target.value)}
+        />
+    );
+}
+
+/**
+ * A group that is not there until it is wanted.
+ *
+ * Everything at once was the other half of the problem: the form opened on every field a contact could
+ * ever have, so finding the one being edited meant scrolling past twenty empty boxes. A group with
+ * something in it opens; an empty one is a line you press.
+ */
+function Group({
+    title,
+    filled,
+    children,
+}: {
+    title: string;
+    /** Whether it already holds something, in which case it opens with the form. */
+    filled: boolean;
+    children: React.ReactNode;
+}): JSX.Element {
+    const [open, setOpen] = useState(filled);
+    return (
+        <section className="mx_ContactEditor_group" aria-label={title} data-open={open || undefined}>
+            <button
+                type="button"
+                className="mx_ContactEditor_groupHead"
+                aria-expanded={open}
+                onClick={() => setOpen((was) => !was)}
+            >
+                <span>{title}</span>
+                <ChevronIcon width="20" height="20" aria-hidden />
+            </button>
+            {open && <div className="mx_ContactEditor_groupBody">{children}</div>}
+        </section>
     );
 }
 
@@ -207,10 +245,46 @@ export function ContactEditor({ card, onSave, onCancel }: Props): JSX.Element {
                 onSave(draft);
             }}
         >
-            <section className="mx_ContactEditor_group" aria-label={_t("contacts|name")}>
-                <h3>{_t("contacts|name")}</h3>
+            {/*
+             * The two answers, at the top and always there.
+             *
+             * They were at the foot of a form that is taller than the screen, so saving meant scrolling
+             * past every field to find the button - and cancelling meant the same journey to get out.
+             */}
+            <div className="mx_ContactEditor_bar">
+                <Button kind="tertiary" size="md" type="button" onClick={onCancel}>
+                    {_t("action|cancel")}
+                </Button>
+                <Button kind="primary" size="md" type="submit">
+                    {_t("action|save")}
+                </Button>
+            </div>
+
+            {/* The three a phone shows first, because they are the three nearly every card has. */}
+            <section className="mx_ContactEditor_group" data-open aria-label={_t("contacts|name")}>
+                <div className="mx_ContactEditor_groupBody">
+                    <Field label={_t("contacts|first_name")} value={draft.firstName} onChange={text("firstName")} />
+                    <Field label={_t("contacts|last_name")} value={draft.lastName} onChange={text("lastName")} />
+                    <Field label={_t("contacts|company")} value={draft.company} onChange={text("company")} />
+                </div>
+            </section>
+
+            <Group
+                title={_t("contacts|more_name")}
+                filled={
+                    !!(
+                        draft.prefix ||
+                        draft.middleName ||
+                        draft.suffix ||
+                        draft.nickname ||
+                        draft.previousName ||
+                        draft.phoneticFirst ||
+                        draft.phoneticMiddle ||
+                        draft.phoneticLast
+                    )
+                }
+            >
                 <Field label={_t("contacts|prefix")} value={draft.prefix} onChange={text("prefix")} />
-                <Field label={_t("contacts|first_name")} value={draft.firstName} onChange={text("firstName")} />
                 {/*
                  * The phonetic fields are not decoration: they are how a name is sorted and spoken in
                  * Japanese and Chinese address books, and a card that drops them cannot round-trip one.
@@ -239,14 +313,12 @@ export function ContactEditor({ card, onSave, onCancel }: Props): JSX.Element {
                     value={draft.previousName}
                     onChange={text("previousName")}
                 />
-            </section>
+            </Group>
 
-            <section className="mx_ContactEditor_group" aria-label={_t("contacts|work")}>
-                <h3>{_t("contacts|work")}</h3>
-                <Field label={_t("contacts|company")} value={draft.company} onChange={text("company")} />
+            <Group title={_t("contacts|work")} filled={!!(draft.jobTitle || draft.department)}>
                 <Field label={_t("contacts|job_title")} value={draft.jobTitle} onChange={text("jobTitle")} />
                 <Field label={_t("contacts|department")} value={draft.department} onChange={text("department")} />
-            </section>
+            </Group>
 
             <LabelledRows
                 title={_t("contacts|phone")}
@@ -273,8 +345,7 @@ export function ContactEditor({ card, onSave, onCancel }: Props): JSX.Element {
                 onChange={(rows) => set("urls", rows)}
             />
 
-            <section className="mx_ContactEditor_group" aria-label={_t("contacts|address")}>
-                <h3>{_t("contacts|address")}</h3>
+            <Group title={_t("contacts|address")} filled={!!draft.addresses?.length}>
                 {addresses.map((address, at) => (
                     <div className="mx_ContactEditor_address" key={at}>
                         <LabelPicker
@@ -309,10 +380,9 @@ export function ContactEditor({ card, onSave, onCancel }: Props): JSX.Element {
                         />
                     </div>
                 ))}
-            </section>
+            </Group>
 
-            <section className="mx_ContactEditor_group" aria-label={_t("contacts|birthday")}>
-                <h3>{_t("contacts|birthday")}</h3>
+            <Group title={_t("contacts|birthday")} filled={!!(draft.birthday || draft.dates?.length)}>
                 {/*
                  * A plain date field: a birthday with no year is written `--MM-DD` in vCard, which a date
                  * input cannot express, so a year is asked for and the card keeps whichever form it was
@@ -355,10 +425,9 @@ export function ContactEditor({ card, onSave, onCancel }: Props): JSX.Element {
                         />
                     </div>
                 ))}
-            </section>
+            </Group>
 
-            <section className="mx_ContactEditor_group" aria-label={_t("contacts|related")}>
-                <h3>{_t("contacts|related")}</h3>
+            <Group title={_t("contacts|related")} filled={!!draft.related?.length}>
                 {related.map((one, at) => (
                     <div className="mx_ContactEditor_row" key={at}>
                         <LabelPicker
@@ -390,7 +459,7 @@ export function ContactEditor({ card, onSave, onCancel }: Props): JSX.Element {
                         />
                     </div>
                 ))}
-            </section>
+            </Group>
 
             {/* Services with no bridge here: a Skype handle is still a fact about the person. */}
             {(
@@ -399,8 +468,7 @@ export function ContactEditor({ card, onSave, onCancel }: Props): JSX.Element {
                     ["social", social, _t("contacts|social")],
                 ] as const
             ).map(([key, rows, title]) => (
-                <section className="mx_ContactEditor_group" aria-label={title} key={key}>
-                    <h3>{title}</h3>
+                <Group title={title} filled={!!rows.length && rows.length > 1} key={key}>
                     {rows.map((one, at) => (
                         <div className="mx_ContactEditor_row" key={at}>
                             <input
@@ -436,28 +504,17 @@ export function ContactEditor({ card, onSave, onCancel }: Props): JSX.Element {
                             />
                         </div>
                     ))}
-                </section>
+                </Group>
             ))}
 
-            <section className="mx_ContactEditor_group" aria-label={_t("contacts|notes")}>
-                <h3>{_t("contacts|notes")}</h3>
+            <Group title={_t("contacts|notes")} filled={!!draft.notes}>
                 <textarea
                     className="mx_ContactEditor_notes"
                     value={draft.notes ?? ""}
                     aria-label={_t("contacts|notes")}
                     onChange={(event) => text("notes")(event.target.value)}
                 />
-            </section>
-
-            <div className="mx_ContactEditor_actions">
-                {/* Without type="button" this would submit the form it sits in, which is a save. */}
-                <Button kind="secondary" size="md" type="button" onClick={onCancel}>
-                    {_t("action|cancel")}
-                </Button>
-                <Button kind="primary" size="md" type="submit">
-                    {_t("action|save")}
-                </Button>
-            </div>
+            </Group>
         </Form.Root>
     );
 }

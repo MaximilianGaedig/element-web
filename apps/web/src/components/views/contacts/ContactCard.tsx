@@ -556,9 +556,7 @@ export function ContactCard({
                                             onClick={() => toneRefs[which].current?.click()}
                                         >
                                             <span className="mx_ContactCard_factLabel">
-                                                {which === "ring"
-                                                    ? _t("contacts|ringtone")
-                                                    : _t("contacts|text_tone")}
+                                                {which === "ring" ? _t("contacts|ringtone") : _t("contacts|text_tone")}
                                             </span>
                                             <span className="mx_ContactCard_factValue">
                                                 {tone?.name ?? _t("contacts|tone_default")}

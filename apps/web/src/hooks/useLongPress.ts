@@ -19,7 +19,10 @@ const HELD_FOR = 500;
  * is cleared when the element goes away, so a row scrolled out mid-press cannot open a menu for itself
  * afterwards.
  */
-export function useLongPress(onLongPress: () => void, ms: number = HELD_FOR): {
+export function useLongPress(
+    onLongPress: () => void,
+    ms: number = HELD_FOR,
+): {
     onTouchStart: () => void;
     onTouchEnd: () => void;
     onTouchMove: () => void;

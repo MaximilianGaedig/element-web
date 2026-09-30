@@ -32,6 +32,7 @@ import { type BridgeLogin, type BridgePerson, askBridge, askEveryBridge, bridgeL
 import { getBridgeInfo, getBridgedDmUserId } from "../bridge/bridgeInfo";
 import { type ContactDetail, type IdentityKey, identityDetails, identityKeys } from "./identity";
 import DMRoomMap from "../DMRoomMap";
+import { allCards, fullName } from "./card";
 
 /** Where links the reader made by hand are kept, so they follow the account and not the browser. */
 export const LINKS_EVENT_TYPE = "im.mxg.contact_links";
@@ -433,6 +434,39 @@ export function accountsOf(people: Person[]): string[] {
 }
 
 /**
+ * The people who are only a card: imported, or written down by hand.
+ *
+ * Most of an address book is people you are not currently messaging, and until these were read back the
+ * list simply did not show them - an import of two hundred contacts stored two hundred cards and put none
+ * of them on screen. They arrive as accounts like any other, with the numbers and addresses the card
+ * carries as their identity keys, so the merging then does its job: a card with a number a bridge also
+ * publishes becomes one person with that chat rather than a second entry beside it.
+ */
+function contactsFromCards(client: MatrixClient): Account[] {
+    const accounts: Account[] = [];
+    for (const [key, card] of Object.entries(allCards(client))) {
+        // A card stored against a Matrix ID belongs to somebody the list already has.
+        if (!key.startsWith("vcard:")) continue;
+        const identifiers = [
+            ...(card.phones ?? []).map((phone) => `tel:${phone.value}`),
+            ...(card.emails ?? []).map((email) => `mailto:${email.value}`),
+        ];
+        const name = fullName(card) || card.nickname || identifiers[0] || key.slice("vcard:".length);
+        accounts.push({
+            network: "Contacts",
+            remoteId: key,
+            name,
+            keys: identityKeys(identifiers),
+            details: identityDetails(identifiers),
+            identifiers,
+            // They are in the address book; that is the whole of what these are.
+            saved: true,
+        });
+    }
+    return accounts;
+}
+
+/**
  * Everybody you know, merged, with the links you made applied.
  *
  * `ask` is what the list costs. Asking means a request per person for the identifiers that merge two
@@ -446,5 +480,5 @@ export async function allPeople(client: MatrixClient, { ask = true }: { ask?: bo
         ask ? contactsFromBridges(client) : [],
         contactsFromChats(client, ask),
     ]);
-    return groupAccounts([...fromBridges, ...fromChats], manualLinks(client));
+    return groupAccounts([...fromBridges, ...fromChats, ...contactsFromCards(client)], manualLinks(client));
 }

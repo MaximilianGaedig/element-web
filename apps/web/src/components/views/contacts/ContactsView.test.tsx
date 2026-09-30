@@ -31,6 +31,8 @@ const client = {
         getMember: () => member,
         tags: {},
         currentState: { getStateEvents: () => [] },
+        // A room, with the account data a room has: the card reads a ringtone off it.
+        getAccountData: () => undefined,
     }),
     getAccountData: () => undefined,
     getVisibleRooms: () => [],
@@ -117,6 +119,29 @@ describe("ContactsView people", () => {
     });
 });
 
+describe("ContactsView keeping your place", () => {
+    /*
+     * Opening somebody and coming back used to return the reader to the top of the list: the card was
+     * returned *instead of* the list, so the list unmounted, and a list that unmounts comes back scrolled
+     * to A. The card is a layer over it now, and this checks the mechanism that makes that true - the very
+     * same list element is still there underneath - because a scroll position cannot be measured in jsdom.
+     */
+    it("keeps the list mounted while a card is open", async () => {
+        vi.spyOn(peopleModule, "allPeople").mockResolvedValue([person("Ada"), person("Bob")]);
+        open();
+        await waitFor(() => expect(screen.getByText("Ada")).toBeInTheDocument());
+        const list = document.querySelector(".mx_Contacts_list");
+
+        await userEvent.click(screen.getByText("Ada"));
+        // The card is up: its own header is in the layer over the list.
+        expect(document.querySelector(".mx_Contacts_layer")).toBeInTheDocument();
+        // The same list node, not a new one that happens to look the same.
+        expect(document.querySelector(".mx_Contacts_list")).toBe(list);
+        // And what it covers is out of reach rather than a second copy of every control.
+        expect(document.querySelector(".mx_Contacts_under")).toHaveAttribute("inert");
+    });
+});
+
 describe("ContactsView merging by hand", () => {
     /*
      * The merging that matters: only the identifiers some networks publish can put two accounts together on
@@ -195,7 +220,10 @@ describe("ContactsView calls", () => {
         vi.spyOn(callsModule, "callHistory").mockReturnValue([call()]);
         await openCalls();
 
-        await userEvent.click(screen.getByRole("button", { name: "Show Ada" }));
+        // The info button is gone: it sat on its own surface beside the row and did what the row did, so
+        // who the caller is now lives in the row's menu with everything else that is not "open the call".
+        fireEvent.contextMenu(screen.getByText("Ada").closest(".mx_Contacts_rowWith")!);
+        await userEvent.click(await screen.findByRole("menuitem", { name: "Show Ada" }));
         expect(dispatch).toHaveBeenCalledWith(expect.objectContaining({ action: Action.ViewUser, member }));
         // The room, but not that call highlighted: this asks who they are, not what happened.
         expect(dispatch).toHaveBeenCalledWith(expect.objectContaining({ action: Action.ViewRoom, room_id: "!room:e" }));

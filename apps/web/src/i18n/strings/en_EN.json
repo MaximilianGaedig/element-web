@@ -772,6 +772,7 @@
     "contacts": {
         "about": "Active now",
         "about_on": "Active now on %(network)s",
+        "add_contact": "Add a contact",
         "add_photo": "Add photo",
         "add_to_list": "Add to list",
         "address": "Address",
@@ -822,6 +823,13 @@
             "one": "1 of your contacts is on Matrix"
         },
         "discovered_none": "None of your contacts were found on Matrix",
+        "duplicates_found": {
+            "other": "%(count)s duplicates found",
+            "one": "1 duplicate found"
+        },
+        "duplicates_none": "No duplicates left",
+        "duplicates_title": "Duplicates found",
+        "duplicates_what": "Merging keeps everything each card knows",
         "edit_contact": "Edit contact",
         "edit_edit": "Edited",
         "edit_import": "Imported",
@@ -842,6 +850,7 @@
         "groups": "Groups in common",
         "handle": "Username",
         "history": "Earlier versions",
+        "ignore_all": "Ignore all",
         "import_failed": "Nothing in that file looked like a contact",
         "import_vcf": "Import contacts…",
         "imported": {
@@ -857,6 +866,7 @@
         "list_name": "List name",
         "lists": "Lists",
         "merge": "Same person",
+        "merge_all": "Merge all",
         "merge_selected": {
             "other": "Merge %(count)s contacts",
             "one": "Merge"
@@ -865,6 +875,7 @@
         "message": "Message",
         "messaging": "Chat services",
         "middle_name": "Middle name",
+        "more_name": "More name fields",
         "my_card": "My Card",
         "name": "Name",
         "new_list": "New list…",
