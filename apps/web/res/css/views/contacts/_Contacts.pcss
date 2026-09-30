@@ -278,6 +278,7 @@ Please see LICENSE files in the repository root for full details.
 
     .mx_Contacts_suggestionFace {
         position: relative;
+        display: flex;
         flex-shrink: 0;
 
         & + & {
@@ -370,7 +371,15 @@ Please see LICENSE files in the repository root for full details.
         position: relative;
         display: flex;
         flex-direction: column;
-        justify-content: space-evenly;
+        justify-content: center;
+        /*
+         * As tall as its own letters, not as tall as the list.
+         *
+         * Stretched to the list's height the letters were spread almost fifty pixels apart and the strip
+         * took a drag over a lot of empty space, which is the same mismatch from the other side: what can
+         * be dragged has to be what is drawn.
+         */
+        align-self: center;
         flex-shrink: 0;
         padding: 0 var(--cpd-space-1x);
         /* Dragged rather than scrolled, so the strip keeps the gesture instead of the list taking it. */
@@ -379,9 +388,10 @@ Please see LICENSE files in the repository root for full details.
         user-select: none;
 
         span[aria-hidden] {
+            /* Tight, as an index is: a ruler to run a thumb down, not a column of controls. */
             color: var(--cpd-color-text-secondary);
             font: var(--cpd-font-body-xs-medium);
-            line-height: 1.15;
+            line-height: 1.25;
             text-align: center;
         }
 
@@ -1089,8 +1099,8 @@ Please see LICENSE files in the repository root for full details.
         cursor: pointer;
 
         &[aria-selected="true"] {
-            background: var(--cpd-color-bg-action-primary-rest);
-            color: var(--cpd-color-text-on-solid-primary);
+            background: var(--cpd-color-bg-subtle-primary);
+            color: var(--cpd-color-text-action-accent);
         }
     }
 }
