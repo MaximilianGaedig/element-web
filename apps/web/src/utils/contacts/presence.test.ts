@@ -32,7 +32,11 @@ describe("presence across networks", () => {
             "@wa:e": { presence: "online", lastActiveAgo: 1000 },
             "@sig:e": { presence: "unavailable" },
         });
-        const them = person({ network: "Telegram", mxid: "@tg:e" }, { network: "WhatsApp", mxid: "@wa:e" }, { network: "Signal", mxid: "@sig:e" });
+        const them = person(
+            { network: "Telegram", mxid: "@tg:e" },
+            { network: "WhatsApp", mxid: "@wa:e" },
+            { network: "Signal", mxid: "@sig:e" },
+        );
         expect(personPresence(client, them)).toBe("online");
         // And says where, because "about on WhatsApp" is the useful half of "about".
         expect(presenceNetwork(client, them)).toBe("WhatsApp");

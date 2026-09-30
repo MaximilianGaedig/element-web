@@ -71,7 +71,9 @@ export function accountLink(
     }
     if (on.includes("signal")) {
         // Signal addresses a person by number; its own id is an account UUID no link takes.
-        return phone ? { url: `https://signal.me/#p/${phone.startsWith("+") ? phone : `+${phone}`}`, network } : undefined;
+        return phone
+            ? { url: `https://signal.me/#p/${phone.startsWith("+") ? phone : `+${phone}`}`, network }
+            : undefined;
     }
     if (on.includes("facebook") || on.includes("messenger") || on.includes("instagram")) {
         return remoteId ? { url: `https://m.me/${remoteId}`, network } : undefined;

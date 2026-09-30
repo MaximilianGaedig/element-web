@@ -190,3 +190,23 @@ export const missedCalls = (calls: Call[]): Call[] =>
  */
 export const unknownCallers = (calls: Call[], saved: ReadonlySet<string>): Call[] =>
     calls.filter((call) => !call.outgoing && !saved.has(call.userId));
+
+/**
+ * The calls on one day, or in one hour when the search said a time as well.
+ *
+ * "Yesterday" and "last Tuesday" are how people look for a call they half remember, and a list that can
+ * only be searched by name cannot answer either. The date comes from the same detector the composer uses
+ * to spot dates in messages (utils/detect/entities.ts), so the words it understands are the same words.
+ */
+export function callsWhen(calls: readonly Call[], when: Date, hasTime: boolean): Call[] {
+    const from = new Date(when);
+    const to = new Date(when);
+    if (hasTime) {
+        from.setMinutes(0, 0, 0);
+        to.setMinutes(59, 59, 999);
+    } else {
+        from.setHours(0, 0, 0, 0);
+        to.setHours(23, 59, 59, 999);
+    }
+    return calls.filter((call) => call.ts >= from.getTime() && call.ts <= to.getTime());
+}

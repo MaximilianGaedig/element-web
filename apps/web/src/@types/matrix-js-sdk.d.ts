@@ -65,6 +65,10 @@ declare module "matrix-js-sdk/src/types" {
         // What the reader decided about accounts no identifier ties together (utils/contacts): which
         // ones are one person, and which pairings they turned down so they stop being offered.
         "im.mxg.contact_links": { links?: string[][]; dismissed?: string[][]; names?: Record<string, string> };
+        "im.mxg.contact_appearance": { colours?: Record<string, number>; order?: "first" | "last" };
+        "im.mxg.contact_cards": { cards?: Record<string, unknown> };
+        "im.mxg.contact_lists": { lists?: { id: string; name: string; members: string[] }[] };
+        "im.mxg.contact_history": { history?: Record<string, { ts: number; source: string; was: unknown }[]> };
         // Analytics account data event
         "im.vector.analytics": {
             id: string;

@@ -143,7 +143,14 @@ async function detectPhones(text: string, country = defaultCountry()): Promise<D
  * Every locale is asked and the longest match wins, because the wrong locale tends to match a fragment
  * - the time alone - where the right one matches the whole phrase.
  */
-async function detectDateTimes(text: string, now: Date): Promise<DetectedDateTime[]> {
+/**
+ * The dates and times a piece of text mentions.
+ *
+ * Exported on its own as well as through detectEntities, because a search box wants only this: the whole
+ * detector pulls in addresses, flights, parcels and units, which is a lot of code to load per keystroke to
+ * answer "does this say yesterday".
+ */
+export async function detectDateTimes(text: string, now: Date = new Date()): Promise<DetectedDateTime[]> {
     const [chrono, { parsePolish }] = await Promise.all([import("chrono-node"), import("./chronoPl")]);
     const found: DetectedDateTime[] = [];
 
