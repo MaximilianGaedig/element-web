@@ -40,7 +40,7 @@ import {
 import { setSearchOpen, setSearchQuery, usePanelSearch } from "../../../../utils/panelSearch";
 import defaultDispatcher from "../../../../dispatcher/dispatcher";
 import { Action } from "../../../../dispatcher/actions";
-import { setAddingContact } from "../../../../utils/contacts/adding";
+import { setAddingContact, useAddingContact } from "../../../../utils/contacts/adding";
 
 function Entry({
     Icon,
@@ -73,6 +73,7 @@ function Entry({
 export function RoomListPill({ canSearch = true }: { canSearch?: boolean }): JSX.Element {
     const view = useRoomListPanelView();
     const { open, query } = usePanelSearch();
+    const adding = useAddingContact();
     const go = (next: RoomListPanelView) => (): void => setRoomListPanelView(next);
     /*
      * The mark on the current entry travels to it, as the shared media strip's does: a selection that
@@ -159,7 +160,8 @@ export function RoomListPill({ canSearch = true }: { canSearch?: boolean }): JSX
                 />
             </nav>
 
-            {view === "contacts" && (
+            {/* Gone while its editor is open: pressing it again would open a second editor over the first. */}
+            {view === "contacts" && !adding && (
                 <button
                     type="button"
                     className="mx_RoomListPill_island mx_RoomListPill_add"

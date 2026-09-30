@@ -8,7 +8,7 @@ Please see LICENSE files in the repository root for full details.
 // @vitest-environment happy-dom
 
 import React from "react";
-import { render, screen } from "test-utils-rtl";
+import { act, render, screen } from "test-utils-rtl";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, afterEach, vi } from "vitest";
 
@@ -91,6 +91,10 @@ describe("RoomListPill", () => {
         await userEvent.click(screen.getByRole("button", { name: "People" }));
         await userEvent.click(screen.getByRole("button", { name: "Add a contact" }));
         expect(isAddingContact()).toBe(true);
+        // The editor is open: the + goes away until it closes, and comes back after.
+        expect(screen.queryByRole("button", { name: "Add a contact" })).toBeNull();
+        act(() => setAddingContact(false));
+        expect(screen.getByRole("button", { name: "Add a contact" })).toBeInTheDocument();
     });
 
     it("puts search before the pill and + after it", () => {

@@ -60,20 +60,33 @@
  * over a scrolling list is the one that costs a fifth of a core.
  */
 .mx_RoomListPill_bar {
+    --mx-room-list-island: 44px;
+
     position: absolute;
     bottom: calc(var(--tg-safe-bottom, 0px) + var(--cpd-space-4x));
-    left: 50%;
-    transform: translateX(-50%);
+    inset-inline: var(--cpd-space-4x);
     /*
      * Above the sticky section headers, as the toast is, and above the screens contacts opens over the
      * column (a card, the duplicates, the editor - z-index 4): the bar is how you get anywhere else, so
      * nothing opened from it covers it.
      */
     z-index: 5;
-    display: flex;
+    /*
+     * Three columns with the outer two the same width: the pill is centred whatever the sides hold, so the
+     * + coming and going (it is only there over People, and not while its editor is open) moves nothing.
+     * Search sits at the start edge and + at the end edge, rather than huddled against the pill.
+     */
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
     align-items: center;
-    gap: var(--cpd-space-2x);
-    max-width: calc(100% - 2 * var(--cpd-space-4x));
+    column-gap: var(--cpd-space-2x);
+    /* The empty parts of the row are not a control: the list under them stays scrollable and tappable. */
+    pointer-events: none;
+
+    > * {
+        grid-row: 1;
+        pointer-events: auto;
+    }
 }
 
 /* The glass all three are made of: the same as the composer's islands. */
@@ -92,23 +105,17 @@
 }
 
 .mx_RoomListPill {
+    grid-column: 2;
     /* The containing block for the travelling selection mark. */
     position: relative;
-    /* The islands beside it are the ones that give way; the pill's labels never get cut. */
-    flex-shrink: 0;
     display: flex;
     align-items: center;
     height: var(--mx-room-list-pill-height);
     box-sizing: border-box;
     gap: 2px;
-    max-width: 30rem;
     padding: var(--cpd-space-1x);
     overflow: hidden;
-    transition:
-        max-width 260ms cubic-bezier(0.2, 0, 0, 1),
-        padding 260ms cubic-bezier(0.2, 0, 0, 1),
-        margin 260ms cubic-bezier(0.2, 0, 0, 1),
-        opacity 160ms ease;
+    transition: opacity 160ms ease;
 }
 
 /*
@@ -144,18 +151,24 @@
 .mx_RoomListPill_island {
     display: flex;
     align-items: center;
-    flex-shrink: 0;
-    /* The pill's height, as the microphone takes the composer's; the pill is held to it exactly. */
-    width: var(--mx-room-list-pill-height);
-    height: var(--mx-room-list-pill-height);
+    /* As tall as the search field it turns into: smaller than the pill, which holds labelled icons. */
+    width: var(--mx-room-list-island);
+    height: var(--mx-room-list-island);
     box-sizing: border-box;
     overflow: hidden;
     transition:
         width 260ms cubic-bezier(0.2, 0, 0, 1),
-        height 260ms cubic-bezier(0.2, 0, 0, 1),
-        max-width 260ms cubic-bezier(0.2, 0, 0, 1),
-        margin 260ms cubic-bezier(0.2, 0, 0, 1),
         opacity 160ms ease;
+}
+
+.mx_RoomListPill_find {
+    grid-column: 1;
+    justify-self: start;
+}
+
+.mx_RoomListPill_add {
+    grid-column: 3;
+    justify-self: end;
 }
 
 .mx_RoomListPill_find input {
@@ -203,21 +216,18 @@
 .mx_RoomListPill_bar[data-searching] {
     .mx_RoomListPill,
     .mx_RoomListPill_add {
-        max-width: 0;
-        padding: 0;
-        /* Hands back the gap as well, so the field is centred where the row was. */
-        margin-inline-start: calc(-1 * var(--cpd-space-2x));
-        border: none;
         opacity: 0;
+        pointer-events: none;
     }
 
+    /* The field takes the whole row, over where the pill was. */
     .mx_RoomListPill_find {
-        width: 20rem;
-        max-width: 100%;
-        height: 44px;
+        grid-column: 1 / -1;
+        width: 100%;
+        z-index: 1;
 
         .mx_RoomListPill_islandButton {
-            width: 44px;
+            width: var(--mx-room-list-island);
         }
     }
 }
