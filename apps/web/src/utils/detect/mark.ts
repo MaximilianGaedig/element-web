@@ -45,7 +45,7 @@ export function markEntities(
 ): number {
     let made = 0;
     for (const entity of entities) {
-        // A link is already a link; a measurement has no span of its own worth marking in the text.
+        // A link is already a link.
         if (entity.kind === "url") continue;
         const target = findText(element, entity.text);
         if (!target) continue;
@@ -89,6 +89,11 @@ function mark(node: Text, at: number, entity: Detected, onPress?: (entity: Detec
     element.className = CLASS;
     element.dataset.kind = kindOf(entity);
     element.textContent = middle.data;
+    // A measurement's answer is what it comes to, and with no chip under the message any more it is here.
+    if (entity.kind === "measure") {
+        element.title = entity.converted;
+        element.setAttribute("aria-label", `${middle.data} (${entity.converted})`);
+    }
     element.addEventListener("click", (event) => {
         // The message's own click does its own thing; this one is about the words that were pressed.
         event.preventDefault();

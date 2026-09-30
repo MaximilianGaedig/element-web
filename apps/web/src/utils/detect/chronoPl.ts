@@ -75,11 +75,33 @@ const alternatives = (words: Record<string, unknown>): string =>
         .join("|");
 
 /** "o 18:00", "o 18", "godz. 18.30", or a bare time right after a day. */
-const TIME = String.raw`(?:\s*(?:o|ok\.|około|godz\.?|godzinie)?\s*(\d{1,2})(?:[:.](\d{2}))?)?`;
+/*
+ * The words a time follows. "o 14", "około 9", "godz. 18" say outright that the number is an hour. "do",
+ * "po", "od", "przed", "na" say "until", "after", "from", "before", "for" - an hour when written as one
+ * ("do 14:00", "po 20:30"), but just as often a count ("na 2 dni", "do 5 osób"), so after these a bare
+ * number only counts as an hour when the day follows it straight away ("po 20 dzisiaj").
+ */
+const HOUR_WORDS = String.raw`o|ok\.?|około|okolo|koło|kolo|godz\.?|godzinie|godzina`;
+const SPAN_WORDS = String.raw`do|po|od|przed|na|między|miedzy`;
+
+/** A time after the day: "jutro o 14", "jutra do 14:00", "w piątek 18:30". Groups: hour, minute (x2). */
+const TIME = String.raw`(?:\s*(?:(?:${HOUR_WORDS})\s*)?(\d{1,2})(?:[:.](\d{2}))?|\s+(?:${SPAN_WORDS})\s+(\d{1,2})[:.](\d{2}))?`;
+
+/** A time before the day: "po 20 dzisiaj", "o 9 jutro", "14:00 w piątek". Groups: hour, minute (x2). */
+const TIME_FIRST = String.raw`(?:(?:${HOUR_WORDS}|${SPAN_WORDS})\s*(\d{1,2})(?:[:.](\d{2}))?|(\d{1,2})[:.](\d{2}))\s+`;
 
 const DAY_RE = new RegExp(String.raw`\b(${alternatives(RELATIVE_DAYS)})\b${TIME}`, "i");
 const WEEKDAY_RE = new RegExp(String.raw`\b(?:w\s+|we\s+)?(${alternatives(WEEKDAYS)})\b${TIME}`, "i");
 const DATE_RE = new RegExp(String.raw`\b(\d{1,2})\s+(${alternatives(MONTHS)})\b(?:\s+(\d{4}))?${TIME}`, "i");
+const DAY_FIRST_TIME_RE = new RegExp(String.raw`(?<!\p{L})${TIME_FIRST}(${alternatives(RELATIVE_DAYS)})\b`, "iu");
+const WEEKDAY_FIRST_TIME_RE = new RegExp(
+    String.raw`(?<!\p{L})${TIME_FIRST}(?:w\s+|we\s+)?(${alternatives(WEEKDAYS)})\b`,
+    "iu",
+);
+
+/** The hour and minute out of whichever of the two time forms matched, as the groups from `at` on. */
+const timeAt = (match: RegExpMatchArray, at: number): [string | undefined, string | undefined] =>
+    match[at] !== undefined ? [match[at], match[at + 1]] : [match[at + 2], match[at + 3]];
 
 /** Assigns the time when one was written, and says whether it was. */
 function withTime(components: ParsingComponents, hour?: string, minute?: string): ParsingComponents {
@@ -104,7 +126,7 @@ const relativeDayParser = {
     extract(context: ParsingContext, match: RegExpMatchArray): ParsingComponents {
         const date = context.reference.getDateWithAdjustedTimezone();
         date.setDate(date.getDate() + RELATIVE_DAYS[match[1].toLowerCase()]);
-        return withTime(dayComponents(context, date), match[2], match[3]);
+        return withTime(dayComponents(context, date), ...timeAt(match, 2));
     },
 };
 
@@ -116,7 +138,27 @@ const weekdayParser = {
         const wanted = WEEKDAYS[match[1].toLowerCase()];
         const ahead = (wanted - date.getDay() + 7) % 7 || 7;
         date.setDate(date.getDate() + ahead);
-        return withTime(dayComponents(context, date), match[2], match[3]);
+        return withTime(dayComponents(context, date), ...timeAt(match, 2));
+    },
+};
+
+const relativeDayTimeFirstParser = {
+    pattern: (): RegExp => DAY_FIRST_TIME_RE,
+    extract(context: ParsingContext, match: RegExpMatchArray): ParsingComponents {
+        const date = context.reference.getDateWithAdjustedTimezone();
+        date.setDate(date.getDate() + RELATIVE_DAYS[match[5].toLowerCase()]);
+        return withTime(dayComponents(context, date), ...timeAt(match, 1));
+    },
+};
+
+const weekdayTimeFirstParser = {
+    pattern: (): RegExp => WEEKDAY_FIRST_TIME_RE,
+    extract(context: ParsingContext, match: RegExpMatchArray): ParsingComponents {
+        const date = context.reference.getDateWithAdjustedTimezone();
+        const wanted = WEEKDAYS[match[5].toLowerCase()];
+        const ahead = (wanted - date.getDay() + 7) % 7 || 7;
+        date.setDate(date.getDate() + ahead);
+        return withTime(dayComponents(context, date), ...timeAt(match, 1));
     },
 };
 
@@ -133,11 +175,14 @@ const dateParser = {
             .assign("year", year)
             .assign("month", month)
             .assign("day", day);
-        return withTime(components, match[4], match[5]);
+        return withTime(components, ...timeAt(match, 4));
     },
 };
 
-const chronoPl = new Chrono({ parsers: [relativeDayParser, weekdayParser, dateParser], refiners: [] });
+const chronoPl = new Chrono({
+    parsers: [relativeDayParser, weekdayParser, dateParser, relativeDayTimeFirstParser, weekdayTimeFirstParser],
+    refiners: [],
+});
 
 /** Polish dates and times in `text`, read against `reference`. */
 export function parsePolish(text: string, reference: Date): ParsedResult[] {

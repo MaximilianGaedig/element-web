@@ -165,7 +165,7 @@ function rowFor(event: MatrixEvent, found: Detected): Collected | undefined {
  * Writes down what a message turned out to contain.
  *
  * Called from wherever detection already ran, so nothing is detected twice for the sake of this: a
- * message on screen has been read anyway (views/messages/DetectedActions.tsx), and the sweep over what is
+ * message on screen has been read anyway (hooks/useDetectedMarks.ts), and the sweep over what is
  * loaded but was never on screen is in collect.ts.
  */
 export async function remember(userId: string, event: MatrixEvent, found: Detected[]): Promise<void> {

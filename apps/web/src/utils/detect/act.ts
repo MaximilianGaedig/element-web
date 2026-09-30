@@ -55,7 +55,7 @@ export function actOn(entity: Detected, context = ""): void {
             break;
         }
         case "measure":
-            // Its own answer: there is nowhere to go, and the chip beside it already says what it comes to.
+            // Its own answer: there is nowhere to go, and the mark's tooltip says what it comes to.
             break;
     }
 }

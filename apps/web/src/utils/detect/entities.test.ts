@@ -52,10 +52,22 @@ describe("dates and times, in the languages chrono speaks", () => {
         ["spotkanie jutro o 18", 22, 18],
         ["pojutrze o 9:30", 23, 9],
         ["dzisiaj o 20:00", 21, 20],
+        // "until tomorrow until 14:00" and "I can after 20 today": the time after a span word, or before the day.
+        ["informacja zwrotna do jutra do 14:00", 22, 14],
+        ["Ja mogę po 20 dzisiaj", 21, 20],
+        ["o 9 jutro", 22, 9],
     ])("reads Polish, which chrono does not speak: %s", async (text, day, hour) => {
         const found = (await at(text)).find((e) => e.kind === "datetime");
         expect(found?.date.getDate()).toBe(day);
         expect(found?.date.getHours()).toBe(hour);
+    });
+
+    // "na 2 dni" is "for 2 days" and "do 5 osób" "for up to 5 people": counts, not hours.
+    it("does not read a count after a span word as an hour", async () => {
+        for (const text of ["jutro na 2 dni", "jutro do 5 osób"]) {
+            const found = (await at(text)).find((e) => e.kind === "datetime");
+            expect(found?.hasTime).toBe(false);
+        }
     });
 
     it("reads a Polish weekday as the next one", async () => {

@@ -9,7 +9,7 @@ Please see LICENSE files in the repository root for full details.
  * Reading what is already here, in the gaps.
  *
  * A message that has been on screen has been read for dates and numbers anyway, because that is what puts
- * the chips under it (views/messages/DetectedActions.tsx). But most of what the client holds has never
+ * the marks in it (hooks/useDetectedMarks.ts). But most of what the client holds has never
  * been on screen: a chat opened once a week is a thousand messages nobody looked at twice, and the parcel
  * number in it is exactly the thing worth having in a list.
  *

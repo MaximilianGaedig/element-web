@@ -43,7 +43,7 @@ import PopOutIcon from "@vector-im/compound-design-tokens/assets/web/icons/pop-o
 import { EditMessageComposerWrapper } from "../rooms/EditMessageComposerWrapper";
 import { ModuleApi } from "../../../modules/Api";
 import BridgeButtons from "./BridgeButtons";
-import { DetectedActions } from "./DetectedActions";
+import { useDetectedMarks } from "../../../hooks/useDetectedMarks";
 import { bubbleTimelineEnabled } from "../../../utils/telegram/telegramLayout";
 import { TgWebPage } from "../telegram/TgWebPage";
 
@@ -74,6 +74,9 @@ export function TextualBodyFactory(props: Readonly<IBodyProps>): JSX.Element {
     const willHaveWrapper = !!props.replacingEventId || !!props.isSeeingThroughMessageHiddenForModeration || isEmote;
     const stripReply = !props.mxEvent.replacingEvent() && !!getParentEventId(props.mxEvent);
     const contentRef = useRef<TextualBodyContentElement>(null);
+    // Fork: what the message asks of you - a time to put in the calendar, a number to ring - marked where
+    // it is written.
+    useDetectedMarks(props.mxEvent, contentRef, !props.inhibitInteraction);
 
     const urlPreviewBundleEnabled = useSettingValue("feature_msc4095_url_preview_bundle");
     const e2eeBundledUrlPreviewsOnly = useSettingValue("urlPreviewsEnabled_e2ee_bundled_only");
@@ -345,9 +348,6 @@ export function TextualBodyFactory(props: Readonly<IBodyProps>): JSX.Element {
                         <MediaPreviewGroupPreview vm={mediaPreviewVm} className="mx_TextualBody_urlPreviews" />
                     )}
                     <BridgeButtons mxEvent={props.mxEvent} inhibitInteraction={props.inhibitInteraction} />
-                    {/* Fork: what the message asks of you - a time to put in the calendar, a number to
-                        ring - offered under it rather than hidden in a menu. */}
-                    {!props.inhibitInteraction && <DetectedActions mxEvent={props.mxEvent} bodyRef={contentRef} />}
                 </>
             }
             className={getTextualBodyClassName(content.msgtype as MsgType | undefined)}
