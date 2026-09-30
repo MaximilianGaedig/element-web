@@ -68,6 +68,7 @@ import { ContactCard } from "./ContactCard";
 import { ContactFace } from "./ContactFace";
 import { type Presence, personPresence, presenceNetwork } from "../../../utils/contacts/presence";
 import { type SharedRoom, askSharedRooms, callsWith, sharedRooms } from "../../../utils/contacts/shared";
+import { filingName, splitName } from "../../../utils/contacts/names";
 import { type Verification, realAccounts, verificationOf, verify } from "../../../utils/contacts/verification";
 import { chosenColour, nameOrder, setColour, setNameOrder } from "../../../utils/contacts/appearance";
 import {
@@ -974,19 +975,14 @@ export function ContactsView({ tab, onFinished }: Props): JSX.Element {
     /*
      * Filed under the name the reader asked for.
      *
-     * A card gives a first and a family name, so "Kowalczyk, Aleksandra" is a real option rather than a
-     * guess at where to split a display name - and for anyone with no card the display name is all there
-     * is, which files under itself either way.
+     * A card gives a first and a family name outright; for everyone else - which is most of the list, since
+     * a bridged contact is one display name - the name is read into parts (utils/contacts/names.ts). Before
+     * that they all filed under their display name whatever the setting said, so sorting by family name
+     * looked like it did nothing at all.
      */
     const order = nameOrder(client);
     const filedAs = useCallback(
-        (person: Person): string => {
-            const card = cardFor(client, person);
-            if (!card?.lastName && !card?.firstName) return person.name;
-            const first = card.firstName ?? "";
-            const last = card.lastName ?? "";
-            return (order === "last" ? `${last} ${first}` : `${first} ${last}`).trim() || person.name;
-        },
+        (person: Person): string => filingName(person.name, order, cardFor(client, person)),
         [client, order],
     );
     const sections = useMemo(() => sectionsOf(shown, filedAs), [shown, filedAs]);
@@ -1455,7 +1451,12 @@ export function ContactsView({ tab, onFinished }: Props): JSX.Element {
                         linkedIds={state?.linked}
                         colour={chosenColour(client, open)}
                         onColour={(next) => void setColour(client, open, next).then(again)}
-                        card={cardFor(client, open)}
+                        /*
+                         * The card, or the name read into its parts when there is no card: editing a bridged
+                         * contact used to open a form with an empty first and last name beside their display
+                         * name, which asks the reader to retype what is already on the screen.
+                         */
+                        card={cardFor(client, open) ?? splitName(open.name)}
                         onCard={(next) => {
                             /*
                              * What it said before is kept first, then the change is written: a record taken

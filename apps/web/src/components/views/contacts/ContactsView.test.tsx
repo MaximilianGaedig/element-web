@@ -19,6 +19,7 @@ import { type Person } from "../../../utils/contacts/people";
 import * as peopleModule from "../../../utils/contacts/people";
 import * as callsModule from "../../../utils/contacts/calls";
 import * as favouritesModule from "../../../utils/contacts/favourites";
+import * as appearanceModule from "../../../utils/contacts/appearance";
 import dis from "../../../dispatcher/dispatcher";
 import { MatrixClientPeg } from "../../../MatrixClientPeg";
 import { Action } from "../../../dispatcher/actions";
@@ -119,6 +120,30 @@ describe("ContactsView people", () => {
         open();
         await waitFor(() => expect(screen.getByRole("heading", { name: "A" })).toBeInTheDocument());
         expect(screen.queryByRole("navigation", { name: "Jump to a letter" })).not.toBeInTheDocument();
+    });
+});
+
+describe("ContactsView filing names", () => {
+    /*
+     * The bug: a bridged contact is one display name and no card, and the list filed everyone by that whole
+     * string - so choosing "sort by last name" changed nothing at all for almost every row in it.
+     */
+    it("files a bridged contact under their family name when that is the order", async () => {
+        vi.spyOn(appearanceModule, "nameOrder").mockReturnValue("last");
+        vi.spyOn(peopleModule, "allPeople").mockResolvedValue([person("Aleksandra Kowalczyk")]);
+        open();
+        await waitFor(() => expect(screen.getByText("Aleksandra Kowalczyk")).toBeInTheDocument());
+
+        // Filed under K, not A, while still being shown under the name the network gave.
+        expect(screen.getByRole("heading", { name: "K" })).toBeInTheDocument();
+    });
+
+    it("files them under their first name in the other order", async () => {
+        vi.spyOn(appearanceModule, "nameOrder").mockReturnValue("first");
+        vi.spyOn(peopleModule, "allPeople").mockResolvedValue([person("Aleksandra Kowalczyk")]);
+        open();
+        await waitFor(() => expect(screen.getByText("Aleksandra Kowalczyk")).toBeInTheDocument());
+        expect(screen.getByRole("heading", { name: "A" })).toBeInTheDocument();
     });
 });
 
