@@ -250,12 +250,3 @@ export async function saveLooseCard(client: MatrixClient, card: ContactCard): Pr
     const key = `vcard:${fullName(card) || card.nickname || card.phones?.[0]?.value || Date.now().toString(36)}`;
     await client.setAccountData(CARD_EVENT_TYPE, { cards: { ...stored(client).cards, [key]: card } });
 }
-
-/** The reader's own card, kept against their own Matrix ID like everybody else's. */
-export async function saveMyCard(client: MatrixClient, card: ContactCard): Promise<void> {
-    const cards = { ...stored(client).cards };
-    const me = client.getSafeUserId();
-    if (isEmpty(card)) delete cards[me];
-    else cards[me] = card;
-    await client.setAccountData(CARD_EVENT_TYPE, { cards });
-}

@@ -32,6 +32,7 @@ import BackIcon from "@vector-im/compound-design-tokens/assets/web/icons/chevron
 import ChevronIcon from "@vector-im/compound-design-tokens/assets/web/icons/chevron-down";
 import ChevronRightIcon from "@vector-im/compound-design-tokens/assets/web/icons/chevron-right";
 import CheckIcon from "@vector-im/compound-design-tokens/assets/web/icons/check";
+import EditIcon from "@vector-im/compound-design-tokens/assets/web/icons/edit";
 import OverflowIcon from "@vector-im/compound-design-tokens/assets/web/icons/overflow-horizontal";
 import GroupIcon from "@vector-im/compound-design-tokens/assets/web/icons/group";
 import ImportIcon from "@vector-im/compound-design-tokens/assets/web/icons/download";
@@ -41,7 +42,7 @@ import ExportIcon from "@vector-im/compound-design-tokens/assets/web/icons/share
 import CloseIcon from "@vector-im/compound-design-tokens/assets/web/icons/close";
 import FavouriteIcon from "@vector-im/compound-design-tokens/assets/web/icons/favourite";
 
-import { _t } from "../../../languageHandler";
+import { _t, _td } from "../../../languageHandler";
 import { type Call, callHistory, callsWhen, missedCalls, unknownCallers } from "../../../utils/contacts/calls";
 import { type Favourite, favourites, isFavourite, setFavourite } from "../../../utils/contacts/favourites";
 import { sectionsOf } from "../../../utils/contacts/sections";
@@ -79,7 +80,7 @@ import {
     saveLooseCard,
 } from "../../../utils/contacts/card";
 import { ContactEditor } from "./ContactEditor";
-import { type Discovered, discoverOnMatrix, lookupQuery } from "../../../utils/contacts/discover";
+import { type Discovered, type DiscoverProblem, discoverOnMatrix, lookupQuery } from "../../../utils/contacts/discover";
 import { deleteRevision, forgetHistory, historyFor, recordRevision } from "../../../utils/contacts/history";
 import { setAddingContact, useAddingContact } from "../../../utils/contacts/adding";
 import { setBarActions } from "../../../utils/roomListBarActions";
@@ -93,7 +94,7 @@ import {
     toVCards,
 } from "../../../utils/contacts/vcard";
 import { importCards } from "../../../utils/contacts/importCards";
-import { addTag, contactTags, peopleTagged, removeTag, setInTag } from "../../../utils/contacts/tags";
+import { addTag, contactTags, peopleTagged, removeTag, renameTag, setInTag } from "../../../utils/contacts/tags";
 import { PersonMenu } from "./PersonMenu";
 import { MatrixClientPeg } from "../../../MatrixClientPeg";
 import BaseAvatar from "../avatars/BaseAvatar";
@@ -113,6 +114,13 @@ import { useLeaving } from "../../../hooks/useLeaving";
 import { setSearchQuery, usePanelSearch } from "../../../utils/panelSearch";
 import { useSwipeBack } from "../../../hooks/useSwipeBack";
 import { useSlidingIndicator } from "../../../hooks/useSlidingIndicator";
+
+/** What went wrong with a lookup, spelled out so the string extractor sees every key. */
+const DISCOVER_PROBLEMS: Record<DiscoverProblem, TranslationKey> = {
+    "no-server": _td("contacts|discover_no_server"),
+    "terms": _td("contacts|discover_terms"),
+    "failed": _td("contacts|discover_failed"),
+};
 
 const AVATAR_SIZE = "32px";
 
@@ -733,6 +741,13 @@ export function ContactsView({ tab, onFinished }: Props): JSX.Element {
     const [reviewing, setReviewing] = useState(false);
     const [dismissedDuplicates, dismissDuplicates] = useDismissedDuplicates();
     const [newTagName, setNewTagName] = useState("");
+    /* The tag being renamed, when the naming form is renaming one rather than making a new one. */
+    const [renamingTag, setRenamingTag] = useState<string>();
+    const stopNaming = (): void => {
+        setNewTagName("");
+        setRenamingTag(undefined);
+        setNaming(false);
+    };
     /* The file input is hidden and clicked by the menu item: a file button cannot live inside a menu. */
     const fileRef = useRef<HTMLInputElement>(null);
     /*
@@ -1258,7 +1273,11 @@ export function ContactsView({ tab, onFinished }: Props): JSX.Element {
      * are in the reader's address book, and how many are about to be sent is said before any are. The
      * server hashes what it can, but a lookup is still a disclosure.
      */
-    const [discovering, setDiscovering] = useState<{ asked: number; found?: Discovered[]; problem?: string }>();
+    const [discovering, setDiscovering] = useState<{
+        asked: number;
+        found?: Discovered[];
+        problem?: DiscoverProblem;
+    }>();
     const discover = useCallback(
         (confirmed: boolean): void => {
             const cards = Object.values(allCards(client));
@@ -1729,6 +1748,18 @@ export function ContactsView({ tab, onFinished }: Props): JSX.Element {
                         {!!tag && (
                             <MenuItem
                                 hideChevron
+                                Icon={EditIcon}
+                                label={_t("contacts|rename_tag")}
+                                onSelect={() => {
+                                    setRenamingTag(tag.id);
+                                    setNewTagName(tag.name);
+                                    setNaming(true);
+                                }}
+                            />
+                        )}
+                        {!!tag && (
+                            <MenuItem
+                                hideChevron
                                 Icon={DeleteIcon}
                                 kind="critical"
                                 label={_t("contacts|delete_tag")}
@@ -1777,9 +1808,9 @@ export function ContactsView({ tab, onFinished }: Props): JSX.Element {
                         onSubmit={(event) => {
                             event.preventDefault();
                             const name = newTagName.trim();
-                            if (name) void addTag(client, name).then(again);
-                            setNewTagName("");
-                            setNaming(false);
+                            if (name && renamingTag) void renameTag(client, renamingTag, name).then(again);
+                            else if (name) void addTag(client, name).then(again);
+                            stopNaming();
                         }}
                     >
                         <input
@@ -1792,7 +1823,7 @@ export function ContactsView({ tab, onFinished }: Props): JSX.Element {
                         <Button kind="primary" size="md" type="submit">
                             {_t("action|save")}
                         </Button>
-                        <Button kind="secondary" size="md" type="button" onClick={() => setNaming(false)}>
+                        <Button kind="secondary" size="md" type="button" onClick={stopNaming}>
                             {_t("action|cancel")}
                         </Button>
                     </form>
@@ -1812,7 +1843,7 @@ export function ContactsView({ tab, onFinished }: Props): JSX.Element {
                                     : _t("contacts|discovered_none")}
                             </span>
                         ) : discovering.problem ? (
-                            <span>{_t(`contacts|discover_${discovering.problem}`)}</span>
+                            <span>{_t(DISCOVER_PROBLEMS[discovering.problem])}</span>
                         ) : (
                             <>
                                 <span>

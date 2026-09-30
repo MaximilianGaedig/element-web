@@ -804,8 +804,8 @@
         "caller_info": "Show %(name)s",
         "calls": "Calls",
         "cards_found": {
-            "other": "%(count)s cards found",
-            "one": "1 card"
+            "one": "1 card",
+            "other": "%(count)s cards found"
         },
         "change_photo": "Change photo",
         "city": "City",
@@ -814,27 +814,26 @@
         "company": "Company",
         "country": "Country",
         "dates": "Dates",
-        "delete_card": "Delete contact details",
         "delete_tag": "Delete this tag",
         "department": "Department",
         "details": "Details",
         "discover": "Find contacts on Matrix…",
         "discover_failed": "The identity server could not be asked",
         "discover_go": "Look them up",
-        "discover_no-server": "No identity server is set up, so there is nowhere to look them up",
+        "discover_no_server": "No identity server is set up, so there is nowhere to look them up",
         "discover_terms": "The identity server wants its terms agreed first",
         "discover_warning": {
-            "other": "This sends %(count)s phone numbers and addresses from your contacts to %(server)s to check which are on Matrix.",
-            "one": "This sends 1 identifier from your contacts to %(server)s to check whether it is on Matrix."
+            "one": "This sends 1 identifier from your contacts to %(server)s to check whether it is on Matrix.",
+            "other": "This sends %(count)s phone numbers and addresses from your contacts to %(server)s to check which are on Matrix."
         },
         "discovered": {
-            "other": "%(count)s of your contacts are on Matrix",
-            "one": "1 of your contacts is on Matrix"
+            "one": "1 of your contacts is on Matrix",
+            "other": "%(count)s of your contacts are on Matrix"
         },
         "discovered_none": "None of your contacts were found on Matrix",
         "duplicates_found": {
-            "other": "%(count)s duplicates found",
-            "one": "1 duplicate found"
+            "one": "1 duplicate found",
+            "other": "%(count)s duplicates found"
         },
         "duplicates_none": "No duplicates left",
         "duplicates_title": "Duplicates found",
@@ -854,14 +853,12 @@
         "field_label": "Label",
         "first_name": "First name",
         "group_members": {
-            "other": "%(count)s members",
-            "one": "1 member"
+            "one": "1 member",
+            "other": "%(count)s members"
         },
         "groups": "Groups in common",
         "handle": "Username",
         "history": "Earlier versions",
-        "history_changed_here": "Changed since",
-        "history_current": "Current",
         "history_delete": "Delete this version",
         "history_empty": "Delete all versions",
         "history_empty_confirm": "Delete every earlier version of this contact? This cannot be undone.",
@@ -871,28 +868,26 @@
         "history_restore_confirm": "Put this version back? What the card says now is kept as a version, so this can be undone.",
         "history_show": "Show this version",
         "history_versions": {
-            "other": "%(count)s earlier versions",
-            "one": "1 earlier version"
+            "one": "1 earlier version",
+            "other": "%(count)s earlier versions"
         },
         "ignore_all": "Ignore all",
         "import_failed": "Nothing in that file looked like a contact",
         "import_vcf": "Import contacts…",
         "imported": {
-            "other": "%(count)s contacts imported",
-            "one": "1 contact imported"
+            "one": "1 contact imported",
+            "other": "%(count)s contacts imported"
         },
         "index": "Jump to a letter",
         "index_hint": "Drag to jump",
         "job_title": "Job title",
         "last_name": "Last name",
-        "link": "Link to another contact",
-        "link_with": "Link with %(name)s",
         "merge": "Same person",
         "merge_all": "Merge all",
         "merge_include": "Include %(name)s in the merge",
         "merge_selected": {
-            "other": "Merge %(count)s contacts",
-            "one": "Merge"
+            "one": "Merge",
+            "other": "Merge %(count)s contacts"
         },
         "merge_with": "Same person as…",
         "message": "Message",
@@ -922,30 +917,19 @@
         "previous_name": "Previous name",
         "pronunciation_first": "Pronunciation, first name",
         "pronunciation_last": "Pronunciation, last name",
-        "publish": "On your Matrix profile",
-        "publish_company": "Company",
-        "publish_email": "Email addresses",
-        "publish_go": "Publish these",
-        "publish_jobTitle": "Job title",
-        "publish_phone": "Phone numbers",
-        "publish_why": "Anyone who can see your profile can read what you publish here. Nothing is published unless you tick it.",
         "related": "Related people",
         "related_name": "Their name",
         "remove_field": "Remove %(field)s",
-        "remove_from_tag": "Remove from list",
         "rename": "Rename",
-        "restore": "Put this version back",
+        "rename_tag": "contacts|rename_tag",
         "restore_changed": "Changed %(fields)s — put back",
         "ringtone": "Ringtone",
-        "same_person": "Also on %(networks)s under this name",
-        "same_person_named": "Same person as %(name)s?",
         "search_calls": "Search calls",
         "search_people": "Search people",
-        "select": "Select",
         "selected": "Selected",
         "selected_count": {
-            "other": "%(count)s selected",
-            "one": "1 selected"
+            "one": "1 selected",
+            "other": "%(count)s selected"
         },
         "send_contact": "Send to this chat",
         "separate": "Separate",
@@ -1610,7 +1594,6 @@
         "onway": "On the way",
         "open": "Open",
         "open_it": "What's in my chats",
-        "short": "Found",
         "title": "Found in your chats",
         "when": "When",
         "where": "Where",

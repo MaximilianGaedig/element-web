@@ -33,7 +33,7 @@ import UnlinkIcon from "@vector-im/compound-design-tokens/assets/web/icons/close
 import VerifiedIcon from "@vector-im/compound-design-tokens/assets/web/icons/verified";
 import UnverifiedIcon from "@vector-im/compound-design-tokens/assets/web/icons/error";
 
-import { _t } from "../../../languageHandler";
+import { _t, _td } from "../../../languageHandler";
 import { type Person } from "../../../utils/contacts/people";
 import { readKey } from "../../../utils/contacts/identity";
 import { accountId } from "../../../utils/contacts/people";
@@ -56,6 +56,13 @@ import { type SharedRoom } from "../../../utils/contacts/shared";
 import { type Call } from "../../../utils/contacts/calls";
 import BaseAvatar from "../avatars/BaseAvatar";
 import { mediaFromMxc } from "../../../customisations/Media";
+
+/** Each verification state's words, spelled out so the string extractor sees every key. */
+const VERIFY_LABELS: Record<Verification, TranslationKey> = {
+    verified: _td("contacts|verify_verified"),
+    unverified: _td("contacts|verify_unverified"),
+    changed: _td("contacts|verify_changed"),
+};
 
 interface Props {
     /** The person's own menu, the same one the list rows open, shown with the card's chrome. */
@@ -370,7 +377,7 @@ export function ContactCard({
                                 ) : (
                                     <UnverifiedIcon width="16" height="16" aria-hidden />
                                 )}
-                                {_t(`contacts|verify_${verification}`)}
+                                {_t(VERIFY_LABELS[verification])}
                             </button>
                         )}
                         {presenceText && (

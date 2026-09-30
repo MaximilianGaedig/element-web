@@ -27,12 +27,20 @@ import BackIcon from "@vector-im/compound-design-tokens/assets/web/icons/chevron
 import DeleteIcon from "@vector-im/compound-design-tokens/assets/web/icons/delete";
 import RestoreIcon from "@vector-im/compound-design-tokens/assets/web/icons/restart";
 
-import { _t } from "../../../languageHandler";
+import { _t, _td } from "../../../languageHandler";
 import Modal from "../../../Modal";
 import QuestionDialog from "../dialogs/QuestionDialog";
 import { type ContactCard } from "../../../utils/contacts/card";
-import { KEEP, type Revision, changedFields } from "../../../utils/contacts/history";
+import { type EditSource, KEEP, type Revision, changedFields } from "../../../utils/contacts/history";
 import { describeCard, differingKeys } from "../../../utils/contacts/describe";
+
+/** Each kind of change, spelled out so the string extractor sees every key a label can be. */
+const EDIT_LABELS: Record<EditSource, TranslationKey> = {
+    edit: _td("contacts|edit_edit"),
+    import: _td("contacts|edit_import"),
+    merge: _td("contacts|edit_merge"),
+    restore: _td("contacts|edit_restore"),
+};
 
 /*
  * Asked with the client's own dialog rather than the browser's.
@@ -91,7 +99,7 @@ function Version({
                 <span className="mx_ContactHistory_stamp">
                     {when(revision.ts)}
                     {" · "}
-                    {_t(`contacts|edit_${revision.source}`)}
+                    {_t(EDIT_LABELS[revision.source])}
                 </span>
             </header>
 
@@ -171,7 +179,7 @@ export function ContactHistory({ history, card, onRestore, onDelete, onEmpty }: 
                         <span className="mx_ContactHistory_stamp">
                             {when(revision.ts)}
                             {" · "}
-                            {_t(`contacts|edit_${revision.source}`)}
+                            {_t(EDIT_LABELS[revision.source])}
                         </span>
                         {/* What is different about it, which is what tells one version from another in a list
                             of timestamps. Names of fields, not values: a column of old phone numbers is not
