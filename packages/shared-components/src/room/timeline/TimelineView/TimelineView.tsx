@@ -108,6 +108,7 @@ export function TimelineView({
     vm,
     renderItem,
     renderStickyDate,
+    alwaysShowStickyDate = false,
     paddingStart = 0,
     paddingEnd = 0,
 }: TimelineViewProps): JSX.Element {
@@ -152,9 +153,17 @@ export function TimelineView({
     const stickyTsRef = useRef<number | null>(null);
     const stickyPinnedRef = useRef(false);
     const scrollingRef = useRef(false);
+    /** How far the next day's date has pushed the pinned one up (tweb: the next group's sticky date). */
+    const stickyShiftRef = useRef(0);
+    const alwaysShowStickyDateRef = useRef(alwaysShowStickyDate);
+    alwaysShowStickyDateRef.current = alwaysShowStickyDate;
     /** Tells the floating date what to show, from whatever last changed. */
     const updateStickyDate = useCallback((): void => {
-        stickyDateRef.current?.set(stickyTsRef.current, stickyPinnedRef.current && scrollingRef.current);
+        stickyDateRef.current?.set(
+            stickyTsRef.current,
+            stickyPinnedRef.current && (scrollingRef.current || alwaysShowStickyDateRef.current),
+            stickyShiftRef.current,
+        );
     }, []);
 
     // Gives each row a stable identity (its event id). TanStack uses these to recognise the
@@ -231,19 +240,43 @@ export function TimelineView({
             // Telegram's test — has that separator itself scrolled above the top edge?
             // While it is still on screen it is already doing the job, and showing the
             // floating copy too would put the same date on screen twice.
+            //
+            // The edge is where the floating date itself sits, not the top of the list: a header
+            // floats over the list, so a separator reaching the list's top has long gone behind it,
+            // and handing over only then made the date jump down to where it is pinned. Handed over
+            // as the separator reaches the pinned date's place, it simply stays there. And as in
+            // Telegram, where each day's date is sticky within its own day, the next day's
+            // separator pushes the pinned date up and out rather than replacing it on the spot.
             const startIndex = visibleRange?.startIndex ?? 0;
             const rendered = v.getVirtualItems();
+            const box = stickyDateRef.current?.box();
+            const edge = scrollOffset + (box?.top ?? 0);
             let pinned = false;
-            for (let i = startIndex; i >= 0; i--) {
-                const item = itemsRef.current[i];
-                if (item?.kind !== "date-separator") continue;
-                // Only rows near the viewport are rendered at all, so a separator that is
-                // not among them is far above it and certainly scrolled past.
-                const row = rendered.find((r) => r.index === i);
-                pinned = !row || row.start < scrollOffset;
-                if (pinned) stickyTsRef.current = item.ts;
-                break;
+            let next: VirtualItem | undefined;
+            let current: VirtualItem | undefined;
+            for (const row of rendered) {
+                if (itemsRef.current[row.index]?.kind !== "date-separator") continue;
+                if (row.start < edge) current = row;
+                else if (!next) next = row;
             }
+            if (current) {
+                const item = itemsRef.current[current.index];
+                if (item?.kind === "date-separator") {
+                    pinned = true;
+                    stickyTsRef.current = item.ts;
+                }
+            } else {
+                // Only rows near the viewport are rendered at all, so a separator that is not
+                // among them is far above it and certainly scrolled past.
+                for (let i = startIndex; i >= 0; i--) {
+                    const item = itemsRef.current[i];
+                    if (item?.kind !== "date-separator") continue;
+                    pinned = !rendered.some((r) => r.index === i);
+                    if (pinned) stickyTsRef.current = item.ts;
+                    break;
+                }
+            }
+            stickyShiftRef.current = pinned && next && box ? Math.min(0, next.start - edge - box.height) : 0;
             stickyPinnedRef.current = pinned;
             updateStickyDate();
 

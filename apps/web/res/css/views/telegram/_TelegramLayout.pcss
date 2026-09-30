@@ -230,11 +230,12 @@ html[data-floating-bars] .mx_RoomView_body {
     }
 
     /*
-     * The floating date hangs just below the top bar. The header's own bottom edge, not the whole
-     * top block: the pinned and import plates float over the timeline too, and the date belongs
-     * under the bar rather than under everything stacked beneath it.
+     * The floating date hangs below everything that floats over the top of the timeline - the bar
+     * and the pinned and import plates under it - as tweb pins it (.is-date top:
+     * --chat-padding-top, which counts the pinned plate, + $bubble-overflow-big). Under the bar
+     * alone it sat on top of the pinned message.
      */
-    --mx-timeline-top-inset: calc(var(--tg-header-bottom, 0px) + 8px);
+    --mx-timeline-top-inset: calc(var(--tg-header-block, 0px) + 3px);
 
     /*
      * Only the timeline is meant to run under the floating header - that is the whole point of the

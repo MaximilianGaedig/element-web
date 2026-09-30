@@ -5,7 +5,7 @@
  * Please see LICENSE files in the repository root for full details.
  */
 
-import React, { forwardRef, useImperativeHandle, useState, type ReactNode } from "react";
+import React, { forwardRef, useImperativeHandle, useRef, useState, type ReactNode } from "react";
 import classNames from "classnames";
 
 import styles from "./TimelineView.module.css";
@@ -22,8 +22,11 @@ export interface StickyDateHandle {
     /**
      * @param ts the day being read, or null when there is none to name yet
      * @param visible whether it should be on screen at all
+     * @param shift how far the next day's date has pushed it up, in pixels (0 or less)
      */
-    set(ts: number | null, visible: boolean): void;
+    set(ts: number | null, visible: boolean, shift?: number): void;
+    /** Where the date sits over the list and how tall it is, once it is drawn. */
+    box(): { top: number; height: number } | null;
 }
 
 interface StickyDateProps {
@@ -33,16 +36,25 @@ interface StickyDateProps {
 
 export const StickyDate = forwardRef<StickyDateHandle, StickyDateProps>(function StickyDate({ render }, ref) {
     // The day is kept even once it should be hidden, so the label stays put as it fades out.
-    const [state, setState] = useState<{ ts: number | null; visible: boolean }>({ ts: null, visible: false });
+    const [state, setState] = useState<{ ts: number | null; visible: boolean; shift: number }>({
+        ts: null,
+        visible: false,
+        shift: 0,
+    });
+    const element = useRef<HTMLDivElement>(null);
     useImperativeHandle(
         ref,
         () => ({
-            set(ts, visible) {
+            set(ts, visible, shift = 0) {
                 setState((prev) => {
                     const nextTs = ts ?? prev.ts;
-                    if (prev.ts === nextTs && prev.visible === visible) return prev;
-                    return { ts: nextTs, visible };
+                    if (prev.ts === nextTs && prev.visible === visible && prev.shift === shift) return prev;
+                    return { ts: nextTs, visible, shift };
                 });
+            },
+            box() {
+                const el = element.current;
+                return el ? { top: el.offsetTop, height: el.offsetHeight } : null;
             },
         }),
         [],
@@ -51,7 +63,9 @@ export const StickyDate = forwardRef<StickyDateHandle, StickyDateProps>(function
     if (state.ts === null) return null;
     return (
         <div
+            ref={element}
             className={classNames(styles.stickyDate, { [styles.stickyDateVisible]: state.visible })}
+            style={state.shift ? { transform: `translateY(${state.shift}px)` } : undefined}
             // A copy of a date the list already states in place, shown for as long as the
             // reader is moving through it. Announcing it again on every scroll would be
             // noise, and nothing in it can be interacted with.

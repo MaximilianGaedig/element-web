@@ -217,4 +217,11 @@ export interface TimelineViewProps {
      * it is shown, so this only has to draw the label. Omit it to have no floating date.
      */
     renderStickyDate?: (ts: number) => ReactNode;
+
+    /**
+     * Keep the floating date on screen whenever a day's own separator has scrolled past, rather
+     * than only while the reader scrolls (Telegram's pinned date that stays, for a layout that
+     * wants it).
+     */
+    alwaysShowStickyDate?: boolean;
 }

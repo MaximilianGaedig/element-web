@@ -109,10 +109,15 @@ const renderStickyDate = (ts: number): React.ReactNode => <div data-testid="stic
 
 // Fixed-height viewport: the TimelineView is height:100%, so its parent must size it.
 const VIEWPORT_HEIGHT = 300;
-function renderTimeline(vm: TimelineViewModel): RenderResult {
+function renderTimeline(vm: TimelineViewModel, alwaysShowStickyDate = false): RenderResult {
     return render(
         <div style={{ height: VIEWPORT_HEIGHT, width: 320 }}>
-            <TimelineView vm={vm} renderItem={renderItem} renderStickyDate={renderStickyDate} />
+            <TimelineView
+                vm={vm}
+                renderItem={renderItem}
+                renderStickyDate={renderStickyDate}
+                alwaysShowStickyDate={alwaysShowStickyDate}
+            />
         </div>,
     );
 }
@@ -204,6 +209,36 @@ describe("<TimelineView />", () => {
                 scroller.dispatchEvent(new Event("scroll"));
             });
             await waitFor(() => expect(floatingDate()).toHaveClass(styles.stickyDateVisible));
+        });
+
+        it("stays on screen without scrolling when asked to (Telegram's pinned date)", async () => {
+            const { vm, actions } = makeFakeVm({ items: twoDayItems() });
+            renderTimeline(vm, true);
+            await waitFor(() => expect(actions.onAnchorReached).toHaveBeenCalled(), { timeout: 5000 });
+
+            const scroller = screen.getByTestId("timeline-scroller");
+            act(() => {
+                scroller.scrollTop = scroller.scrollHeight;
+                scroller.dispatchEvent(new Event("scroll"));
+            });
+            await waitFor(() => expect(screen.getByTestId("sticky-date")).toHaveTextContent(String(DAY_TWO)));
+            // Long after the last scroll it is still there (the plain one goes after SCROLL_IDLE_MS).
+            await new Promise((resolve) => setTimeout(resolve, 1600));
+            expect(floatingDate()).toHaveClass(styles.stickyDateVisible);
+        });
+
+        it("is pushed up by the next day's separator rather than swapped for it", async () => {
+            const { vm, actions } = makeFakeVm({ items: twoDayItems() });
+            renderTimeline(vm, true);
+            await waitFor(() => expect(actions.onAnchorReached).toHaveBeenCalled(), { timeout: 5000 });
+            const scroller = screen.getByTestId("timeline-scroller");
+            // Day two's separator is row 21; stop with it 4px below the top, inside the pinned date.
+            act(() => {
+                scroller.scrollTop = 21 * ROW_HEIGHT - 4;
+                scroller.dispatchEvent(new Event("scroll"));
+            });
+            await waitFor(() => expect(screen.getByTestId("sticky-date")).toHaveTextContent(String(DAY_ONE)));
+            await waitFor(() => expect(floatingDate().style.transform).toMatch(/translateY\(-\d+(\.\d+)?px\)/));
         });
 
         it("says nothing while the day's own separator is still on screen", async () => {
