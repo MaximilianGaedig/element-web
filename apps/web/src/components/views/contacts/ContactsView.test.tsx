@@ -8,7 +8,7 @@ Please see LICENSE files in the repository root for full details.
 // @vitest-environment happy-dom
 
 import React from "react";
-import { render, screen, waitFor, type RenderResult } from "test-utils-rtl";
+import { fireEvent, render, screen, waitFor, type RenderResult } from "test-utils-rtl";
 import userEvent from "@testing-library/user-event";
 import { vi, describe, it, expect, beforeEach } from "vitest";
 import { type MatrixClient } from "matrix-js-sdk/src/matrix";
@@ -26,9 +26,16 @@ import { Action } from "../../../dispatcher/actions";
 const member = { userId: "@ada:e", name: "Ada" };
 const client = {
     getSafeUserId: () => "@me:e",
-    getRoom: () => ({ getMember: () => member, tags: {} }),
+    // A room, with the state a room has: a stub without it only proves the client never reads it.
+    getRoom: () => ({
+        getMember: () => member,
+        tags: {},
+        currentState: { getStateEvents: () => [] },
+    }),
     getAccountData: () => undefined,
     getVisibleRooms: () => [],
+    // Presence is read per account, so a client without it is one the rows cannot be built from.
+    getUser: () => null,
 } as unknown as MatrixClient;
 
 const person = (name: string, saved = false): Person => ({
@@ -42,10 +49,13 @@ const person = (name: string, saved = false): Person => ({
 });
 
 const call = (over: Partial<Call> = {}): Call => ({
+    // The row shows `title`, so a fixture that overrode only `name` made every call read as the same person.
+    title: over.name ?? "Ada",
     eventId: "$call",
     roomId: "!room:e",
     userId: "@ada:e",
     name: "Ada",
+    group: false,
     network: "Signal",
     ts: 1_700_000_000_000,
     outgoing: false,
@@ -54,7 +64,9 @@ const call = (over: Partial<Call> = {}): Call => ({
     ...over,
 });
 
-const open = (): RenderResult => render(<ContactsView onFinished={() => {}} />);
+/* The bar at the bottom of the column decides which list this is, so the test says which one too. */
+const open = (tab: "people" | "calls" = "people"): RenderResult =>
+    render(<ContactsView tab={tab} onFinished={() => {}} />);
 
 beforeEach(() => {
     vi.restoreAllMocks();
@@ -103,23 +115,28 @@ describe("ContactsView people", () => {
     });
 });
 
-describe("ContactsView linking by hand", () => {
+describe("ContactsView merging by hand", () => {
     /*
-     * The only merging that can happen on an account whose bridges publish no identifiers - which is this
-     * one, every bridge - so it is the path that matters most, not a convenience.
+     * The merging that matters: only the identifiers some networks publish can put two accounts together on
+     * their own, so the reader saying "these are the same person" is the rest of it. It happens in the row's
+     * own menu now - it used to take the list away for a screen per step, then bring it back.
      */
-    it("offers the other people to link with, never the person themselves", async () => {
+    const menuFor = async (name: string): Promise<void> => {
+        const row = screen.getByText(name).closest(".mx_Contacts_rowWith")!;
+        fireEvent.contextMenu(row);
+    };
+
+    it("offers the other people to merge with, never the person themselves", async () => {
         vi.spyOn(peopleModule, "allPeople").mockResolvedValue([person("Ada"), person("Bob"), person("Cyd")]);
         open();
         await waitFor(() => expect(screen.getByText("Ada")).toBeInTheDocument());
 
-        await userEvent.click(screen.getByText("Ada"));
-        await userEvent.click(screen.getByRole("button", { name: "Link to another contact" }));
+        await menuFor("Ada");
+        await userEvent.click(await screen.findByRole("menuitem", { name: "Same person as…" }));
 
-        expect(screen.getByRole("heading", { name: "Link with Ada" })).toBeInTheDocument();
-        expect(screen.getByText("Bob")).toBeInTheDocument();
-        expect(screen.getByText("Cyd")).toBeInTheDocument();
-        expect(screen.queryByText("Ada")).not.toBeInTheDocument();
+        expect(await screen.findByRole("menuitem", { name: "Bob" })).toBeInTheDocument();
+        expect(screen.getByRole("menuitem", { name: "Cyd" })).toBeInTheDocument();
+        expect(screen.queryByRole("menuitem", { name: "Ada" })).not.toBeInTheDocument();
     });
 
     it("records both sides when one is chosen", async () => {
@@ -128,18 +145,44 @@ describe("ContactsView linking by hand", () => {
         open();
         await waitFor(() => expect(screen.getByText("Ada")).toBeInTheDocument());
 
-        await userEvent.click(screen.getByText("Ada"));
-        await userEvent.click(screen.getByRole("button", { name: "Link to another contact" }));
-        await userEvent.click(screen.getByText("Bob"));
+        await menuFor("Ada");
+        await userEvent.click(await screen.findByRole("menuitem", { name: "Same person as…" }));
+        await userEvent.click(await screen.findByRole("menuitem", { name: "Bob" }));
 
         expect(link).toHaveBeenCalledWith(expect.anything(), expect.arrayContaining(["@Ada:e", "@Bob:e"]));
+    });
+
+    /*
+     * Several at once, which is what a list of near-duplicates actually needs: picking them one pair at a
+     * time was the same two-step answer repeated for every account the same person has.
+     */
+    it("merges everybody picked in one go", async () => {
+        const link = vi.spyOn(peopleModule, "linkAccounts").mockResolvedValue(undefined);
+        vi.spyOn(peopleModule, "allPeople").mockResolvedValue([person("Ada"), person("Bob"), person("Cyd")]);
+        open();
+        await waitFor(() => expect(screen.getByText("Ada")).toBeInTheDocument());
+
+        /*
+         * Picking starts from the row's own menu, and from then on a press picks rather than opens - so the
+         * second and third are one press each. A modifier press does the same without the menu.
+         */
+        await menuFor("Ada");
+        await userEvent.click(await screen.findByRole("menuitem", { name: "Select" }));
+        await userEvent.click(screen.getByText("Bob"));
+        await userEvent.click(screen.getByText("Cyd"));
+        expect(screen.getByText("3 selected")).toBeInTheDocument();
+
+        await userEvent.click(screen.getByRole("button", { name: "Same person" }));
+        expect(link).toHaveBeenCalledWith(
+            expect.anything(),
+            expect.arrayContaining(["@Ada:e", "@Bob:e", "@Cyd:e"]),
+        );
     });
 });
 
 describe("ContactsView calls", () => {
     const openCalls = async (): Promise<void> => {
-        open();
-        await userEvent.click(screen.getByRole("tab", { name: "Calls" }));
+        open("calls");
     };
 
     it("puts the reader's favourites above the calls", async () => {

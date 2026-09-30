@@ -158,10 +158,22 @@ describe("ContactCard", () => {
         expect(onFavourite).toHaveBeenLastCalledWith(expect.anything(), false);
     });
 
-    it("offers to separate only a merge the reader made", () => {
-        const { rerender } = render(<ContactCard person={person()} onBack={() => {}} onMessage={() => {}} />);
+    /*
+     * Separating used to be a button on the card and another in the list. Both are gone: undoing a merge
+     * is in the person's menu, as a destructive item, so it cannot be hit while reaching for anything else
+     * - and the card shows that same menu rather than keeping its own copy of any of it.
+     */
+    it("keeps no actions of its own beside the menu it is given", () => {
+        render(
+            <ContactCard
+                person={person()}
+                onBack={() => {}}
+                onMessage={() => {}}
+                menu={<button type="button">Options</button>}
+            />,
+        );
         expect(screen.queryByRole("button", { name: "Separate" })).not.toBeInTheDocument();
-        rerender(<ContactCard person={person()} onBack={() => {}} onMessage={() => {}} onSeparate={() => {}} />);
-        expect(screen.getByRole("button", { name: "Separate" })).toBeInTheDocument();
+        expect(screen.queryByRole("button", { name: "Link" })).not.toBeInTheDocument();
+        expect(screen.getByRole("button", { name: "Options" })).toBeInTheDocument();
     });
 });

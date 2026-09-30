@@ -15,7 +15,6 @@ import { HistoryStatusMini } from "../../telegram/TgHistoryChip";
 import { RoomListView } from "./RoomListView";
 import { RoomListPill } from "./RoomListPill";
 import { ContactsView } from "../../contacts/ContactsView";
-import { contactsTab } from "../../../../utils/contacts/contactsTab";
 import { setRoomListPanelView, useRoomListPanelView } from "../../../../utils/roomListPanelView";
 import { _t } from "../../../../languageHandler";
 import { getKeyBindingsManager } from "../../../../KeyBindingsManager";
@@ -83,14 +82,10 @@ export const RoomListPanel: React.FC<RoomListPanelProps> = ({ activeSpace }) => 
             onBlur={onBlur}
             onKeyDown={onKeyDown}
         >
-            {panelView === "contacts" ? (
-                /*
-                 * In place of the list, not over it: one column, one thing in it. Keyed on the tab so
-                 * reopening on Calls from the pill remounts rather than leaving the last tab showing.
-                 */
+            {panelView !== "rooms" ? (
+                /* In place of the list, not over it: one column, one thing in it. */
                 <ContactsView
-                    key={contactsTab()}
-                    initialTab={contactsTab()}
+                    tab={panelView === "calls" ? "calls" : "people"}
                     onFinished={() => setRoomListPanelView("rooms")}
                 />
             ) : (
@@ -105,10 +100,13 @@ export const RoomListPanel: React.FC<RoomListPanelProps> = ({ activeSpace }) => 
                     )}
                     <RoomListHeaderView vm={vm} />
                     <RoomListView />
-                    {/* Fork: over the list rather than above it, so it costs the list no height. */}
-                    <RoomListPill />
                 </>
             )}
+            {/*
+             * Over whichever of the three is showing, because it is what moves between them: kept out of
+             * the branches so it does not unmount and remount - and so the list is never without it.
+             */}
+            <RoomListPill />
         </Flex>
     );
 };

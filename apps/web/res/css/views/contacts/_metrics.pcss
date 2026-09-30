@@ -1,0 +1,52 @@
+/*
+Copyright 2026 New Vector Ltd.
+
+SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only OR LicenseRef-Element-Commercial
+Please see LICENSE files in the repository root for full details.
+*/
+
+/*
+ * The measurements the contacts and calls screens are built from, in one place, with where each comes
+ * from. The layout of these two screens follows a phone's address book rather than Element's own list
+ * shapes, so the numbers are taken from published sources instead of being guessed at, and the rules that
+ * shaped the markup are recorded here beside them. Only the layout: the colours, type and controls are
+ * Element's, which is why nothing here names a colour or a font.
+ *
+ * Metrics: Ionic's iOS-mode source, which carries the platform's list metrics as real constants -
+ * core/src/components/item/item.ios.vars.scss and core/src/components/list/list.ios.vars.scss:
+ *   $item-ios-min-height 44px, $item-ios-font-size 16px, $item-ios-paragraph-font-size 14px,
+ *   $item-ios-padding-top/-bottom 10px, $item-ios-padding-start/-end 16px, $item-ios-avatar-width 36px,
+ *   $item-ios-thumbnail-size 56px, $list-inset-ios-border-radius 10px, $list-inset-ios-margin-* 16px.
+ *
+ * Rules, from Apple's Human Interface Guidelines:
+ *   Materials - "Liquid Glass forms a distinct functional layer for controls and navigation elements [...]
+ *   that floats above the content layer" and "Don't use Liquid Glass in the content layer [...] use
+ *   standard materials for elements in the content layer". So the floating pill is glass and the rows,
+ *   cards and sections underneath it are not.
+ *   Layout - "Instead of applying a solid or semi-opaque background color beneath controls, use a scroll
+ *   edge effect to visually elevate controls above content."
+ *   Scroll views - "Only use a scroll edge effect when a scroll view is behind floating interface
+ *   elements" and "Apply one scroll edge effect per view", preferring the automatic style.
+ *   Lists and tables - "Avoid adding an index to a table that displays controls - like disclosure
+ *   indicators - in the trailing ends of its rows", which is why an indexed row here carries no trailing
+ *   action; and a disclosure indicator means "reveals the next level in a hierarchy" while an info button
+ *   "shows details about a list item", which is how the two are used apart.
+ */
+.mx_Contacts,
+.mx_ContactCard {
+    /* A row and anything meant to be tappable: the platform's minimum. */
+    --mx-contacts-row-height: 44px;
+    --mx-contacts-row-padding-block: 10px;
+    /* The margin a grouped list keeps from the edge of the screen, and the padding inside its rows. */
+    --mx-contacts-gutter: 16px;
+    --mx-contacts-inset-radius: 10px;
+    --mx-contacts-avatar: 36px;
+    /* A face that is the subject of its row rather than a mark beside it, as in a favourites card. */
+    --mx-contacts-thumbnail: 56px;
+    /*
+     * A hairline, and where it starts: in a grouped list the separator begins at the text rather than at
+     * the edge, so a row with a face is divided under the words and not under the face.
+     */
+    --mx-contacts-hairline: var(--cpd-color-gray-400);
+    --mx-contacts-separator-inset: calc(var(--mx-contacts-gutter) + var(--mx-contacts-avatar) + var(--cpd-space-3x));
+}

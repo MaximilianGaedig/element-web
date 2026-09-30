@@ -14,29 +14,37 @@ import { describe, expect, it, afterEach } from "vitest";
 
 import { RoomListPill } from "./RoomListPill";
 import { roomListPanelView, setRoomListPanelView } from "../../../../utils/roomListPanelView";
-import { contactsTab } from "../../../../utils/contacts/contactsTab";
 
 afterEach(() => setRoomListPanelView("rooms"));
 
 describe("RoomListPill", () => {
-    it("offers the three whole-list actions", () => {
+    it("names every view it can move between, rather than only drawing an icon for it", () => {
         render(<RoomListPill />);
-        expect(screen.getByRole("toolbar", { name: "Everything in this list" })).toBeInTheDocument();
-        expect(screen.getByRole("button", { name: "People" })).toBeInTheDocument();
-        expect(screen.getByRole("button", { name: "Calls" })).toBeInTheDocument();
+        expect(screen.getByRole("navigation", { name: "Chats, people and calls" })).toBeInTheDocument();
+        for (const name of ["Messages", "People", "Calls"]) {
+            expect(screen.getByRole("button", { name })).toBeInTheDocument();
+        }
     });
 
-    it("puts contacts in the panel, on the people list", async () => {
+    it("marks the view being shown, so the bar says where you are and not only where you can go", async () => {
+        render(<RoomListPill />);
+        expect(screen.getByRole("button", { name: "Messages" })).toHaveAttribute("aria-current", "page");
+
+        await userEvent.click(screen.getByRole("button", { name: "Calls" }));
+        expect(roomListPanelView()).toBe("calls");
+        expect(screen.getByRole("button", { name: "Calls" })).toHaveAttribute("aria-current", "page");
+        expect(screen.getByRole("button", { name: "Messages" })).not.toHaveAttribute("aria-current");
+    });
+
+    it("puts the people in the panel", async () => {
         render(<RoomListPill />);
         await userEvent.click(screen.getByRole("button", { name: "People" }));
         expect(roomListPanelView()).toBe("contacts");
-        expect(contactsTab()).toBe("people");
     });
 
-    it("opens the calls list when that is the one asked for", async () => {
+    /* Search opens over whatever is showing, so it is never somewhere to be. */
+    it("never marks search as the view you are in", async () => {
         render(<RoomListPill />);
-        await userEvent.click(screen.getByRole("button", { name: "Calls" }));
-        expect(roomListPanelView()).toBe("contacts");
-        expect(contactsTab()).toBe("calls");
+        expect(screen.getByRole("button", { name: "Found" })).not.toHaveAttribute("aria-current");
     });
 });

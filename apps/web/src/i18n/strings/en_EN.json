@@ -770,7 +770,13 @@
     "console_scam_warning": "If someone told you to copy/paste something here, there is a high likelihood you're being scammed!",
     "console_wait": "Wait!",
     "contacts": {
+        "about": "Active now",
+        "about_on": "Active now on %(network)s",
+        "away": "Away",
+        "call": "Call",
+        "call_back": "Call back",
         "call_declined": "Declined",
+        "call_group": "Group call",
         "call_how": "Call with",
         "call_incoming": "Incoming",
         "call_missed": "Missed",
@@ -784,24 +790,50 @@
         "email": "Email",
         "favourite": "Add to favourites",
         "favourites": "Favourites",
+        "group_members": {
+            "other": "%(count)s members",
+            "one": "1 member"
+        },
+        "groups": "Groups in common",
         "handle": "Username",
         "index": "Jump to a letter",
+        "index_hint": "Drag to jump",
         "link": "Link to another contact",
         "link_with": "Link with %(name)s",
         "merge": "Same person",
+        "merge_selected": {
+            "other": "Merge %(count)s contacts",
+            "one": "Merge"
+        },
+        "merge_with": "Same person as…",
+        "message": "Message",
         "no_calls": "No calls yet",
         "no_calls_matching": "No calls match",
         "no_people": "Nobody here yet",
         "not_same_person": "Different people",
+        "offline": "Offline",
         "on_networks": "Also on",
+        "open_card": "Contact details",
+        "open_on": "Open in %(network)s",
         "people": "People",
         "phone": "Phone",
         "rename": "Rename",
         "same_person": "Also on %(networks)s under this name",
+        "same_person_named": "Same person as %(name)s?",
+        "search_calls": "Search calls",
         "search_people": "Search people",
+        "select": "Select",
+        "selected": "Selected",
+        "selected_count": {
+            "other": "%(count)s selected",
+            "one": "1 selected"
+        },
         "separate": "Separate",
         "title": "People and calls",
-        "unfavourite": "Remove from favourites"
+        "unfavourite": "Remove from favourites",
+        "video_call": "Video call",
+        "when_today": "Today",
+        "when_yesterday": "Yesterday"
     },
     "create_room": {
         "action_create_room": "Create room",
@@ -1437,6 +1469,7 @@
         "onway": "On the way",
         "open": "Open",
         "open_it": "What's in my chats",
+        "short": "Found",
         "title": "Found in your chats",
         "when": "When",
         "where": "Where",
@@ -2303,11 +2336,12 @@
         "failed_remove_tag": "Failed to remove tag %(tagName)s from room",
         "failed_set_dm_tag": "Failed to set direct message tag",
         "list_title": "Room list",
+        "messages": "Messages",
         "more_options": {
             "leave_room": "Leave room"
         },
         "notification_options": "Notification options",
-        "pill_label": "Everything in this list",
+        "pill_label": "Chats, people and calls",
         "section": {
             "chats": "Chats",
             "favourites": "Favourites",

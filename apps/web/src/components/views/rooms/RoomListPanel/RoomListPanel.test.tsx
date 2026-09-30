@@ -60,9 +60,9 @@ describe("<RoomListPanel />", () => {
         vi.mocked(shouldShowComponent).mockReturnValue(true);
     });
 
-    it("renders the pill of whole-list actions over the list", () => {
+    it("renders the bar that moves between the chats, the people and the calls", () => {
         renderComponent();
-        const pill = screen.getByRole("toolbar", { name: "Everything in this list" });
+        const pill = screen.getByRole("navigation", { name: "Chats, people and calls" });
         expect(pill).toBeInTheDocument();
         expect(screen.getByRole("button", { name: "People" })).toBeInTheDocument();
         expect(screen.getByRole("button", { name: "Calls" })).toBeInTheDocument();

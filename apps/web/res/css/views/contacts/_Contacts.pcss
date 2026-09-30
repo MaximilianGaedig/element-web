@@ -7,23 +7,142 @@ Please see LICENSE files in the repository root for full details.
 
 /* Element's own list shapes, not a new set: a row is an avatar, two lines of text and a trailing note. */
 .mx_Contacts {
+    /*
+     * One control with two positions: a tinted track with the chosen half raised out of it, which is how a
+     * segmented control reads. Element's own colours and font, iOS's shape.
+     */
     .mx_Contacts_tabs {
         display: flex;
-        gap: var(--cpd-space-2x);
-        margin-bottom: var(--cpd-space-3x);
+        gap: 2px;
+        padding: 2px;
+        margin: 0 var(--mx-contacts-gutter) var(--cpd-space-2x);
+        border-radius: var(--mx-contacts-inset-radius);
+        background: var(--cpd-color-bg-subtle-secondary);
+
+        button {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: var(--cpd-space-1x);
+            flex: 1;
+            min-height: calc(var(--mx-contacts-row-height) - 12px);
+            padding: 0 var(--cpd-space-2x);
+            border: none;
+            border-radius: calc(var(--mx-contacts-inset-radius) - 2px);
+            background: transparent;
+            color: var(--cpd-color-text-secondary);
+            font: var(--cpd-font-body-sm-semibold);
+            cursor: pointer;
+            transition:
+                background-color 120ms ease,
+                color 120ms ease;
+
+            &[aria-selected="true"] {
+                background: var(--cpd-color-bg-canvas-default);
+                color: var(--cpd-color-text-primary);
+                box-shadow: 0 1px 2px rgb(0 0 0 / 12%);
+            }
+        }
     }
 
+    /*
+     * What is picked and what can be done to it, above the list rather than over it: a bar that floats on
+     * top of the rows hides the very names the reader is choosing between.
+     */
+    .mx_Contacts_batch {
+        display: flex;
+        align-items: center;
+        gap: var(--cpd-space-2x);
+        padding: var(--cpd-space-2x) var(--mx-contacts-gutter);
+        margin: 0 var(--mx-contacts-gutter) var(--cpd-space-2x);
+        border-radius: var(--mx-contacts-inset-radius);
+        background: var(--cpd-color-bg-subtle-secondary);
+    }
+
+    .mx_Contacts_batchCount {
+        flex: 1;
+        color: var(--cpd-color-text-secondary);
+        font: var(--cpd-font-body-sm-medium);
+    }
+
+    /* The face, and whatever is marked on it. */
+    .mx_Contacts_faceWith {
+        position: relative;
+        display: flex;
+        flex-shrink: 0;
+    }
+
+    /*
+     * The tick that says a row is picked, on the corner of the face: in the row it would be a column that
+     * appears and disappears, which shifts every name in the list at the moment of picking one.
+     */
+    .mx_Contacts_tick {
+        position: absolute;
+        inset-block-end: -2px;
+        inset-inline-end: -2px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 18px;
+        height: 18px;
+        border: 2px solid var(--cpd-color-bg-canvas-default);
+        border-radius: 50%;
+        background: var(--cpd-color-bg-subtle-primary);
+        color: var(--cpd-color-icon-on-solid-primary);
+        transition: background-color 120ms ease;
+
+        &[data-selected] {
+            background: var(--cpd-color-bg-accent-rest);
+        }
+    }
+
+    /*
+     * The row's own menu control, out of the way until it is wanted.
+     *
+     * Only where there is a pointer to reveal it with: on a touch screen a control that appears on hover
+     * takes the first tap to appear and the second to work, so there it is simply always there - and a long
+     * press on the row opens the same menu either way.
+     */
+    .mx_Contacts_more {
+        flex-shrink: 0;
+    }
+
+    @media (hover: hover) {
+        .mx_Contacts_more {
+            opacity: 0;
+            transition: opacity 100ms ease;
+        }
+
+        .mx_Contacts_rowWith:hover .mx_Contacts_more,
+        .mx_Contacts_rowWith:focus-within .mx_Contacts_more,
+        .mx_Contacts_more[data-open] {
+            opacity: 1;
+        }
+    }
+
+    /*
+     * A filled field with the grouped-list radius, not a bordered pill: on iOS a search field is the
+     * same shape as the rows under it and reads as part of the list rather than as a control over it.
+     */
     .mx_Contacts_search {
-        width: 100%;
+        /*
+         * Stretched by the column rather than told to be all of it: `width: 100%` plus a margin on each
+         * side is the column's width and then some, which pushed the field - and the panel with it - a
+         * gutter's worth past its own right edge.
+         */
         box-sizing: border-box;
-        padding: var(--cpd-space-2x) var(--cpd-space-3x);
-        margin-bottom: var(--cpd-space-2x);
-        border: 1px solid var(--cpd-color-border-interactive-primary);
-        /* A pill, as Element's other rounded chrome writes it. */
-        border-radius: 99px;
-        background: var(--cpd-color-bg-canvas-default);
+        min-height: var(--mx-contacts-row-height);
+        padding: var(--mx-contacts-row-padding-block) var(--cpd-space-3x);
+        margin: 0 var(--mx-contacts-gutter) var(--cpd-space-2x);
+        border: none;
+        border-radius: var(--mx-contacts-inset-radius);
+        background: var(--cpd-color-bg-subtle-secondary);
         color: var(--cpd-color-text-primary);
         font: var(--cpd-font-body-md-regular);
+
+        &::placeholder {
+            color: var(--cpd-color-text-secondary);
+        }
     }
 
     /* Its own scroller, so a long list cannot push the tabs or the search off the dialog. */
@@ -34,18 +153,25 @@ Please see LICENSE files in the repository root for full details.
         overflow-y: auto;
     }
 
+    /*
+     * A full-width row with a hairline under the words, which is the shape of a grouped list: the rounded
+     * pill this used to be made every name look like a separate control rather than one list to read down.
+     */
     .mx_Contacts_row {
+        position: relative;
         display: flex;
         align-items: center;
         gap: var(--cpd-space-3x);
         width: 100%;
-        padding: var(--cpd-space-2x);
+        box-sizing: border-box;
+        min-height: var(--mx-contacts-row-height);
+        padding: var(--mx-contacts-row-padding-block) var(--mx-contacts-gutter);
         border: none;
-        /* A pill, as Element's other rounded chrome writes it. */
-        border-radius: 99px;
+        border-radius: 0;
         background: transparent;
         color: var(--cpd-color-text-primary);
         text-align: start;
+        font: var(--cpd-font-body-md-regular);
         cursor: pointer;
 
         &:hover,
@@ -53,6 +179,20 @@ Please see LICENSE files in the repository root for full details.
             background: var(--cpd-color-bg-subtle-secondary);
         }
     }
+
+    /*
+     * The separator starts where the text starts, so a row divides under the name and not under the face.
+     * Drawn on the row rather than between rows so it survives a row being filtered out of the middle.
+     */
+    .mx_Contacts_row:not(:last-child)::after {
+        content: "";
+        position: absolute;
+        inset-inline: var(--mx-contacts-separator-inset) 0;
+        bottom: 0;
+        height: 1px;
+        background: var(--mx-contacts-hairline);
+    }
+
 
     /* A row that has an action beside it: the row still takes the width, the action sits at the end. */
     .mx_Contacts_rowWith {
@@ -76,14 +216,14 @@ Please see LICENSE files in the repository root for full details.
      * arrived as an ellipsis, which is no use for a question whose whole job is to say which two people
      * it means. The face and name keep their row; what it says and what you can answer sit under it.
      */
+    /* One row: the faces it means, what it is asking, and the two answers. */
     .mx_Contacts_suggestion {
         display: flex;
-        flex-direction: column;
-        align-items: stretch;
+        align-items: center;
         gap: var(--cpd-space-2x);
-        padding: var(--cpd-space-3x);
-        margin-bottom: var(--cpd-space-2x);
-        border-radius: var(--cpd-space-3x);
+        padding: var(--cpd-space-2x) var(--mx-contacts-gutter);
+        margin: 0 var(--mx-contacts-gutter) var(--cpd-space-2x);
+        border-radius: var(--mx-contacts-inset-radius);
         background: var(--cpd-color-bg-subtle-secondary);
     }
 
@@ -91,10 +231,34 @@ Please see LICENSE files in the repository root for full details.
         display: flex;
         align-items: center;
         gap: var(--cpd-space-2x);
+        flex: 1;
         min-width: 0;
     }
 
-    /* The sentence wraps here rather than being cut: it names the networks, which is the whole point. */
+    /* The faces overlap, as a stack of people does, so several fit in a row's worth of width. */
+    .mx_Contacts_suggestionFace {
+        position: relative;
+        flex-shrink: 0;
+
+        & + & {
+            margin-inline-start: -10px;
+        }
+
+        .mx_Contacts_networkLogo {
+            position: absolute;
+            inset-block-end: -2px;
+            inset-inline-end: -2px;
+        }
+    }
+
+    /*
+     * The question wraps rather than being cut.
+     *
+     * Every other name in this list is one line and ellipsed, which is right for a row you can open to see
+     * the rest of. A suggestion has nothing to open: the whole of it is the question of who it means, and
+     * "Same person as Aleksandra K…" does not ask it.
+     */
+    .mx_Contacts_suggestion .mx_Contacts_name,
     .mx_Contacts_suggestion .mx_Contacts_detail {
         overflow: visible;
         white-space: normal;
@@ -103,11 +267,8 @@ Please see LICENSE files in the repository root for full details.
 
     .mx_Contacts_suggestionActions {
         display: flex;
-        gap: var(--cpd-space-2x);
-
-        > * {
-            flex: 1;
-        }
+        gap: var(--cpd-space-1x);
+        flex-shrink: 0;
     }
 
     /* The list and the letters beside it: the list scrolls, the index stays put next to it. */
@@ -130,38 +291,57 @@ Please see LICENSE files in the repository root for full details.
      * of the way of the names until it is aimed at.
      */
     .mx_Contacts_index {
+        position: relative;
         display: flex;
         flex-direction: column;
         justify-content: center;
         flex-shrink: 0;
         padding: 0 var(--cpd-space-1x);
+        /* Dragged rather than scrolled, so the strip keeps the gesture instead of the list taking it. */
+        touch-action: none;
+        cursor: ns-resize;
+        user-select: none;
 
-        button {
-            padding: 0;
-            border: none;
-            background: transparent;
+        span[aria-hidden] {
             color: var(--cpd-color-text-secondary);
             font: var(--cpd-font-body-xs-medium);
             line-height: 1.15;
-            cursor: pointer;
+            text-align: center;
+        }
 
-            &:hover,
-            &:focus-visible {
-                color: var(--cpd-color-text-primary);
-            }
+        /* While it is being dragged the whole strip is the control, so all of it lights up. */
+        &[data-dragging] span[aria-hidden] {
+            color: var(--cpd-color-text-primary);
         }
     }
 
-    /* Sticky, so the reader can always see which letter the names under the cursor belong to. */
+    /*
+     * The same letters for the keyboard, off screen but not out of the tree: the strip is a drag, which a
+     * keyboard cannot do, and a letter nobody can tab to is a list half the readers cannot navigate.
+     */
+    .mx_Contacts_indexKeys {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        overflow: hidden;
+        clip-path: inset(50%);
+        white-space: nowrap;
+    }
+
+    /*
+     * Sticky, so the reader can always see which letter the names under the cursor belong to. A tinted
+     * band rather than a heading in the canvas colour, which is how a grouped list marks its sections.
+     */
     .mx_Contacts_letter {
         position: sticky;
         top: 0;
         z-index: 1;
         margin: 0;
-        padding: var(--cpd-space-1x) var(--cpd-space-2x);
-        background: var(--cpd-color-bg-canvas-default);
+        padding: 2px var(--mx-contacts-gutter);
+        background: var(--cpd-color-bg-subtle-primary);
         color: var(--cpd-color-text-secondary);
-        font: var(--cpd-font-body-sm-medium);
+        font: var(--cpd-font-body-sm-semibold);
     }
 
     /* A row of faces above the calls: scrolled sideways, so a long list of favourites costs no height. */
@@ -178,8 +358,8 @@ Please see LICENSE files in the repository root for full details.
         flex-direction: column;
         align-items: center;
         gap: var(--cpd-space-1x);
-        /* Wide enough for a face and a first name under it, and the same width whichever name it is. */
-        width: 64px;
+        /* A face that is the subject of its card, at the platform's thumbnail size, with room for a name. */
+        width: calc(var(--mx-contacts-thumbnail) + var(--cpd-space-2x));
         flex-shrink: 0;
         padding: 0;
         border: none;
@@ -236,6 +416,40 @@ Please see LICENSE files in the repository root for full details.
         flex-shrink: 0;
     }
 
+    /*
+     * Which way a call went and how it ended, in colour, because it is now the only thing saying it.
+     * Element's semantic icon colours rather than a palette of this screen's own.
+     */
+    .mx_Contacts_callMark {
+        flex-shrink: 0;
+        vertical-align: -3px;
+        margin-inline-end: var(--cpd-space-1x);
+        color: var(--cpd-color-icon-secondary);
+
+        /* The one that is still owed an answer. */
+        &[data-mark="missed"] {
+            color: var(--cpd-color-icon-critical-primary);
+        }
+
+        &[data-mark="declined"] {
+            color: var(--cpd-color-icon-tertiary);
+        }
+
+        &[data-mark="answered"] {
+            color: var(--cpd-color-icon-success-primary);
+        }
+
+        &[data-mark="outgoing"] {
+            color: var(--cpd-color-icon-accent-tertiary);
+        }
+    }
+
+    /* The detail line carries an icon now, so it lays out rather than only wrapping. */
+    .mx_Contacts_detail {
+        display: flex;
+        align-items: center;
+    }
+
     .mx_Contacts_network {
         padding: 0 var(--cpd-space-2x);
         /* A pill, as Element's other rounded chrome writes it. */
@@ -262,14 +476,19 @@ Please see LICENSE files in the repository root for full details.
     flex-direction: column;
     min-height: 0;
     flex: 1;
-    padding: 0 var(--cpd-space-3x);
+    /*
+     * The panel is the thing that is narrow, not the window: this column can be a phone's width inside a
+     * wide desktop window, and a rule that asks the window what size it is gets the wrong answer in the
+     * one case it exists for. Named, as _HomePage.pcss and _RoomView.pcss name theirs.
+     */
+    container: contactspanel / inline-size;
 }
 
 .mx_ContactsView_header {
     display: flex;
     align-items: center;
     gap: var(--cpd-space-2x);
-    padding: var(--cpd-space-2x) 0;
+    padding: var(--cpd-space-2x) var(--mx-contacts-gutter);
 }
 
 .mx_ContactsView_title {
@@ -423,4 +642,157 @@ Please see LICENSE files in the repository root for full details.
 /* With a star present, the edit control no longer needs to claim the space itself. */
 .mx_ContactCard_favourite + .mx_ContactCard_edit {
     margin-inline-start: 0;
+}
+
+/* The account row: the chat it opens, and the way out to the network's own app beside it. */
+.mx_ContactCard_accountRow {
+    display: flex;
+    align-items: stretch;
+
+    & + & {
+        border-top: 1px solid var(--mx-contacts-hairline);
+    }
+
+    .mx_ContactCard_account {
+        flex: 1;
+        min-width: 0;
+    }
+}
+
+.mx_ContactCard_accountLink {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    /* The platform's smallest target, so a link out is as easy to hit as the row it sits on. */
+    min-width: var(--mx-contacts-row-height);
+    color: var(--cpd-color-icon-secondary);
+
+    &:hover,
+    &:focus-visible {
+        color: var(--cpd-color-icon-primary);
+        background: var(--cpd-color-bg-subtle-primary);
+    }
+}
+
+/* A name typed into the menu, which is where merging and renaming happen now. */
+.mx_PersonMenu_find {
+    padding: var(--cpd-space-1x) var(--cpd-space-2x);
+}
+
+/*
+ * Touch and pointer, narrow and wide.
+ *
+ * The same screen is used with a finger on a phone and with a mouse on a desktop, and the two want
+ * different things: a finger needs the platform's 44px of target and cannot hover to reveal anything, a
+ * mouse can hover but is pixel-accurate and wants the chrome out of the way until it is wanted. Split on
+ * `hover`/`pointer` rather than on width, because a narrow window on a desktop is still a mouse and a
+ * tablet is neither.
+ */
+@media (hover: none), (pointer: coarse) {
+    /* Every control on a row gets a finger's worth of target, not an icon's worth. */
+    .mx_Contacts_rowWith .mx_Contacts_more,
+    .mx_Contacts_rowWith > .mx_IconButton,
+    .mx_ContactCard_accountLink {
+        min-width: var(--mx-contacts-row-height);
+        min-height: var(--mx-contacts-row-height);
+    }
+
+    /* Nothing reveals on hover here, so the row's own menu control is simply always there. */
+    .mx_Contacts_more {
+        opacity: 1;
+    }
+
+    /* The strip is wider to be draggable with a thumb, and its letters stay legible while it is. */
+    .mx_Contacts_index {
+        padding: 0 var(--cpd-space-2x);
+    }
+}
+
+/*
+ * A narrow panel, where a row cannot hold everything.
+ *
+ * The info button goes: it is the one control with a duplicate, since the menu on the same row carries
+ * "Show <name>", and a long press reaches that menu anywhere on the row. The name and what is under it
+ * keep the space instead, which is what the row is for.
+ */
+@container contactspanel (max-width: 420px) {
+    .mx_Contacts_rowWith > .mx_IconButton:not(.mx_Contacts_more) {
+        display: none;
+    }
+
+    .mx_Contacts_batch {
+        flex-wrap: wrap;
+    }
+
+    .mx_Contacts_batchCount {
+        flex-basis: 100%;
+    }
+
+    /* Three faces and two answers do not fit beside a sentence, so the question takes its own line. */
+    .mx_Contacts_suggestion {
+        flex-wrap: wrap;
+    }
+}
+
+/* A press should look pressed on touch, where there is no hover to show anything is happening. */
+.mx_Contacts_row:active {
+    background: var(--cpd-color-bg-subtle-secondary);
+}
+
+/* Element draws its own press states; the platform's grey flash on top of them is not wanted. */
+.mx_Contacts,
+.mx_ContactCard {
+    -webkit-tap-highlight-color: transparent;
+}
+
+/* Nothing moves for a reader who asked for nothing to move. */
+@media (prefers-reduced-motion: reduce) {
+    .mx_Contacts_tabs button,
+    .mx_Contacts_tick,
+    .mx_Contacts_more {
+        transition: none;
+    }
+}
+
+/*
+ * Whether somebody is about, as a dot on their face.
+ *
+ * On the face rather than in the row's words, because the words are already carrying the number or the
+ * handle - and because a dot in the row would be one more thing that appears and shifts everything along.
+ * Only drawn when a network actually said something: silence is not "away".
+ */
+.mx_Contacts_presenceDot {
+    position: absolute;
+    inset-block-end: -1px;
+    inset-inline-end: -1px;
+    width: 12px;
+    height: 12px;
+    border: 2px solid var(--cpd-color-bg-canvas-default);
+    border-radius: 50%;
+    background: var(--cpd-color-icon-tertiary);
+
+    &[data-presence="online"] {
+        background: var(--cpd-color-icon-success-primary);
+    }
+
+    &[data-presence="unavailable"] {
+        background: var(--cpd-color-icon-quaternary);
+    }
+}
+
+/* In the card the same dot sits beside the words, where there is room for both. */
+.mx_ContactCard_presence {
+    display: flex;
+    align-items: center;
+    gap: var(--cpd-space-2x);
+    color: var(--cpd-color-text-secondary);
+    font: var(--cpd-font-body-sm-regular);
+
+    .mx_Contacts_presenceDot {
+        position: static;
+        border: none;
+        width: 8px;
+        height: 8px;
+    }
 }
