@@ -123,7 +123,9 @@ describe("SpaceRoomView", () => {
             await renderSpaceRoomView();
             await expect(screen.findByText("Welcome to")).resolves.toBeVisible();
 
-            const addButton = screen.getByRole("button", { name: /add/i });
+            // The landing can re-render once more after its heading shows (the space's children
+            // load), so wait for the button rather than taking whatever is there that instant.
+            const addButton = await screen.findByRole("button", { name: /add/i });
             fireEvent.click(addButton);
 
             expect(await screen.findByText(/new room/i)).toBeInTheDocument();
