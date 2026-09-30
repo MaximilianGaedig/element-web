@@ -9,7 +9,7 @@ import { describe, expect, it, vi } from "vitest";
 import { type MatrixClient } from "matrix-js-sdk/src/matrix";
 
 import { CARD_EVENT_TYPE } from "./card";
-import { accountId, allPeople, groupAccounts } from "./people";
+import { accountId, allPeople, groupAccounts, withReaderNames } from "./people";
 import DMRoomMap from "../DMRoomMap";
 
 const clientWith = (cards: Record<string, unknown>): MatrixClient =>
@@ -43,6 +43,46 @@ describe("people who are only a card", () => {
         expect(people.map((person) => person.name)).toEqual(["Ada Lovelace"]);
         // And with the number it was imported with, which is what later merges it with a bridged chat.
         expect(people[0].keys).toEqual(["tel:+447700900123"]);
+    });
+
+    /*
+     * A card with no name, nickname, number or email was stored as "vcard:" and listed under that key. It
+     * goes by what it has instead; one with nothing at all is left out.
+     */
+    it("names a card without a name by what it has, never by its key", async () => {
+        vi.spyOn(DMRoomMap, "shared").mockReturnValue({
+            getUserIdForRoomId: () => undefined,
+            getRoomIds: () => new Set(),
+        } as unknown as DMRoomMap);
+        const client = clientWith({
+            "vcard:": { company: "Acme Plumbing" },
+            "vcard:#k1": { social: [{ service: "instagram", handle: "someone.x" }] },
+            "vcard:#k2": { note: "" },
+        });
+
+        const names = (await allPeople(client, { ask: false })).map((person) => person.name);
+        expect(names).toEqual(["Acme Plumbing", "someone.x"]);
+        expect(names.some((name) => name.startsWith("vcard:"))).toBe(false);
+    });
+
+    it("goes by the name on the reader's card before the chat's", async () => {
+        vi.spyOn(DMRoomMap, "shared").mockReturnValue({
+            getUserIdForRoomId: () => undefined,
+            getRoomIds: () => new Set(),
+        } as unknown as DMRoomMap);
+        const client = clientWith({ "@whatsapp_1:e": { firstName: "Mark", lastName: "Otherson" } });
+        const [person] = withReaderNames(client, [
+            {
+                id: "@whatsapp_1:e",
+                name: "~ MK ~",
+                accounts: [{ network: "WhatsApp", mxid: "@whatsapp_1:e", remoteId: "1", name: "~ MK ~", keys: [] }],
+                keys: [],
+                rooms: [],
+                saved: false,
+                details: [],
+            } as never,
+        ]);
+        expect(person.name).toBe("Mark Otherson");
     });
 
     it("leaves a card stored against a Matrix ID to the person it belongs to", async () => {

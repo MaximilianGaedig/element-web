@@ -57,7 +57,8 @@ describe("the same account described twice", () => {
         expect(person.accounts).toHaveLength(1);
         expect(person.accounts[0]).toMatchObject({
             roomId: "!dm:e",
-            name: "Mark",
+            // The name saved in the address book, as a phone's contacts app shows it.
+            name: "Mark Otherson",
             remoteId: "1",
             saved: true,
             identifiers: ["tel:+491701234567"],
@@ -331,5 +332,39 @@ describe("identifiers a ghost publishes", () => {
         expect(people[0].accounts[0].remoteId).toBe("212938191");
         // Nothing to match on, so the row carries no keys rather than a made-up one.
         expect(people[0].keys).toEqual([]);
+    });
+});
+
+describe("a person's name", () => {
+    it("is the address book's before a chat's", () => {
+        const fromChat = account("Telegram", "@telegram_1:e", "marky_mark", ["tel:+491701234567" as never], "!dm:e");
+        const card: Account = {
+            network: "Contacts",
+            remoteId: "vcard:1",
+            name: "Mark Otherson",
+            keys: ["tel:+491701234567" as never],
+            saved: true,
+        };
+        const [person] = groupAccounts([fromChat, card]);
+        expect(person.name).toBe("Mark Otherson");
+    });
+
+    it("is the network's saved contact name before the chat's", () => {
+        const fromChat = account("WhatsApp", "@whatsapp_1:e", "~ MK ~", ["tel:+491701234567" as never], "!dm:e");
+        const saved: Account = {
+            network: "Signal",
+            mxid: "@signal_2:e",
+            remoteId: "2",
+            name: "Mark Otherson",
+            keys: ["tel:+491701234567" as never],
+            saved: true,
+        };
+        const [person] = groupAccounts([fromChat, saved]);
+        expect(person.name).toBe("Mark Otherson");
+    });
+
+    it("falls back to the chat's name when nothing is saved", () => {
+        const [person] = groupAccounts([account("WhatsApp", "@whatsapp_1:e", "Mark", [], "!dm:e")]);
+        expect(person.name).toBe("Mark");
     });
 });

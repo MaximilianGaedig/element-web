@@ -20,7 +20,7 @@ Please see LICENSE files in the repository root for full details.
 
 import { type MatrixClient } from "matrix-js-sdk/src/matrix";
 
-import { CARD_EVENT_TYPE, type ContactCard, cardFor, fullName } from "./card";
+import { CARD_EVENT_TYPE, type ContactCard, cardFor, cardLabel, fullName } from "./card";
 import { recordRevision } from "./history";
 import { readKey } from "./identity";
 import { type Person } from "./people";
@@ -36,8 +36,22 @@ function keysOf(card: ContactCard): string[] {
     return keys;
 }
 
-/** Where a card with nobody to attach to is kept, so it is still in the address book. */
-const unmatchedKey = (card: ContactCard): string => `vcard:${fullName(card) || card.nickname || keysOf(card)[0] || ""}`;
+/**
+ * Where a card with nobody to attach to is kept, so it is still in the address book. A card with nothing
+ * to name it by is keyed by its content, so that two such cards don't share the bare key "vcard:" (one
+ * overwriting the other) and importing the same file again still finds the same card.
+ */
+const unmatchedKey = (card: ContactCard): string =>
+    `vcard:${fullName(card) || card.nickname || keysOf(card)[0] || cardLabel(card) || `#${contentHash(card)}`}`;
+
+/** A short stable hash of a card's content (FNV-1a over its JSON), for keying a card with no name. */
+function contentHash(card: ContactCard): string {
+    let hash = 0x811c9dc5;
+    for (const ch of JSON.stringify(card)) {
+        hash = Math.imul(hash ^ ch.charCodeAt(0), 0x01000193) >>> 0;
+    }
+    return hash.toString(36);
+}
 
 /**
  * Writes each card against whoever it turned out to be.

@@ -213,6 +213,24 @@ export async function saveCard(client: MatrixClient, person: Person, card: Conta
 /** Every card the reader has written, for handing the whole address book to something else. */
 export const allCards = (client: MatrixClient): Record<string, ContactCard> => stored(client).cards ?? {};
 
+/**
+ * What to call a card in a list: its name, or else whatever it has that a person would recognise it by -
+ * the nickname, the company, a number, an address, a handle, a website. Empty only for a card that has none
+ * of these, which has nothing to show.
+ */
+export function cardLabel(card: ContactCard): string {
+    return (
+        fullName(card) ||
+        card.nickname?.trim() ||
+        card.company?.trim() ||
+        card.phones?.find((p) => p.value.trim())?.value.trim() ||
+        card.emails?.find((e) => e.value.trim())?.value.trim() ||
+        [...(card.messaging ?? []), ...(card.social ?? [])].find((h) => h.handle.trim())?.handle.trim() ||
+        card.urls?.find((u) => u.value.trim())?.value.trim() ||
+        ""
+    );
+}
+
 /** The whole name, in the order it is written, from whichever parts are filled in. */
 export function fullName(card: ContactCard): string {
     return [card.prefix, card.firstName, card.middleName, card.lastName, card.suffix]

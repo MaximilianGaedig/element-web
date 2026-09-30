@@ -32,7 +32,7 @@ import { type BridgeLogin, type BridgePerson, askBridge, askEveryBridge, bridgeL
 import { getBridgeInfo, getBridgedDmUserId } from "../bridge/bridgeInfo";
 import { type ContactDetail, type IdentityKey, identityDetails, identityKeys } from "./identity";
 import DMRoomMap from "../DMRoomMap";
-import { type ContactCard, allCards, fullName } from "./card";
+import { type ContactCard, allCards, cardFor, cardLabel, fullName } from "./card";
 import { cardFromProfile } from "./publish";
 
 /** Where links the reader made by hand are kept, so they follow the account and not the browser. */
@@ -100,6 +100,19 @@ export interface Person {
 export interface Suggestion {
     reason: "same name";
     people: Person[];
+}
+
+/**
+ * Whose name a merged person goes by, best first. As in a phone's contacts app, the name in the reader's
+ * address book wins over what a network calls them: an imported contact first, then a network's own
+ * address book (a bridge's contact list, i.e. the name saved on the phone), then the name in a chat.
+ */
+function nameRank(account: Account): number {
+    if (!account.name?.trim()) return 4;
+    if (account.network === "Contacts") return 0;
+    if (account.saved) return 1;
+    if (account.roomId) return 2;
+    return 3;
 }
 
 const nameOf = (account: Account): string => account.name?.trim() || account.mxid || account.remoteId;
@@ -415,8 +428,12 @@ export function mergeSameAccounts(accounts: Account[]): Account[] {
         Object.assign(same, {
             mxid: same.mxid ?? account.mxid,
             remoteId: same.remoteId && same.remoteId !== same.mxid ? same.remoteId : account.remoteId,
-            // The name of the copy in a chat is the one the reader has seen.
-            name: same.roomId ? (same.name ?? account.name) : (account.name ?? same.name),
+            // The name saved in the network's address book (the reader's phone contact) wins, as in a
+            // phone's contacts app; otherwise the name in the chat, the one the reader has seen.
+            name:
+                (same.saved ? same.name : undefined) ??
+                (account.saved ? account.name : undefined) ??
+                (same.roomId ? (same.name ?? account.name) : (account.name ?? same.name)),
             avatarUrl: same.avatarUrl ?? account.avatarUrl,
             roomId: same.roomId ?? account.roomId,
             keys: [...new Set([...same.keys, ...account.keys])],
@@ -476,14 +493,14 @@ export function groupAccounts(described: Account[], links: string[][] = []): Per
     return [...groups.values()]
         .map((group) => {
             const keys = [...new Set(group.flatMap((account) => account.keys))];
-            // The name and face of whichever account has one, preferring an account that is in a chat:
-            // that is the one the reader has seen before.
+            // The face of whichever account has one, preferring an account that is in a chat: that is the
+            // one the reader has seen before.
             const best = [...group].sort(
                 (a, b) => Number(!!b.roomId) - Number(!!a.roomId) || Number(!!b.name) - Number(!!a.name),
             )[0];
             return {
                 id: keys[0] ?? best.mxid ?? `${best.network}:${best.remoteId}`,
-                name: nameOf(best),
+                name: nameOf([...group].sort((a, b) => nameRank(a) - nameRank(b))[0]),
                 avatarUrl: group.find((account) => account.avatarUrl)?.avatarUrl,
                 accounts: group,
                 keys,
@@ -552,7 +569,9 @@ function contactsFromCards(client: MatrixClient): Account[] {
             ...(card.phones ?? []).map((phone) => `tel:${phone.value}`),
             ...(card.emails ?? []).map((email) => `mailto:${email.value}`),
         ];
-        const name = fullName(card) || card.nickname || identifiers[0] || key.slice("vcard:".length);
+        // Named by what it holds, never by its storage key: a card with nothing at all to show is left out.
+        const name = cardLabel(card);
+        if (!name) continue;
         accounts.push({
             network: "Contacts",
             remoteId: key,
@@ -584,5 +603,22 @@ export async function allPeople(
         ask ? bridgeContacts(client, fresh) : [],
         contactsFromChats(client, ask),
     ]);
-    return groupAccounts([...fromBridges, ...fromChats, ...contactsFromCards(client)], manualLinks(client));
+    return withReaderNames(
+        client,
+        groupAccounts([...fromBridges, ...fromChats, ...contactsFromCards(client)], manualLinks(client)),
+    );
+}
+
+/**
+ * The names the reader wrote themselves go first of all: a nickname they gave, then the name on the card
+ * they keep for the person.
+ */
+export function withReaderNames(client: MatrixClient, people: Person[]): Person[] {
+    return people
+        .map((person) => {
+            const card = cardFor(client, person);
+            const name = chosenName(client, person) || (card && (fullName(card) || card.nickname?.trim()));
+            return name ? { ...person, name } : person;
+        })
+        .sort((a, b) => a.name.localeCompare(b.name));
 }
