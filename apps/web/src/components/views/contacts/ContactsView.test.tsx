@@ -225,17 +225,42 @@ describe("ContactsView merging by hand", () => {
         await waitFor(() => expect(screen.getByText("Ada")).toBeInTheDocument());
 
         /*
-         * Picking starts from the row's own menu, and from then on a press picks rather than opens - so the
-         * second and third are one press each. A modifier press does the same without the menu.
+         * Picking starts from the Select at the top, not from inside somebody's menu, and from then on a
+         * press picks rather than opens - so each person is one press.
          */
-        await menuFor("Ada");
-        await userEvent.click(await screen.findByRole("menuitem", { name: "Select" }));
+        await userEvent.click(screen.getByRole("button", { name: "Select" }));
+        expect(screen.getByText("0 selected")).toBeInTheDocument();
+        await userEvent.click(screen.getByText("Ada"));
         await userEvent.click(screen.getByText("Bob"));
         await userEvent.click(screen.getByText("Cyd"));
         expect(screen.getByText("3 selected")).toBeInTheDocument();
 
         await userEvent.click(screen.getByRole("button", { name: "Same person" }));
         expect(link).toHaveBeenCalledWith(expect.anything(), expect.arrayContaining(["@Ada:e", "@Bob:e", "@Cyd:e"]));
+    });
+});
+
+describe("ContactsView picking", () => {
+    // The tick on the face is there before any selection, so one press on it picks without opening.
+    it("picks somebody with one press on the tick on their face", async () => {
+        vi.spyOn(peopleModule, "allPeople").mockResolvedValue([person("Ada"), person("Bob")]);
+        open();
+        await waitFor(() => expect(screen.getByText("Ada")).toBeInTheDocument());
+
+        const row = screen.getByText("Ada").closest(".mx_Contacts_row")!;
+        await userEvent.click(row.querySelector(".mx_Contacts_rowTick")!);
+        expect(screen.getByText("1 selected")).toBeInTheDocument();
+        // Picked, not opened: the list is still what is showing, with no card over it.
+        expect(document.querySelector(".mx_ContactCard")).toBeNull();
+    });
+
+    it("leaves Select out of a person's menu, now it has its own place", async () => {
+        vi.spyOn(peopleModule, "allPeople").mockResolvedValue([person("Ada")]);
+        open();
+        await waitFor(() => expect(screen.getByText("Ada")).toBeInTheDocument());
+        fireEvent.contextMenu(screen.getByText("Ada").closest(".mx_Contacts_rowWith")!);
+        await screen.findAllByRole("menuitem");
+        expect(screen.queryByRole("menuitem", { name: "Select" })).toBeNull();
     });
 });
 

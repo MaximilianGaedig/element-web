@@ -125,6 +125,31 @@ Please see LICENSE files in the repository root for full details.
         &[data-selected] {
             background: var(--cpd-color-bg-accent-rest);
         }
+
+        /*
+         * Outside a selection it is how one starts: hidden, and shown over the face on hover so picking
+         * somebody is a single press there. Only where there is hover - on touch a control that appears on
+         * hover eats the first tap, so there the header's Select starts it instead.
+         */
+    }
+
+    .mx_Contacts_rowTick:not([data-selecting]) {
+        display: none;
+        cursor: pointer;
+    }
+
+    @media (hover: hover) {
+        .mx_Contacts_row:hover .mx_Contacts_rowTick:not([data-selecting]) {
+            display: flex;
+        }
+
+        .mx_Contacts_row:hover .mx_Contacts_rowTick:not([data-selecting]):hover {
+            background: var(--cpd-color-bg-accent-rest);
+        }
+    }
+
+    .mx_Contacts_selectToggle[aria-pressed="true"] {
+        color: var(--cpd-color-icon-accent-primary);
     }
 
     /*
@@ -1807,4 +1832,51 @@ Please see LICENSE files in the repository root for full details.
     gap: var(--cpd-space-2x);
     padding: var(--mx-contacts-row-padding-block) var(--mx-contacts-gutter);
     border-top: 1px solid var(--cpd-color-bg-subtle-primary);
+}
+
+/*
+ * The contacts' menus at Telegram Web's size, not compound's.
+ *
+ * Compound's rows are 40px with a 24px icon and a 4px gap between each, which turned a person's dozen
+ * actions into a menu taller than the list it came from. These are tweb's .btn-menu values
+ * (src/scss/partials/_button.scss): a 4px inset, 32px rows at 14px medium, a 20px icon, rows inset 4px
+ * with a 12px corner, the menu's own corner 16px. Only the floating menu: on a phone compound draws a
+ * drawer instead, which has no className and keeps its touch-sized rows, as tweb's mobile menu does.
+ * The menu is portalled out of the view, so these cannot be nested under it.
+ */
+.mx_Contacts_menu[role="menu"] {
+    gap: 0;
+    min-inline-size: 180px;
+    padding-block: var(--cpd-space-1x);
+    border-radius: 16px;
+
+    [role="menuitem"] {
+        min-inline-size: 0;
+        inline-size: calc(100% - 2 * var(--cpd-space-1x));
+        min-block-size: 32px;
+        margin-inline: var(--cpd-space-1x);
+        padding-block: var(--cpd-space-1x);
+        padding-inline: var(--cpd-space-3x);
+        border-radius: 12px;
+
+        > svg:first-child {
+            inline-size: 20px;
+            block-size: 20px;
+            margin-inline-end: var(--cpd-space-4x);
+        }
+
+        > span {
+            /* tweb's --font-size-14 / --line-height-14 at its medium weight; compound has no 14px step. */
+            font-size: 14px;
+            line-height: 20px;
+            margin-inline-end: var(--cpd-space-2x);
+        }
+    }
+
+    h3 {
+        margin-block: var(--cpd-space-1x);
+        padding-inline: var(--cpd-space-4x);
+        padding-block-end: var(--cpd-space-1x);
+        font: var(--cpd-font-body-xs-semibold);
+    }
 }

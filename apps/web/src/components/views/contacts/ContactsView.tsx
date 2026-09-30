@@ -32,6 +32,7 @@ import BackIcon from "@vector-im/compound-design-tokens/assets/web/icons/chevron
 import ChevronIcon from "@vector-im/compound-design-tokens/assets/web/icons/chevron-down";
 import ChevronRightIcon from "@vector-im/compound-design-tokens/assets/web/icons/chevron-right";
 import CheckIcon from "@vector-im/compound-design-tokens/assets/web/icons/check";
+import CheckCircleIcon from "@vector-im/compound-design-tokens/assets/web/icons/check-circle";
 import OverflowIcon from "@vector-im/compound-design-tokens/assets/web/icons/overflow-horizontal";
 import GroupIcon from "@vector-im/compound-design-tokens/assets/web/icons/group";
 import ImportIcon from "@vector-im/compound-design-tokens/assets/web/icons/download";
@@ -209,7 +210,8 @@ function PersonRow({
             aria-pressed={selecting ? selected : undefined}
             onClick={(event) => {
                 // Holding a modifier picks people out of the list without leaving it, as a file list does.
-                if (selecting || event.metaKey || event.ctrlKey) onToggle(person);
+                const onTick = (event.target as Element).closest?.(".mx_Contacts_rowTick");
+                if (selecting || onTick || event.metaKey || event.ctrlKey) onToggle(person);
                 else onOpen(person);
             }}
         >
@@ -228,11 +230,20 @@ function PersonRow({
                     presence={selecting ? undefined : presence}
                     selected={selecting}
                 />
-                {selecting && (
-                    <span className="mx_Contacts_tick" data-selected={selected || undefined} aria-hidden="true">
-                        {selected && <CheckIcon width="14" height="14" />}
-                    </span>
-                )}
+                {/*
+                 * Always there, so picking somebody is one press on their face rather than a trip through a
+                 * menu: shown while a selection is being made, and on hover otherwise (_Contacts.pcss), the
+                 * way a mail list offers its checkboxes. Not a button of its own - a button inside the row's
+                 * button is not markup a browser keeps - so the row's press sees where it landed.
+                 */}
+                <span
+                    className="mx_Contacts_tick mx_Contacts_rowTick"
+                    data-selected={selected || undefined}
+                    data-selecting={selecting || undefined}
+                    aria-hidden="true"
+                >
+                    {selected && <CheckIcon width="14" height="14" />}
+                </span>
             </span>
             <span className="mx_Contacts_rowText">
                 <span className="mx_Contacts_name">{person.name}</span>
@@ -418,6 +429,7 @@ function CallRow({
                 <span className="mx_Contacts_when">{timeOfDay(call.ts)}</span>
             </button>
             <Menu
+                className="mx_Contacts_menu"
                 title={call.title}
                 showTitle={false}
                 open={menuOpen}
@@ -689,6 +701,13 @@ export function ContactsView({ tab, onFinished }: Props): JSX.Element {
      * repeating a two-step pick for each pair.
      */
     const [picked, setPicked] = useState<ReadonlySet<string>>(new Set());
+    /* Picking started from the header's Select, which holds even before anybody is picked. */
+    const [selectMode, setSelectMode] = useState(false);
+    const selecting = selectMode || picked.size > 0;
+    const stopSelecting = useCallback((): void => {
+        setPicked(new Set());
+        setSelectMode(false);
+    }, []);
     const [menuFor, setMenuFor] = useState<string>();
     const [managing, setManaging] = useState(false);
     /* Which of the reader's own lists is showing, or all of them. */
@@ -906,11 +925,11 @@ export function ContactsView({ tab, onFinished }: Props): JSX.Element {
         (people: Person[]): void => {
             if (people.length < 2) return;
             const all = accountsOf(people);
-            setPicked(new Set());
+            stopSelecting();
             setOpen(undefined);
             void linkAccounts(client, all).then(again);
         },
-        [client, again],
+        [client, again, stopSelecting],
     );
 
     /*
@@ -1386,7 +1405,6 @@ export function ContactsView({ tab, onFinished }: Props): JSX.Element {
                         onRename={rename}
                         onFavourite={favourite}
                         onOpen={setOpen}
-                        onSelect={toggle}
                         onBlock={block}
                         onExport={exportPerson}
                         onSend={sendPerson}
@@ -1426,7 +1444,6 @@ export function ContactsView({ tab, onFinished }: Props): JSX.Element {
             separate,
             rename,
             favourite,
-            toggle,
         ],
     );
 
@@ -1630,7 +1647,24 @@ export function ContactsView({ tab, onFinished }: Props): JSX.Element {
                      * being a dead end: the file a phone exports goes in here, and what is here goes back to a
                      * phone the same way.
                      */}
+                    {/*
+                     * Picking people out of the list, one press away at the top as a phone's list has it, rather
+                     * than behind a person's menu. Only on the people, which is the list that has a selection.
+                     */}
+                    {tab === "people" && (
+                        <IconButton
+                            className="mx_Contacts_selectToggle"
+                            aria-label={_t("contacts|select")}
+                            tooltip={_t("contacts|select")}
+                            aria-pressed={selecting}
+                            onClick={() => (selecting ? stopSelecting() : setSelectMode(true))}
+                            size="32px"
+                        >
+                            <CheckCircleIcon />
+                        </IconButton>
+                    )}
                     <Menu
+                        className="mx_Contacts_menu"
                         title={_t("contacts|title")}
                         showTitle={false}
                         open={managing}
@@ -1820,7 +1854,7 @@ export function ContactsView({ tab, onFinished }: Props): JSX.Element {
                          * picks before, and the bar also says how many are in hand, which a set of ticks does
                          * not.
                          */}
-                        {picked.size > 0 && (
+                        {selecting && (
                             <div className="mx_Contacts_batch" role="toolbar" aria-label={_t("contacts|selected")}>
                                 <span className="mx_Contacts_batchCount">
                                     {_t("contacts|selected_count", { count: picked.size })}
@@ -1842,11 +1876,7 @@ export function ContactsView({ tab, onFinished }: Props): JSX.Element {
                                 >
                                     <FavouriteIcon />
                                 </IconButton>
-                                <IconButton
-                                    size="24px"
-                                    aria-label={_t("action|cancel")}
-                                    onClick={() => setPicked(new Set())}
-                                >
+                                <IconButton size="24px" aria-label={_t("action|cancel")} onClick={stopSelecting}>
                                     <CloseIcon />
                                 </IconButton>
                             </div>
@@ -1945,7 +1975,7 @@ export function ContactsView({ tab, onFinished }: Props): JSX.Element {
                                                 onOpen={setOpen}
                                                 menu={personMenu}
                                                 selected={picked.has(person.id)}
-                                                selecting={picked.size > 0}
+                                                selecting={selecting}
                                                 onToggle={toggle}
                                             />
                                         ))}

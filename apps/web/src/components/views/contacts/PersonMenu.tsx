@@ -58,8 +58,6 @@ export interface PersonActions {
     /** Hand them to something else as a vCard: to a file, or into a chat. */
     onExport?: (person: Person) => void;
     onSend?: (person: Person) => void;
-    /** Start picking several, with this one picked. */
-    onSelect?: (person: Person) => void;
 }
 
 interface Props extends PersonActions {
@@ -124,7 +122,6 @@ export function PersonMenu({
     onRename,
     onFavourite,
     onOpen,
-    onSelect,
     onBlock,
     onExport,
     onSend,
@@ -199,7 +196,15 @@ export function PersonMenu({
     const title = batch ? _t("contacts|selected_count", { count: people.length }) : person.name;
 
     return (
-        <Menu title={title} showTitle={false} open={open} onOpenChange={change} trigger={trigger} align="end">
+        <Menu
+            className="mx_Contacts_menu"
+            title={title}
+            showTitle={false}
+            open={open}
+            onOpenChange={change}
+            trigger={trigger}
+            align="end"
+        >
             {view === "root" && (
                 <>
                     <MenuTitle title={title} />
@@ -352,14 +357,6 @@ export function PersonMenu({
                             label={blocked ? _t("contacts|unblock") : _t("contacts|block")}
                             kind={blocked ? "primary" : "critical"}
                             onSelect={() => act(() => onBlock(person, !blocked))}
-                        />
-                    )}
-                    {!batch && onSelect && (
-                        <MenuItem
-                            hideChevron
-                            Icon={CheckIcon}
-                            label={_t("contacts|select")}
-                            onSelect={() => act(() => onSelect(person))}
                         />
                     )}
                 </>

@@ -398,6 +398,7 @@ export function ContactCard({
                          */}
                         {reachable.length > 0 && (
                             <Menu
+                                className="mx_Contacts_menu"
                                 open={calling}
                                 onOpenChange={setCalling}
                                 title={_t("contacts|call_how")}
