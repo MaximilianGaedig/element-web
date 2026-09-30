@@ -232,7 +232,33 @@ export function scrubberUsable(span: number, months: { month: string }[]): boole
  * the fold, and the reader could drag only the part still on screen - which reached only part of the
  * history. That is the scrubber not stretching across the whole timespan.
  */
-export function scrubberTrackHeight(scroll: { viewport: number; offset: number; top: number }): number {
+export function scrubberTrackHeight(scroll: {
+    viewport: number;
+    offset: number;
+    top: number;
+    /** How much of the scrolling box's bottom is off the screen, e.g. under a phone's keyboard or edge. */
+    belowScreen?: number;
+}): number {
     const chromeStillAbove = Math.max(0, scroll.offset - scroll.top);
-    return Math.max(0, scroll.viewport - chromeStillAbove);
+    return Math.max(0, scroll.viewport - chromeStillAbove - Math.max(0, scroll.belowScreen ?? 0));
+}
+
+/** The scrubber handle's height, as _SharedMedia.pcss draws it (2.5rem). */
+export const SCRUBBER_HANDLE = 40;
+
+/**
+ * Where the handle's top goes for a position `at` (0 newest, 1 oldest): within the track, handle and all.
+ *
+ * Placed at `at` of the whole track, the handle's top reached the bottom edge at the oldest end and the
+ * handle itself hung below it, off the screen - a scrubber that did not stop where the track stops.
+ */
+export function scrubberHandleTop(at: number, track: number, handle = SCRUBBER_HANDLE): number {
+    return Math.min(1, Math.max(0, at)) * Math.max(0, track - handle);
+}
+
+/** The position `at` a pointer at `y` (from the track's top) asks for: the handle's middle under it. */
+export function scrubberAt(y: number, track: number, handle = SCRUBBER_HANDLE): number {
+    const room = track - handle;
+    if (room <= 0) return 0;
+    return Math.min(1, Math.max(0, (y - handle / 2) / room));
 }

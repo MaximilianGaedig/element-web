@@ -13,6 +13,8 @@ import {
     monthAt,
     monthKey,
     rowAtTime,
+    scrubberAt,
+    scrubberHandleTop,
     scrubberTrackHeight,
     scrubberUsable,
     sectionAt,
@@ -248,5 +250,26 @@ describe("scrubberTrackHeight", () => {
 
     it("never goes negative, whatever it is handed", () => {
         expect(scrubberTrackHeight({ viewport: 100, offset: 500, top: 0 })).toBe(0);
+    });
+});
+
+describe("the scrubber handle stays on its track", () => {
+    // At the oldest end the handle's top sat at the track's bottom, so the handle hung off the screen.
+    it("puts the handle inside the track at both ends", () => {
+        expect(scrubberHandleTop(0, 600)).toBe(0);
+        expect(scrubberHandleTop(1, 600)).toBe(560);
+        expect(scrubberHandleTop(2, 600)).toBe(560);
+    });
+
+    it("reads the pointer as the handle's middle, and the same both ways", () => {
+        expect(scrubberAt(20, 600)).toBe(0);
+        expect(scrubberAt(580, 600)).toBe(1);
+        expect(scrubberAt(300, 600)).toBeCloseTo(0.5);
+        expect(scrubberHandleTop(scrubberAt(300, 600), 600) + 20).toBeCloseTo(300);
+    });
+
+    // A panel taller than the screen (a phone's keyboard or edge): the track stops at the screen.
+    it("stops the track at the bottom of the screen", () => {
+        expect(scrubberTrackHeight({ viewport: 800, offset: 0, top: 0, belowScreen: 120 })).toBe(680);
     });
 });

@@ -38,6 +38,8 @@ import {
     monthAt,
     type MonthSpan,
     rowAtTime,
+    scrubberAt,
+    scrubberHandleTop,
     scrubberTrackHeight,
     scrubberUsable,
     sectionAt,
@@ -851,14 +853,20 @@ function useGridLayout(
      * has to span the whole of what scrolls, tabs and header included, or it reaches the end of its
      * track before the list reaches its end. `offset` is where the column starts inside that.
      */
-    scroll: { top: number; viewport: number; content: number; offset: number };
+    scroll: { top: number; viewport: number; content: number; offset: number; belowScreen?: number };
     seek: (top: number) => void;
     /** Hides the native scrollbar, for as long as the scrubber is standing in for it. */
     setScrubbed: (on: boolean) => void;
 } {
     const ref = useRef<HTMLDivElement>(null);
     const [width, setWidth] = useState(0);
-    const [scroll, setScroll] = useState({ top: 0, viewport: 0, content: 0, offset: 0 });
+    const [scroll, setScroll] = useState<{
+        top: number;
+        viewport: number;
+        content: number;
+        offset: number;
+        belowScreen?: number;
+    }>({ top: 0, viewport: 0, content: 0, offset: 0 });
 
     // Measured before the first paint: the column's width sets every row's height, so measuring
     // after it would show one frame of rows piled on top of each other.
@@ -879,12 +887,16 @@ function useGridLayout(
              * two boxes rather than from offsetTop: offsetTop answers about whichever ancestor
              * happens to be positioned, and the wrapper the handle floats in is one.
              */
-            const offset = box.scrollTop + (el.getBoundingClientRect().top - box.getBoundingClientRect().top);
+            const boxRect = box.getBoundingClientRect();
+            const offset = box.scrollTop + (el.getBoundingClientRect().top - boxRect.top);
+            // What of the box is past the bottom of the screen, which the track must stop short of.
+            const screen = UIStore.instance.windowHeight;
             setScroll({
                 top: box.scrollTop,
                 viewport: box.clientHeight,
                 content: box.scrollHeight,
                 offset: Math.max(0, offset),
+                belowScreen: Math.max(0, Math.round(boxRect.bottom - screen)),
             });
         };
         measure();
@@ -962,7 +974,7 @@ function DateScrubber({
     onPickMonth,
 }: {
     rows: MediaRow[];
-    scroll: { top: number; viewport: number; content: number; offset: number };
+    scroll: { top: number; viewport: number; content: number; offset: number; belowScreen?: number };
     seek: (top: number) => void;
     /**
      * What the whole history holds per month, from the server's index. With this the handle
@@ -986,7 +998,7 @@ function DateScrubber({
         (clientY: number) => {
             const box = track.current?.getBoundingClientRect();
             if (!box || box.height <= 0) return;
-            const at = Math.min(1, Math.max(0, (clientY - box.top) / box.height));
+            const at = scrubberAt(clientY - box.top, box.height);
             setHeld(at);
             // Only where there is something to scroll. With the column fitting, span is zero or
             // negative and this drove scrollTop to the top on every move while the handle followed
@@ -1043,7 +1055,10 @@ function DateScrubber({
                 to(e.clientY);
             }}
         >
-            <div className="mx_SharedMedia_scrubberHandle" style={{ insetBlockStart: `${at * 100}%` }}>
+            <div
+                className="mx_SharedMedia_scrubberHandle"
+                style={{ insetBlockStart: scrubberHandleTop(at, scrubberTrackHeight(scroll)) }}
+            >
                 {held !== null && under && (
                     <span className="mx_SharedMedia_scrubberDate">
                         {/* A month's before_ts is its newest item's own time, so it names the month. */}
@@ -1153,7 +1168,14 @@ function MediaGrid({
          * clipping, which is what the float and the stickiness each need.
          */
         <div className="mx_SharedMedia_column">
-            <DateScrubber rows={rows} scroll={scroll} seek={seek} months={months} onPickMonth={pickMonth} />
+            {/*
+             * A dock with no height, pinned to the top of the scroll: the track hangs from it. Floated,
+             * the track was a box as tall as the screen, and the grid - which clips its corners, and so
+             * cannot flow round a float - was pushed below all of it: a screen of nothing above the media.
+             */}
+            <div className="mx_SharedMedia_scrubberDock">
+                <DateScrubber rows={rows} scroll={scroll} seek={seek} months={months} onPickMonth={pickMonth} />
+            </div>
             <div className="mx_SharedMedia_grid" ref={ref} style={{ height }}>
                 {/* The month at the top, but only once its own heading has scrolled away - otherwise the
                     two of them say the same thing one under the other. */}

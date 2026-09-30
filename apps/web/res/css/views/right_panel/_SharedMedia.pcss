@@ -165,7 +165,7 @@ Please see LICENSE files in the repository root for full details.
         padding-block-end: var(--cpd-space-2x);
     }
 
-    /* Holds the column and the handle beside it; a block, so the handle can float. */
+    /* Holds the column and the handle beside it. */
     .mx_SharedMedia_column {
         position: relative;
     }
@@ -206,13 +206,19 @@ Please see LICENSE files in the repository root for full details.
      * Telegram's date scrubber: a handle down the edge carrying the whole history, so a date can be
      * aimed at rather than scrolled to. Wide enough to grab with a thumb, drawn narrow.
      */
-    .mx_SharedMedia_scrubber {
+    /* Takes no room in the column: see SharedMediaPanel's comment on it. */
+    .mx_SharedMedia_scrubberDock {
         position: sticky;
         inset-block-start: 0;
         z-index: 4;
-        float: inline-end;
+        height: 0;
+    }
+
+    .mx_SharedMedia_scrubber {
+        position: absolute;
+        inset-block-start: 0;
+        inset-inline-end: calc(-1 * var(--cpd-space-1x));
         width: 1.5rem;
-        margin-inline-end: calc(-1 * var(--cpd-space-1x));
         touch-action: none;
         cursor: grab;
 
