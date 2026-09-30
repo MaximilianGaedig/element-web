@@ -22,6 +22,7 @@ import type { RoomNotificationState } from "../../stores/notifications/RoomNotif
 import { RoomNotificationStateStore } from "../../stores/notifications/RoomNotificationStateStore";
 import { NotificationStateEvents } from "../../stores/notifications/NotificationState";
 import { MessagePreviewStore } from "../../stores/message-preview";
+import { previewThumbnail } from "../../utils/room/previewThumbnail";
 import { DefaultTagID } from "../../stores/room-list-v3/skip-list/tag";
 import DMRoomMap from "../../utils/DMRoomMap";
 import SettingsStore from "../../settings/SettingsStore";
@@ -256,6 +257,7 @@ export class RoomListItemViewModel
             sections: keepIfSame(this.snapshot.current.sections, newItem.sections),
             // Preserve message preview - it's managed separately by loadAndSetMessagePreview
             messagePreview: this.snapshot.current.messagePreview,
+            messagePreviewThumbnail: this.snapshot.current.messagePreviewThumbnail,
         });
     }
 
@@ -268,23 +270,28 @@ export class RoomListItemViewModel
      * Load the message preview for this room if enabled.
      * Returns undefined if previews are disabled or couldn't be loaded.
      */
-    private async loadMessagePreview(): Promise<string | undefined> {
+    private async loadMessagePreview(): Promise<
+        Pick<RoomListItemViewSnapshot, "messagePreview" | "messagePreviewThumbnail">
+    > {
         const shouldShowMessagePreview = SettingsStore.getValue("RoomList.showMessagePreview");
         if (!shouldShowMessagePreview) {
-            return undefined;
+            return { messagePreview: undefined, messagePreviewThumbnail: undefined };
         }
 
         const messagePreviewTag = this.getMessagePreviewTag();
         const preview = await MessagePreviewStore.instance.getPreviewForRoom(this.props.room, messagePreviewTag);
-        return preview?.text;
+        return {
+            messagePreview: preview?.text,
+            // Fork: the photo the preview is about, in front of its text (previewThumbnail.ts).
+            messagePreviewThumbnail: previewThumbnail(preview?.event, this.props.room),
+        };
     }
 
     /**
      * Load and set the message preview if it differs from current.
      */
     private async loadAndSetMessagePreview(): Promise<void> {
-        const messagePreview = await this.loadMessagePreview();
-        this.snapshot.merge({ messagePreview });
+        this.snapshot.merge(await this.loadMessagePreview());
     }
 
     /**

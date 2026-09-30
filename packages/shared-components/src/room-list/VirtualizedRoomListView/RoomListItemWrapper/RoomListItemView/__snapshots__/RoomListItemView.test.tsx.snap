@@ -44,10 +44,14 @@ exports[`<RoomListItemView /> > renders Bold story 1`] = `
               Team Updates
             </div>
             <div
-              class="_typography_6v6n8_153 _font-body-sm-regular_6v6n8_31 RoomListItemView-module_ellipsis"
+              class="_typography_6v6n8_153 _font-body-sm-regular_6v6n8_31 RoomListItemView-module_preview"
               title="Alice: Hey everyone!"
             >
-              Alice: Hey everyone!
+              <span
+                class="RoomListItemView-module_ellipsis"
+              >
+                Alice: Hey everyone!
+              </span>
             </div>
           </div>
           <div
@@ -174,10 +178,14 @@ exports[`<RoomListItemView /> > renders Default story 1`] = `
               General
             </div>
             <div
-              class="_typography_6v6n8_153 _font-body-sm-regular_6v6n8_31 RoomListItemView-module_ellipsis"
+              class="_typography_6v6n8_153 _font-body-sm-regular_6v6n8_31 RoomListItemView-module_preview"
               title="Alice: Hey everyone!"
             >
-              Alice: Hey everyone!
+              <span
+                class="RoomListItemView-module_ellipsis"
+              >
+                Alice: Hey everyone!
+              </span>
             </div>
           </div>
           <div
@@ -304,10 +312,14 @@ exports[`<RoomListItemView /> > renders Invitation story 1`] = `
               Secret Project
             </div>
             <div
-              class="_typography_6v6n8_153 _font-body-sm-regular_6v6n8_31 RoomListItemView-module_ellipsis"
+              class="_typography_6v6n8_153 _font-body-sm-regular_6v6n8_31 RoomListItemView-module_preview"
               title="Bob invited you"
             >
-              Bob invited you
+              <span
+                class="RoomListItemView-module_ellipsis"
+              >
+                Bob invited you
+              </span>
             </div>
           </div>
           <div
@@ -576,10 +588,14 @@ exports[`<RoomListItemView /> > renders Selected story 1`] = `
               General
             </div>
             <div
-              class="_typography_6v6n8_153 _font-body-sm-regular_6v6n8_31 RoomListItemView-module_ellipsis"
+              class="_typography_6v6n8_153 _font-body-sm-regular_6v6n8_31 RoomListItemView-module_preview"
               title="Alice: Hey everyone!"
             >
-              Alice: Hey everyone!
+              <span
+                class="RoomListItemView-module_ellipsis"
+              >
+                Alice: Hey everyone!
+              </span>
             </div>
           </div>
           <div
@@ -706,10 +722,14 @@ exports[`<RoomListItemView /> > renders UnsentMessage story 1`] = `
               General
             </div>
             <div
-              class="_typography_6v6n8_153 _font-body-sm-regular_6v6n8_31 RoomListItemView-module_ellipsis"
+              class="_typography_6v6n8_153 _font-body-sm-regular_6v6n8_31 RoomListItemView-module_preview"
               title="Failed to send message"
             >
-              Failed to send message
+              <span
+                class="RoomListItemView-module_ellipsis"
+              >
+                Failed to send message
+              </span>
             </div>
           </div>
           <div
@@ -854,10 +874,14 @@ exports[`<RoomListItemView /> > renders WithHoverMenu story 1`] = `
               General
             </div>
             <div
-              class="_typography_6v6n8_153 _font-body-sm-regular_6v6n8_31 RoomListItemView-module_ellipsis"
+              class="_typography_6v6n8_153 _font-body-sm-regular_6v6n8_31 RoomListItemView-module_preview"
               title="Alice: Hey everyone!"
             >
-              Alice: Hey everyone!
+              <span
+                class="RoomListItemView-module_ellipsis"
+              >
+                Alice: Hey everyone!
+              </span>
             </div>
           </div>
           <div
@@ -984,10 +1008,14 @@ exports[`<RoomListItemView /> > renders WithMention story 1`] = `
               General
             </div>
             <div
-              class="_typography_6v6n8_153 _font-body-sm-regular_6v6n8_31 RoomListItemView-module_ellipsis"
+              class="_typography_6v6n8_153 _font-body-sm-regular_6v6n8_31 RoomListItemView-module_preview"
               title="Alice: Hey everyone!"
             >
-              Alice: Hey everyone!
+              <span
+                class="RoomListItemView-module_ellipsis"
+              >
+                Alice: Hey everyone!
+              </span>
             </div>
           </div>
           <div
@@ -1137,10 +1165,14 @@ exports[`<RoomListItemView /> > renders WithNotification story 1`] = `
               General
             </div>
             <div
-              class="_typography_6v6n8_153 _font-body-sm-regular_6v6n8_31 RoomListItemView-module_ellipsis"
+              class="_typography_6v6n8_153 _font-body-sm-regular_6v6n8_31 RoomListItemView-module_preview"
               title="Alice: Hey everyone!"
             >
-              Alice: Hey everyone!
+              <span
+                class="RoomListItemView-module_ellipsis"
+              >
+                Alice: Hey everyone!
+              </span>
             </div>
           </div>
           <div
@@ -1279,10 +1311,14 @@ exports[`<RoomListItemView /> > renders WithVideoCall story 1`] = `
               General
             </div>
             <div
-              class="_typography_6v6n8_153 _font-body-sm-regular_6v6n8_31 RoomListItemView-module_ellipsis"
+              class="_typography_6v6n8_153 _font-body-sm-regular_6v6n8_31 RoomListItemView-module_preview"
               title="Alice: Hey everyone!"
             >
-              Alice: Hey everyone!
+              <span
+                class="RoomListItemView-module_ellipsis"
+              >
+                Alice: Hey everyone!
+              </span>
             </div>
           </div>
           <div
@@ -1427,10 +1463,14 @@ exports[`<RoomListItemView /> > renders WithVoiceCall story 1`] = `
               General
             </div>
             <div
-              class="_typography_6v6n8_153 _font-body-sm-regular_6v6n8_31 RoomListItemView-module_ellipsis"
+              class="_typography_6v6n8_153 _font-body-sm-regular_6v6n8_31 RoomListItemView-module_preview"
               title="Alice: Hey everyone!"
             >
-              Alice: Hey everyone!
+              <span
+                class="RoomListItemView-module_ellipsis"
+              >
+                Alice: Hey everyone!
+              </span>
             </div>
           </div>
           <div

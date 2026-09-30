@@ -73,6 +73,11 @@ export interface RoomListItemViewSnapshot {
     isBold: boolean;
     /** Optional message preview text */
     messagePreview?: string;
+    /**
+     * Fork: a thumbnail URL for the photo or video the preview is about (the last message, or the one it
+     * replies to), shown in front of the preview text as Telegram's chat list does.
+     */
+    messagePreviewThumbnail?: string;
     /** The MSC4426 user status of the other user in a DM room, if any */
     userStatus?: UserStatus;
     /** Notification decoration data */

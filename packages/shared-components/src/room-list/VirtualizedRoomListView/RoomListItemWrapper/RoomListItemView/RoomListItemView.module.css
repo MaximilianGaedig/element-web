@@ -112,6 +112,29 @@
     min-width: 0;
 }
 
+/* Fork: the preview line, with a photo's thumbnail in front of the text when there is one. */
+.preview {
+    display: flex;
+    align-items: center;
+    gap: var(--cpd-space-1x);
+    min-width: 0;
+
+    /* A flex child keeps its full text width unless told it may shrink, which stops the ellipsis. */
+    > .ellipsis {
+        flex: 1 1 auto;
+        min-width: 0;
+    }
+}
+
+/* Telegram's size for it: a small rounded square about the height of the line. */
+.previewThumbnail {
+    flex-shrink: 0;
+    width: 18px;
+    height: 18px;
+    border-radius: 3px;
+    object-fit: cover;
+}
+
 .ellipsis,
 .roomName {
     white-space: nowrap;

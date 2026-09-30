@@ -68,8 +68,17 @@ export const RoomListItemContent = memo(function RoomListItemContent({
                     </div>
 
                     {item.messagePreview && (
-                        <Text as="div" size="sm" className={styles.ellipsis} title={item.messagePreview}>
-                            {item.messagePreview}
+                        <Text as="div" size="sm" className={styles.preview} title={item.messagePreview}>
+                            {item.messagePreviewThumbnail && (
+                                <img
+                                    className={styles.previewThumbnail}
+                                    src={item.messagePreviewThumbnail}
+                                    alt=""
+                                    loading="lazy"
+                                    decoding="async"
+                                />
+                            )}
+                            <span className={styles.ellipsis}>{item.messagePreview}</span>
                         </Text>
                     )}
                 </div>
