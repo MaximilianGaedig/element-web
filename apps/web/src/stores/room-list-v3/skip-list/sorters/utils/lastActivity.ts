@@ -60,7 +60,7 @@ export function rememberActivity(roomId: string, ts: number): void {
     save();
 }
 
-/** For tests: forget everything, in memory and in storage. */
+/** @knipignore For tests: forget everything, in memory and in storage. */
 export function forgetActivity(): void {
     known = new Map();
     clearTimeout(saveTimer);
