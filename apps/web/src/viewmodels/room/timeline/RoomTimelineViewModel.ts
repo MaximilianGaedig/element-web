@@ -105,6 +105,11 @@ const PAGINATE_DECRYPT_WAIT_MS = 500;
  * - `permalink` — centre on `eventId` and highlight it.
  * - `restore`   — scroll to the saved `eventId` without highlighting.
  */
+/** Whether an event ID is a local echo's (an unsent message), which only this client knows. */
+export function isLocalEchoId(eventId: string): boolean {
+    return eventId.startsWith("~");
+}
+
 type LoadTarget = { kind: "live" } | { kind: "permalink"; eventId: string } | { kind: "restore"; eventId: string };
 
 export interface RoomTimelineViewModelOpts {
@@ -291,6 +296,18 @@ export class RoomTimelineViewModel
         }
     }
 
+    /**
+     * The server's ID for an event: a link to an unsent message carries its local echo ID, which is swapped
+     * for the real one once the message is sent. Undefined while it isn't sent, as the server can't find it.
+     */
+    private sentEventId(eventId: string): string | undefined {
+        if (!isLocalEchoId(eventId)) return eventId;
+        const room = this.opts.room;
+        const event = room.findEventById(eventId) ?? room.getPendingEvents().find((e) => e.getId() === eventId);
+        const id = event?.getId();
+        return id && !isLocalEchoId(id) ? id : undefined;
+    }
+
     private static saveScrollTarget(roomId: string, eventId: string | null): void {
         try {
             if (eventId) {
@@ -349,11 +366,16 @@ export class RoomTimelineViewModel
 
         // Determine how to load the timeline.
         let loadTarget: LoadTarget;
-        if (this.opts.initialEventId) {
-            loadTarget = { kind: "permalink", eventId: this.opts.initialEventId };
+        const permalinkTarget = this.opts.initialEventId && this.sentEventId(this.opts.initialEventId);
+        if (permalinkTarget) {
+            loadTarget = { kind: "permalink", eventId: permalinkTarget };
         } else {
             const savedEventId = RoomTimelineViewModel.readScrollTarget(this.opts.room.roomId);
-            loadTarget = savedEventId ? { kind: "restore", eventId: savedEventId } : { kind: "live" };
+            // A position saved before unsent messages were skipped may be a local echo ID.
+            loadTarget =
+                savedEventId && !isLocalEchoId(savedEventId)
+                    ? { kind: "restore", eventId: savedEventId }
+                    : { kind: "live" };
         }
 
         void this.load(loadTarget);
@@ -825,7 +847,9 @@ export class RoomTimelineViewModel
 
         for (let i = endIndex; i >= startIndex; i--) {
             const item = items[i];
-            if (item?.kind === "event") {
+            // An unsent message's key is its local echo ID ("~…"), which the server doesn't know: it can be
+            // neither a read receipt nor the place to reopen the room at.
+            if (item?.kind === "event" && !isLocalEchoId(item.key)) {
                 this.lastBottomEventId = item.key;
                 break;
             }

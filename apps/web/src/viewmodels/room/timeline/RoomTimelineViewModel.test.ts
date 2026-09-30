@@ -716,6 +716,37 @@ describe("RoomTimelineViewModel", () => {
             expect(localStorage.getItem(`timeline_scroll_${ROOM_ID}`)).toBe("$b");
         });
 
+        /*
+         * An unsent message at the bottom has only its local echo ID, which the server doesn't know:
+         * reopening the room at it asked the server for it and failed with M_BAD_JSON.
+         */
+        it("remembers the last sent message rather than an unsent one below it", async () => {
+            seedTimeline([makeMessage("$a"), makeMessage("$b")]);
+            const vm = await createStartedViewModel();
+            const unsent = makeMessage("~!room:m1.1");
+            vi.spyOn(room, "getPendingEvents").mockReturnValue([unsent]);
+            room.emit(RoomEvent.LocalEchoUpdated, unsent, room, undefined, undefined);
+            await vi.waitFor(() => expect(eventKeys(vm.getSnapshot().items)).toContain("~!room:m1.1"));
+            vm.onAnchorReached();
+            vm.onAtBottomStateChange(false);
+            vm.onVisibleRangeChanged(0, vm.getSnapshot().items.length - 1);
+
+            vm.dispose();
+
+            expect(localStorage.getItem(`timeline_scroll_${ROOM_ID}`)).toBe("$b");
+        });
+
+        it("opens at the newest message when the saved position is an unsent message's", async () => {
+            localStorage.setItem(`timeline_scroll_${ROOM_ID}`, "~!room:m1.1");
+            seedTimeline([makeMessage("$a"), makeMessage("$b")]);
+            const getEventTimeline = vi.spyOn(client, "getEventTimeline");
+
+            const vm = await createStartedViewModel();
+
+            expect(getEventTimeline.mock.calls.map(([, eventId]) => eventId)).not.toContain("~!room:m1.1");
+            expect(eventKeys(vm.getSnapshot().items)).toContain("$b");
+        });
+
         it("forgets the position when the reader was already at the bottom", async () => {
             localStorage.setItem(`timeline_scroll_${ROOM_ID}`, "$a");
             seedTimeline([makeMessage("$a"), makeMessage("$b")]);
