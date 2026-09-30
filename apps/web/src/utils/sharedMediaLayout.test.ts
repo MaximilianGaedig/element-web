@@ -329,14 +329,36 @@ describe("the whole history laid out before it loads (sparse)", () => {
         expect(after.rows[1]).toMatchObject({ kind: "cells", indices: [0, 1], placeholders: 1 });
     });
 
-    it("loads the month on screen: its newest, or just before the oldest of it held", () => {
+    it("asks for exactly the places on screen, wherever they are", () => {
         const { rows } = sparseRows([], months, 3, METRICS);
         const march = rows.findIndex((r) => r.section?.key === "2025-03");
-        expect(placeholderTarget(rows, [], months, [march, march + 2])).toBe(months[1].before_ts);
+        // March starts after September's four places.
+        expect(placeholderTarget(rows, [march, march + 2])).toEqual({ start: 4, count: 3 });
+        expect(placeholderTarget(rows, [0, rows.length])).toEqual({ start: 0, count: 7 });
+    });
 
-        const sept = [utc(2026, 9, 28), utc(2026, 9, 20)];
-        const part = sparseRows(sept, months, 3, METRICS);
-        expect(placeholderTarget(part.rows, sept, months, [0, 3])).toBe(Date.UTC(2026, 8, 20, 12) - 1);
+    it("puts an item loaded by place in its own cell, even in the middle of a month", () => {
+        const late = utc(2026, 9, 3);
+        const places = new Map([[late.getId()!, 3]]);
+        const { rows } = sparseRows([late], months, 3, METRICS, { places, empty: new Set() });
+        // September's first row is still to load; its fourth place, the second row, is there.
+        expect(rows[1]).toMatchObject({ kind: "pending", missing: [0, 1, 2] });
+        expect(rows[2]).toMatchObject({ kind: "cells", indices: [0] });
+        expect(placeholderTarget(rows, [0, 3])).toEqual({ start: 0, count: 3 });
+    });
+
+    /*
+     * The stuck case: a month counted a place the server never returns (a redacted or hidden event).
+     * Its placeholder stayed forever, the month kept being asked for, and nothing below it loaded.
+     */
+    it("drops places the server answered with nothing, so nothing waits on them", () => {
+        const sept = [utc(2026, 9, 28), utc(2026, 9, 20), utc(2026, 9, 10)];
+        const places = new Map(sept.map((e, i) => [e.getId()!, i]));
+        const { rows } = sparseRows(sept, months, 3, METRICS, { places, empty: new Set([3]) });
+        expect(rows.slice(0, 2)).toMatchObject([{ kind: "header" }, { kind: "cells", indices: [0, 1, 2] }]);
+        expect(rows[1]).not.toHaveProperty("missing");
+        // September is settled; what is left to load is March, and only March.
+        expect(placeholderTarget(rows, [0, rows.length])).toEqual({ start: 4, count: 3 });
     });
 
     it("keeps an item from a month the counts do not have yet", () => {

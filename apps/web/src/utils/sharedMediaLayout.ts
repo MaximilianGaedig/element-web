@@ -38,9 +38,27 @@ export type MediaRow =
           height: number;
           /** Cells after the loaded ones still to come, in a row that is part loaded (sparseRows). */
           placeholders?: number;
+          /** The server index places those placeholders stand for (sparseRows), to load them by. */
+          missing?: number[];
       }
     /** Room held for what has not been fetched yet, drawn as placeholders. */
-    | { kind: "pending"; count: number; section?: MediaSection; top: number; height: number };
+    | {
+          kind: "pending";
+          count: number;
+          section?: MediaSection;
+          top: number;
+          height: number;
+          /** The server index places the placeholders stand for (sparseRows). */
+          missing?: number[];
+      };
+
+/** Where the items loaded by place sit in the server's index, and the places that hold nothing. */
+export interface IndexPlaces {
+    places: ReadonlyMap<string, number>;
+    empty: ReadonlySet<number>;
+}
+
+const NOWHERE: IndexPlaces = { places: new Map(), empty: new Set() };
 
 export interface RowMetrics {
     /** The height of a month heading. */
@@ -338,8 +356,9 @@ function utcMonthMiddle(key: string): number {
  * The whole history laid out as it will look, before most of it has loaded - Telegram's sparse grid.
  *
  * The server says how many items each month holds, so every month gets its heading and as many cells
- * as it will have: the loaded ones first (a month loads from its newest down) and placeholders for the
- * rest. Nothing moves when a month arrives, because its cells were already there. Laid out as one
+ * as it will have, and each cell stands for one place in the server's index: an item loaded by place
+ * sits in its own cell, a place the server said holds nothing to show is left out, and whatever loaded
+ * without a place fills its month's first open cells. Nothing moves when a month arrives, because its cells were already there. Laid out as one
  * block of placeholders instead, the headings appeared as the items did and pushed everything below
  * them down - the list jumped just as a scroll came to rest - and the placeholders stood for no month
  * in particular, so there was no telling which month to load for them.
@@ -352,41 +371,69 @@ export function sparseRows(
     months: readonly MonthSpan[],
     columns: number,
     metrics: RowMetrics,
+    index: IndexPlaces = NOWHERE,
 ): { rows: MediaRow[]; height: number } {
-    const loaded = new Map<string, number[]>();
+    // Where each month starts in the index: the counts, newest month first, end to end.
+    const firstPlace = new Map<string, number>();
+    let total = 0;
+    for (const m of months) {
+        firstPlace.set(m.month, total);
+        total += m.count;
+    }
+    const byPlace = new Map<number, number>();
+    const unplaced = new Map<string, number[]>();
     items.forEach((item, i) => {
+        const place = index.places.get(item.getId() ?? "");
+        if (place !== undefined && place < total) {
+            byPlace.set(place, i);
+            return;
+        }
         const key = utcMonthKey(item.getTs());
-        const list = loaded.get(key);
+        const list = unplaced.get(key);
         if (list) list.push(i);
-        else loaded.set(key, [i]);
+        else unplaced.set(key, [i]);
     });
-    const counts = new Map<string, number>(months.map((m) => [m.month, m.count]));
-    const keys = [...new Set([...counts.keys(), ...loaded.keys()])].sort().reverse();
+    const monthOf = new Map<string, MonthSpan>(months.map((m) => [m.month, m]));
+    const keys = [...new Set([...monthOf.keys(), ...unplaced.keys()])].sort().reverse();
 
     const rows: MediaRow[] = [];
     let top = 0;
     for (const key of keys) {
-        const indices = loaded.get(key) ?? [];
-        const count = Math.max(counts.get(key) ?? 0, indices.length);
-        if (!count) continue;
+        // Each cell is an item (its index in `items`) or a place still to load (-1 - place).
+        const cells: number[] = [];
+        const start = firstPlace.get(key);
+        const count = monthOf.get(key)?.count ?? 0;
+        const end = start === undefined ? 0 : start + count;
+        for (let p = start ?? 0; p < end; p++) {
+            if (index.empty.has(p)) continue;
+            cells.push(byPlace.get(p) ?? -1 - p);
+        }
+        // What loaded without a place (from the newest down, or before places existed) fills the month's
+        // first open cells; anything beyond the count, sent since it was read, goes on the end.
+        for (const i of unplaced.get(key) ?? []) {
+            const open = cells.findIndex((c) => c < 0);
+            if (open >= 0) cells[open] = i;
+            else cells.push(i);
+        }
+        if (!cells.length) continue;
         const section: MediaSection = { key, time: utcMonthMiddle(key) };
         rows.push({ kind: "header", section, top, height: metrics.header });
         top += metrics.header;
-        for (let start = 0; start < count; start += columns) {
-            const here = indices.slice(start, start + columns);
-            const cells = Math.min(columns, count - start);
+        for (let at = 0; at < cells.length; at += columns) {
+            const row = cells.slice(at, at + columns);
+            const here = row.filter((c) => c >= 0);
+            const missing = row.filter((c) => c < 0).map((c) => -1 - c);
             if (here.length) {
-                const placeholders = cells - here.length;
                 rows.push({
                     kind: "cells",
                     indices: here,
                     section,
                     top,
                     height: metrics.cell,
-                    ...(placeholders ? { placeholders } : {}),
+                    ...(missing.length ? { placeholders: missing.length, missing } : {}),
                 });
             } else {
-                rows.push({ kind: "pending", count: cells, section, top, height: metrics.cell });
+                rows.push({ kind: "pending", count: row.length, section, top, height: metrics.cell, missing });
             }
             top += metrics.cell + metrics.gap;
         }
@@ -395,24 +442,20 @@ export function sparseRows(
 }
 
 /**
- * Where to load from for the placeholders on screen: the first month in view with cells still to come,
- * and the time to ask the server for - that month's newest if none of it has loaded, or just before the
- * oldest of it held so far.
+ * The stretch of the server's index to load for the placeholders in `window`: from the first place
+ * they stand for to the last, in one request.
  */
 export function placeholderTarget(
     rows: readonly MediaRow[],
-    items: readonly MatrixEvent[],
-    months: readonly MonthSpan[],
     window: readonly [number, number],
-): number | undefined {
+): { start: number; count: number } | undefined {
+    let first = Infinity;
+    let last = -1;
     for (let i = window[0]; i < window[1]; i++) {
         const row = rows[i];
-        if (!row || (row.kind !== "pending" && !(row.kind === "cells" && row.placeholders))) continue;
-        const key = row.section?.key;
-        if (!key) continue;
-        const held = items.filter((item) => utcMonthKey(item.getTs()) === key);
-        if (held.length) return Math.min(...held.map((item) => item.getTs())) - 1;
-        return months.find((m) => m.month === key)?.before_ts;
+        if (!row || row.kind === "header" || !row.missing?.length) continue;
+        first = Math.min(first, ...row.missing);
+        last = Math.max(last, ...row.missing);
     }
-    return undefined;
+    return last < 0 ? undefined : { start: first, count: last - first + 1 };
 }

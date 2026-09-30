@@ -50,6 +50,9 @@ export interface MonthCount {
     before_ts: number;
 }
 
+const NO_PLACES: ReadonlyMap<string, number> = new Map();
+const NO_EMPTY: ReadonlySet<number> = new Set();
+
 /** tweb appSearchSuper LOAD_COUNT. */
 export const SHARED_MEDIA_PAGE = 50;
 /** Most requests one "load more" may make while it finds nothing for the tab (links scan text). */
@@ -148,7 +151,14 @@ export interface SharedMediaState {
     loading: boolean;
     /** No older history left to scan. */
     done: boolean;
+    /** Where in the server's index each item loaded by place sits ({@link SharedMediaLoader.loadPlaces}). */
+    places: ReadonlyMap<string, number>;
+    /** Places the server answered with nothing to show: a redacted or hidden event, or a sticker. */
+    empty: ReadonlySet<number>;
 }
+
+/** The most one request may ask for (tuwunel media_index LIMIT_MAX). */
+const MAX_PLACES_PER_REQUEST = 500;
 
 /**
  * How many of each tab the room holds in all, from the homeserver's counts (`im.mxg.room_stats`), so a
@@ -208,6 +218,11 @@ export class SharedMediaLoader {
     private readonly seeked = new Set<SharedMediaTab>();
     /** Whether the homeserver has a media index, once asked. */
     private indexSupported?: boolean;
+    /** Each tab's items' places in the index, and the places that hold nothing to show. */
+    private readonly places = new Map<SharedMediaTab, Map<string, number>>();
+    private readonly empty = new Map<SharedMediaTab, Set<number>>();
+    /** Stretches being asked for right now, by first place, so the same one is never asked twice at once. */
+    private readonly placing = new Map<SharedMediaTab, Set<number>>();
 
     public constructor(
         private readonly client: MatrixClient,
@@ -275,6 +290,8 @@ export class SharedMediaLoader {
             items: this.items.get(tab)!,
             loading: this.loadingTabs.has(tab),
             done: this.isDone(tab),
+            places: this.places.get(tab) ?? NO_PLACES,
+            empty: this.empty.get(tab) ?? NO_EMPTY,
         };
     }
 
@@ -439,6 +456,65 @@ export class SharedMediaLoader {
             if (!this.destroyed) this.emit();
         }
         return true;
+    }
+
+    /**
+     * Loads the stretch of the index from place `start` on - places counted as the month counts
+     * count them, newest first - so what is on screen loads in one request wherever it is.
+     *
+     * Paging to a place walked each month 50 items at a time from its newest, one request after
+     * another, and a month whose count included something the server never returns (a redacted or
+     * hidden event, or a sticker the tabs leave out) was asked for again and again while nothing
+     * after it loaded. Here every place the server answered is settled: an item, or known empty.
+     * Stretches run side by side; only the same one is not asked for twice at once.
+     */
+    public async loadPlaces(tab: SharedMediaTab, start: number, count: number): Promise<void> {
+        const busy = this.placing.get(tab) ?? new Set<number>();
+        this.placing.set(tab, busy);
+        if (busy.has(start) || count <= 0 || !(await this.hasServerIndex())) return;
+        busy.add(start);
+        try {
+            const path = utils.encodeUri("/rooms/$roomId/media", { $roomId: this.room.roomId });
+            const res = await this.client.http.authedRequest<{
+                chunk: IRoomEvent[];
+                positions?: number[];
+                next_position?: number;
+            }>(
+                Method.Get,
+                path,
+                { kind: tab, skip: String(start), limit: String(Math.min(count, MAX_PLACES_PER_REQUEST)) },
+                undefined,
+                { prefix: MEDIA_INDEX_PREFIX },
+            );
+            if (this.destroyed) return;
+            const mapper = this.client.getEventMapper();
+            const events = res.chunk.map((raw) => mapper(raw));
+            for (const ev of events) this.add(ev);
+            historyIndexer.add(events);
+            // A server without places still returns the items; they fill their months from the top.
+            if (res.positions && res.next_position !== undefined) {
+                const places = new Map(this.places.get(tab));
+                const empty = new Set(this.empty.get(tab));
+                const filled = new Set<number>();
+                events.forEach((ev, i) => {
+                    const place = res.positions![i];
+                    const id = ev.getId();
+                    if (place === undefined || !id || sharedMediaTab(ev) !== tab) return;
+                    places.set(id, place);
+                    filled.add(place);
+                });
+                for (let place = start; place < res.next_position; place++) {
+                    if (!filled.has(place)) empty.add(place);
+                }
+                this.places.set(tab, places);
+                this.empty.set(tab, empty);
+            }
+            this.emit();
+        } catch (e) {
+            logger.warn("Shared media: failed to load a stretch of the list", e);
+        } finally {
+            busy.delete(start);
+        }
     }
 
     /**

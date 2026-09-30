@@ -35,6 +35,7 @@ import {
     mediaRows,
     placeholderTarget,
     sparseRows,
+    type IndexPlaces,
     type MediaRow,
     type MediaSection,
     monthAt,
@@ -850,6 +851,7 @@ function useGridLayout(
     total?: number,
     /** The server's count per month: with it the whole history is laid out as it will look. */
     months: MonthSpan[] = [],
+    index?: IndexPlaces,
 ): {
     ref: React.RefObject<HTMLDivElement | null>;
     rows: MediaRow[];
@@ -929,9 +931,9 @@ function useGridLayout(
     const { rows, height } = useMemo(() => {
         const metrics = { header: MONTH_HEADER, cell, gap: GRID_GAP };
         return months.length
-            ? sparseRows(items, months, GRID_COLUMNS, metrics)
+            ? sparseRows(items, months, GRID_COLUMNS, metrics, index)
             : mediaRows(items, GRID_COLUMNS, metrics, total);
-    }, [items, cell, total, months]);
+    }, [items, cell, total, months, index]);
     /*
      * Held still while rows arrive above what is being looked at.
      *
@@ -1155,7 +1157,9 @@ function MediaGrid({
     total,
     onNearEnd,
     months,
+    index,
     onSeekDate,
+    onLoadPlaces,
 }: {
     items: MatrixEvent[];
     selection: Selection;
@@ -1164,10 +1168,23 @@ function MediaGrid({
     onNearEnd: () => void;
     /** What the whole history holds per month, for the scrubber. Empty without a server index. */
     months: MonthSpan[];
+    /** Where the items loaded by place sit in the server's index, and which places hold nothing. */
+    index: IndexPlaces;
     /** Fetches a month and returns once it is in, so the column can then be scrolled to it. */
     onSeekDate: (ts: number) => Promise<boolean>;
+    /** Loads a stretch of the server's index by place. */
+    onLoadPlaces: (start: number, count: number) => Promise<void>;
 }): JSX.Element {
-    const { ref, rows, height, window: shown, month, scroll, seek, setScrubbed } = useGridLayout(items, total, months);
+    const {
+        ref,
+        rows,
+        height,
+        window: shown,
+        month,
+        scroll,
+        seek,
+        setScrubbed,
+    } = useGridLayout(items, total, months, index);
 
     // The scrollbar goes only while the thing replacing it is usable, by the scrubber's own rule.
     const usable = scrubberWorthIt(scroll.viewport, scroll.content, months);
@@ -1203,25 +1220,28 @@ function MediaGrid({
      * than something at the very bottom that a reader would have to scroll past the gap to meet.
      */
     /*
-     * With the server's counts every month is already laid out, placeholders and all, so what is on
-     * screen is what gets loaded: the month those placeholders belong to, wherever the reader has
-     * scrolled or scrubbed to. One request at a time, and never the same one twice in a row.
+     * With the server's counts every month is already laid out, placeholders and all, and each
+     * placeholder is a place in the server's index - so what is on screen loads in one request for
+     * exactly those places, wherever the reader has scrolled or scrubbed to. Then a screen either
+     * side, so it is there before the reader is. Every place a request covers comes back settled (an
+     * item, or known to hold nothing), so the same stretch is not asked for again.
      */
     const sparse = months.length > 0;
-    // What is on screen first; then a screen either side, so it is there before the reader is.
     const around = visibleRows(rows, Math.max(0, scroll.top - scroll.offset - scroll.viewport), scroll.viewport * 3);
-    const target = sparse
-        ? (placeholderTarget(rows, items, months, shown) ?? placeholderTarget(rows, items, months, around))
-        : undefined;
-    const asked = useRef<number | undefined>(undefined);
+    const onScreen = sparse ? placeholderTarget(rows, shown) : undefined;
+    const nearby = sparse ? placeholderTarget(rows, around) : undefined;
+    const onScreenStart = onScreen?.start;
+    const onScreenCount = onScreen?.count;
+    const nearbyStart = nearby?.start;
+    const nearbyCount = nearby?.count;
     useEffect(() => {
-        if (target === undefined || asked.current === target) return;
-        asked.current = target;
-        // Turned away while another load ran: forgotten, so the next arrival (a change of items) asks again.
-        void onSeekDate(target).then((ran) => {
-            if (!ran && asked.current === target) asked.current = undefined;
-        });
-    }, [target, onSeekDate, items]);
+        if (onScreenStart !== undefined && onScreenCount !== undefined) {
+            void onLoadPlaces(onScreenStart, onScreenCount);
+        }
+        if (nearbyStart !== undefined && nearbyCount !== undefined && nearbyStart !== onScreenStart) {
+            void onLoadPlaces(nearbyStart, nearbyCount);
+        }
+    }, [onScreenStart, onScreenCount, nearbyStart, nearbyCount, onLoadPlaces]);
 
     const lastReal = rows.reduce((last, row, i) => (row.kind === "pending" ? last : i), -1);
     // Paging from the top is for a layout without the counts; the sparse one loads what is on screen.
@@ -1479,6 +1499,18 @@ function TabContent({
         };
     }, [loader, tab]);
     const seekDate = useCallback((ts: number) => loader.seekTo(tab, ts), [loader, tab]);
+    const loadPlaces = useCallback(
+        (start: number, count: number) => loader.loadPlaces(tab, start, count),
+        [loader, tab],
+    );
+    // What the filter hides still has its place in the index: to the grid, those places hold nothing.
+    const index = useMemo<IndexPlaces>(() => {
+        if (items.length === state.items.length) return { places: state.places, empty: state.empty };
+        const shown = new Set(items.map((e) => e.getId()));
+        const empty = new Set(state.empty);
+        for (const [id, place] of state.places) if (!shown.has(id)) empty.add(place);
+        return { places: state.places, empty };
+    }, [items, state.items, state.places, state.empty]);
 
     const room = loader.room;
     let list: JSX.Element | null = null;
@@ -1491,7 +1523,9 @@ function TabContent({
                     total={total}
                     onNearEnd={() => void loader.loadMore(tab)}
                     months={months}
+                    index={index}
                     onSeekDate={seekDate}
+                    onLoadPlaces={loadPlaces}
                 />
             );
         } else {

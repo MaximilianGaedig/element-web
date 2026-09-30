@@ -143,6 +143,23 @@ describe("SharedMediaLoader with the server's media index", () => {
         return { loader: new SharedMediaLoader(client, room), authedRequest };
     }
 
+    it("loads a stretch by place, and settles the places the server had nothing for", async () => {
+        const a = msg({ msgtype: "m.image", body: "a", url: "mxc://x/a" }, 300);
+        const b = msg({ msgtype: "m.image", body: "b", url: "mxc://x/b" }, 200);
+        // Places 120-123 were looked at: 121 and 123 are the items, 120 and 122 held nothing to show.
+        const { loader, authedRequest } = setup({
+            media: [{ chunk: [a.event, b.event], positions: [121, 123], next_position: 124 } as any],
+        });
+
+        await loader.loadPlaces("media", 120, 60);
+
+        expect(authedRequest.mock.calls[0][2]).toMatchObject({ kind: "media", skip: "120", limit: "60" });
+        const state = loader.state("media");
+        expect(state.places.get(a.getId()!)).toBe(121);
+        expect(state.places.get(b.getId()!)).toBe(123);
+        expect([...state.empty]).toEqual([120, 122]);
+    });
+
     it("opens the list at a date instead of paging back to it", async () => {
         const march = msg({ msgtype: "m.image", body: "march", url: "mxc://x/m" }, 300);
         const { loader, authedRequest } = setup({ media: [{ chunk: [march.event], end: "t-march" }] });
