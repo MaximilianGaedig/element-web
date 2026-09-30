@@ -225,7 +225,7 @@ describe("identifiers a ghost publishes", () => {
             getVisibleRooms: () => [room],
             getRooms: () => [],
             getExtendedProfile: vi.fn().mockResolvedValue({
-                "com.beeper.bridge.identifiers": ["tel:+48735449421", "telegram:ada"],
+                "com.beeper.bridge.identifiers": ["tel:+447700900123", "telegram:ada"],
                 "displayname": "Ada",
             }),
             getAccountData: () => undefined,
@@ -238,10 +238,10 @@ describe("identifiers a ghost publishes", () => {
         const people = await allPeople(client);
         expect(client.getExtendedProfile).toHaveBeenCalledWith("@signal_x:e");
         // The number becomes a key, so this person can be matched with the same number elsewhere...
-        expect(people[0].keys).toEqual(["tel:+48735449421"]);
+        expect(people[0].keys).toEqual(["tel:+447700900123"]);
         // ...and the handle is kept for showing, though it can never match.
         expect(people[0].details).toEqual([
-            { kind: "phone", value: "+48735449421" },
+            { kind: "phone", value: "+447700900123" },
             { kind: "handle", value: "telegram:ada" },
         ]);
     });

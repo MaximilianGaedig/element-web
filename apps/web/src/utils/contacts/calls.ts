@@ -50,15 +50,31 @@ export interface Call {
     outcome: CallOutcome;
     /** How long it lasted, when the timeline says enough to know. */
     seconds?: number;
+    /**
+     * Whether this was a call in a group rather than with one person.
+     *
+     * A group call is not "a call from whoever started it": the reader looking for it is looking for the
+     * group, so the row says the room and keeps the starter as the person underneath it. Element's own
+     * calls are MatrixRTC sessions, which leave an `org.matrix.msc4075.rtc.notification` in the timeline
+     * where a one-to-one call leaves an `m.call.invite`, so both are read and only the room says which
+     * kind it was.
+     */
+    group: boolean;
+    /** What to put on the row: the group's name for a group call, the person's for a call with one. */
+    title: string;
 }
 
 /** How far back into each chat is worth reading: the recent end, which is what a call list is. */
 const DEEPEST = 500;
 
-/** Whether this event is a call starting, in either of the two shapes calls take here. */
+/** Whether this event is a call starting, in any of the three shapes calls take here. */
 function startsCall(event: MatrixEvent): boolean {
     // The bridge's own marker rather than its words: "Incoming call" is only English.
-    return event.getType() === EventType.CallInvite || getActionMessage(event)?.type === "call";
+    return (
+        event.getType() === EventType.CallInvite ||
+        event.getType() === EventType.RTCNotification ||
+        getActionMessage(event)?.type === "call"
+    );
 }
 
 /** What a hangup says about how the call went. */
@@ -77,6 +93,11 @@ function callsIn(client: MatrixClient, room: Room): Call[] {
     const from = Math.max(0, events.length - DEEPEST);
     const me = client.getSafeUserId();
     const network = getBridgeInfo(room)?.networkName ?? "Matrix";
+    /*
+     * Whether this room is a group, decided once for the room rather than per call: a call's own events
+     * do not say how many people the room has, and the answer cannot change between two calls in it.
+     */
+    const group = room.getJoinedMemberCount() + room.getInvitedMemberCount() > 2;
     const calls: Call[] = [];
 
     for (let at = events.length - 1; at >= from; at--) {
@@ -106,7 +127,24 @@ function callsIn(client: MatrixClient, room: Room): Call[] {
             if (startsCall(later)) break;
         }
 
-        const answered = !!answer;
+        /*
+         * A group call is joined rather than answered, and declined out loud: MatrixRTC records the
+         * reader's own membership when they join and an `rtc.decline` when they turn it down, so those
+         * are what "answered" and "declined" mean for one.
+         */
+        let declined = false;
+        let joined = false;
+        if (event.getType() === EventType.RTCNotification) {
+            for (let then = at + 1; then < events.length; then++) {
+                const later = events[then];
+                if (startsCall(later)) break;
+                if (later.getSender() !== me) continue;
+                if (later.getType() === EventType.RTCDecline) declined = true;
+                if (later.getType() === EventType.RTCMembership) joined = true;
+            }
+        }
+
+        const answered = !!answer || joined;
         calls.push({
             eventId: event.getId()!,
             roomId: room.roomId,
@@ -118,7 +156,9 @@ function callsIn(client: MatrixClient, room: Room): Call[] {
             outgoing: userId === me,
             video:
                 !!event.getContent().offer?.sdp?.includes("m=video") || getActionMessage(event)?.call_type === "video",
-            outcome: outcomeOf(hangup, answered),
+            outcome: declined ? "declined" : outcomeOf(hangup, answered),
+            group,
+            title: group ? room.name : (member?.rawDisplayName ?? userId),
             seconds: answer && hangup ? Math.max(0, Math.round((hangup.getTs() - answer.getTs()) / 1000)) : undefined,
         });
     }

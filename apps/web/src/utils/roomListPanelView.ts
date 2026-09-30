@@ -19,7 +19,13 @@ Please see LICENSE files in the repository root for full details.
 
 import { useSyncExternalStore } from "react";
 
-export type RoomListPanelView = "rooms" | "contacts";
+/*
+ * The three things this column can be, which are the three entries in the bar at the bottom of it: the
+ * chats, the people, and the calls. Contacts and calls are two views rather than one with a tab inside it
+ * because the bar is what switches between them - a tab strip under a bar that already switches views is
+ * the same control twice.
+ */
+export type RoomListPanelView = "rooms" | "contacts" | "calls";
 
 let view: RoomListPanelView = "rooms";
 const listeners = new Set<() => void>();

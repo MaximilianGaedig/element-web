@@ -57,6 +57,14 @@ export interface Account {
     details?: ContactDetail[];
     /** The line the network shows to tell people of the same name apart, where it gives one. */
     context?: string;
+    /**
+     * What the network published, as published: `tel:+48...`, `telegram:ada`.
+     *
+     * Kept beside `keys` and `details` rather than derived from either, because a link into the network's
+     * own app is built from the raw forms (see utils/contacts/deepLinks.ts) - `keys` is narrowed to what
+     * can match two accounts and `details` is shaped for showing.
+     */
+    identifiers?: string[];
     /** Which login answered, so a chat is started on the right account of the right network. */
     login?: BridgeLogin;
     /** Whether the network's own contact list holds them, rather than only a chat existing. */
@@ -105,6 +113,7 @@ async function contactsFromBridges(client: MatrixClient): Promise<Account[]> {
                 roomId: contact.dm_room_mxid,
                 keys: identityKeys(contact.identifiers),
                 details: identityDetails(contact.identifiers),
+                identifiers: contact.identifiers,
                 context: contact.context,
                 login,
                 // This half of the list *is* the network's address book, so everyone in it is saved.
@@ -121,7 +130,7 @@ async function contactsFromBridges(client: MatrixClient): Promise<Account[]> {
  * Read from the rooms rather than asked for, so this half works with no bridge reachable at all - and so the
  * list still has everybody the reader actually talks to when a network is down.
  */
-async function contactsFromChats(client: MatrixClient): Promise<Account[]> {
+async function contactsFromChats(client: MatrixClient, profiles: boolean): Promise<Account[]> {
     const dmMap = DMRoomMap.shared();
     const found: { room: Room; otherId: string }[] = [];
     for (const room of client.getVisibleRooms()) {
@@ -135,7 +144,14 @@ async function contactsFromChats(client: MatrixClient): Promise<Account[]> {
      * the list cannot be shown until the last of them anyway. Cached per ghost, so the rebuild that
      * follows every decision the reader makes costs nothing.
      */
-    const facts = await Promise.all(found.map(({ otherId }) => profileFacts(client, otherId)));
+    /*
+     * Waiting for the profiles is what made the list slow to appear: one request per person, and the first
+     * name could not be drawn until the last of them answered. Asked for only when the caller wants them,
+     * so the list can be built from the rooms at once and built again when the answers are in.
+     */
+    const facts = profiles
+        ? await Promise.all(found.map(({ otherId }) => profileFacts(client, otherId)))
+        : found.map(() => NOTHING_PUBLISHED);
     return found.map(({ room, otherId }, at) => {
         const info = getBridgeInfo(room);
         const member = room.getMember(otherId);
@@ -151,6 +167,7 @@ async function contactsFromChats(client: MatrixClient): Promise<Account[]> {
             roomId: room.roomId,
             keys: identityKeys(published.identifiers),
             details: identityDetails(published.identifiers),
+            identifiers: published.identifiers,
         };
     });
 }
@@ -415,8 +432,19 @@ export function accountsOf(people: Person[]): string[] {
     );
 }
 
-/** Everybody you know, merged, with the links you made applied. */
-export async function allPeople(client: MatrixClient): Promise<Person[]> {
-    const [fromBridges, fromChats] = await Promise.all([contactsFromBridges(client), contactsFromChats(client)]);
+/**
+ * Everybody you know, merged, with the links you made applied.
+ *
+ * `ask` is what the list costs. Asking means a request per person for the identifiers that merge two
+ * accounts into one row, and a request per bridge for its own address book; not asking means only what the
+ * client already holds, which is every chat the reader has. A reader opening the list wants to see it now,
+ * so it is built both ways - from the rooms at once, and again when the answers arrive - and only the
+ * second build can merge accounts or know who is saved. Answers are cached, so the wait happens once.
+ */
+export async function allPeople(client: MatrixClient, { ask = true }: { ask?: boolean } = {}): Promise<Person[]> {
+    const [fromBridges, fromChats] = await Promise.all([
+        ask ? contactsFromBridges(client) : [],
+        contactsFromChats(client, ask),
+    ]);
     return groupAccounts([...fromBridges, ...fromChats], manualLinks(client));
 }
