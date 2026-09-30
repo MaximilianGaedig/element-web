@@ -116,7 +116,8 @@ interface Props {
     onTone?: (which: "ring" | "text", file?: File) => void;
     person: Person;
     /** Back to the list. */
-    onBack: () => void;
+    /** Where back goes; without it there is no back button (the card is in a panel with its own). */
+    onBack?: () => void;
     /** Open the chat with them, on the account given or on whichever one can. */
     onMessage: (person: Person, mxid?: string) => void;
     /** Place a call in one of their chats; the bridge for that chat carries it to that network. */
@@ -271,9 +272,13 @@ export function ContactCard({
     return (
         <div className="mx_ContactCard">
             <div className="mx_ContactsView_header">
-                <IconButton aria-label={_t("action|back")} onClick={onBack} size="32px">
-                    <BackIcon />
-                </IconButton>
+                {onBack ? (
+                    <IconButton aria-label={_t("action|back")} onClick={onBack} size="32px">
+                        <BackIcon />
+                    </IconButton>
+                ) : (
+                    <span />
+                )}
                 {onFavourite && !editing && (
                     <IconButton
                         aria-label={favourite ? _t("contacts|unfavourite") : _t("contacts|favourite")}

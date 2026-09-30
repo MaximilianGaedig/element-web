@@ -32,6 +32,8 @@ import {
 import { clearAllModals, clientAndSDKContextRenderOptions, flushPromises, TestSDKContext } from "test-utils";
 
 import UserInfo, { disambiguateDevices } from "./UserInfo";
+import * as personCardModule from "../contacts/PersonCard";
+import { type Person } from "../../../utils/contacts/people";
 import { getPowerLevels } from "../../viewmodels/right_panel/user_info/UserInfoBasicViewModel";
 import { RightPanelPhases } from "../../../stores/right-panel/RightPanelStorePhases";
 import { MatrixClientPeg } from "../../../MatrixClientPeg";
@@ -185,6 +187,22 @@ describe("<UserInfo />", () => {
         await userEvent.click(screen.getByTestId("base-card-close-button"));
 
         expect(defaultProps.onClose).toHaveBeenCalled();
+    });
+
+    // Somebody in the contacts gets their contact card, not the profile of the one account clicked.
+    it("shows a contact's card in place of the profile header", () => {
+        const person = { id: "p", name: "Richard", accounts: [], rooms: [] } as unknown as Person;
+        const found = vi.spyOn(personCardModule, "usePersonFor").mockReturnValue([person, () => {}]);
+        const card = vi
+            .spyOn(personCardModule, "PersonCard")
+            .mockImplementation(({ person }) => <div data-testid="person-card">{person.name}</div>);
+
+        renderComponent();
+
+        expect(screen.getByTestId("person-card")).toHaveTextContent("Richard");
+        expect(screen.queryByRole("heading", { name: defaultUserId })).not.toBeInTheDocument();
+        found.mockRestore();
+        card.mockRestore();
     });
 
     describe("without a room", () => {

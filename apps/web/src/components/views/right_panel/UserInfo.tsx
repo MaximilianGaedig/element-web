@@ -25,6 +25,7 @@ import BaseCard from "./BaseCard";
 import QuestionDialog from "../dialogs/QuestionDialog";
 import PosthogTrackers from "../../../PosthogTrackers";
 import { UserInfoHeaderView } from "./user_info/UserInfoHeaderView";
+import { PersonCard, usePersonFor } from "../contacts/PersonCard";
 import { UserInfoBasicView } from "./user_info/UserInfoBasicView";
 import { SDKContext } from "../../../contexts/SDKContext.ts";
 
@@ -192,10 +193,29 @@ const UserInfo: React.FC<IProps> = ({ user, room, onClose, phase = RightPanelPha
         sdkContext.rightPanelStore.popCard();
     };
 
+    /*
+     * Somebody in the reader's contacts gets their contact card here too - every account they have, their
+     * details, your calls and chats with them - rather than the profile of whichever one account was
+     * clicked. What only makes sense in this room (their power, removing them) stays underneath it.
+     */
+    const [person, rereadPerson] = usePersonFor(
+        sdkContext.client!,
+        phase === RightPanelPhases.MemberInfo ? member.userId : undefined,
+    );
+
     let content: JSX.Element | undefined;
     switch (phase) {
         case RightPanelPhases.MemberInfo:
-            content = <UserInfoBasicView room={room!} member={member} />;
+            content = person ? (
+                <>
+                    <div className="mx_Contacts mx_UserInfo_contact">
+                        <PersonCard client={sdkContext.client!} person={person} onChanged={rereadPerson} />
+                    </div>
+                    <UserInfoBasicView room={room!} member={member} />
+                </>
+            ) : (
+                <UserInfoBasicView room={room!} member={member} />
+            );
             break;
         case RightPanelPhases.EncryptionPanel:
             classes.push("mx_UserInfo_smallAvatar");
@@ -239,7 +259,8 @@ const UserInfo: React.FC<IProps> = ({ user, room, onClose, phase = RightPanelPha
                 }
             }}
         >
-            {header}
+            {/* The card has the face and the name already. */}
+            {!person && header}
             {content}
         </BaseCard>
     );

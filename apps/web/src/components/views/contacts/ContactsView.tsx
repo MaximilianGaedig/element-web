@@ -51,7 +51,6 @@ import { fuzzyMatch } from "../../../utils/search/fuzzy";
 import {
     type Person,
     accountId,
-    chosenName,
     namePerson,
     type Suggestion,
     accountsOf,
@@ -64,29 +63,24 @@ import {
     unlinkAccounts,
 } from "../../../utils/contacts/people";
 import { readKey } from "../../../utils/contacts/identity";
-import { ContactCard } from "./ContactCard";
+import { PersonCard } from "./PersonCard";
+import { callInRoom, messagePerson as openChatWith } from "../../../utils/contacts/actions";
 import { CallMark, readDuration, timeOfDay } from "./CallMark";
 import { ContactFace } from "./ContactFace";
 import { usePersonPresence } from "../../../utils/contacts/presence";
-import { type SharedRoom, askSharedRooms, callsWith, sharedRooms } from "../../../utils/contacts/shared";
-import { filingName, splitName } from "../../../utils/contacts/names";
-import { publishedCardOf } from "../../../utils/contacts/publish";
-import { type Verification, realAccounts, verificationOf, verify } from "../../../utils/contacts/verification";
-import { chosenColour, nameOrder, setColour, setNameOrder } from "../../../utils/contacts/appearance";
+import { filingName } from "../../../utils/contacts/names";
+import { nameOrder, setNameOrder } from "../../../utils/contacts/appearance";
 import {
     type ContactCard as ContactCardFields,
     allCards,
     cardFor,
     fullName,
-    saveCard,
     saveLooseCard,
 } from "../../../utils/contacts/card";
 import { ContactEditor } from "./ContactEditor";
 import { type Discovered, type DiscoverProblem, discoverOnMatrix, lookupQuery } from "../../../utils/contacts/discover";
-import { deleteRevision, forgetHistory, historyFor, recordRevision } from "../../../utils/contacts/history";
 import { setAddingContact, useAddingContact } from "../../../utils/contacts/adding";
 import { setBarActions } from "../../../utils/roomListBarActions";
-import { ringtoneOf, setRingtone, setTextTone, textToneOf, uploadTone } from "../../../utils/contacts/tones";
 import {
     cardForExport,
     downloadVCard,
@@ -101,7 +95,6 @@ import { PersonMenu } from "./PersonMenu";
 import { MatrixClientPeg } from "../../../MatrixClientPeg";
 import BaseAvatar from "../avatars/BaseAvatar";
 import { mediaFromMxc } from "../../../customisations/Media";
-import { DirectoryMember, startDmOnFirstMessage } from "../../../utils/direct-messages";
 import dis from "../../../dispatcher/dispatcher";
 import ContentMessages from "../../../ContentMessages";
 import { Action } from "../../../dispatcher/actions";
@@ -672,7 +665,6 @@ export function ContactsView({ tab, onFinished }: Props): JSX.Element {
     const [onlyUnknown, setOnlyUnknown] = useState(false);
     /* The person whose card is open, if one is: the list and one of its rows are one column's two depths. */
     const [open, setOpen] = useState<Person>();
-    const openPresence = usePersonPresence(client, open);
     /*
      * Who is picked, and whose menu is open.
      *
@@ -1132,34 +1124,7 @@ export function ContactsView({ tab, onFinished }: Props): JSX.Element {
      * nowhere to see who somebody is, which is most of what a contact list is for.
      */
     const messagePerson = useCallback(
-        (person: Person, mxid?: string): void => {
-            const wanted = mxid ? person.accounts.find((one) => one.mxid === mxid) : undefined;
-            const existing = wanted?.roomId ?? person.rooms[0];
-            if (existing) {
-                /*
-                 * The chat opens beside the list, and the list stays.
-                 *
-                 * Closing contacts to show a chat threw away where the reader was - which letter, which
-                 * selection, which search - for something the panel does not need to give up: this column
-                 * holds the list, the room fills the one next to it.
-                 */
-                dis.dispatch<ViewRoomPayload>({
-                    action: Action.ViewRoom,
-                    room_id: existing,
-                    metricsTrigger: undefined,
-                });
-                return;
-            }
-            const account = wanted ?? person.accounts.find((one) => one.mxid);
-            if (!account?.mxid) return;
-            void startDmOnFirstMessage(client, [
-                new DirectoryMember({
-                    user_id: account.mxid,
-                    display_name: account.name,
-                    avatar_url: account.avatarUrl,
-                }),
-            ]);
-        },
+        (person: Person, mxid?: string): void => openChatWith(client, person, mxid),
         [client],
     );
 
@@ -1179,21 +1144,10 @@ export function ContactsView({ tab, onFinished }: Props): JSX.Element {
      * the call UI to have anywhere to live. Which network it goes over is decided by which chat this is -
      * that chat's bridge carries it - so the choice was already made in the menu.
      */
-    const callPerson = useCallback((_person: Person, roomId: string, video: boolean): void => {
-        dis.dispatch<ViewRoomPayload>({
-            action: Action.ViewRoom,
-            room_id: roomId,
-            metricsTrigger: undefined,
-        });
-        // Forced through Matrix calling, as the room header does for a bridged DM: those rooms carry
-        // the bridge bot as a third member, which the handler counting members cannot tell from a group.
-        void SDKContextClass.instance.legacyCallHandler.placeCall(
-            roomId,
-            video ? CallType.Video : CallType.Voice,
-            undefined,
-            true,
-        );
-    }, []);
+    const callPerson = useCallback(
+        (_person: Person, roomId: string, video: boolean): void => callInRoom(roomId, video),
+        [],
+    );
 
     /*
      * The reader's own name and face, from their profile rather than from a chat: there is no room with
@@ -1278,16 +1232,6 @@ export function ContactsView({ tab, onFinished }: Props): JSX.Element {
         [client, again],
     );
 
-    /** Somewhere to go: a room, at a particular event when one is named. */
-    const openRoom = useCallback((roomId: string, eventId?: string): void => {
-        dis.dispatch<ViewRoomPayload>({
-            action: Action.ViewRoom,
-            room_id: roomId,
-            ...(eventId ? { event_id: eventId, highlighted: true } : {}),
-            metricsTrigger: undefined,
-        });
-    }, []);
-
     /** Ringing back, in the chat the call was in - which is the network it was on. */
     const callBack = useCallback((call: Call, video: boolean): void => {
         dis.dispatch<ViewRoomPayload>({
@@ -1341,27 +1285,6 @@ export function ContactsView({ tab, onFinished }: Props): JSX.Element {
         },
         [client],
     );
-
-    /*
-     * What the server and the crypto say about whoever is open.
-     *
-     * Both are asked rather than worked out here: the rooms you are both in come from the homeserver
-     * (MSC2666, which it advertises) and find the ones this client has never synced, and the identity
-     * check is the crypto's answer about their cross-signing. Neither can be had synchronously, so the
-     * card shows what there is and fills in when they answer.
-     */
-    const [groups, setGroups] = useState<SharedRoom[]>([]);
-    const [verification, setVerification] = useState<Verification>();
-    useEffect(() => {
-        if (!open) return;
-        let alive = true;
-        setGroups(sharedRooms(client, open));
-        void askSharedRooms(client, open).then((found) => alive && setGroups(found));
-        void verificationOf(client, open).then((said) => alive && setVerification(said));
-        return () => {
-            alive = false;
-        };
-    }, [client, open]);
 
     /*
      * Going back plays the way coming in did.
@@ -1557,92 +1480,15 @@ export function ContactsView({ tab, onFinished }: Props): JSX.Element {
         cardShown && open ? (
             <div ref={cardRef} className="mx_Contacts_layer" data-leaving={cardLeaving || undefined}>
                 <div className="mx_Contacts mx_ContactsView">
-                    <ContactCard
+                    <PersonCard
+                        client={client}
                         person={open}
                         onBack={closeCard}
-                        onMessage={messagePerson}
-                        nickname={chosenName(client, open)}
-                        onRename={rename}
-                        onCall={callPerson}
-                        favourite={isFavourite(client, open.rooms)}
-                        onFavourite={open.rooms.length ? (person, on) => favourite([person], on) : undefined}
+                        onChanged={again}
+                        calls={calls}
                         menu={personMenu(<></>, open)}
-                        presence={openPresence}
-                        calls={callsWith(calls, open)}
-                        groups={groups}
-                        verification={verification}
-                        onVerify={() => {
-                            const [mxid] = realAccounts(client, open);
-                            if (mxid) void verify(client, mxid);
-                        }}
-                        onOpenRoom={openRoom}
-                        onUnlinkAccount={unlinkOne}
                         linkedIds={state?.linked}
-                        colour={chosenColour(client, open)}
-                        onColour={(next) => void setColour(client, open, next).then(again)}
-                        /*
-                         * The card, or the name read into its parts when there is no card: editing a bridged
-                         * contact used to open a form with an empty first and last name beside their display
-                         * name, which asks the reader to retype what is already on the screen.
-                         */
-                        card={cardFor(client, open) ?? publishedCardOf(open) ?? splitName(open.name)}
-                        onCard={(next) => {
-                            /*
-                             * What it said before is kept first, then the change is written: a record taken
-                             * after the write has nothing to record, and one taken and then not followed by a
-                             * write claims a change that never happened.
-                             */
-                            const was = cardFor(client, open);
-                            void recordRevision(client, open, was, "edit")
-                                .then(() => saveCard(client, open, next))
-                                .then(again);
-                        }}
-                        ringtone={ringtoneOf(client, open)}
-                        textTone={textToneOf(client, open)}
-                        onTone={(which, file) => {
-                            const set = which === "ring" ? setRingtone : setTextTone;
-                            if (!file) {
-                                void set(client, open, undefined).then(again);
-                                return;
-                            }
-                            void uploadTone(client, file)
-                                .then((tone) => set(client, open, tone))
-                                .then(again);
-                        }}
-                        history={historyFor(client, open)}
-                        /*
-                         * Restoring is itself a save: what the card says now is recorded first, so putting an
-                         * old version back can be put back too. The same thing a password manager does when
-                         * you restore an entry from its history, and for the same reason - a restore onto the
-                         * wrong contact is exactly the mistake the history exists to undo.
-                         */
-                        onRestore={(revision) => {
-                            const was = cardFor(client, open);
-                            void recordRevision(client, open, was, "restore")
-                                .then(() => saveCard(client, open, revision.was))
-                                .then(again);
-                        }}
-                        onDeleteRevision={(revision) => void deleteRevision(client, open, revision.ts).then(again)}
-                        onEmptyHistory={() => void forgetHistory(client, open).then(again)}
-                        onExport={() =>
-                            downloadVCard(`${open.name}.vcf`, toVCard(cardForExport(open, cardFor(client, open))))
-                        }
-                        onPhoto={(file) => {
-                            /*
-                             * Uploaded to the reader's own media and kept as an mxc: URI, not inlined: a photo
-                             * in account data is sent to every device on every sync, which is not what account
-                             * data is for.
-                             */
-                            const was = cardFor(client, open);
-                            void client
-                                .uploadContent(file, { type: file.type })
-                                .then(({ content_uri: photoUrl }) =>
-                                    recordRevision(client, open, was, "edit").then(() =>
-                                        saveCard(client, open, { ...was, photoUrl }),
-                                    ),
-                                )
-                                .then(again);
-                        }}
+                        onUnlinkAccount={unlinkOne}
                     />
                 </div>
             </div>
