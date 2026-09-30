@@ -119,6 +119,29 @@ export class PresenceSyncLoop {
         PresenceSyncLoop.current = undefined;
     }
 
+    /**
+     * Everyone's current presence, once, for a client whose sync does not deliver it in full.
+     *
+     * A client on the v2 /sync resumes from its saved token, and that sync only carries presence that has
+     * changed since. Presence restored from the store at startup is therefore all the client has for anyone
+     * whose presence has not changed - and a stored event from before the SDK kept its arrival time says
+     * nothing about when they were last active. One request without a `since` returns the current presence
+     * of everyone the reader shares a room with; with no `since`, nothing is acknowledged or deleted.
+     */
+    public static async snapshot(client: MatrixClient): Promise<void> {
+        if (!isPresenceEnabled(client)) return;
+        try {
+            const res = await client.http.authedRequest<PresenceSyncResponse>(Method.Get, "/sync", {
+                filter: JSON.stringify(PRESENCE_ONLY_FILTER),
+                timeout: "0",
+            });
+            for (const raw of res.presence?.events ?? []) applyPresenceEvent(client, raw);
+        } catch (e) {
+            // Nothing is lost: presence then fills in as it changes, as it did before.
+            logger.warn("Could not fetch everyone's presence at startup", e);
+        }
+    }
+
     private running = false;
     private since?: string;
     private abort?: AbortController;

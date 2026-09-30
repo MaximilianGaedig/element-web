@@ -1080,7 +1080,9 @@ async function startMatrixClient(
         void Presence.start();
     }
     // Simplified sliding sync delivers no presence: run a presence-only /sync long-poll beside it,
-    // falling back to polling /presence for DM partners while that keeps failing.
+    // falling back to polling /presence for DM partners while that keeps failing. The v2 sync delivers
+    // only changes, so it gets everyone's current presence once instead.
+    if (!PresenceSyncLoop.isApplicable(client)) void PresenceSyncLoop.snapshot(client);
     PresenceSyncLoop.start(client, {
         onFallback: (active) => {
             if (active) {

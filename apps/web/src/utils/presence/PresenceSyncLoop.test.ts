@@ -61,7 +61,7 @@ function makeClient(): { client: MatrixClient; requests: Request[] } {
             (_method: string, path: string, params: Record<string, string>, _body: unknown, opts: any) =>
                 new Promise<SyncRes>((resolve, reject) => {
                     expect(path).toBe("/sync");
-                    requests.push({ params, signal: opts.abortSignal, resolve, reject });
+                    requests.push({ params, signal: opts?.abortSignal, resolve, reject });
                 }),
         ),
     };
@@ -94,6 +94,46 @@ describe("PresenceSyncLoop", () => {
         SdkConfig.reset();
         vi.useRealTimers();
         vi.restoreAllMocks();
+    });
+
+    /*
+     * A client on the v2 sync resumes from its saved token and only hears about presence that changed. The
+     * snapshot is how it learns everyone else's current presence, instead of trusting what the store kept.
+     */
+    describe("snapshot", () => {
+        it("asks once, without `since`, and applies everyone's current presence", async () => {
+            const { client, requests } = makeClient();
+            slidingSync = false;
+            const done = PresenceSyncLoop.snapshot(client);
+            expect(requests).toHaveLength(1);
+            expect(requests[0].params).toEqual({ filter: JSON.stringify(PRESENCE_ONLY_FILTER), timeout: "0" });
+
+            requests[0].resolve({
+                next_batch: "s1",
+                presence: { events: [presence("@alice:e", { presence: "offline", last_active_ago: 3 * 3600_000 })] },
+            });
+            await done;
+
+            const alice = client.getUser("@alice:e")!;
+            expect(alice.presence).toBe("offline");
+            expect(alice.lastActiveAgo).toBe(3 * 3600_000);
+            expect(requests).toHaveLength(1);
+        });
+
+        it("does nothing when presence is disabled for the homeserver", async () => {
+            const { client, requests } = makeClient();
+            SdkConfig.put({ enable_presence_by_hs_url: { [HS]: false } });
+            await PresenceSyncLoop.snapshot(client);
+            expect(requests).toHaveLength(0);
+        });
+
+        it("leaves presence as it was when the request fails", async () => {
+            const { client, requests } = makeClient();
+            const done = PresenceSyncLoop.snapshot(client);
+            requests[0].reject(new MatrixError({ errcode: "M_UNKNOWN" }, 500));
+            await expect(done).resolves.toBeUndefined();
+            expect(client.getUser("@alice:e")).toBeNull();
+        });
     });
 
     it("only runs with simplified sliding sync and presence enabled for the HS", () => {
