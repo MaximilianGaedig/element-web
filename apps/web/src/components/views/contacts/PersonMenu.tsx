@@ -18,6 +18,9 @@ import FavouriteSolidIcon from "@vector-im/compound-design-tokens/assets/web/ico
 import LinkIcon from "@vector-im/compound-design-tokens/assets/web/icons/link";
 import ExternalIcon from "@vector-im/compound-design-tokens/assets/web/icons/extensions";
 import CheckIcon from "@vector-im/compound-design-tokens/assets/web/icons/check";
+import BlockIcon from "@vector-im/compound-design-tokens/assets/web/icons/block";
+import ShareIcon from "@vector-im/compound-design-tokens/assets/web/icons/share";
+import ListIcon from "@vector-im/compound-design-tokens/assets/web/icons/list-bulleted";
 import UserProfileIcon from "@vector-im/compound-design-tokens/assets/web/icons/user-profile";
 import BackIcon from "@vector-im/compound-design-tokens/assets/web/icons/chevron-left";
 
@@ -25,6 +28,7 @@ import { _t } from "../../../languageHandler";
 import { type Person } from "../../../utils/contacts/people";
 import { fuzzyMatch } from "../../../utils/search/fuzzy";
 import { type AccountLink, accountLink } from "../../../utils/contacts/deepLinks";
+import { type ContactList, inList } from "../../../utils/contacts/lists";
 import { NetworkLogo } from "./NetworkLogo";
 
 /**
@@ -34,7 +38,7 @@ import { NetworkLogo } from "./NetworkLogo";
  * choosing who somebody is the same person as, and giving them a name are all one or two taps from the
  * row they are about, and none of them takes the list away to come back to.
  */
-type View = "root" | "voice" | "video" | "merge" | "rename";
+type View = "root" | "voice" | "video" | "merge" | "rename" | "lists";
 
 export interface PersonActions {
     /** Open the chat with them, on a particular account if one is named. */
@@ -49,6 +53,10 @@ export interface PersonActions {
     onFavourite: (people: Person[], on: boolean) => void;
     /** Show the whole card for them. */
     onOpen: (person: Person) => void;
+    /** Stop hearing from them at all: every account they have goes on the ignore list. */
+    onBlock?: (person: Person, blocked: boolean) => void;
+    /** Hand them to something else as a vCard. */
+    onExport?: (person: Person) => void;
     /** Start picking several, with this one picked. */
     onSelect?: (person: Person) => void;
 }
@@ -62,6 +70,11 @@ interface Props extends PersonActions {
     favourited: boolean;
     /** Whether a merge the reader made is what put this person together. */
     linked: boolean;
+    /** Whether every account of theirs is already ignored. */
+    blocked?: boolean;
+    /** The reader's own lists, and whether this person is in each. */
+    lists?: readonly ContactList[];
+    onList?: (list: ContactList, member: boolean) => void;
     trigger: ReactNode;
     open: boolean;
     onOpenChange: (open: boolean) => void;
@@ -111,6 +124,11 @@ export function PersonMenu({
     onFavourite,
     onOpen,
     onSelect,
+    onBlock,
+    onExport,
+    blocked,
+    lists,
+    onList,
 }: Props): JSX.Element {
     const [view, setView] = useState<View>("root");
     const [query, setQuery] = useState("");
@@ -146,10 +164,7 @@ export function PersonMenu({
         };
 
     /* Their chats, which are what a call or a message can be sent over. */
-    const chats = useMemo(
-        () => (batch ? [] : person.accounts.filter((account) => account.roomId)),
-        [batch, person],
-    );
+    const chats = useMemo(() => (batch ? [] : person.accounts.filter((account) => account.roomId)), [batch, person]);
 
     /* Each account's way out to its own network, where the network publishes one. */
     const links = useMemo(
@@ -161,8 +176,9 @@ export function PersonMenu({
                           account,
                           link: accountLink(account.network, account.remoteId, account.identifiers),
                       }))
-                      .filter((both): both is { account: (typeof person.accounts)[number]; link: AccountLink } =>
-                          !!both.link,
+                      .filter(
+                          (both): both is { account: (typeof person.accounts)[number]; link: AccountLink } =>
+                              !!both.link,
                       ),
         [batch, person],
     );
@@ -186,14 +202,16 @@ export function PersonMenu({
                 <>
                     <MenuTitle title={title} />
                     {!batch && (
-                        <MenuItem hideChevron
+                        <MenuItem
+                            hideChevron
                             Icon={UserProfileIcon}
                             label={_t("contacts|open_card")}
                             onSelect={() => act(() => onOpen(person))}
                         />
                     )}
                     {!batch && !!chats.length && (
-                        <MenuItem hideChevron
+                        <MenuItem
+                            hideChevron
                             Icon={ChatIcon}
                             label={_t("contacts|message")}
                             onSelect={() => act(() => onMessage(person))}
@@ -205,12 +223,14 @@ export function PersonMenu({
                      */}
                     {!batch && chats.length === 1 && (
                         <>
-                            <MenuItem hideChevron
+                            <MenuItem
+                                hideChevron
                                 Icon={VoiceCallIcon}
                                 label={_t("contacts|call")}
                                 onSelect={() => act(() => onCall(person, chats[0].roomId!, false))}
                             />
-                            <MenuItem hideChevron
+                            <MenuItem
+                                hideChevron
                                 Icon={VideoCallIcon}
                                 label={_t("contacts|video_call")}
                                 onSelect={() => act(() => onCall(person, chats[0].roomId!, true))}
@@ -231,25 +251,35 @@ export function PersonMenu({
                             />
                         </>
                     )}
-                    <MenuItem hideChevron
+                    <MenuItem
+                        hideChevron
                         Icon={favourited ? FavouriteSolidIcon : FavouriteIcon}
                         label={favourited ? _t("contacts|unfavourite") : _t("contacts|favourite")}
                         onSelect={() => act(() => onFavourite(people, !favourited))}
                     />
                     {/* A batch is already a set of people to merge, so it merges itself rather than picking. */}
                     {batch ? (
-                        <MenuItem hideChevron
+                        <MenuItem
+                            hideChevron
                             Icon={GroupIcon}
                             label={_t("contacts|merge_selected", { count: people.length })}
                             onSelect={() => act(() => onMerge(people))}
                         />
                     ) : (
                         !!others.length && (
-                            <MenuItem Icon={GroupIcon} label={_t("contacts|merge_with")} onSelect={keepOpen(() => setView("merge"))} />
+                            <MenuItem
+                                Icon={GroupIcon}
+                                label={_t("contacts|merge_with")}
+                                onSelect={keepOpen(() => setView("merge"))}
+                            />
                         )
                     )}
                     {!batch && (
-                        <MenuItem Icon={EditIcon} label={_t("contacts|rename")} onSelect={keepOpen(() => setView("rename"))} />
+                        <MenuItem
+                            Icon={EditIcon}
+                            label={_t("contacts|rename")}
+                            onSelect={keepOpen(() => setView("rename"))}
+                        />
                     )}
                     {/*
                      * Out to the network's own app, for whatever a bridge does not carry. Only the accounts
@@ -271,16 +301,47 @@ export function PersonMenu({
                                 <NetworkLogo client={client} roomId={account.roomId} size={20} />
                             </MenuItem>
                         ))}
+                    {/* Filing somebody, which on a phone is what Lists are for. */}
+                    {!batch && !!lists?.length && onList && (
+                        <MenuItem
+                            Icon={ListIcon}
+                            label={_t("contacts|add_to_list")}
+                            onSelect={keepOpen(() => setView("lists"))}
+                        />
+                    )}
+                    {!batch && onExport && (
+                        <MenuItem
+                            hideChevron
+                            Icon={ShareIcon}
+                            label={_t("contacts|export_vcf")}
+                            onSelect={() => act(() => onExport(person))}
+                        />
+                    )}
                     {!batch && linked && (
-                        <MenuItem hideChevron
+                        <MenuItem
+                            hideChevron
                             Icon={LinkIcon}
                             label={_t("contacts|separate")}
                             kind="critical"
                             onSelect={() => act(() => onSeparate(person))}
                         />
                     )}
+                    {/*
+                     * Blocking is every account at once: half-ignoring somebody - blocked on Signal, still
+                     * ringing on WhatsApp - is not what the reader asked for when they blocked a person.
+                     */}
+                    {!batch && onBlock && (
+                        <MenuItem
+                            hideChevron
+                            Icon={BlockIcon}
+                            label={blocked ? _t("contacts|unblock") : _t("contacts|block")}
+                            kind={blocked ? "primary" : "critical"}
+                            onSelect={() => act(() => onBlock(person, !blocked))}
+                        />
+                    )}
                     {!batch && onSelect && (
-                        <MenuItem hideChevron
+                        <MenuItem
+                            hideChevron
                             Icon={CheckIcon}
                             label={_t("contacts|select")}
                             onSelect={() => act(() => onSelect(person))}
@@ -291,7 +352,12 @@ export function PersonMenu({
 
             {(view === "voice" || view === "video") && (
                 <>
-                    <MenuItem hideChevron Icon={BackIcon} label={_t("action|back")} onSelect={keepOpen(() => setView("root"))} />
+                    <MenuItem
+                        hideChevron
+                        Icon={BackIcon}
+                        label={_t("action|back")}
+                        onSelect={keepOpen(() => setView("root"))}
+                    />
                     <MenuTitle title={view === "video" ? _t("contacts|video_call") : _t("contacts|call")} />
                     {chats.map((account) => (
                         <ChatItem
@@ -308,7 +374,12 @@ export function PersonMenu({
 
             {view === "merge" && (
                 <>
-                    <MenuItem hideChevron Icon={BackIcon} label={_t("action|back")} onSelect={keepOpen(() => setView("root"))} />
+                    <MenuItem
+                        hideChevron
+                        Icon={BackIcon}
+                        label={_t("action|back")}
+                        onSelect={keepOpen(() => setView("root"))}
+                    />
                     <MenuTitle title={_t("contacts|merge_with")} />
                     {/*
                      * Typed here rather than on another screen: the list of who somebody might also be is
@@ -331,7 +402,8 @@ export function PersonMenu({
                         </Form.Field>
                     </Form.Root>
                     {candidates.map((other) => (
-                        <MenuItem hideChevron
+                        <MenuItem
+                            hideChevron
                             key={other.id}
                             Icon={GroupIcon}
                             label={other.name}
@@ -341,9 +413,38 @@ export function PersonMenu({
                 </>
             )}
 
+            {view === "lists" && (
+                <>
+                    <MenuItem
+                        hideChevron
+                        Icon={BackIcon}
+                        label={_t("action|back")}
+                        onSelect={keepOpen(() => setView("root"))}
+                    />
+                    <MenuTitle title={_t("contacts|lists")} />
+                    {(lists ?? []).map((one) => {
+                        const member = inList(one, person);
+                        return (
+                            <MenuItem
+                                hideChevron
+                                key={one.id}
+                                Icon={member ? CheckIcon : ListIcon}
+                                label={one.name}
+                                onSelect={() => act(() => onList?.(one, !member))}
+                            />
+                        );
+                    })}
+                </>
+            )}
+
             {view === "rename" && (
                 <>
-                    <MenuItem hideChevron Icon={BackIcon} label={_t("action|back")} onSelect={keepOpen(() => setView("root"))} />
+                    <MenuItem
+                        hideChevron
+                        Icon={BackIcon}
+                        label={_t("action|back")}
+                        onSelect={keepOpen(() => setView("root"))}
+                    />
                     <MenuTitle title={_t("contacts|rename")} />
                     <Form.Root
                         className="mx_PersonMenu_find"

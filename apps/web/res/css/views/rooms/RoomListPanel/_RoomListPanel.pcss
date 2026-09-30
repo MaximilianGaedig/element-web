@@ -84,12 +84,35 @@
     padding: var(--cpd-space-1x);
     /* A pill, as Element's other rounded chrome writes it. */
     border-radius: 99px;
-    background: var(--tg-glass-background, var(--cpd-color-bg-canvas-default));
-    backdrop-filter: var(--tg-glass-backdrop, none);
+    /*
+     * The same glass the shared media strip uses when it sticks: the list scrolling underneath is blurred
+     * behind the bar rather than covered by a solid one, so the column stays visibly continuous.
+     */
+    background: color-mix(in srgb, var(--cpd-color-bg-canvas-default) 72%, transparent);
+    backdrop-filter: blur(16px) saturate(180%);
     box-shadow:
         inset 0 1px 0 rgb(255 255 255 / 40%),
         0 1px 2px rgb(0 0 0 / 10%),
         0 8px 24px rgb(0 0 0 / 14%);
+}
+
+/*
+ * The mark on the entry you are in, which travels to it.
+ *
+ * Behind the entries and driven from their measured boxes (useSlidingIndicator), the way
+ * mx_SharedMedia_tabBackground is: the entries are not all the same width, so the shape has to be told
+ * where to go rather than work it out from a count.
+ */
+.mx_RoomListPill_selection {
+    position: absolute;
+    inset-block: var(--cpd-space-1x);
+    inset-inline-start: 0;
+    border-radius: 99px;
+    background: var(--cpd-color-bg-action-primary-rest);
+    transition:
+        transform 260ms cubic-bezier(0.2, 0, 0, 1),
+        width 260ms cubic-bezier(0.2, 0, 0, 1);
+    pointer-events: none;
 }
 
 /*
@@ -100,23 +123,25 @@
  * finger needs even though the glyph is 22.
  */
 .mx_RoomListPill_entry {
+    position: relative;
+    z-index: 1;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 2px;
-    min-width: 60px;
+    gap: var(--cpd-space-1x);
+    min-width: 64px;
     min-height: 44px;
-    padding: var(--cpd-space-1x) var(--cpd-space-2x);
+    padding: var(--cpd-space-1x) var(--cpd-space-3x);
     border: none;
     border-radius: 99px;
     background: transparent;
     color: var(--cpd-color-icon-secondary);
     font: var(--cpd-font-body-xs-medium);
+    letter-spacing: 0.01em;
     cursor: pointer;
-    transition:
-        background-color 120ms ease,
-        color 120ms ease;
+    /* The mark moves; only the colour of what is on top of it changes. */
+    transition: color 160ms ease;
 
     &:hover,
     &:focus-visible {
@@ -124,7 +149,6 @@
     }
 
     &[aria-current="page"] {
-        background: var(--cpd-color-bg-action-primary-rest);
         color: var(--cpd-color-icon-on-solid-primary);
     }
 
@@ -135,7 +159,8 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .mx_RoomListPill_entry {
+    .mx_RoomListPill_entry,
+    .mx_RoomListPill_selection {
         transition: none;
     }
 }

@@ -36,6 +36,8 @@ const client = {
     getVisibleRooms: () => [],
     // Presence is read per account, so a client without it is one the rows cannot be built from.
     getUser: () => null,
+    // Blocking is the homeserver's ignore list, which the rows read to know whether somebody is on it.
+    getIgnoredUsers: () => [],
 } as unknown as MatrixClient;
 
 const person = (name: string, saved = false): Person => ({
@@ -173,10 +175,7 @@ describe("ContactsView merging by hand", () => {
         expect(screen.getByText("3 selected")).toBeInTheDocument();
 
         await userEvent.click(screen.getByRole("button", { name: "Same person" }));
-        expect(link).toHaveBeenCalledWith(
-            expect.anything(),
-            expect.arrayContaining(["@Ada:e", "@Bob:e", "@Cyd:e"]),
-        );
+        expect(link).toHaveBeenCalledWith(expect.anything(), expect.arrayContaining(["@Ada:e", "@Bob:e", "@Cyd:e"]));
     });
 });
 
@@ -212,7 +211,7 @@ describe("ContactsView calls", () => {
         await openCalls();
         await waitFor(() => expect(screen.getByText("Ada")).toBeInTheDocument());
 
-        await userEvent.click(screen.getByRole("button", { name: "Not in contacts" }));
+        await userEvent.click(screen.getByRole("tab", { name: "Not in contacts" }));
         expect(screen.queryByText("Ada")).not.toBeInTheDocument();
         expect(screen.getByText("Zed")).toBeInTheDocument();
     });
@@ -220,7 +219,7 @@ describe("ContactsView calls", () => {
     it("says so when the filters leave nothing, rather than looking like no calls at all", async () => {
         vi.spyOn(callsModule, "callHistory").mockReturnValue([call({ outgoing: true, outcome: "answered" })]);
         await openCalls();
-        await userEvent.click(screen.getByRole("button", { name: "Missed" }));
+        await userEvent.click(screen.getByRole("tab", { name: "Missed" }));
         expect(screen.getByText("No calls match")).toBeInTheDocument();
     });
 });

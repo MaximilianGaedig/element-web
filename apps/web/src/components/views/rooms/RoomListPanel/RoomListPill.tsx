@@ -25,6 +25,7 @@ import VoiceCallIcon from "@vector-im/compound-design-tokens/assets/web/icons/vo
 import FoundIcon from "@vector-im/compound-design-tokens/assets/web/icons/search";
 
 import { _t } from "../../../../languageHandler";
+import { useSlidingIndicator } from "../../../../hooks/useSlidingIndicator";
 import {
     type RoomListPanelView,
     setRoomListPanelView,
@@ -43,16 +44,19 @@ function Entry({
     label,
     current,
     onClick,
+    innerRef,
 }: {
     Icon: ComponentType<SVGAttributes<SVGElement>>;
     label: string;
     /** Undefined for an entry that opens something else rather than being somewhere to be. */
     current?: boolean;
     onClick: () => void;
+    innerRef?: (el: HTMLElement | null) => void;
 }): JSX.Element {
     return (
         <button
             type="button"
+            ref={innerRef}
             className="mx_RoomListPill_entry"
             // Where you are, rather than only which button is tinted: a mark a screen reader can hear too.
             aria-current={current ? "page" : undefined}
@@ -67,26 +71,35 @@ function Entry({
 export function RoomListPill(): JSX.Element {
     const view = useRoomListPanelView();
     const go = (next: RoomListPanelView) => (): void => setRoomListPanelView(next);
+    /*
+     * The mark on the current entry travels to it, as the shared media strip's does: a selection that
+     * blinks from one entry to another says two things happened, where one thing moved.
+     */
+    const { itemRef, style } = useSlidingIndicator<RoomListPanelView>(view);
 
     return (
         <nav className="mx_RoomListPill" aria-label={_t("room_list|pill_label")}>
+            {style && <span className="mx_RoomListPill_selection" style={style} aria-hidden />}
             <Entry
                 Icon={ChatIcon}
                 label={_t("room_list|messages")}
                 current={view === "rooms"}
                 onClick={go("rooms")}
+                innerRef={itemRef("rooms")}
             />
             <Entry
                 Icon={UserProfileIcon}
                 label={_t("contacts|people")}
                 current={view === "contacts"}
                 onClick={go("contacts")}
+                innerRef={itemRef("contacts")}
             />
             <Entry
                 Icon={VoiceCallIcon}
                 label={_t("contacts|calls")}
                 current={view === "calls"}
                 onClick={go("calls")}
+                innerRef={itemRef("calls")}
             />
             {/* Search opens over whatever is showing, so it is never where you are. */}
             <Entry Icon={FoundIcon} label={_t("found|short")} onClick={openFound} />

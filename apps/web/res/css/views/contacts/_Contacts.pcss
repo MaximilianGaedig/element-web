@@ -65,6 +65,18 @@ Please see LICENSE files in the repository root for full details.
         font: var(--cpd-font-body-sm-medium);
     }
 
+    /*
+     * The reader's own row, above the letters and set apart from them: it is not one of the names being
+     * scrolled through, it is the card this list belongs to.
+     */
+    .mx_Contacts_me {
+        margin-bottom: var(--cpd-space-2x);
+
+        &::after {
+            display: none;
+        }
+    }
+
     /* The face, and whatever is marked on it. */
     .mx_Contacts_faceWith {
         position: relative;
@@ -121,8 +133,11 @@ Please see LICENSE files in the repository root for full details.
     }
 
     /*
-     * A filled field with the grouped-list radius, not a bordered pill: on iOS a search field is the
-     * same shape as the rows under it and reads as part of the list rather than as a control over it.
+     * A filled pill, the shape every other search in this client has.
+     *
+     * The grouped-list radius is the phone's shape for this, but the search box is chrome rather than
+     * layout - and Element writes its rounded chrome as pills, so one screen rounding its search a
+     * different amount reads as a mistake rather than as a reference.
      */
     .mx_Contacts_search {
         /*
@@ -132,10 +147,10 @@ Please see LICENSE files in the repository root for full details.
          */
         box-sizing: border-box;
         min-height: var(--mx-contacts-row-height);
-        padding: var(--mx-contacts-row-padding-block) var(--cpd-space-3x);
+        padding: var(--mx-contacts-row-padding-block) var(--cpd-space-4x);
         margin: 0 var(--mx-contacts-gutter) var(--cpd-space-2x);
         border: none;
-        border-radius: var(--mx-contacts-inset-radius);
+        border-radius: 99px;
         background: var(--cpd-color-bg-subtle-secondary);
         color: var(--cpd-color-text-primary);
         font: var(--cpd-font-body-md-regular);
@@ -216,59 +231,113 @@ Please see LICENSE files in the repository root for full details.
      * arrived as an ellipsis, which is no use for a question whose whole job is to say which two people
      * it means. The face and name keep their row; what it says and what you can answer sit under it.
      */
-    /* One row: the faces it means, what it is asking, and the two answers. */
+    /*
+     * A suggestion: who it is, how many cards were found, and the cards themselves a disclosure away.
+     *
+     * Naming the networks in a sentence said nothing about which card was which - and two cards on the same
+     * network with the same name and picture is the case this exists for. Opening it lists each card with
+     * the number or handle that tells it from its twin, and a tick that keeps it in or leaves it out.
+     */
     .mx_Contacts_suggestion {
         display: flex;
-        align-items: center;
-        gap: var(--cpd-space-2x);
-        padding: var(--cpd-space-2x) var(--mx-contacts-gutter);
+        flex-direction: column;
+        padding: var(--cpd-space-1x) 0;
         margin: 0 var(--mx-contacts-gutter) var(--cpd-space-2x);
         border-radius: var(--mx-contacts-inset-radius);
         background: var(--cpd-color-bg-subtle-secondary);
     }
 
+    .mx_Contacts_suggestionHead {
+        display: flex;
+        align-items: center;
+        gap: var(--cpd-space-1x);
+        padding-inline-end: var(--cpd-space-2x);
+    }
+
     .mx_Contacts_suggestionWho {
         display: flex;
         align-items: center;
-        gap: var(--cpd-space-2x);
+        gap: var(--cpd-space-3x);
         flex: 1;
         min-width: 0;
+        min-height: var(--mx-contacts-row-height);
+        padding: var(--cpd-space-1x) var(--cpd-space-3x);
+        border: none;
+        border-radius: var(--mx-contacts-inset-radius);
+        background: none;
+        color: var(--cpd-color-text-primary);
+        text-align: start;
+        cursor: pointer;
     }
 
     /* The faces overlap, as a stack of people does, so several fit in a row's worth of width. */
+    .mx_Contacts_suggestionFaces {
+        display: flex;
+        flex-shrink: 0;
+    }
+
     .mx_Contacts_suggestionFace {
         position: relative;
         flex-shrink: 0;
 
         & + & {
-            margin-inline-start: -10px;
-        }
-
-        .mx_Contacts_networkLogo {
-            position: absolute;
-            inset-block-end: -2px;
-            inset-inline-end: -2px;
+            margin-inline-start: -12px;
         }
     }
 
-    /*
-     * The question wraps rather than being cut.
-     *
-     * Every other name in this list is one line and ellipsed, which is right for a row you can open to see
-     * the rest of. A suggestion has nothing to open: the whole of it is the question of who it means, and
-     * "Same person as Aleksandra K…" does not ask it.
-     */
-    .mx_Contacts_suggestion .mx_Contacts_name,
-    .mx_Contacts_suggestion .mx_Contacts_detail {
-        overflow: visible;
-        white-space: normal;
-        text-overflow: clip;
+    .mx_Contacts_suggestionChevron {
+        flex-shrink: 0;
+        color: var(--cpd-color-icon-secondary);
+        transition: transform 160ms ease;
+
+        &[data-open] {
+            transform: rotate(180deg);
+        }
     }
 
     .mx_Contacts_suggestionActions {
         display: flex;
         gap: var(--cpd-space-1x);
         flex-shrink: 0;
+    }
+
+    .mx_Contacts_suggestionCards {
+        display: flex;
+        flex-direction: column;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+    }
+
+    .mx_Contacts_suggestionCard {
+        display: flex;
+        align-items: center;
+        gap: var(--cpd-space-3x);
+        width: 100%;
+        box-sizing: border-box;
+        min-height: var(--mx-contacts-row-height);
+        padding: var(--cpd-space-1x) var(--cpd-space-3x);
+        border: none;
+        background: none;
+        color: var(--cpd-color-text-primary);
+        text-align: start;
+        cursor: pointer;
+
+        &:hover:not(:disabled),
+        &:focus-visible {
+            background: var(--cpd-color-bg-subtle-primary);
+        }
+
+        /* A card with no Matrix ID cannot be merged with anything, so it is shown and not offered. */
+        &:disabled {
+            opacity: 0.6;
+            cursor: default;
+        }
+
+        .mx_Contacts_tick {
+            position: static;
+            border: none;
+        }
     }
 
     /* The list and the letters beside it: the list scrolls, the index stays put next to it. */
@@ -290,11 +359,18 @@ Please see LICENSE files in the repository root for full details.
      * Small and tight on purpose: it is a ruler for the list rather than a set of buttons, so it stays out
      * of the way of the names until it is aimed at.
      */
+    /*
+     * The letters fill the strip rather than sitting in the middle of it.
+     *
+     * The whole strip takes the drag - that is what makes it a ruler - so the letters have to be the whole
+     * strip as well: centred in a full-height column, the list jumped from a point where nothing was drawn,
+     * which reads as the list moving on its own.
+     */
     .mx_Contacts_index {
         position: relative;
         display: flex;
         flex-direction: column;
-        justify-content: center;
+        justify-content: space-evenly;
         flex-shrink: 0;
         padding: 0 var(--cpd-space-1x);
         /* Dragged rather than scrolled, so the strip keeps the gesture instead of the list taking it. */
@@ -330,42 +406,53 @@ Please see LICENSE files in the repository root for full details.
     }
 
     /*
-     * Sticky, so the reader can always see which letter the names under the cursor belong to. A tinted
-     * band rather than a heading in the canvas colour, which is how a grouped list marks its sections.
+     * Sticky, so the reader can always see which letter the names under the cursor belong to.
+     *
+     * No band behind it: a tinted bar reads as a row of its own and cuts the list into pieces, where a
+     * phone's address book just sets the letter in the margin above the names it belongs to.
      */
     .mx_Contacts_letter {
         position: sticky;
         top: 0;
         z-index: 1;
         margin: 0;
-        padding: 2px var(--mx-contacts-gutter);
-        background: var(--cpd-color-bg-subtle-primary);
+        padding: var(--cpd-space-2x) var(--mx-contacts-gutter) var(--cpd-space-1x);
+        background: transparent;
         color: var(--cpd-color-text-secondary);
         font: var(--cpd-font-body-sm-semibold);
     }
 
-    /* A row of faces above the calls: scrolled sideways, so a long list of favourites costs no height. */
+    /*
+     * The favourites as a grid that fills the width it is given.
+     *
+     * Sideways scrolling hid most of them behind a gesture nothing announced, and on a wide panel left the
+     * row three quarters empty. A grid that takes as many columns as fit shows the whole set at any width,
+     * which is what a phone's favourites screen does.
+     */
     .mx_Contacts_favourites {
-        display: flex;
-        gap: var(--cpd-space-3x);
-        overflow-x: auto;
-        padding-bottom: var(--cpd-space-2x);
-        margin-bottom: var(--cpd-space-2x);
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+        gap: var(--cpd-space-3x) var(--cpd-space-2x);
+        padding: 0 var(--mx-contacts-gutter) var(--cpd-space-3x);
     }
 
     .mx_Contacts_favourite {
         display: flex;
         flex-direction: column;
         align-items: center;
-        gap: var(--cpd-space-1x);
-        /* A face that is the subject of its card, at the platform's thumbnail size, with room for a name. */
-        width: calc(var(--mx-contacts-thumbnail) + var(--cpd-space-2x));
-        flex-shrink: 0;
-        padding: 0;
+        gap: var(--cpd-space-2x);
+        min-width: 0;
+        padding: var(--cpd-space-2x) var(--cpd-space-1x);
         border: none;
+        border-radius: var(--mx-contacts-inset-radius);
         background: transparent;
         color: var(--cpd-color-text-primary);
         cursor: pointer;
+
+        &:hover,
+        &:focus-visible {
+            background: var(--cpd-color-bg-subtle-secondary);
+        }
     }
 
     .mx_Contacts_favouriteName {
@@ -376,10 +463,47 @@ Please see LICENSE files in the repository root for full details.
         font: var(--cpd-font-body-xs-regular);
     }
 
+    /* The same shape as the bar at the foot of the column, with the same travelling mark. */
     .mx_Contacts_filters {
+        position: relative;
         display: flex;
-        gap: var(--cpd-space-2x);
-        margin-bottom: var(--cpd-space-2x);
+        gap: 2px;
+        padding: 2px;
+        margin: 0 var(--mx-contacts-gutter) var(--cpd-space-2x);
+        border-radius: var(--mx-contacts-inset-radius);
+        background: var(--cpd-color-bg-subtle-secondary);
+
+        button {
+            position: relative;
+            z-index: 1;
+            flex: 1;
+            min-height: calc(var(--mx-contacts-row-height) - 12px);
+            padding: 0 var(--cpd-space-2x);
+            border: none;
+            border-radius: calc(var(--mx-contacts-inset-radius) - 2px);
+            background: none;
+            color: var(--cpd-color-text-secondary);
+            font: var(--cpd-font-body-sm-semibold);
+            cursor: pointer;
+            transition: color 160ms ease;
+
+            &[aria-selected="true"] {
+                color: var(--cpd-color-text-primary);
+            }
+        }
+    }
+
+    .mx_Contacts_filterSelection {
+        position: absolute;
+        inset-block: 2px;
+        inset-inline-start: 0;
+        border-radius: calc(var(--mx-contacts-inset-radius) - 2px);
+        background: var(--cpd-color-bg-canvas-default);
+        box-shadow: 0 1px 2px rgb(0 0 0 / 12%);
+        transition:
+            transform 220ms cubic-bezier(0.2, 0, 0, 1),
+            width 220ms cubic-bezier(0.2, 0, 0, 1);
+        pointer-events: none;
     }
 
     /* A missed call is the one row people open this list to find. */
@@ -514,12 +638,27 @@ Please see LICENSE files in the repository root for full details.
  * Sectioned as iOS does it - grouped inset blocks with a label beside each value - because the point of
  * the card is that one person has several of these, and a flat list of rows would not say so.
  */
+/*
+ * The card scrolls, and everything in it keeps the list's gutter.
+ *
+ * It is a column of sections whose length depends on how many networks somebody is on, how many groups you
+ * share and how many calls there have been - so on a phone the foot of it was simply unreachable. The
+ * header stays put and the rest scrolls under it.
+ */
 .mx_ContactCard {
     display: flex;
     flex-direction: column;
     min-height: 0;
     flex: 1;
+    overflow: hidden;
+}
+
+.mx_ContactCard_scroll {
+    flex: 1;
+    min-height: 0;
     overflow-y: auto;
+    overscroll-behavior: contain;
+    padding-bottom: var(--mx-room-list-toast-bottom, var(--cpd-space-8x));
 }
 
 .mx_ContactCard_edit {
@@ -557,19 +696,84 @@ Please see LICENSE files in the repository root for full details.
     margin-top: var(--cpd-space-2x);
 }
 
-/* Round targets in a row, the way iOS puts the actions under the name. */
+/*
+ * The four actions as equal tiles across the card, the way a phone lays them out: a filled round mark with
+ * its name under it, every tile the same width, so the row is read at a glance instead of icon by icon.
+ */
 .mx_ContactCard_actions {
-    display: flex;
-    justify-content: center;
-    gap: var(--cpd-space-4x);
-    padding-bottom: var(--cpd-space-4x);
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: 1fr;
+    gap: var(--cpd-space-2x);
+    padding: 0 var(--mx-contacts-gutter) var(--cpd-space-4x);
 }
 
+.mx_ContactCard_action {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--cpd-space-1x);
+    min-width: 0;
+    padding: 0;
+    border: none;
+    background: none;
+    color: var(--cpd-color-text-primary);
+    font: var(--cpd-font-body-xs-medium);
+    cursor: pointer;
+
+    &:disabled {
+        color: var(--cpd-color-text-disabled);
+        cursor: default;
+    }
+}
+
+.mx_ContactCard_actionMark {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    /* The platform's smallest target, and the shape a phone gives these. */
+    width: var(--mx-contacts-row-height);
+    height: var(--mx-contacts-row-height);
+    border-radius: 50%;
+    background: var(--cpd-color-bg-subtle-secondary);
+    color: var(--cpd-color-icon-accent-primary);
+    transition: background-color 120ms ease;
+
+    .mx_ContactCard_action:hover:not(:disabled) &,
+    .mx_ContactCard_action:focus-visible & {
+        background: var(--cpd-color-bg-subtle-primary);
+    }
+
+    .mx_ContactCard_action:disabled & {
+        color: var(--cpd-color-icon-disabled);
+    }
+}
+
+/* Taking one account back out of a merged person, beside the row it belongs to. */
+.mx_ContactCard_accountUnlink {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    min-width: var(--mx-contacts-row-height);
+    border: none;
+    background: none;
+    color: var(--cpd-color-icon-secondary);
+    cursor: pointer;
+
+    &:hover,
+    &:focus-visible {
+        color: var(--cpd-color-icon-critical-primary);
+        background: var(--cpd-color-bg-subtle-primary);
+    }
+}
+
+/* A grouped block, inset from the edge by the same gutter the rows use. */
 .mx_ContactCard_section {
     display: flex;
     flex-direction: column;
-    margin-bottom: var(--cpd-space-4x);
-    border-radius: var(--cpd-space-3x);
+    margin: 0 var(--mx-contacts-gutter) var(--cpd-space-4x);
+    border-radius: var(--mx-contacts-inset-radius);
     background: var(--cpd-color-bg-subtle-secondary);
     overflow: hidden;
 }
@@ -580,7 +784,10 @@ Please see LICENSE files in the repository root for full details.
     flex-direction: column;
     gap: 2px;
     width: 100%;
-    padding: var(--cpd-space-3x);
+    box-sizing: border-box;
+    min-height: var(--mx-contacts-row-height);
+    justify-content: center;
+    padding: var(--mx-contacts-row-padding-block) var(--mx-contacts-gutter);
     border: none;
     background: transparent;
     color: var(--cpd-color-text-primary);
@@ -762,29 +969,22 @@ Please see LICENSE files in the repository root for full details.
 }
 
 /*
- * Whether somebody is about, as a dot on their face.
+ * Where the presence mark sits: on the corner of the face, not in the row's words.
  *
- * On the face rather than in the row's words, because the words are already carrying the number or the
- * handle - and because a dot in the row would be one more thing that appears and shifts everything along.
- * Only drawn when a network actually said something: silence is not "away".
+ * The mark itself is PresenceIconView, the same one the room list draws, so the colours and shapes match
+ * the rest of the client; only its position is this screen's business.
  */
-.mx_Contacts_presenceDot {
+.mx_Contacts_presence {
     position: absolute;
     inset-block-end: -1px;
     inset-inline-end: -1px;
-    width: 12px;
-    height: 12px;
-    border: 2px solid var(--cpd-color-bg-canvas-default);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 14px;
+    height: 14px;
     border-radius: 50%;
-    background: var(--cpd-color-icon-tertiary);
-
-    &[data-presence="online"] {
-        background: var(--cpd-color-icon-success-primary);
-    }
-
-    &[data-presence="unavailable"] {
-        background: var(--cpd-color-icon-quaternary);
-    }
+    background: var(--cpd-color-bg-canvas-default);
 }
 
 /* In the card the same dot sits beside the words, where there is room for both. */
@@ -794,11 +994,251 @@ Please see LICENSE files in the repository root for full details.
     gap: var(--cpd-space-2x);
     color: var(--cpd-color-text-secondary);
     font: var(--cpd-font-body-sm-regular);
+}
 
-    .mx_Contacts_presenceDot {
-        position: static;
-        border: none;
-        width: 8px;
-        height: 8px;
+/* The filters for the calls, in one place: what to show, and what the date in the search was taken to be. */
+.mx_Contacts_filterBar {
+    display: flex;
+    flex-direction: column;
+    gap: var(--cpd-space-2x);
+}
+
+.mx_Contacts_dateChip {
+    display: flex;
+    align-items: center;
+    gap: var(--cpd-space-1x);
+    align-self: flex-start;
+    min-height: 32px;
+    padding: 0 var(--cpd-space-3x);
+    margin: 0 var(--mx-contacts-gutter) var(--cpd-space-2x);
+    border: none;
+    border-radius: 99px;
+    background: var(--cpd-color-bg-accent-subtle, var(--cpd-color-bg-subtle-secondary));
+    color: var(--cpd-color-text-primary);
+    font: var(--cpd-font-body-sm-medium);
+    cursor: pointer;
+}
+
+/*
+ * The colour the reader gave somebody, and the swatches to choose it from.
+ *
+ * Compound's decorative palette rather than colours of this screen's own: they are what the client already
+ * draws avatars in, and they carry their own light and dark forms.
+ */
+.mx_ContactCard_colours {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: var(--cpd-space-2x);
+    padding: 0 var(--mx-contacts-gutter) var(--cpd-space-4x);
+}
+
+.mx_ContactCard_colour {
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border: 2px solid transparent;
+    border-radius: 50%;
+    cursor: pointer;
+
+    &[aria-checked="true"] {
+        border-color: var(--cpd-color-border-interactive-primary);
     }
+}
+
+.mx_ContactCard_colour[data-colour="1"] { background: var(--cpd-color-bg-decorative-1); }
+.mx_ContactCard_colour[data-colour="2"] { background: var(--cpd-color-bg-decorative-2); }
+.mx_ContactCard_colour[data-colour="3"] { background: var(--cpd-color-bg-decorative-3); }
+.mx_ContactCard_colour[data-colour="4"] { background: var(--cpd-color-bg-decorative-4); }
+.mx_ContactCard_colour[data-colour="5"] { background: var(--cpd-color-bg-decorative-5); }
+.mx_ContactCard_colour[data-colour="6"] { background: var(--cpd-color-bg-decorative-6); }
+
+/*
+ * The head takes the chosen colour as a wash behind the face and the name, which is the part of the card
+ * the reader sees first and the thing that tells two people of the same name apart at a glance.
+ */
+.mx_ContactCard_head[data-colour="1"] { background: var(--cpd-color-bg-decorative-1); }
+.mx_ContactCard_head[data-colour="2"] { background: var(--cpd-color-bg-decorative-2); }
+.mx_ContactCard_head[data-colour="3"] { background: var(--cpd-color-bg-decorative-3); }
+.mx_ContactCard_head[data-colour="4"] { background: var(--cpd-color-bg-decorative-4); }
+.mx_ContactCard_head[data-colour="5"] { background: var(--cpd-color-bg-decorative-5); }
+.mx_ContactCard_head[data-colour="6"] { background: var(--cpd-color-bg-decorative-6); }
+
+/* A file input that is clicked by something else: it is never the control the reader sees. */
+.mx_Contacts_file {
+    display: none;
+}
+
+/* The reader's own lists, as a strip they scroll through. */
+.mx_Contacts_lists {
+    display: flex;
+    gap: var(--cpd-space-1x);
+    padding: 0 var(--mx-contacts-gutter) var(--cpd-space-2x);
+    overflow-x: auto;
+    scrollbar-width: none;
+
+    button {
+        flex-shrink: 0;
+        min-height: 32px;
+        padding: 0 var(--cpd-space-3x);
+        border: none;
+        border-radius: 99px;
+        background: var(--cpd-color-bg-subtle-secondary);
+        color: var(--cpd-color-text-secondary);
+        font: var(--cpd-font-body-sm-medium);
+        cursor: pointer;
+
+        &[aria-selected="true"] {
+            background: var(--cpd-color-bg-action-primary-rest);
+            color: var(--cpd-color-text-on-solid-primary);
+        }
+    }
+}
+
+/* Naming a new list, in the column rather than in a dialog over it. */
+.mx_Contacts_naming {
+    display: flex;
+    gap: var(--cpd-space-2x);
+    padding: 0 var(--mx-contacts-gutter) var(--cpd-space-2x);
+
+    input {
+        flex: 1;
+        min-width: 0;
+        min-height: var(--mx-contacts-row-height);
+        padding: 0 var(--cpd-space-4x);
+        border: none;
+        border-radius: 99px;
+        background: var(--cpd-color-bg-subtle-secondary);
+        color: var(--cpd-color-text-primary);
+        font: var(--cpd-font-body-md-regular);
+    }
+}
+
+/* What an import did, said once and dismissable. */
+.mx_Contacts_imported {
+    display: flex;
+    align-items: center;
+    gap: var(--cpd-space-2x);
+    margin: 0 var(--mx-contacts-gutter) var(--cpd-space-2x);
+    padding: var(--cpd-space-2x) var(--cpd-space-3x);
+    border: none;
+    border-radius: var(--mx-contacts-inset-radius);
+    background: var(--cpd-color-bg-success-subtle, var(--cpd-color-bg-subtle-secondary));
+    color: var(--cpd-color-text-primary);
+    font: var(--cpd-font-body-sm-medium);
+    cursor: pointer;
+}
+
+/* Choosing a picture, under the face it replaces. */
+.mx_ContactCard_photoPick {
+    order: 2;
+    padding: 0;
+    border: none;
+    background: none;
+    color: var(--cpd-color-text-action-accent);
+    font: var(--cpd-font-body-sm-medium);
+    cursor: pointer;
+}
+
+/*
+ * The editor: a column of grouped blocks, the same shape the card reads in, so switching between reading
+ * and editing does not move anything the reader was looking at.
+ */
+.mx_ContactEditor {
+    display: flex;
+    flex-direction: column;
+    gap: var(--cpd-space-4x);
+    padding: 0 var(--mx-contacts-gutter) var(--cpd-space-6x);
+}
+
+.mx_ContactEditor_group {
+    display: flex;
+    flex-direction: column;
+    gap: var(--cpd-space-1x);
+
+    h3 {
+        margin: 0 0 var(--cpd-space-1x);
+        color: var(--cpd-color-text-secondary);
+        font: var(--cpd-font-body-sm-semibold);
+    }
+
+    input,
+    select,
+    textarea {
+        box-sizing: border-box;
+        min-height: var(--mx-contacts-row-height);
+        padding: var(--cpd-space-2x) var(--cpd-space-3x);
+        border: 1px solid var(--cpd-color-border-interactive-secondary);
+        border-radius: var(--mx-contacts-inset-radius);
+        background: var(--cpd-color-bg-canvas-default);
+        color: var(--cpd-color-text-primary);
+        font: var(--cpd-font-body-md-regular);
+    }
+}
+
+.mx_ContactEditor_field {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.mx_ContactEditor_fieldLabel {
+    color: var(--cpd-color-text-secondary);
+    font: var(--cpd-font-body-xs-regular);
+}
+
+.mx_ContactEditor_row {
+    display: flex;
+    align-items: center;
+    gap: var(--cpd-space-2x);
+
+    input:not(.mx_ContactEditor_label) {
+        flex: 1;
+        min-width: 0;
+    }
+}
+
+/* Narrow enough to read as the label of the value beside it rather than as a field of its own. */
+.mx_ContactEditor_label {
+    flex: 0 0 auto;
+    width: 9rem;
+    max-width: 40%;
+}
+
+.mx_ContactEditor_address {
+    display: flex;
+    flex-direction: column;
+    gap: var(--cpd-space-1x);
+    padding: var(--cpd-space-3x);
+    border-radius: var(--mx-contacts-inset-radius);
+    background: var(--cpd-color-bg-subtle-secondary);
+}
+
+.mx_ContactEditor_remove {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    min-width: var(--mx-contacts-row-height);
+    min-height: var(--mx-contacts-row-height);
+    border: none;
+    background: none;
+    color: var(--cpd-color-icon-secondary);
+    cursor: pointer;
+
+    &:hover,
+    &:focus-visible {
+        color: var(--cpd-color-icon-critical-primary);
+    }
+}
+
+.mx_ContactEditor_notes {
+    min-height: 6rem;
+    resize: vertical;
+}
+
+.mx_ContactEditor_actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--cpd-space-2x);
 }

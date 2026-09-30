@@ -30,19 +30,25 @@ import VideoMissedIcon from "@vector-im/compound-design-tokens/assets/web/icons/
 import VideoDeclinedIcon from "@vector-im/compound-design-tokens/assets/web/icons/video-call-declined-solid";
 import VideoOutgoingIcon from "@vector-im/compound-design-tokens/assets/web/icons/video-call-outgoing-solid";
 import BackIcon from "@vector-im/compound-design-tokens/assets/web/icons/chevron-left";
+import ChevronIcon from "@vector-im/compound-design-tokens/assets/web/icons/chevron-down";
 import CheckIcon from "@vector-im/compound-design-tokens/assets/web/icons/check";
 import OverflowIcon from "@vector-im/compound-design-tokens/assets/web/icons/overflow-horizontal";
 import GroupIcon from "@vector-im/compound-design-tokens/assets/web/icons/group";
+import ImportIcon from "@vector-im/compound-design-tokens/assets/web/icons/download";
+import ListIcon from "@vector-im/compound-design-tokens/assets/web/icons/list-bulleted";
+import DeleteIcon from "@vector-im/compound-design-tokens/assets/web/icons/delete";
+import ExportIcon from "@vector-im/compound-design-tokens/assets/web/icons/share";
 import CloseIcon from "@vector-im/compound-design-tokens/assets/web/icons/close";
 import FavouriteIcon from "@vector-im/compound-design-tokens/assets/web/icons/favourite";
 
 import { _t } from "../../../languageHandler";
-import { type Call, callHistory, missedCalls, unknownCallers } from "../../../utils/contacts/calls";
+import { type Call, callHistory, callsWhen, missedCalls, unknownCallers } from "../../../utils/contacts/calls";
 import { type Favourite, favourites, isFavourite, setFavourite } from "../../../utils/contacts/favourites";
 import { sectionsOf } from "../../../utils/contacts/sections";
 import { fuzzyMatch } from "../../../utils/search/fuzzy";
 import {
     type Person,
+    type Account,
     chosenName,
     namePerson,
     type Suggestion,
@@ -58,8 +64,15 @@ import {
 import { readKey } from "../../../utils/contacts/identity";
 import { ContactCard } from "./ContactCard";
 import { NetworkLogo } from "./NetworkLogo";
+import PresenceIconView from "../rooms/MemberList/tiles/common/PresenceIconView";
 import { type Presence, personPresence, presenceNetwork } from "../../../utils/contacts/presence";
 import { callsWith, sharedRooms } from "../../../utils/contacts/shared";
+import { chosenColour, nameOrder, setColour, setNameOrder } from "../../../utils/contacts/appearance";
+import { cardFor, fullName, saveCard } from "../../../utils/contacts/card";
+import { historyFor, recordRevision } from "../../../utils/contacts/history";
+import { cardForExport, downloadVCard, parseVCards, toVCard, toVCards } from "../../../utils/contacts/vcard";
+import { importCards } from "../../../utils/contacts/importCards";
+import { addList, contactLists, peopleIn, removeList, setInList } from "../../../utils/contacts/lists";
 import { PersonMenu } from "./PersonMenu";
 import { MatrixClientPeg } from "../../../MatrixClientPeg";
 import BaseAvatar from "../avatars/BaseAvatar";
@@ -74,6 +87,7 @@ import { SDKContextClass } from "../../../contexts/SDKContextClass.ts";
 import { type ViewUserPayload } from "../../../dispatcher/payloads/ViewUserPayload";
 import Spinner from "../elements/Spinner";
 import { useLongPress } from "../../../hooks/useLongPress";
+import { useSlidingIndicator } from "../../../hooks/useSlidingIndicator";
 
 const AVATAR_SIZE = "32px";
 
@@ -184,14 +198,13 @@ function PersonRow({
              */}
             <span className="mx_Contacts_faceWith">
                 <Face name={person.name} avatarUrl={person.avatarUrl} />
-                {/* Whether they are about on any of their networks, on the face rather than in the words. */}
+                {/*
+                 * Whether they are about, drawn by the same component the room list uses: presence has one
+                 * set of colours and shapes across this client, and a dot of this screen's own making was
+                 * a second answer to a question already answered.
+                 */}
                 {!selecting && presence && (
-                    <span
-                        className="mx_Contacts_presenceDot"
-                        data-presence={presence}
-                        role="img"
-                        aria-label={presence === "online" ? _t("contacts|about") : _t("contacts|away")}
-                    />
+                    <PresenceIconView className="mx_Contacts_presence" presenceState={presence} />
                 )}
                 {selecting && (
                     <span className="mx_Contacts_tick" data-selected={selected || undefined} aria-hidden="true">
@@ -217,7 +230,6 @@ function PersonRow({
 
     return menu(row, person);
 }
-
 
 /**
  * One of the reader's favourites, as a face to reach for.
@@ -262,12 +274,12 @@ function CallMark({ call }: { call: Call }): JSX.Element {
             ? _t("contacts|call_declined")
             : _t("contacts|call_incoming");
     const props = {
-        className: "mx_Contacts_callMark",
-        width: "16",
-        height: "16",
+        "className": "mx_Contacts_callMark",
+        "width": "16",
+        "height": "16",
         "data-mark": kind,
         "aria-label": label,
-        role: "img",
+        "role": "img",
     } as const;
     if (call.outgoing) return call.video ? <VideoOutgoingIcon {...props} /> : <VoiceOutgoingIcon {...props} />;
     if (call.outcome === "missed") return call.video ? <VideoMissedIcon {...props} /> : <VoiceMissedIcon {...props} />;
@@ -280,6 +292,35 @@ function CallMark({ call }: { call: Call }): JSX.Element {
 /** The time of day a call happened, since which day it was is the section it sits in. */
 const timeOfDay = (ts: number): string =>
     new Date(ts).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+
+/** All calls, the ones nobody answered, or the ones from people no address book holds. */
+type CallsShown = "all" | "missed" | "unknown";
+
+function CallFilter({ value, onChange }: { value: CallsShown; onChange: (next: CallsShown) => void }): JSX.Element {
+    const { itemRef, style } = useSlidingIndicator<CallsShown>(value);
+    const labels: Record<CallsShown, string> = {
+        all: _t("contacts|call_all"),
+        missed: _t("contacts|call_missed"),
+        unknown: _t("contacts|call_unknown"),
+    };
+    return (
+        <div className="mx_Contacts_filters" role="tablist">
+            {style && <span className="mx_Contacts_filterSelection" style={style} aria-hidden />}
+            {(Object.keys(labels) as CallsShown[]).map((key) => (
+                <button
+                    key={key}
+                    type="button"
+                    role="tab"
+                    ref={itemRef(key)}
+                    aria-selected={value === key}
+                    onClick={() => onChange(key)}
+                >
+                    {labels[key]}
+                </button>
+            ))}
+        </div>
+    );
+}
 
 function CallRow({
     client,
@@ -378,12 +419,7 @@ function CallRow({
                     label={_t("contacts|video_call")}
                     onSelect={() => onCallBack(call, true)}
                 />
-                <MenuItem
-                    hideChevron
-                    Icon={ChatIcon}
-                    label={_t("contacts|message")}
-                    onSelect={() => onMessage(call)}
-                />
+                <MenuItem hideChevron Icon={ChatIcon} label={_t("contacts|message")} onSelect={() => onMessage(call)} />
                 <MenuItem
                     hideChevron
                     Icon={UserProfileIcon}
@@ -409,51 +445,122 @@ function SuggestionCard({
 }: {
     client: MatrixClient;
     suggestion: Suggestion;
-    onMerge: (suggestion: Suggestion) => void;
+    /** The accounts the reader settled on, which is not always all of the ones offered. */
+    onMerge: (suggestion: Suggestion, mxids: string[]) => void;
     onDismiss: (suggestion: Suggestion) => void;
 }): JSX.Element {
-    /*
-     * The faces of everyone it means, in one row.
-     *
-     * A merge is a question about which accounts, and the card used to name one of them and then list the
-     * networks in a sentence - so the reader could not see what they were being asked to join, and the
-     * sentence was long enough to be cut off saying it. A face and a network's logo per account says it
-     * in the space of one row, which is also all the room a suggestion deserves above the list.
-     */
-    const accounts = suggestion.people.flatMap((one) =>
-        one.accounts.map((account) => ({ person: one, account })),
+    const accounts = useMemo(
+        () => suggestion.people.flatMap((one) => one.accounts.map((account) => ({ person: one, account }))),
+        [suggestion],
     );
+    const [open, setOpen] = useState(false);
+    const [chosen, setChosen] = useState<ReadonlySet<string>>(
+        () => new Set(accounts.map(({ account }) => account.mxid).filter((mxid): mxid is string => !!mxid)),
+    );
+
+    /*
+     * What tells one card from another.
+     *
+     * Two cards on the same network with the same name and the same picture are the case this list exists
+     * for, and a face beside a logo says nothing about which is which. The number, the handle or - when a
+     * network published neither - the account's own id is what the reader decides on, so that is what each
+     * card shows.
+     */
+    const tellApart = (account: Account): string =>
+        account.details?.[0]?.value ?? account.keys[0] ?? readKey(account.remoteId);
+
+    const toggle = (mxid: string): void =>
+        setChosen((was) => {
+            const next = new Set(was);
+            if (!next.delete(mxid)) next.add(mxid);
+            return next;
+        });
+
     return (
         <div className="mx_Contacts_suggestion">
-            <span className="mx_Contacts_suggestionWho">
-                {accounts.map(({ person, account }) => (
-                    <span className="mx_Contacts_suggestionFace" key={`${account.network}:${account.remoteId}`}>
-                        <Face name={person.name} avatarUrl={person.avatarUrl} />
-                        <NetworkLogo client={client} roomId={account.roomId} size={14} />
+            <div className="mx_Contacts_suggestionHead">
+                {/*
+                 * Named and counted, the way a phone puts it: one row per person with how many cards were
+                 * found for them, and the cards themselves a disclosure away rather than spread across the
+                 * list. Merging without opening it is the common case and stays one press.
+                 */}
+                <button
+                    type="button"
+                    className="mx_Contacts_suggestionWho"
+                    aria-expanded={open}
+                    onClick={() => setOpen((was) => !was)}
+                >
+                    <span className="mx_Contacts_suggestionFaces">
+                        {suggestion.people.slice(0, 3).map((one) => (
+                            <span className="mx_Contacts_suggestionFace" key={one.id}>
+                                <Face name={one.name} avatarUrl={one.avatarUrl} />
+                            </span>
+                        ))}
                     </span>
-                ))}
-                <span className="mx_Contacts_name">
-                    {_t("contacts|same_person_named", { name: suggestion.people[0].name })}
+                    <span className="mx_Contacts_rowText">
+                        <span className="mx_Contacts_name">{suggestion.people[0].name}</span>
+                        <span className="mx_Contacts_detail">
+                            {_t("contacts|cards_found", { count: accounts.length })}
+                        </span>
+                    </span>
+                    <ChevronIcon className="mx_Contacts_suggestionChevron" data-open={open || undefined} aria-hidden />
+                </button>
+                <span className="mx_Contacts_suggestionActions">
+                    <IconButton
+                        size="28px"
+                        aria-label={_t("contacts|merge")}
+                        tooltip={_t("contacts|merge")}
+                        disabled={chosen.size < 2}
+                        onClick={() => onMerge(suggestion, [...chosen])}
+                    >
+                        <CheckIcon />
+                    </IconButton>
+                    <IconButton
+                        size="28px"
+                        aria-label={_t("contacts|not_same_person")}
+                        tooltip={_t("contacts|not_same_person")}
+                        onClick={() => onDismiss(suggestion)}
+                    >
+                        <CloseIcon />
+                    </IconButton>
                 </span>
-            </span>
-            <span className="mx_Contacts_suggestionActions">
-                <IconButton
-                    size="28px"
-                    aria-label={_t("contacts|merge")}
-                    tooltip={_t("contacts|merge")}
-                    onClick={() => onMerge(suggestion)}
-                >
-                    <CheckIcon />
-                </IconButton>
-                <IconButton
-                    size="28px"
-                    aria-label={_t("contacts|not_same_person")}
-                    tooltip={_t("contacts|not_same_person")}
-                    onClick={() => onDismiss(suggestion)}
-                >
-                    <CloseIcon />
-                </IconButton>
-            </span>
+            </div>
+
+            {/*
+             * The cards themselves, each with what distinguishes it and a tick that keeps it in or leaves
+             * it out - so one wrong card among four does not mean turning the whole suggestion down.
+             */}
+            {open && (
+                <ul className="mx_Contacts_suggestionCards">
+                    {accounts.map(({ person, account }) => {
+                        const mxid = account.mxid;
+                        const picked = !!mxid && chosen.has(mxid);
+                        return (
+                            <li key={`${account.network}:${account.remoteId}`}>
+                                <button
+                                    type="button"
+                                    className="mx_Contacts_suggestionCard"
+                                    aria-pressed={picked}
+                                    disabled={!mxid}
+                                    onClick={() => mxid && toggle(mxid)}
+                                >
+                                    <span className="mx_Contacts_tick" data-selected={picked || undefined} aria-hidden>
+                                        {picked && <CheckIcon width="14" height="14" />}
+                                    </span>
+                                    <span className="mx_Contacts_faceWith">
+                                        <Face name={person.name} avatarUrl={person.avatarUrl} />
+                                        <NetworkLogo client={client} roomId={account.roomId} size={14} />
+                                    </span>
+                                    <span className="mx_Contacts_rowText">
+                                        <span className="mx_Contacts_name">{account.name || person.name}</span>
+                                        <span className="mx_Contacts_detail">{tellApart(account)}</span>
+                                    </span>
+                                </button>
+                            </li>
+                        );
+                    })}
+                </ul>
+            )}
         </div>
     );
 }
@@ -490,6 +597,13 @@ export function ContactsView({ tab, onFinished }: Props): JSX.Element {
      */
     const [picked, setPicked] = useState<ReadonlySet<string>>(new Set());
     const [menuFor, setMenuFor] = useState<string>();
+    const [managing, setManaging] = useState(false);
+    /* Which of the reader's own lists is showing, or all of them. */
+    const [listId, setListId] = useState<string>();
+    const [naming, setNaming] = useState(false);
+    const [newListName, setNewListName] = useState("");
+    /* The file input is hidden and clicked by the menu item: a file button cannot live inside a menu. */
+    const fileRef = useRef<HTMLInputElement>(null);
     /*
      * The list and the decisions behind it, read together.
      *
@@ -537,6 +651,36 @@ export function ContactsView({ tab, onFinished }: Props): JSX.Element {
     const again = useCallback(() => setAt((n) => n + 1), []);
 
     const calls = useMemo(() => callHistory(client), [client]);
+
+    /*
+     * A date in the search box, when there is one.
+     *
+     * "yesterday", "last Tuesday", "3 March" - the way people actually look for a call they half remember.
+     * Read by the same detector the composer uses on messages, so the words it understands here are the
+     * words it understands everywhere; asked for only while the calls are showing, and only after the
+     * typing stops, because it loads its parser and is not worth a round per keystroke.
+     */
+    const [when, setWhen] = useState<{ date: Date; hasTime: boolean; text: string }>();
+    useEffect(() => {
+        if (tab !== "calls" || !query.trim()) {
+            setWhen(undefined);
+            return;
+        }
+        let alive = true;
+        const timer = window.setTimeout(() => {
+            void import("../../../utils/detect/entities").then(({ detectDateTimes }) =>
+                detectDateTimes(query).then((found) => {
+                    if (!alive) return;
+                    const first = found[0];
+                    setWhen(first ? { date: first.date, hasTime: first.hasTime, text: first.text } : undefined);
+                }),
+            );
+        }, 250);
+        return () => {
+            alive = false;
+            window.clearTimeout(timer);
+        };
+    }, [tab, query]);
     const favourited = useMemo(() => favourites(client), [client]);
 
     /*
@@ -560,11 +704,25 @@ export function ContactsView({ tab, onFinished }: Props): JSX.Element {
          * it. Ranking is by match, but the sections below are still days, so the order within a day is
          * whatever the search thought best and the days stay in order.
          */
+        /*
+         * A date in the query is a filter, not a word to match: "yesterday" narrows to that day, and the
+         * rest of what was typed still ranks the names within it. With only a date typed, the day itself
+         * is the whole answer and ranking has nothing left to do.
+         */
+        if (when) {
+            narrowed = callsWhen(narrowed, when.date, when.hasTime);
+            const rest = query.replace(when.text, "").trim();
+            if (!rest) return narrowed;
+            return fuzzyMatch(
+                narrowed.map((call) => ({ item: call, keys: [call.title, call.name, call.network] })),
+                rest,
+            ).map((match) => match.item);
+        }
         return fuzzyMatch(
             narrowed.map((call) => ({ item: call, keys: [call.title, call.name, call.network] })),
             query,
         ).map((match) => match.item);
-    }, [calls, onlyMissed, onlyUnknown, state, query]);
+    }, [calls, onlyMissed, onlyUnknown, state, query, when]);
 
     /*
      * The calls in day-sized groups, newest day first, each day's calls newest first.
@@ -593,8 +751,8 @@ export function ContactsView({ tab, onFinished }: Props): JSX.Element {
     }, [shownCalls]);
 
     const merge = useCallback(
-        (suggestion: Suggestion): void => {
-            void linkAccounts(client, accountsOf(suggestion.people)).then(again);
+        (_suggestion: Suggestion, mxids: string[]): void => {
+            void linkAccounts(client, mxids).then(again);
         },
         [client, again],
     );
@@ -637,6 +795,43 @@ export function ContactsView({ tab, onFinished }: Props): JSX.Element {
         [client, again],
     );
 
+    /*
+     * Blocking somebody: every account they have, on the homeserver's own ignore list.
+     *
+     * The ignore list is per Matrix ID, and a person here is several of them - so blocking one account
+     * would leave the same human ringing from the next network along, which is not what blocking means.
+     */
+    // `at` counts the reader's decisions: account data is not reactive, so it is what says to read it again.
+    // oxlint-disable-next-line react-hooks/exhaustive-deps
+    const ignored = useMemo(() => new Set(client.getIgnoredUsers()), [client, at]);
+    const block = useCallback(
+        (person: Person, blocked: boolean): void => {
+            const theirs = person.accounts.map((account) => account.mxid).filter((mxid): mxid is string => !!mxid);
+            const next = new Set(client.getIgnoredUsers());
+            for (const mxid of theirs) {
+                if (blocked) next.add(mxid);
+                else next.delete(mxid);
+            }
+            void client.setIgnoredUsers([...next]).then(again);
+        },
+        [client, again],
+    );
+
+    const exportPerson = useCallback(
+        (person: Person): void => {
+            downloadVCard(`${person.name}.vcf`, toVCard(cardForExport(person, cardFor(client, person))));
+        },
+        [client],
+    );
+
+    /** One account out of a merged person, leaving the others as they were. */
+    const unlinkOne = useCallback(
+        (mxid: string): void => {
+            void unlinkAccounts(client, [mxid]).then(again);
+        },
+        [client, again],
+    );
+
     const separate = useCallback(
         (person: Person): void => {
             void unlinkAccounts(client, accountsOf([person])).then(again);
@@ -651,16 +846,52 @@ export function ContactsView({ tab, onFinished }: Props): JSX.Element {
      * three go into the same ranked pass (utils/search/fuzzy.ts) so a typo or a missing accent still
      * finds the person. Without a query the list stays as it was built: by name.
      */
+    // `at` counts the reader's decisions: account data is not reactive, so it is what says to read it again.
+    // oxlint-disable-next-line react-hooks/exhaustive-deps
+    const lists = useMemo(() => contactLists(client), [client, at]);
+    /* A list the reader deleted while it was showing is not a filter any more. */
+    const list = lists.find((one) => one.id === listId);
+    const inScope = useMemo(() => (list ? peopleIn(list, people ?? []) : (people ?? [])), [list, people]);
+
     const shown = useMemo(
         () =>
             fuzzyMatch(
-                (people ?? []).map((person) => ({
-                    item: person,
-                    keys: [person.name, ...person.keys, ...person.accounts.map((account) => account.network)],
-                })),
+                inScope.map((person) => {
+                    /*
+                     * What the reader wrote counts as much as what the networks published: a number typed
+                     * into the card, the company somebody works for, the note about where you met them -
+                     * those are the things people search an address book by, and a search that only knew
+                     * the display name could not find any of them.
+                     */
+                    const card = cardFor(client, person);
+                    return {
+                        item: person,
+                        keys: [
+                            person.name,
+                            ...person.keys,
+                            ...person.accounts.map((account) => account.network),
+                            ...(card
+                                ? [
+                                      fullName(card),
+                                      card.nickname,
+                                      card.company,
+                                      card.jobTitle,
+                                      card.notes,
+                                      ...(card.phones ?? []).map((one) => one.value),
+                                      ...(card.emails ?? []).map((one) => one.value),
+                                      ...(card.addresses ?? []).map((one) =>
+                                          [one.street, one.city, one.country].filter(Boolean).join(" "),
+                                      ),
+                                  ].filter((one): one is string => !!one)
+                                : []),
+                        ],
+                    };
+                }),
                 query,
             ).map((match) => match.item),
-        [people, query],
+        // `at` counts the reader's decisions: account data is not reactive, so it is what says to read it again.
+        // oxlint-disable-next-line react-hooks/exhaustive-deps
+        [inScope, query, client, at],
     );
 
     /*
@@ -669,7 +900,25 @@ export function ContactsView({ tab, onFinished }: Props): JSX.Element {
      * A search is ranked by how well each person matches, so letters down its edge would point at an order
      * that is not there; without a query the list is alphabetical and the letters are how it is navigated.
      */
-    const sections = useMemo(() => sectionsOf(shown, (person) => person.name), [shown]);
+    /*
+     * Filed under the name the reader asked for.
+     *
+     * A card gives a first and a family name, so "Kowalczyk, Aleksandra" is a real option rather than a
+     * guess at where to split a display name - and for anyone with no card the display name is all there
+     * is, which files under itself either way.
+     */
+    const order = nameOrder(client);
+    const filedAs = useCallback(
+        (person: Person): string => {
+            const card = cardFor(client, person);
+            if (!card?.lastName && !card?.firstName) return person.name;
+            const first = card.firstName ?? "";
+            const last = card.lastName ?? "";
+            return (order === "last" ? `${last} ${first}` : `${first} ${last}`).trim() || person.name;
+        },
+        [client, order],
+    );
+    const sections = useMemo(() => sectionsOf(shown, filedAs), [shown, filedAs]);
 
     /*
      * The index scrolls the list's own scroller, so the dialog around it does not move - and by measured
@@ -742,16 +991,13 @@ export function ContactsView({ tab, onFinished }: Props): JSX.Element {
     );
 
     /** A favourite is somewhere to go: the chat with them, which is where calling them starts. */
-    const openFavourite = useCallback(
-        (favourite: Favourite): void => {
-            dis.dispatch<ViewRoomPayload>({
-                action: Action.ViewRoom,
-                room_id: favourite.roomId,
-                metricsTrigger: undefined,
-            });
-        },
-        [],
-    );
+    const openFavourite = useCallback((favourite: Favourite): void => {
+        dis.dispatch<ViewRoomPayload>({
+            action: Action.ViewRoom,
+            room_id: favourite.roomId,
+            metricsTrigger: undefined,
+        });
+    }, []);
 
     /**
      * Place a call in the chat the reader picked.
@@ -760,24 +1006,63 @@ export function ContactsView({ tab, onFinished }: Props): JSX.Element {
      * the call UI to have anywhere to live. Which network it goes over is decided by which chat this is -
      * that chat's bridge carries it - so the choice was already made in the menu.
      */
-    const callPerson = useCallback(
-        (_person: Person, roomId: string, video: boolean): void => {
-            dis.dispatch<ViewRoomPayload>({
-                action: Action.ViewRoom,
-                room_id: roomId,
-                metricsTrigger: undefined,
+    const callPerson = useCallback((_person: Person, roomId: string, video: boolean): void => {
+        dis.dispatch<ViewRoomPayload>({
+            action: Action.ViewRoom,
+            room_id: roomId,
+            metricsTrigger: undefined,
+        });
+        // Forced through Matrix calling, as the room header does for a bridged DM: those rooms carry
+        // the bridge bot as a third member, which the handler counting members cannot tell from a group.
+        void SDKContextClass.instance.legacyCallHandler.placeCall(
+            roomId,
+            video ? CallType.Video : CallType.Voice,
+            undefined,
+            true,
+        );
+    }, []);
+
+    /*
+     * The reader's own name and face, from their profile rather than from a chat: there is no room with
+     * yourself to read it out of, and the one place it is always right is the account itself.
+     */
+    const me = client.getUser(client.getSafeUserId());
+    const myName = me?.displayName ?? client.getSafeUserId();
+    const myAvatar = me?.avatarUrl ?? undefined;
+
+    /** Your own card is your profile, which the client already has a screen for. */
+    const openMe = useCallback((): void => {
+        dis.dispatch({ action: Action.ViewUserSettings });
+    }, []);
+
+    /*
+     * Reading an address book in.
+     *
+     * A file rather than a sync: there is no CardDAV here, and the thing a reader actually has is the .vcf
+     * their phone exported. Each card is matched to somebody already known by a number or an address it
+     * carries - that is what the published identifiers are for - and anything that matches nobody is kept
+     * as a card of its own, because a contact with no chat is still a contact.
+     */
+    const [imported, setImported] = useState<string>();
+    const importVCards = useCallback(
+        (text: string): void => {
+            const cards = parseVCards(text);
+            if (!cards.length) {
+                setImported(_t("contacts|import_failed"));
+                return;
+            }
+            void importCards(client, cards, people ?? []).then((count) => {
+                setImported(_t("contacts|imported", { count }));
+                again();
             });
-            // Forced through Matrix calling, as the room header does for a bridged DM: those rooms carry
-            // the bridge bot as a third member, which the handler counting members cannot tell from a group.
-            void SDKContextClass.instance.legacyCallHandler.placeCall(
-                roomId,
-                video ? CallType.Video : CallType.Voice,
-                undefined,
-                true,
-            );
         },
-        [],
+        [client, people, again],
     );
+
+    const exportAll = useCallback((): void => {
+        const cards = (people ?? []).map((person) => cardForExport(person, cardFor(client, person)));
+        downloadVCard("contacts.vcf", toVCards(cards));
+    }, [client, people]);
 
     /** Somewhere to go: a room, at a particular event when one is named. */
     const openRoom = useCallback((roomId: string, eventId?: string): void => {
@@ -790,22 +1075,19 @@ export function ContactsView({ tab, onFinished }: Props): JSX.Element {
     }, []);
 
     /** Ringing back, in the chat the call was in - which is the network it was on. */
-    const callBack = useCallback(
-        (call: Call, video: boolean): void => {
-            dis.dispatch<ViewRoomPayload>({
-                action: Action.ViewRoom,
-                room_id: call.roomId,
-                metricsTrigger: undefined,
-            });
-            void SDKContextClass.instance.legacyCallHandler.placeCall(
-                call.roomId,
-                video ? CallType.Video : CallType.Voice,
-                undefined,
-                true,
-            );
-        },
-        [],
-    );
+    const callBack = useCallback((call: Call, video: boolean): void => {
+        dis.dispatch<ViewRoomPayload>({
+            action: Action.ViewRoom,
+            room_id: call.roomId,
+            metricsTrigger: undefined,
+        });
+        void SDKContextClass.instance.legacyCallHandler.placeCall(
+            call.roomId,
+            video ? CallType.Video : CallType.Voice,
+            undefined,
+            true,
+        );
+    }, []);
 
     /** Writing instead of ringing: the same chat, without placing anything. */
     const messageCaller = useCallback((call: Call): void => {
@@ -817,18 +1099,15 @@ export function ContactsView({ tab, onFinished }: Props): JSX.Element {
     }, []);
 
     /** A call is somewhere to go: the call itself, in the chat it happened in. */
-    const openCall = useCallback(
-        (call: Call): void => {
-            dis.dispatch<ViewRoomPayload>({
-                action: Action.ViewRoom,
-                room_id: call.roomId,
-                event_id: call.eventId,
-                highlighted: true,
-                metricsTrigger: undefined,
-            });
-        },
-        [],
-    );
+    const openCall = useCallback((call: Call): void => {
+        dis.dispatch<ViewRoomPayload>({
+            action: Action.ViewRoom,
+            room_id: call.roomId,
+            event_id: call.eventId,
+            highlighted: true,
+            metricsTrigger: undefined,
+        });
+    }, []);
 
     /**
      * The caller behind a call: their card, which here is a member of the room the call was in.
@@ -887,6 +1166,11 @@ export function ContactsView({ tab, onFinished }: Props): JSX.Element {
                         onFavourite={favourite}
                         onOpen={setOpen}
                         onSelect={toggle}
+                        onBlock={block}
+                        onExport={exportPerson}
+                        lists={lists}
+                        onList={(one, member) => void setInList(client, one.id, person, member).then(again)}
+                        blocked={person.accounts.every((a) => !a.mxid || ignored.has(a.mxid))}
                         trigger={
                             <IconButton
                                 className="mx_Contacts_more"
@@ -910,6 +1194,11 @@ export function ContactsView({ tab, onFinished }: Props): JSX.Element {
             state,
             messagePerson,
             callPerson,
+            block,
+            exportPerson,
+            ignored,
+            lists,
+            again,
             mergePeople,
             separate,
             rename,
@@ -940,6 +1229,48 @@ export function ContactsView({ tab, onFinished }: Props): JSX.Element {
                     calls={callsWith(calls, open)}
                     groups={sharedRooms(client, open)}
                     onOpenRoom={openRoom}
+                    onUnlinkAccount={unlinkOne}
+                    linkedIds={state?.linked}
+                    colour={chosenColour(client, open)}
+                    onColour={(next) => void setColour(client, open, next).then(again)}
+                    card={cardFor(client, open)}
+                    onCard={(next) => {
+                        /*
+                         * What it said before is kept first, then the change is written: a record taken
+                         * after the write has nothing to record, and one taken and then not followed by a
+                         * write claims a change that never happened.
+                         */
+                        const was = cardFor(client, open);
+                        void recordRevision(client, open, was, "edit")
+                            .then(() => saveCard(client, open, next))
+                            .then(again);
+                    }}
+                    history={historyFor(client, open)}
+                    onRestore={(revision) => {
+                        const was = cardFor(client, open);
+                        void recordRevision(client, open, was, "restore")
+                            .then(() => saveCard(client, open, revision.was))
+                            .then(again);
+                    }}
+                    onExport={() =>
+                        downloadVCard(`${open.name}.vcf`, toVCard(cardForExport(open, cardFor(client, open))))
+                    }
+                    onPhoto={(file) => {
+                        /*
+                         * Uploaded to the reader's own media and kept as an mxc: URI, not inlined: a photo
+                         * in account data is sent to every device on every sync, which is not what account
+                         * data is for.
+                         */
+                        const was = cardFor(client, open);
+                        void client
+                            .uploadContent(file, { type: file.type })
+                            .then(({ content_uri: photoUrl }) =>
+                                recordRevision(client, open, was, "edit").then(() =>
+                                    saveCard(client, open, { ...was, photoUrl }),
+                                ),
+                            )
+                            .then(again);
+                    }}
                 />
             </div>
         );
@@ -952,7 +1283,114 @@ export function ContactsView({ tab, onFinished }: Props): JSX.Element {
                     <BackIcon />
                 </IconButton>
                 <h2 className="mx_ContactsView_title">{_t("contacts|title")}</h2>
+                {/*
+                 * Bringing an address book in and handing it back out, which is what keeps this list from
+                 * being a dead end: the file a phone exports goes in here, and what is here goes back to a
+                 * phone the same way.
+                 */}
+                <Menu
+                    title={_t("contacts|title")}
+                    showTitle={false}
+                    open={managing}
+                    onOpenChange={setManaging}
+                    align="end"
+                    trigger={
+                        <IconButton aria-label={_t("common|options")} size="32px">
+                            <OverflowIcon />
+                        </IconButton>
+                    }
+                >
+                    <MenuItem
+                        hideChevron
+                        Icon={ImportIcon}
+                        label={_t("contacts|import_vcf")}
+                        onSelect={() => fileRef.current?.click()}
+                    />
+                    <MenuItem
+                        hideChevron
+                        Icon={ExportIcon}
+                        label={_t("contacts|export_all_vcf")}
+                        onSelect={exportAll}
+                    />
+                    <MenuItem
+                        hideChevron
+                        Icon={ListIcon}
+                        label={_t("contacts|new_list")}
+                        onSelect={() => setNaming(true)}
+                    />
+                    {!!list && (
+                        <MenuItem
+                            hideChevron
+                            Icon={DeleteIcon}
+                            kind="critical"
+                            label={_t("contacts|delete_list")}
+                            onSelect={() => {
+                                void removeList(client, list.id).then(again);
+                                setListId(undefined);
+                            }}
+                        />
+                    )}
+                    <MenuTitle title={_t("contacts|sort_by")} />
+                    <MenuItem
+                        hideChevron
+                        Icon={order === "first" ? CheckIcon : UserProfileIcon}
+                        label={_t("contacts|sort_first")}
+                        onSelect={() => void setNameOrder(client, "first").then(again)}
+                    />
+                    <MenuItem
+                        hideChevron
+                        Icon={order === "last" ? CheckIcon : UserProfileIcon}
+                        label={_t("contacts|sort_last")}
+                        onSelect={() => void setNameOrder(client, "last").then(again)}
+                    />
+                </Menu>
+                <input
+                    ref={fileRef}
+                    className="mx_Contacts_file"
+                    type="file"
+                    accept=".vcf,text/vcard,text/x-vcard"
+                    onChange={(event) => {
+                        const file = event.target.files?.[0];
+                        // Cleared either way, so choosing the same file twice in a row still reads it.
+                        event.target.value = "";
+                        void file?.text().then(importVCards);
+                    }}
+                />
             </div>
+            {/* Naming a new list, in the column rather than in a dialog over it. */}
+            {naming && (
+                <form
+                    className="mx_Contacts_naming"
+                    onSubmit={(event) => {
+                        event.preventDefault();
+                        const name = newListName.trim();
+                        if (name) void addList(client, name).then(again);
+                        setNewListName("");
+                        setNaming(false);
+                    }}
+                >
+                    <input
+                        autoFocus
+                        value={newListName}
+                        placeholder={_t("contacts|list_name")}
+                        aria-label={_t("contacts|list_name")}
+                        onChange={(event) => setNewListName(event.target.value)}
+                    />
+                    <Button kind="primary" size="md" type="submit">
+                        {_t("action|save")}
+                    </Button>
+                    <Button kind="secondary" size="md" type="button" onClick={() => setNaming(false)}>
+                        {_t("action|cancel")}
+                    </Button>
+                </form>
+            )}
+            {/* What the import did, said once and dismissable, rather than a list that silently grew. */}
+            {imported && (
+                <button type="button" className="mx_Contacts_imported" onClick={() => setImported(undefined)}>
+                    {imported}
+                    <CloseIcon width="16" height="16" aria-hidden />
+                </button>
+            )}
             {/*
              * One search, whichever list is showing.
              *
@@ -970,6 +1408,29 @@ export function ContactsView({ tab, onFinished }: Props): JSX.Element {
 
             {tab === "people" ? (
                 <>
+                    {/*
+                     * The reader's own lists, as a strip they scroll through: filing people into "family"
+                     * or "the band" is theirs and is seen by nobody else, which is what makes it different
+                     * from the rooms they happen to share. Only shown once there is one to choose.
+                     */}
+                    {!!lists.length && (
+                        <div className="mx_Contacts_lists" role="tablist" aria-label={_t("contacts|lists")}>
+                            <button type="button" role="tab" aria-selected={!list} onClick={() => setListId(undefined)}>
+                                {_t("contacts|all_contacts")}
+                            </button>
+                            {lists.map((one) => (
+                                <button
+                                    key={one.id}
+                                    type="button"
+                                    role="tab"
+                                    aria-selected={one.id === listId}
+                                    onClick={() => setListId(one.id)}
+                                >
+                                    {one.name}
+                                </button>
+                            ))}
+                        </div>
+                    )}
                     {/*
                      * What is picked, and what can be done to all of it at once. Merging several rows in
                      * one go is the point: saying "these four are one person" was four separate two-step
@@ -1009,6 +1470,24 @@ export function ContactsView({ tab, onFinished }: Props): JSX.Element {
                     )}
                     <div className="mx_Contacts_listWithIndex">
                         <div className="mx_Contacts_list" ref={listRef}>
+                            {/*
+                             * The reader's own card, at the top and outside the letters.
+                             *
+                             * A phone's address book opens on you: it is the card you hand to other people
+                             * and the one you edit most, and filing it under its own initial makes you
+                             * scroll to find yourself among everyone else.
+                             */}
+                            {!query && (
+                                <button type="button" className="mx_Contacts_row mx_Contacts_me" onClick={openMe}>
+                                    <span className="mx_Contacts_faceWith">
+                                        <Face name={myName} avatarUrl={myAvatar} />
+                                    </span>
+                                    <span className="mx_Contacts_rowText">
+                                        <span className="mx_Contacts_name">{myName}</span>
+                                        <span className="mx_Contacts_detail">{_t("contacts|my_card")}</span>
+                                    </span>
+                                </button>
+                            )}
                             {people === undefined && <Spinner />}
                             {/* Only while nothing is typed: a search is a question about one person. */}
                             {!query &&
@@ -1124,23 +1603,38 @@ export function ContactsView({ tab, onFinished }: Props): JSX.Element {
                             ))}
                         </div>
                     )}
-                    <div className="mx_Contacts_filters">
-                        <Button
-                            kind={onlyMissed ? "primary" : "secondary"}
-                            size="md"
-                            aria-pressed={onlyMissed}
-                            onClick={() => setOnlyMissed((only) => !only)}
-                        >
-                            {_t("contacts|call_missed")}
-                        </Button>
-                        <Button
-                            kind={onlyUnknown ? "primary" : "secondary"}
-                            size="md"
-                            aria-pressed={onlyUnknown}
-                            onClick={() => setOnlyUnknown((only) => !only)}
-                        >
-                            {_t("contacts|call_unknown")}
-                        </Button>
+                    {/*
+                     * All, missed, or callers nobody saved: one control with three positions, the same
+                     * shape as the bar at the foot of the column. Two filled buttons that each toggled
+                     * read as two switches, and left "all calls" as the state of having pressed neither.
+                     */}
+                    <div className="mx_Contacts_filterBar">
+                        <CallFilter
+                            value={onlyMissed ? "missed" : onlyUnknown ? "unknown" : "all"}
+                            onChange={(next) => {
+                                setOnlyMissed(next === "missed");
+                                setOnlyUnknown(next === "unknown");
+                            }}
+                        />
+                        {/*
+                         * What the date in the search was taken to mean, said out loud and removable: a
+                         * list that silently narrowed itself to one day would read as a list that had lost
+                         * most of its calls.
+                         */}
+                        {when && (
+                            <button
+                                type="button"
+                                className="mx_Contacts_dateChip"
+                                onClick={() => setQuery(query.replace(when.text, "").trim())}
+                            >
+                                {when.date.toLocaleDateString(undefined, {
+                                    day: "numeric",
+                                    month: "long",
+                                    ...(when.hasTime ? { hour: "numeric", minute: "2-digit" } : {}),
+                                })}
+                                <CloseIcon width="16" height="16" aria-hidden />
+                            </button>
+                        )}
                     </div>
                     <div className="mx_Contacts_list">
                         {!shownCalls.length && (

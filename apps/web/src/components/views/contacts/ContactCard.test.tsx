@@ -79,7 +79,7 @@ describe("ContactCard", () => {
         // Per account, not per person: which chat is picked decides which network carries the call.
         for (const account of nowhere.accounts) delete account.roomId;
         render(<ContactCard person={nowhere} onBack={() => {}} onMessage={() => {}} onCall={vi.fn()} />);
-        expect(screen.queryByRole("button", { name: "Voice call" })).not.toBeInTheDocument();
+        expect(screen.queryByRole("button", { name: "Call" })).not.toBeInTheDocument();
     });
 
     /*
@@ -92,7 +92,7 @@ describe("ContactCard", () => {
         p.accounts[1].roomId = "!wa:e";
         render(<ContactCard person={p} onBack={() => {}} onMessage={() => {}} onCall={vi.fn()} />);
 
-        await userEvent.click(screen.getByRole("button", { name: "Voice call" }));
+        await userEvent.click(screen.getByRole("button", { name: "Call" }));
         expect(await screen.findByText("Voice call on Signal")).toBeInTheDocument();
         expect(screen.getByText("Video call on WhatsApp")).toBeInTheDocument();
     });
@@ -103,7 +103,7 @@ describe("ContactCard", () => {
         p.accounts[1].roomId = "!wa:e";
         render(<ContactCard person={p} onBack={() => {}} onMessage={() => {}} onCall={onCall} />);
 
-        await userEvent.click(screen.getByRole("button", { name: "Voice call" }));
+        await userEvent.click(screen.getByRole("button", { name: "Call" }));
         await userEvent.click(await screen.findByText("Video call on WhatsApp"));
         expect(onCall).toHaveBeenCalledWith(expect.objectContaining({ name: "Ada Klein" }), "!wa:e", true);
     });
