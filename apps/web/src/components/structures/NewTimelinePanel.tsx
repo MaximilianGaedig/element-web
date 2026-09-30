@@ -5,7 +5,7 @@ SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only OR LicenseRef-Element-Com
 Please see LICENSE files in the repository root for full details.
 */
 
-import React, { useCallback, useEffect, useRef, useState, type JSX, type ReactNode } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState, type JSX, type ReactNode } from "react";
 import {
     TimelineView,
     useCreateAutoDisposedViewModel,
@@ -16,14 +16,24 @@ import {
 import { InlineSpinner } from "@vector-im/compound-web";
 import classNames from "classnames";
 
-import { EventType, type MatrixClient, type RelationType, type Relations, type Room } from "matrix-js-sdk/src/matrix";
+import {
+    EventType,
+    RoomEvent,
+    type MatrixClient,
+    type RelationType,
+    type Relations,
+    type Room,
+} from "matrix-js-sdk/src/matrix";
 import { RoomTimelineViewModel } from "../../viewmodels/room/timeline/RoomTimelineViewModel";
 import { useMatrixClientContext } from "../../contexts/MatrixClientContext";
 import { LegacyEventTileAdapter } from "../views/rooms/LegacyEventTileAdapter";
+import type { IReadReceiptPosition } from "../views/rooms/ReadReceiptMarker";
+import { receiptsByShownEvent } from "../../utils/telegram/receiptsByEvent";
+import { useTypedEventEmitter } from "../../hooks/useEventEmitter";
 import { isOneToOneRoom, bubbleTimelineEnabled, telegramTicksShown } from "../../utils/telegram/telegramLayout";
 import MemberAvatar from "../views/avatars/MemberAvatar";
 import PerMessageProfileAvatar from "../views/bridge/PerMessageProfileAvatar";
-import type { GetRelationsForEvent } from "../views/rooms/EventTile";
+import type { GetRelationsForEvent, IReadReceiptProps } from "../views/rooms/EventTile";
 import { Layout } from "../../settings/enums/Layout";
 import { useSettingValue } from "../../hooks/useSettings";
 import { _t } from "../../languageHandler";
@@ -71,8 +81,16 @@ interface RenderItemContext {
     telegramBubbles: boolean;
     /** Whether our messages carry ticks rather than readers' avatars (telegramTicksShown). */
     telegramTicks: boolean;
+    /** Whether read receipts are shown at all (the "showReadReceipts" setting). */
+    showReadReceipts: boolean;
+    /** Who has read up to each drawn message. */
+    readReceipts: ReadonlyMap<string, IReadReceiptProps[]>;
+    /** Where each reader's avatar last was, which the receipts animate from; kept across renders. */
+    readReceiptMap: Record<string, IReadReceiptPosition>;
     myUserId: string;
 }
+
+const NO_RECEIPTS: ReadonlyMap<string, IReadReceiptProps[]> = new Map();
 
 /** Draws one timeline row. Kept outside the component so it isn't redefined per render. */
 function renderTimelineItem(item: TimelineItem, ctx: RenderItemContext): ReactNode {
@@ -158,6 +176,9 @@ function renderTimelineItem(item: TimelineItem, ctx: RenderItemContext): ReactNo
                     hideAvatar={ctx.hideAvatar || groupAvatar || own}
                     telegramBubbles={ctx.telegramBubbles}
                     telegramTicks={ctx.telegramTicks}
+                    showReadReceipts={ctx.showReadReceipts}
+                    readReceipts={ctx.readReceipts.get(item.key)}
+                    readReceiptMap={ctx.readReceiptMap}
                 />
             );
             if (!groupAvatar) return tile;
@@ -259,6 +280,22 @@ export function NewTimelinePanel({
 
     const snapshot = useViewModel(vm);
 
+    /*
+     * Who has read how far, beside the messages - which the old timeline worked out for its tiles
+     * and this one never did, so a group chat showed nobody's receipt at all. Recomputed as the rows
+     * change and as receipts arrive; left out where ticks stand in for them.
+     */
+    const showReadReceipts = useSettingValue("showReadReceipts");
+    const [receiptsSeen, setReceiptsSeen] = useState(0);
+    useTypedEventEmitter(room, RoomEvent.Receipt, () => setReceiptsSeen((n) => n + 1));
+    const readReceipts = useMemo(() => {
+        if (!showReadReceipts || telegramTicks) return NO_RECEIPTS;
+        const shown = new Set(snapshot.items.filter((item) => item.kind === "event").map((item) => item.key));
+        return receiptsByShownEvent(client, room, room.getLiveTimeline().getEvents(), shown);
+        // receiptsSeen stands for the room's receipts, which change without anything else here doing so.
+    }, [client, room, snapshot.items, showReadReceipts, telegramTicks, receiptsSeen]); // eslint-disable-line react-hooks/exhaustive-deps
+    const readReceiptMap = useRef<Record<string, IReadReceiptPosition>>({}).current;
+
     // How much the floating header and composer cover at each end. TgChatChrome measures them and
     // writes them onto the room body as custom properties; the virtualizer needs them as numbers,
     // because space it does not know about is space it will not scroll through — the last message
@@ -319,6 +356,9 @@ export function NewTimelinePanel({
                 hideAvatar,
                 telegramBubbles,
                 telegramTicks,
+                showReadReceipts,
+                readReceipts,
+                readReceiptMap,
                 myUserId: client.getSafeUserId(),
             }),
         [
@@ -336,6 +376,9 @@ export function NewTimelinePanel({
             hideAvatar,
             telegramBubbles,
             telegramTicks,
+            showReadReceipts,
+            readReceipts,
+            readReceiptMap,
             client,
         ],
     );

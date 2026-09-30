@@ -10,7 +10,7 @@ Please see LICENSE files in the repository root for full details.
 import React from "react";
 import { render, screen } from "test-utils-rtl";
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import { type MatrixClient, type MatrixEvent, PendingEventOrdering, Room } from "matrix-js-sdk/src/matrix";
+import { type MatrixClient, MatrixEvent, PendingEventOrdering, Room } from "matrix-js-sdk/src/matrix";
 import type { TimelineItem } from "@element-hq/web-shared-components";
 import { createTestClient, mkMessage, TestSDKContext } from "test-utils";
 
@@ -240,6 +240,24 @@ describe("<NewTimelinePanel />", () => {
         renderPanel({ layout: Layout.Bubble });
 
         expect(tileProps.current[0]).toMatchObject({ hideAvatar: true, telegramTicks: false });
+    });
+
+    it("gives each message the read receipts of those who read up to it, in a group", () => {
+        vi.spyOn(room, "getInvitedAndJoinedMemberCount").mockReturnValue(3);
+        const reader = "@bob:example.org";
+        room.addReceipt(
+            new MatrixEvent({
+                type: "m.receipt",
+                room_id: ROOM_ID,
+                content: { [event.getId()!]: { "m.read": { [reader]: { ts: 42 } } } },
+            }),
+        );
+        withItems([{ key: event.getId()!, kind: "event", continuation: false, lastInSection: true } as TimelineItem]);
+
+        renderPanel({ layout: Layout.Bubble });
+
+        expect(tileProps.current[0]).toMatchObject({ showReadReceipts: true });
+        expect(tileProps.current[0].readReceipts).toEqual([expect.objectContaining({ userId: reader, ts: 42 })]);
     });
 
     it("gives the edit state only to the message being edited", () => {

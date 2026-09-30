@@ -75,6 +75,11 @@ Please see LICENSE files in the repository root for full details.
         flex-basis: auto;
         order: 2;
         margin-inline-start: auto;
+        /*
+         * The line reaches past its box by Element's negative end margin, which put the readers on the
+         * bubble's edge; with the receipt group's own 4px inset this leaves 4px between them.
+         */
+        padding-inline-start: calc(-4px - var(--event-tile-bubble-line-margin-inline-end, 0px));
     }
 
     /* The hover-only timestamp kept 60px free at the end of every bubble. */
