@@ -8,9 +8,9 @@ Please see LICENSE files in the repository root for full details.
 // @vitest-environment happy-dom
 
 import { describe, it, expect } from "vitest";
-import { EventType, PendingEventOrdering, Room } from "matrix-js-sdk/src/matrix";
+import { EventType, MatrixEvent, PendingEventOrdering, Room } from "matrix-js-sdk/src/matrix";
 
-import { callHistory } from "./calls";
+import { callHistory, indexedCallHistory } from "./calls";
 import { mkEvent, mkMembership, stubClient } from "test-utils";
 
 const ROOM_ID = "!dm:example.org";
@@ -86,5 +86,38 @@ describe("callHistory", () => {
 
         expect(calls).toHaveLength(1);
         expect(calls[0]).toMatchObject({ userId: GHOST, group: false });
+    });
+
+    // The loaded timeline reaches back only a few hundred events; the server's index has every call.
+    it("lists calls the server indexed that the loaded timeline doesn't hold", async () => {
+        const { client } = bridgedDm();
+        const old = mkEvent({
+            event: true,
+            type: EventType.RTCNotification,
+            room: ROOM_ID,
+            user: GHOST,
+            ts: 1_000,
+            content: {},
+        });
+        (client as any).doesServerSupportUnstableFeature = async () => true;
+        (client as any).getEventMapper = () => (raw: any) => new MatrixEvent(raw);
+        (client as any).http = {
+            authedRequest: async (_m: string, path: string, query: Record<string, string>) => {
+                expect(path).toBe("/media");
+                expect(query.kind).toBe("calls");
+                return { chunk: [old.event], rooms: [ROOM_ID] };
+            },
+        };
+
+        const calls = await indexedCallHistory(client);
+
+        expect(calls).toHaveLength(1);
+        expect(calls![0]).toMatchObject({ eventId: old.getId(), userId: GHOST, group: false });
+    });
+
+    it("gives up on the index where the server keeps none", async () => {
+        const { client } = bridgedDm();
+        (client as any).doesServerSupportUnstableFeature = async () => false;
+        expect(await indexedCallHistory(client)).toBeUndefined();
     });
 });

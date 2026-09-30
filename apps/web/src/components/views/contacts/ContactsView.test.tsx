@@ -94,6 +94,7 @@ beforeEach(() => {
     vi.spyOn(peopleModule, "manualLinks").mockReturnValue([]);
     vi.spyOn(peopleModule, "dismissedSuggestions").mockReturnValue([]);
     vi.spyOn(callsModule, "callHistory").mockReturnValue([]);
+    vi.spyOn(callsModule, "indexedCallHistory").mockResolvedValue(undefined);
     vi.spyOn(favouritesModule, "favourites").mockReturnValue([]);
 });
 

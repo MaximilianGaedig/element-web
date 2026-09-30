@@ -43,7 +43,14 @@ import CloseIcon from "@vector-im/compound-design-tokens/assets/web/icons/close"
 import FavouriteIcon from "@vector-im/compound-design-tokens/assets/web/icons/favourite";
 
 import { _t, _td } from "../../../languageHandler";
-import { type Call, callHistory, callsWhen, missedCalls, unknownCallers } from "../../../utils/contacts/calls";
+import {
+    type Call,
+    callHistory,
+    callsWhen,
+    indexedCallHistory,
+    missedCalls,
+    unknownCallers,
+} from "../../../utils/contacts/calls";
 import { type Favourite, favourites, isFavourite, setFavourite } from "../../../utils/contacts/favourites";
 import { sectionsOf } from "../../../utils/contacts/sections";
 import { fuzzyMatch } from "../../../utils/search/fuzzy";
@@ -815,7 +822,18 @@ export function ContactsView({ tab, onFinished }: Props): JSX.Element {
     const people = state?.people;
     const again = useCallback(() => setAt((n) => n + 1), []);
 
-    const calls = useMemo(() => callHistory(client), [client]);
+    // What the loaded timelines hold, at once; then the whole history from the server's index.
+    const [calls, setCalls] = useState(() => callHistory(client));
+    useEffect(() => {
+        let alive = true;
+        setCalls(callHistory(client));
+        void indexedCallHistory(client).then((indexed) => {
+            if (alive && indexed) setCalls(indexed);
+        });
+        return () => {
+            alive = false;
+        };
+    }, [client]);
 
     /*
      * A date in the search box, when there is one.

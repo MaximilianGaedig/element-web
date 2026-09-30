@@ -13,9 +13,10 @@ Please see LICENSE files in the repository root for full details.
  * was out?" means opening chats until one of them has a missed call in it, which is exactly the question a
  * call list answers in one screen.
  *
- * Built from what the client already holds, in the order the events happened, so it costs a walk of loaded
- * timelines and nothing else: no index, no request, nothing to keep in step. A chat whose history is not
- * loaded contributes what is loaded of it, which is the recent end - which is the end a call list is about.
+ * Shown at once from what the client already holds, in the order the events happened - a walk of loaded
+ * timelines, which reaches back only as far as each chat is loaded. Where the homeserver indexes calls
+ * (tuwunel's media index, kind `calls`), the whole history then comes from there in one request
+ * (`indexedCallHistory`), with what the loaded timelines know about each call kept.
  *
  * Both shapes of call are read, because both exist here: a Matrix call (`m.call.invite` and friends, what
  * Element and the bridges' own call bridging use) and a bridge's notice about a call on the network, which
@@ -23,7 +24,14 @@ Please see LICENSE files in the repository root for full details.
  * matched by its text would break in every language.
  */
 
-import { type MatrixClient, type MatrixEvent, type Room, EventType } from "matrix-js-sdk/src/matrix";
+import {
+    type IRoomEvent,
+    type MatrixClient,
+    type MatrixEvent,
+    type Room,
+    EventType,
+    Method,
+} from "matrix-js-sdk/src/matrix";
 
 import { getBridgeBots, getBridgeInfo } from "../bridge/bridgeInfo";
 import { isOneToOneRoom } from "../telegram/telegramLayout";
@@ -104,20 +112,99 @@ function outcomeOf(hangup: MatrixEvent | undefined, answered: boolean): CallOutc
     return "unknown";
 }
 
-/** The calls in one chat, newest first. */
-function callsIn(client: MatrixClient, room: Room): Call[] {
-    const events = room.getLiveTimeline().getEvents();
-    const from = Math.max(0, events.length - DEEPEST);
-    const me = client.getSafeUserId();
-    const network = getBridgeInfo(room)?.networkName ?? "Matrix";
+/** What about a room is the same for every call in it. */
+interface RoomContext {
+    me: string;
+    network: string;
     /*
      * Whether this room is a group, decided once for the room rather than per call: a call's own events
      * do not say how many people the room has, and the answer cannot change between two calls in it.
      * Asked the bridge-aware way: a bridged DM holds the bridge's bot too, and counting members made
      * every call in one a "group call".
      */
-    const group = !isOneToOneRoom(room);
-    const bots = getBridgeBots(room);
+    group: boolean;
+    bots: Set<string>;
+}
+
+function roomContext(client: MatrixClient, room: Room): RoomContext {
+    return {
+        me: client.getSafeUserId(),
+        network: getBridgeInfo(room)?.networkName ?? "Matrix",
+        group: !isOneToOneRoom(room),
+        bots: getBridgeBots(room),
+    };
+}
+
+/** The call starting at `events[at]`, read from it and what follows it in `events`. */
+function readCall(room: Room, events: readonly MatrixEvent[], at: number, ctx: RoomContext): Call {
+    const { me, network, group, bots } = ctx;
+    const event = events[at];
+    const fromBot = bots.has(event.getSender() ?? "");
+    const userId = event.getSender() ?? "";
+    const member = fromBot ? null : room.getMember(userId);
+    const callId = event.getContent().call_id;
+
+    /*
+     * The rest of the call is whatever follows the invite, so it is read forwards from here: an answer
+     * makes it answered, a hangup says how it ended, and their timestamps are the only source for how
+     * long it lasted. Matched on call_id where there is one, so two calls close together do not merge.
+     */
+    let answer: MatrixEvent | undefined;
+    let hangup: MatrixEvent | undefined;
+    for (let then = at + 1; then < events.length; then++) {
+        const later = events[then];
+        const type = later.getType();
+        if (callId && later.getContent().call_id && later.getContent().call_id !== callId) continue;
+        if (type === EventType.CallAnswer) answer ??= later;
+        if (type === EventType.CallHangup || type === EventType.CallReject) {
+            hangup = later;
+            break;
+        }
+        // Another call starting ends what can be said about this one.
+        if (startsCall(later)) break;
+    }
+
+    /*
+     * A group call is joined rather than answered, and declined out loud: MatrixRTC records the
+     * reader's own membership when they join and an `rtc.decline` when they turn it down, so those
+     * are what "answered" and "declined" mean for one.
+     */
+    let declined = false;
+    let joined = false;
+    if (event.getType() === EventType.RTCNotification) {
+        for (let then = at + 1; then < events.length; then++) {
+            const later = events[then];
+            if (startsCall(later)) break;
+            if (later.getSender() !== me) continue;
+            if (later.getType() === EventType.RTCDecline) declined = true;
+            if (later.getType() === EventType.RTCMembership) joined = true;
+        }
+    }
+
+    const answered = !!answer || joined;
+    return {
+        eventId: event.getId()!,
+        roomId: room.roomId,
+        userId,
+        name: fromBot ? room.name : (member?.rawDisplayName ?? userId),
+        avatarUrl: member?.getMxcAvatarUrl() ?? undefined,
+        network,
+        ts: event.getTs(),
+        outgoing: userId === me,
+        video: !!event.getContent().offer?.sdp?.includes("m=video") || getActionMessage(event)?.call_type === "video",
+        outcome: declined ? "declined" : outcomeOf(hangup, answered),
+        group,
+        // A line the bridge had to send as its bot names nobody: the chat is who it was with.
+        title: group || fromBot ? room.name : (member?.rawDisplayName ?? userId),
+        seconds: answer && hangup ? Math.max(0, Math.round((hangup.getTs() - answer.getTs()) / 1000)) : undefined,
+    };
+}
+
+/** The calls in one chat, newest first. */
+function callsIn(client: MatrixClient, room: Room): Call[] {
+    const events = room.getLiveTimeline().getEvents();
+    const from = Math.max(0, events.length - DEEPEST);
+    const ctx = roomContext(client, room);
     const calls: Call[] = [];
 
     for (let at = events.length - 1; at >= from; at--) {
@@ -128,66 +215,7 @@ function callsIn(client: MatrixClient, room: Room): Call[] {
          * invite) is the same call told twice: the call event, which knows who and how, is the one kept.
          */
         if (getActionMessage(event) && hasCallEventNear(events, at)) continue;
-        const fromBot = bots.has(event.getSender() ?? "");
-        const userId = event.getSender() ?? "";
-        const member = fromBot ? null : room.getMember(userId);
-        const callId = event.getContent().call_id;
-
-        /*
-         * The rest of the call is whatever follows the invite, so it is read forwards from here: an answer
-         * makes it answered, a hangup says how it ended, and their timestamps are the only source for how
-         * long it lasted. Matched on call_id where there is one, so two calls close together do not merge.
-         */
-        let answer: MatrixEvent | undefined;
-        let hangup: MatrixEvent | undefined;
-        for (let then = at + 1; then < events.length; then++) {
-            const later = events[then];
-            const type = later.getType();
-            if (callId && later.getContent().call_id && later.getContent().call_id !== callId) continue;
-            if (type === EventType.CallAnswer) answer ??= later;
-            if (type === EventType.CallHangup || type === EventType.CallReject) {
-                hangup = later;
-                break;
-            }
-            // Another call starting ends what can be said about this one.
-            if (startsCall(later)) break;
-        }
-
-        /*
-         * A group call is joined rather than answered, and declined out loud: MatrixRTC records the
-         * reader's own membership when they join and an `rtc.decline` when they turn it down, so those
-         * are what "answered" and "declined" mean for one.
-         */
-        let declined = false;
-        let joined = false;
-        if (event.getType() === EventType.RTCNotification) {
-            for (let then = at + 1; then < events.length; then++) {
-                const later = events[then];
-                if (startsCall(later)) break;
-                if (later.getSender() !== me) continue;
-                if (later.getType() === EventType.RTCDecline) declined = true;
-                if (later.getType() === EventType.RTCMembership) joined = true;
-            }
-        }
-
-        const answered = !!answer || joined;
-        calls.push({
-            eventId: event.getId()!,
-            roomId: room.roomId,
-            userId,
-            name: fromBot ? room.name : (member?.rawDisplayName ?? userId),
-            avatarUrl: member?.getMxcAvatarUrl() ?? undefined,
-            network,
-            ts: event.getTs(),
-            outgoing: userId === me,
-            video:
-                !!event.getContent().offer?.sdp?.includes("m=video") || getActionMessage(event)?.call_type === "video",
-            outcome: declined ? "declined" : outcomeOf(hangup, answered),
-            group,
-            // A line the bridge had to send as its bot names nobody: the chat is who it was with.
-            title: group || fromBot ? room.name : (member?.rawDisplayName ?? userId),
-            seconds: answer && hangup ? Math.max(0, Math.round((hangup.getTs() - answer.getTs()) / 1000)) : undefined,
-        });
+        calls.push(readCall(room, events, at, ctx));
     }
     return calls;
 }
@@ -199,6 +227,58 @@ export function callHistory(client: MatrixClient, { limit = 200 }: { limit?: num
         .flatMap((room) => callsIn(client, room))
         .sort((a, b) => b.ts - a.ts)
         .slice(0, limit);
+}
+
+const MEDIA_INDEX_FEATURE = "im.mxg.media_index";
+const MEDIA_INDEX_PREFIX = "/_matrix/client/unstable/im.mxg.media_index";
+
+/**
+ * Every call, from the homeserver's index (tuwunel's media index, kind `calls`) rather than from the loaded
+ * timelines, which reach back only a few hundred events per room and not at all into rooms not opened
+ * yet. One request, whatever the history behind it; undefined where the server keeps no such index.
+ *
+ * A call whose events are loaded here is read as `callHistory` reads it - answered or missed, how long -
+ * and one that is not is still listed, with what its own event says.
+ */
+export async function indexedCallHistory(
+    client: MatrixClient,
+    { limit = 200 }: { limit?: number } = {},
+): Promise<Call[] | undefined> {
+    try {
+        if (!(await client.doesServerSupportUnstableFeature(MEDIA_INDEX_FEATURE))) return undefined;
+        const res = await client.http.authedRequest<{ chunk: IRoomEvent[]; rooms: string[] }>(
+            Method.Get,
+            "/media",
+            { kind: "calls", limit: String(limit) },
+            undefined,
+            { prefix: MEDIA_INDEX_PREFIX },
+        );
+        const loaded = new Map(callHistory(client, { limit: Number.MAX_SAFE_INTEGER }).map((c) => [c.eventId, c]));
+        const mapper = client.getEventMapper();
+        const byRoom = new Map<string, MatrixEvent[]>();
+        res.chunk.forEach((raw, i) => {
+            const roomId = res.rooms[i];
+            if (!roomId) return;
+            const list = byRoom.get(roomId) ?? [];
+            list.push(mapper({ ...raw, room_id: roomId }));
+            byRoom.set(roomId, list);
+        });
+        const calls: Call[] = [];
+        for (const [roomId, found] of byRoom) {
+            const room = client.getRoom(roomId);
+            if (!room) continue;
+            // Oldest first, as a timeline is, so a bridge's line can be matched to the call beside it.
+            const events = [...found].sort((a, b) => a.getTs() - b.getTs());
+            const ctx = roomContext(client, room);
+            events.forEach((event, at) => {
+                if (event.isRedacted() || (getActionMessage(event) && hasCallEventNear(events, at))) return;
+                calls.push(loaded.get(event.getId()!) ?? readCall(room, [event], 0, ctx));
+            });
+        }
+        return calls.sort((a, b) => b.ts - a.ts).slice(0, limit);
+    } catch {
+        return undefined;
+    }
 }
 
 /** The calls nobody answered, which is the list people actually open a call list for. */
