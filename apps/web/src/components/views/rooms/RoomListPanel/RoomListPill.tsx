@@ -41,6 +41,7 @@ import { setSearchOpen, setSearchQuery, usePanelSearch } from "../../../../utils
 import defaultDispatcher from "../../../../dispatcher/dispatcher";
 import { Action } from "../../../../dispatcher/actions";
 import { setAddingContact, useAddingContact } from "../../../../utils/contacts/adding";
+import { type BarAction, useBarActions } from "../../../../utils/roomListBarActions";
 
 function Entry({
     Icon,
@@ -70,10 +71,43 @@ function Entry({
     );
 }
 
+/** One of a screen's own two answers, in place of search or add; it grows out of the island it replaces. */
+function ActionIsland({
+    action,
+    side,
+    hidden,
+}: {
+    action: BarAction;
+    side: "start" | "end";
+    hidden: boolean;
+}): JSX.Element {
+    return (
+        <button
+            type="button"
+            className={`mx_RoomListPill_island mx_RoomListPill_action mx_RoomListPill_action_${side}`}
+            data-primary={action.primary || undefined}
+            data-hidden={hidden || undefined}
+            inert={hidden || undefined}
+            onClick={action.onClick}
+        >
+            {action.label}
+        </button>
+    );
+}
+
 export function RoomListPill({ canSearch = true }: { canSearch?: boolean }): JSX.Element {
     const view = useRoomListPanelView();
     const { open, query } = usePanelSearch();
     const adding = useAddingContact();
+    /* A screen over the column can put its own two answers in the islands (roomListBarActions.ts). */
+    const actions = useBarActions();
+    /*
+     * The islands swap by transition, both kept in the same place: the last actions stay rendered while they
+     * fade back into search and add, so going back animates as well as coming in.
+     */
+    const lastActions = useRef(actions);
+    if (actions) lastActions.current = actions;
+    const shownActions = actions ?? lastActions.current;
     const go = (next: RoomListPanelView) => (): void => setRoomListPanelView(next);
     /*
      * The mark on the current entry travels to it, as the shared media strip's does: a selection that
@@ -94,9 +128,17 @@ export function RoomListPill({ canSearch = true }: { canSearch?: boolean }): JSX
     };
 
     return (
-        <div className="mx_RoomListPill_bar" data-searching={open || undefined}>
+        <div
+            className="mx_RoomListPill_bar"
+            data-searching={open || undefined}
+            data-actions={actions ? true : undefined}
+        >
             {canSearch && (
-                <div className="mx_RoomListPill_island mx_RoomListPill_find">
+                <div
+                    className="mx_RoomListPill_island mx_RoomListPill_find"
+                    data-hidden={actions ? true : undefined}
+                    inert={actions ? true : undefined}
+                >
                     <button
                         type="button"
                         // Where keyboard landmark navigation (Ctrl+F6) takes you for "search the room list".
@@ -134,8 +176,13 @@ export function RoomListPill({ canSearch = true }: { canSearch?: boolean }): JSX
                     )}
                 </div>
             )}
+            {shownActions && <ActionIsland action={shownActions.start} side="start" hidden={!actions} />}
 
-            <nav className="mx_RoomListPill" aria-label={_t("room_list|pill_label")} inert={open || undefined}>
+            <nav
+                className="mx_RoomListPill"
+                aria-label={_t("room_list|pill_label")}
+                inert={open || !!actions || undefined}
+            >
                 {style && <span className="mx_RoomListPill_selection" style={style} aria-hidden />}
                 <Entry
                     Icon={ChatIcon}
@@ -166,11 +213,14 @@ export function RoomListPill({ canSearch = true }: { canSearch?: boolean }): JSX
                     type="button"
                     className="mx_RoomListPill_island mx_RoomListPill_add"
                     aria-label={_t("contacts|add_contact")}
+                    data-hidden={actions ? true : undefined}
+                    inert={actions ? true : undefined}
                     onClick={() => setAddingContact(true)}
                 >
                     <PlusIcon width="22" height="22" aria-hidden />
                 </button>
             )}
+            {shownActions && <ActionIsland action={shownActions.end} side="end" hidden={!actions} />}
         </div>
     );
 }

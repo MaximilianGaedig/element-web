@@ -83,6 +83,7 @@ import { ContactEditor } from "./ContactEditor";
 import { type Discovered, discoverOnMatrix, lookupQuery } from "../../../utils/contacts/discover";
 import { deleteRevision, forgetHistory, historyFor, recordRevision } from "../../../utils/contacts/history";
 import { setAddingContact, useAddingContact } from "../../../utils/contacts/adding";
+import { setBarActions } from "../../../utils/roomListBarActions";
 import { ringtoneOf, setRingtone, setTextTone, textToneOf, uploadTone } from "../../../utils/contacts/tones";
 import {
     cardForExport,
@@ -1441,7 +1442,37 @@ export function ContactsView({ tab, onFinished }: Props): JSX.Element {
      * far down the reader had scrolled are the work in progress, and both were lost the moment looking at
      * somebody replaced the screen holding them.
      */
-    const suggestions = state?.suggestions ?? [];
+    const suggestions = useMemo(() => state?.suggestions ?? [], [state]);
+
+    /*
+     * The screen's two answers sit in the bar's islands at the foot of the column, where search and add are
+     * otherwise, rather than in a row of their own above it: the way out at the start, the thing to do at the
+     * end. Cleared as the screen starts to leave, so the islands turn back while it slides out.
+     */
+    useEffect(() => {
+        if (!reviewing || reviewLeaving || !suggestions.length) {
+            setBarActions(undefined);
+            return;
+        }
+        setBarActions({
+            start: {
+                label: _t("contacts|ignore_all"),
+                onClick: () => {
+                    for (const suggestion of suggestions) dismiss(suggestion);
+                    closeReview();
+                },
+            },
+            end: {
+                label: _t("contacts|merge_all"),
+                primary: true,
+                onClick: () => {
+                    for (const suggestion of suggestions) merge(suggestion, accountsOf(suggestion.people));
+                    closeReview();
+                },
+            },
+        });
+    }, [reviewing, reviewLeaving, suggestions, dismiss, merge, closeReview]);
+    useEffect(() => () => setBarActions(undefined), []);
     const duplicates = reviewShown ? (
         <div ref={reviewRef} className="mx_Contacts_layer" data-leaving={reviewLeaving || undefined}>
             <div className="mx_ContactsView_header">
@@ -1464,31 +1495,6 @@ export function ContactsView({ tab, onFinished }: Props): JSX.Element {
                     />
                 ))}
             </div>
-            {!!suggestions.length && (
-                <div className="mx_Contacts_reviewActions">
-                    {/* The way out on the left and the thing to do on the right, as a dialog puts them. */}
-                    <Button
-                        kind="tertiary"
-                        size="lg"
-                        onClick={() => {
-                            for (const suggestion of suggestions) dismiss(suggestion);
-                            closeReview();
-                        }}
-                    >
-                        {_t("contacts|ignore_all")}
-                    </Button>
-                    <Button
-                        kind="primary"
-                        size="lg"
-                        onClick={() => {
-                            for (const suggestion of suggestions) merge(suggestion, accountsOf(suggestion.people));
-                            closeReview();
-                        }}
-                    >
-                        {_t("contacts|merge_all")}
-                    </Button>
-                </div>
-            )}
         </div>
     ) : null;
 

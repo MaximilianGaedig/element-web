@@ -18,11 +18,13 @@ import { clearSearch, panelSearch } from "../../../../utils/panelSearch";
 import defaultDispatcher from "../../../../dispatcher/dispatcher";
 import { Action } from "../../../../dispatcher/actions";
 import { isAddingContact, setAddingContact } from "../../../../utils/contacts/adding";
+import { setBarActions } from "../../../../utils/roomListBarActions";
 
 afterEach(() => {
     setRoomListPanelView("rooms");
     clearSearch();
     setAddingContact(false);
+    act(() => setBarActions(undefined));
     vi.restoreAllMocks();
 });
 
@@ -104,6 +106,32 @@ describe("RoomListPill", () => {
         expect(order[0]).toContain("mx_RoomListPill_find");
         expect(order[1]).toContain("mx_RoomListPill");
         expect(order[2]).toContain("mx_RoomListPill_add");
+    });
+
+    /* The duplicates' two answers take the islands' places while that screen is up, and give them back. */
+    it("puts a screen's own actions where search and add are, and restores them", async () => {
+        setRoomListPanelView("contacts");
+        render(<RoomListPill />);
+        const ignore = vi.fn();
+        const merge = vi.fn();
+        act(() =>
+            setBarActions({
+                start: { label: "Ignore all", onClick: ignore },
+                end: { label: "Merge all", onClick: merge, primary: true },
+            }),
+        );
+
+        await userEvent.click(screen.getByRole("button", { name: "Merge all" }));
+        await userEvent.click(screen.getByRole("button", { name: "Ignore all" }));
+        expect(merge).toHaveBeenCalled();
+        expect(ignore).toHaveBeenCalled();
+        // Still rendered, so they can animate back, but out of reach while hidden.
+        expect(document.querySelector(".mx_RoomListPill_find")).toHaveAttribute("inert");
+        expect(document.querySelector(".mx_RoomListPill_add")).toHaveAttribute("inert");
+
+        act(() => setBarActions(undefined));
+        expect(document.querySelector(".mx_RoomListPill_find")).not.toHaveAttribute("inert");
+        expect(document.querySelector(".mx_RoomListPill_action_end")).toHaveAttribute("data-hidden");
     });
 
     it("can leave search out entirely", () => {
