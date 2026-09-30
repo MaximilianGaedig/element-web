@@ -54,6 +54,42 @@ describe("sharedMediaTab", () => {
         expect(isVoice({ "org.matrix.msc1767.audio": { duration: 3000 } })).toBe(false);
     });
 
+    it("leaves out mentions and forward headers, which link to a person or a room", () => {
+        const mention = msg({
+            msgtype: "m.text",
+            body: "Ana: hi",
+            format: "org.matrix.custom.html",
+            formatted_body: '<a href="https://matrix.to/#/@ana:x">Ana</a>: hi',
+        });
+        expect(extractLinks(mention)).toEqual([]);
+        expect(sharedMediaTab(mention)).toBeUndefined();
+        const forward = msg({
+            msgtype: "m.text",
+            body: "Forwarded message from News\n> read https://example.org/story",
+            format: "org.matrix.custom.html",
+            formatted_body:
+                'Forwarded message from <a href="https://matrix.to/#/%23news:x">News</a><br>' +
+                '<blockquote data-telegram-forward>read <a href="https://example.org/story">https://example.org/story</a></blockquote>',
+        });
+        // The link the forwarded message carries is still one.
+        expect(extractLinks(forward)).toEqual(["https://example.org/story"]);
+        // A link to a message is something somebody shared.
+        expect(extractLinks(msg({ msgtype: "m.text", body: "see https://matrix.to/#/!r:x/$ev" }))).toHaveLength(1);
+    });
+
+    it("leaves out the links of the message a reply quotes", () => {
+        const reply = msg({
+            "msgtype": "m.text",
+            "body": "> <@b:x> look https://example.org/quoted\n\nnice",
+            "format": "org.matrix.custom.html",
+            "formatted_body":
+                '<mx-reply><blockquote><a href="https://matrix.to/#/!r:x/$q">In reply to</a> ' +
+                '<a href="https://matrix.to/#/@b:x">@b:x</a><br>look https://example.org/quoted</blockquote></mx-reply>nice',
+            "m.relates_to": { "m.in_reply_to": { event_id: "$q" } },
+        });
+        expect(extractLinks(reply)).toEqual([]);
+    });
+
     it("extracts links without trailing punctuation", () => {
         expect(extractLinks(msg({ msgtype: "m.text", body: "a (https://example.org/p?q=1), b http://x.io." }))).toEqual(
             ["https://example.org/p?q=1", "http://x.io/"],

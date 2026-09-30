@@ -20,6 +20,8 @@ import * as utils from "matrix-js-sdk/src/utils";
 import { logger } from "matrix-js-sdk/src/logger";
 
 import { isAnimatedSticker } from "./bridge/animatedMedia";
+import { parsePermalink } from "./permalinks/Permalinks";
+import { stripPlainReply } from "./Reply";
 import { getPerMessageProfile } from "./bridge/perMessageProfile";
 import { getRoomHistoryState, mediaPage, setRoomHistoryState } from "./history/db";
 import { historyIndexer } from "./history/indexer";
@@ -62,17 +64,34 @@ export function isVoice(content: Record<string, any>): boolean {
     return ["org.matrix.msc3245.voice", "org.matrix.msc2516.voice", "m.voice"].some((key) => key in content);
 }
 
+/**
+ * A link to a person or a room: what a mention pill is, and what bridges put in a "Forwarded from"
+ * header. tweb keeps those out of the Links tab (a mention is its own entity, and the forward header
+ * isn't part of the text); a link to a message is still a link somebody shared.
+ */
+function isPillLink(url: string): boolean {
+    const parts = parsePermalink(url);
+    return !!parts && !parts.eventId && !!(parts.userId || parts.roomIdOrAlias);
+}
+
 /** The URLs in a text message, as tweb's inputMessagesFilterUrl matches them (links in the text). */
 export function extractLinks(event: MatrixEvent): string[] {
     if (event.getType() !== EventType.RoomMessage || event.isRedacted()) return [];
     const content = event.getContent();
     if (![MsgType.Text, MsgType.Notice, MsgType.Emote].includes(content.msgtype as MsgType)) return [];
-    const texts = [content.body, content.formatted_body].filter((t): t is string => typeof t === "string");
+    // A reply's fallback quotes the message it replies to, links and all; those are that message's.
+    const texts = [
+        typeof content.body === "string" ? stripPlainReply(content.body) : undefined,
+        typeof content.formatted_body === "string"
+            ? content.formatted_body.replace(/<mx-reply>[\s\S]*?<\/mx-reply>/gi, "")
+            : undefined,
+    ].filter((t): t is string => t !== undefined);
     const found = new Set<string>();
     for (const text of texts) {
         for (const match of text.matchAll(URL_RE)) {
             try {
-                found.add(new URL(match[0].replace(/&amp;/g, "&")).toString());
+                const url = new URL(match[0].replace(/&amp;/g, "&")).toString();
+                if (!isPillLink(url)) found.add(url);
             } catch {
                 // not a URL after all
             }
