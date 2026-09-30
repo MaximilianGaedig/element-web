@@ -16,6 +16,7 @@ import MatrixClientContext from "../../../contexts/MatrixClientContext";
 import { bridgeHealthOf } from "../../../utils/bridgeLogins";
 import { onBridgeStatusChange } from "../../../utils/chatHistory";
 import { deleteFailed, resendFailed, useFailedSends } from "../../../utils/room/failedSends";
+import { useReadByOthers } from "../../../utils/telegram/readByOthers";
 
 /**
  * Whether this event's room comes through a bridge that says it is not connected.
@@ -69,6 +70,8 @@ export default function TelegramTimeSlot({
     // Anything of yours about this message that failed - the message, an edit, its deletion, a
     // reaction, a thread reply - puts Telegram's "!" on it, on others' messages too (a reaction).
     const failed = useFailedSends(mxEvent, room);
+    // Worked out here, from the room, so it holds in the new timeline too, which never passed it in.
+    const readFromRoom = useReadByOthers(room, mxEvent, isOwnEvent && !readByOthers);
     const sendState =
         failed.length > 0
             ? "error"
@@ -77,7 +80,7 @@ export default function TelegramTimeSlot({
                     eventSendStatus,
                     bridgeStatus: bridgeStatus?.status,
                     bridgeDelivered: !!bridgeStatus?.delivered_to_users?.length,
-                    readByOthers,
+                    readByOthers: readByOthers || readFromRoom,
                     bridgeDown,
                 })
               : undefined;
