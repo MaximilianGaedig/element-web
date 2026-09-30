@@ -414,6 +414,12 @@ Please see LICENSE files in the repository root for full details.
         position: relative;
         display: flex;
         align-items: stretch;
+        /*
+         * The rest of the column, and only the rest: sized by its content, a list of hundreds made
+         * everything above it share the shortfall in proportion to its size, and the tags - which scroll
+         * sideways, so they have no minimum height - were squeezed until their chips were cut off.
+         */
+        flex: 1;
         min-height: 0;
 
         .mx_Contacts_list {
@@ -1205,6 +1211,8 @@ Please see LICENSE files in the repository root for full details.
     padding: var(--cpd-space-1x) var(--mx-contacts-gutter) var(--cpd-space-3x);
     overflow-x: auto;
     scrollbar-width: none;
+    /* Scrolling sideways takes away its minimum height, so it must be told not to give any up. */
+    flex-shrink: 0;
 
     > * {
         flex-shrink: 0;
