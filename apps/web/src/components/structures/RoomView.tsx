@@ -55,7 +55,7 @@ import {
 } from "@element-hq/web-shared-components";
 
 import shouldHideEvent from "../../shouldHideEvent";
-import { bubbleTimelineEnabled, telegramTicksShown } from "../../utils/telegram/telegramLayout";
+import { bubbleTimelineEnabled } from "../../utils/telegram/telegramLayout";
 import { reactionsBlockedReason } from "../../utils/bridge/roomFeatures";
 import { _t } from "../../languageHandler";
 import * as TimezoneHandler from "../../TimezoneHandler";
@@ -410,25 +410,15 @@ function LocalRoomCreateLoader(props: ILocalRoomCreateLoaderProps): ReactElement
 function RoomStatusBarWrappedView(props: ConstructorParameters<typeof RoomStatusBarViewModel>[0]): ReactElement | null {
     const vm = useCreateAutoDisposedViewModel(() => new RoomStatusBarViewModel(props));
     /*
-     * Fork: the Telegram layout carries both of these elsewhere, like tweb - a failed bubble shows the
-     * red error status and offers Resend / Delete from its menu, and the connection state shows in the
-     * chat list's search field. So the banner is dropped, but only where its replacement is on screen.
-     *
-     * The ticks need more than the setting: bubbles, the bubble layout, and either the ticks receipt
-     * style or a one-to-one chat. Suppressing on the setting alone left a failed message with no error
-     * and no banner in any group chat on the default "avatars" style, which is to say most of them.
+     * Fork: the connection state shows in the chat list's header, like tweb, so that banner is dropped
+     * in the bubble layout. The unsent-messages banner is always shown: a failed bubble also offers Resend /
+     * Delete from its menu, but that is easy to miss, and messages that did not go out are the reader's to
+     * send again or throw away - the banner is where they are told and asked.
      */
     const shows = (): boolean => {
         const { state } = vm.getSnapshot();
         if (state === null) return false;
-        if (state === RoomStatusBarState.UnsentMessages) {
-            return !telegramTicksShown({
-                room: props.room,
-                layout: SettingsStore.getValue("layout"),
-                bubbles: bubbleTimelineEnabled(),
-                readReceiptsStyle: SettingsStore.getValue("readReceiptsStyle"),
-            });
-        }
+        if (state === RoomStatusBarState.UnsentMessages) return true;
         return !(state === RoomStatusBarState.ConnectionLost && bubbleTimelineEnabled());
     };
     const shown = useSyncExternalStore(

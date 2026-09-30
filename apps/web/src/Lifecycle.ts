@@ -1080,7 +1080,7 @@ async function startMatrixClient(
     if (!SettingsStore.getValue("lowBandwidth")) {
         void Presence.start();
     }
-    // Messages that did not go out are sent again when the connection is back (unsentResender.ts).
+    // A message just written is sent even when older ones in the room did not go out (unsentResender.ts).
     UnsentResender.start(client);
 
     // Simplified sliding sync delivers no presence: run a presence-only /sync long-poll beside it,
