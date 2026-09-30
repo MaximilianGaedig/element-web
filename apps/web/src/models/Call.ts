@@ -1131,6 +1131,11 @@ export class ElementCall extends Call {
         // (whether the widget asked to close or its messaging just stopped),
         // so the call would linger and its timeline tile stay "in progress"
         if (this.presented) this.presented = false;
+        // A voice call is made persistent so it can float in PiP, and only destroy() undid that - which
+        // waits for the session to empty. In a bridged room the other network's people stay in the session
+        // after we leave, so Element Call stayed alive out of sight, holding the camera and microphone,
+        // and the next call could not turn the camera on. We are done with it: let it be torn down.
+        ActiveWidgetStore.instance.destroyPersistentWidget(this.widget.id, this.widget.roomId);
     }
 
     private destroyed = false;

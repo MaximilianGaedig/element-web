@@ -927,6 +927,21 @@ describe("ElementCall", () => {
             expect(onDestroy).toHaveBeenCalledTimes(1);
         });
 
+        it("lets a persistent call be torn down when it closes, even while others stay in it", async () => {
+            // A voice call floats in PiP, so it is made persistent. In a bridged room the other network's
+            // people stay in the session after we leave, so the call is not destroyed - and the persistent
+            // widget kept Element Call alive out of sight, holding the camera for the next call.
+            await connect(call, widgetApi);
+            ActiveWidgetStore.instance.setWidgetPersistence(widget.id, room.roomId, true);
+            call.session.memberships = [{ sender: alice.userId, deviceId: "alices_device" } as CallMembership];
+
+            widgetApi.emit(`action:${ElementWidgetActions.HangupCall}`, new CustomEvent("widgetapirequest", {}));
+            widgetApi.emit(`action:${ElementWidgetActions.Close}`, new CustomEvent("widgetapirequest", {}));
+            await waitFor(() => expect(call.connectionState).toBe(ConnectionState.Disconnected), { interval: 5 });
+
+            expect(ActiveWidgetStore.instance.getWidgetPersistence(widget.id, room.roomId)).toBe(false);
+        });
+
         it("stops presenting the call when its widget's messaging stops", async () => {
             // The widget drops always_on_screen before it sends close, which
             // ends its messaging first: the close action never arrives
