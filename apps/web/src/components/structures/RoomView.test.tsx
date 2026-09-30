@@ -49,7 +49,9 @@ import { MatrixClientPeg } from "../../MatrixClientPeg";
 import { Action } from "../../dispatcher/actions";
 import defaultDispatcher from "../../dispatcher/dispatcher";
 import { type ViewRoomPayload } from "../../dispatcher/payloads/ViewRoomPayload";
-import { RoomView } from "./RoomView";
+import { RoomStatusBarState } from "@element-hq/web-shared-components";
+
+import { RoomView, statusBarShows } from "./RoomView";
 import SettingsStore from "../../settings/SettingsStore";
 import { SettingLevel } from "../../settings/SettingLevel";
 import DMRoomMap from "../../utils/DMRoomMap";
@@ -1436,5 +1438,22 @@ describe("RoomView", () => {
                 room_id: room2.roomId,
             }),
         );
+    });
+});
+
+// Telegram-style bubbles show neither banner: the chat list header has the connection state, and a failed
+// send puts a red "!" on its message instead (TelegramTimeSlot).
+describe("statusBarShows", () => {
+    it("drops the unsent and connection banners in the bubble layout only", () => {
+        expect(statusBarShows(RoomStatusBarState.UnsentMessages, true)).toBe(false);
+        expect(statusBarShows(RoomStatusBarState.ConnectionLost, true)).toBe(false);
+        expect(statusBarShows(RoomStatusBarState.UnsentMessages, false)).toBe(true);
+        expect(statusBarShows(RoomStatusBarState.ConnectionLost, false)).toBe(true);
+    });
+
+    it("keeps the banners that need the user either way", () => {
+        expect(statusBarShows(RoomStatusBarState.NeedsConsent, true)).toBe(true);
+        expect(statusBarShows(RoomStatusBarState.ResourceLimited, true)).toBe(true);
+        expect(statusBarShows(null, false)).toBe(false);
     });
 });

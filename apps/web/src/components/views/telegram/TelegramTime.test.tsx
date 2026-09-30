@@ -7,9 +7,10 @@ Please see LICENSE files in the repository root for full details.
 
 // @vitest-environment happy-dom
 
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import React from "react";
-import { render } from "test-utils-rtl";
+import { render, screen } from "test-utils-rtl";
+import userEvent from "@testing-library/user-event";
 
 import TelegramTime from "./TelegramTime";
 
@@ -44,5 +45,30 @@ describe("<TelegramTime />", () => {
         const { container } = render(<TelegramTime timestamp="12:34" placement="floating" />);
         expect(container.querySelector(".mx_TelegramTime")).toHaveClass("mx_TelegramTime_floating");
         expect(container.querySelector(".mx_TelegramTime_status")).toBeNull();
+    });
+
+    // Telegram has no banner for unsent messages: the "!" on the message offers to resend or delete it.
+    it("offers resend and delete from a failed send's mark", async () => {
+        const resend = vi.fn();
+        const del = vi.fn();
+        const { container } = render(
+            <TelegramTime timestamp="12:34" sendState="error" placement="inline" onFailed={{ resend, delete: del }} />,
+        );
+        const mark = container.querySelector("button.mx_TelegramTime_status")!;
+        expect(mark).toHaveAttribute("data-state", "error");
+
+        await userEvent.click(mark);
+        await userEvent.click(await screen.findByRole("menuitem", { name: "Resend" }));
+        expect(resend).toHaveBeenCalledTimes(1);
+
+        await userEvent.click(mark);
+        await userEvent.click(await screen.findByRole("menuitem", { name: "Delete" }));
+        expect(del).toHaveBeenCalledTimes(1);
+    });
+
+    it("keeps a plain mark when there is nothing to offer", () => {
+        const { container } = render(<TelegramTime timestamp="12:34" sendState="error" placement="inline" />);
+        expect(container.querySelector("button")).toBeNull();
+        expect(container.querySelector(".mx_TelegramTime_status")).toHaveAttribute("data-state", "error");
     });
 });

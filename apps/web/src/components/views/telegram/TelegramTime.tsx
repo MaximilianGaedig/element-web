@@ -16,8 +16,11 @@ Please see LICENSE files in the repository root for full details.
  * floated pseudo-element whose width we measure from this element (--TgTime-width on the line).
  */
 
-import React, { type JSX, type ReactNode, useLayoutEffect, useRef } from "react";
+import React, { type JSX, type ReactNode, useLayoutEffect, useRef, useState } from "react";
 import classNames from "classnames";
+import { Menu, MenuItem } from "@vector-im/compound-web";
+import RestartIcon from "@vector-im/compound-design-tokens/assets/web/icons/restart";
+import DeleteIcon from "@vector-im/compound-design-tokens/assets/web/icons/delete";
 
 import { _t } from "../../../languageHandler";
 import { type TelegramSendState, type TelegramTimePlacement } from "../../../utils/telegram/telegramTime";
@@ -31,6 +34,43 @@ interface Props {
     placement: TelegramTimePlacement;
     /** Extra time parts shown before the time (tweb's `.time-part`s), e.g. the disappearing timer. */
     parts?: ReactNode;
+    /** What tapping a failed send's "!" offers, as Telegram's apps do: send it again, or drop it. */
+    onFailed?: FailedActions;
+}
+
+export interface FailedActions {
+    resend: () => void;
+    delete: () => void;
+}
+
+/** The failed status, as a button opening Telegram's resend / delete choice. */
+function FailedStatusMenu({ actions }: { actions: FailedActions }): JSX.Element {
+    const [open, setOpen] = useState(false);
+    const label = statusLabel("error");
+    return (
+        <Menu
+            open={open}
+            onOpenChange={setOpen}
+            title={label}
+            showTitle={false}
+            side="top"
+            align="end"
+            trigger={
+                <button
+                    type="button"
+                    className="mx_TelegramTime_status mx_TelegramTime_failedButton"
+                    data-state="error"
+                    aria-label={label}
+                    title={label}
+                >
+                    <TgSendingErrorIcon />
+                </button>
+            }
+        >
+            <MenuItem Icon={RestartIcon} label={_t("action|resend")} onSelect={actions.resend} />
+            <MenuItem Icon={DeleteIcon} label={_t("action|delete")} kind="critical" onSelect={actions.delete} />
+        </Menu>
+    );
 }
 
 function statusLabel(state: TelegramSendState): string {
@@ -97,7 +137,7 @@ function useReserveWidth(ref: React.RefObject<HTMLElement | null>): void {
     }, [ref]);
 }
 
-export default function TelegramTime({ timestamp, sendState, placement, parts }: Props): JSX.Element {
+export default function TelegramTime({ timestamp, sendState, placement, parts, onFailed }: Props): JSX.Element {
     const ref = useRef<HTMLSpanElement>(null);
     useReserveWidth(ref);
     return (
@@ -110,7 +150,11 @@ export default function TelegramTime({ timestamp, sendState, placement, parts }:
         >
             {parts}
             {timestamp}
-            {sendState && <TelegramSendStatusIcon state={sendState} />}
+            {sendState === "error" && onFailed ? (
+                <FailedStatusMenu actions={onFailed} />
+            ) : (
+                sendState && <TelegramSendStatusIcon state={sendState} />
+            )}
         </span>
     );
 }

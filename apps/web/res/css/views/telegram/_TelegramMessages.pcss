@@ -198,6 +198,19 @@ Please see LICENSE files in the repository root for full details.
     }
 }
 
+/* tweb's sendingerror: red on any bubble, since a failed reaction marks someone else's message too. */
+.mx_TelegramTime[data-send-state="error"] {
+    --TgTime-status-color: var(--cpd-color-icon-critical-primary);
+}
+
+/* The "!" is a button: tapping it offers resend or delete, as in Telegram's apps. */
+.mx_TelegramTime_failedButton {
+    padding: 0;
+    border: none;
+    background: none;
+    cursor: pointer;
+}
+
 /* tweb `.bubble.is-out`: time and ticks in the outgoing accent, the glyph nudged 2px outwards. */
 [data-bubble-timeline="true"] .mx_EventTile[data-testid="event-tile"].mx_EventTile_tgOwn {
     --TgTime-color: var(--cpd-color-text-success-primary);
@@ -215,10 +228,6 @@ Please see LICENSE files in the repository root for full details.
 
     .mx_TelegramTime {
         margin-inline-end: -2px;
-    }
-
-    .mx_TelegramTime[data-send-state="error"] {
-        --TgTime-status-color: var(--cpd-color-icon-critical-primary);
     }
 
     /* Delivered and read are both double ticks, so the colour is what tells them apart —

@@ -50,6 +50,7 @@ import { type RoomViewProps } from "@element-hq/element-web-module-api";
 import {
     EncryptionEventView,
     RoomStatusBarState,
+    type RoomStatusBarViewSnapshot,
     RoomStatusBarView,
     useCreateAutoDisposedViewModel,
 } from "@element-hq/web-shared-components";
@@ -407,20 +408,24 @@ function LocalRoomCreateLoader(props: ILocalRoomCreateLoaderProps): ReactElement
 /**
  * Wrap a RoomStatusBarView and ViewModel into one component, for usage with legacy React components.
  */
+/** Whether a status bar state is shown as a banner above the composer (see RoomStatusBarWrappedView). */
+export function statusBarShows(state: RoomStatusBarViewSnapshot["state"], bubbleTimeline: boolean): boolean {
+    if (state === null) return false;
+    if (state === RoomStatusBarState.UnsentMessages || state === RoomStatusBarState.ConnectionLost) {
+        return !bubbleTimeline;
+    }
+    return true;
+}
+
 function RoomStatusBarWrappedView(props: ConstructorParameters<typeof RoomStatusBarViewModel>[0]): ReactElement | null {
     const vm = useCreateAutoDisposedViewModel(() => new RoomStatusBarViewModel(props));
     /*
-     * Fork: the connection state shows in the chat list's header, like tweb, so that banner is dropped
-     * in the bubble layout. The unsent-messages banner is always shown: a failed bubble also offers Resend /
-     * Delete from its menu, but that is easy to miss, and messages that did not go out are the reader's to
-     * send again or throw away - the banner is where they are told and asked.
+     * Fork: in the bubble layout neither of these banners is shown, as in Telegram. The connection
+     * state is in the chat list's header, and an unsent message, edit, deletion or reaction puts a red
+     * "!" on the message it concerns (TelegramTimeSlot), which offers resend or delete, while the
+     * chat list marks the chat. Other layouts have no such mark and keep the unsent banner.
      */
-    const shows = (): boolean => {
-        const { state } = vm.getSnapshot();
-        if (state === null) return false;
-        if (state === RoomStatusBarState.UnsentMessages) return true;
-        return !(state === RoomStatusBarState.ConnectionLost && bubbleTimelineEnabled());
-    };
+    const shows = (): boolean => statusBarShows(vm.getSnapshot().state, bubbleTimelineEnabled());
     const shown = useSyncExternalStore(
         (cb) => vm.subscribe(cb),
         () => shows(),

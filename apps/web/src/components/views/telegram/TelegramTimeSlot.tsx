@@ -15,6 +15,7 @@ import { getTelegramSendState, getTelegramTimePlacement } from "../../../utils/t
 import MatrixClientContext from "../../../contexts/MatrixClientContext";
 import { bridgeHealthOf } from "../../../utils/bridgeLogins";
 import { onBridgeStatusChange } from "../../../utils/chatHistory";
+import { deleteFailed, resendFailed, useFailedSends } from "../../../utils/room/failedSends";
 
 /**
  * Whether this event's room comes through a bridge that says it is not connected.
@@ -63,19 +64,32 @@ export default function TelegramTimeSlot({
 }: Props): JSX.Element {
     const bridgeStatus = useMessageSendStatus(mxEvent);
     const bridgeDown = useBridgeDown(mxEvent);
-    const sendState = isOwnEvent
-        ? getTelegramSendState({
-              eventSendStatus,
-              bridgeStatus: bridgeStatus?.status,
-              bridgeDelivered: !!bridgeStatus?.delivered_to_users?.length,
-              readByOthers,
-              bridgeDown,
-          })
-        : undefined;
+    const client = useContext(MatrixClientContext);
+    const room = client?.getRoom(mxEvent.getRoomId());
+    // Anything of yours about this message that failed - the message, an edit, its deletion, a
+    // reaction, a thread reply - puts Telegram's "!" on it, on others' messages too (a reaction).
+    const failed = useFailedSends(mxEvent, room);
+    const sendState =
+        failed.length > 0
+            ? "error"
+            : isOwnEvent
+              ? getTelegramSendState({
+                    eventSendStatus,
+                    bridgeStatus: bridgeStatus?.status,
+                    bridgeDelivered: !!bridgeStatus?.delivered_to_users?.length,
+                    readByOthers,
+                    bridgeDown,
+                })
+              : undefined;
+    const onFailed =
+        room && failed.length > 0
+            ? { resend: () => resendFailed(room, failed), delete: () => deleteFailed(room, failed) }
+            : undefined;
     return (
         <TelegramTime
             timestamp={timestamp}
             sendState={sendState}
+            onFailed={onFailed}
             placement={getTelegramTimePlacement(mxEvent)}
             parts={<DisappearingMessageBadge mxEvent={mxEvent} onDisappeared={onDisappeared} />}
         />
