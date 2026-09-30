@@ -213,6 +213,13 @@ export function parseVCards(text: string): ContactCard[] {
                 break;
             case "X-PHONETIC-ORG":
                 break;
+            /* How it is said, which Apple keeps apart from how it sorts. */
+            case "X-PRONUNCIATION-FIRST-NAME":
+                held.pronunciationFirst = value;
+                break;
+            case "X-PRONUNCIATION-LAST-NAME":
+                held.pronunciationLast = value;
+                break;
             case "X-ABDATE":
                 pending.push({
                     group,
@@ -391,6 +398,8 @@ export function toVCard(card: ContactCard, extra: { photoUrl?: string } = {}): s
     if (card.phoneticMiddle) out.push(line("X-PHONETIC-MIDDLE-NAME", card.phoneticMiddle));
     if (card.phoneticLast) out.push(line("X-PHONETIC-LAST-NAME", card.phoneticLast));
     if (card.previousName) out.push(line("X-MAIDENNAME", card.previousName));
+    if (card.pronunciationFirst) out.push(line("X-PRONUNCIATION-FIRST-NAME", card.pronunciationFirst));
+    if (card.pronunciationLast) out.push(line("X-PRONUNCIATION-LAST-NAME", card.pronunciationLast));
     if (card.company || card.department) out.push(`ORG:${escape(card.company ?? "")};${escape(card.department ?? "")}`);
     if (card.jobTitle) out.push(line("TITLE", card.jobTitle));
     /* Groups are numbered across the whole card, because that is what makes each X-ABLabel find its value. */

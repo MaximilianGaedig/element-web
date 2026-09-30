@@ -69,6 +69,7 @@ import { ContactFace } from "./ContactFace";
 import { type Presence, personPresence, presenceNetwork } from "../../../utils/contacts/presence";
 import { type SharedRoom, askSharedRooms, callsWith, sharedRooms } from "../../../utils/contacts/shared";
 import { filingName, splitName } from "../../../utils/contacts/names";
+import { publishedCardOf } from "../../../utils/contacts/publish";
 import { type Verification, realAccounts, verificationOf, verify } from "../../../utils/contacts/verification";
 import { chosenColour, nameOrder, setColour, setNameOrder } from "../../../utils/contacts/appearance";
 import {
@@ -109,6 +110,7 @@ import { type ViewUserPayload } from "../../../dispatcher/payloads/ViewUserPaylo
 import Spinner from "../elements/Spinner";
 import { useLongPress } from "../../../hooks/useLongPress";
 import { useLeaving } from "../../../hooks/useLeaving";
+import { useSwipeBack } from "../../../hooks/useSwipeBack";
 import { useSlidingIndicator } from "../../../hooks/useSlidingIndicator";
 
 const AVATAR_SIZE = "32px";
@@ -489,8 +491,21 @@ function SuggestionCard({
      * network published neither - the account's own id is what the reader decides on, so that is what each
      * card shows.
      */
-    const tellApart = (account: Account): string =>
-        account.details?.[0]?.value ?? account.keys[0] ?? readKey(account.remoteId);
+    /*
+     * What tells one card from another, in the order of how much it helps.
+     *
+     * A published number or handle first, then whatever that network calls them when it differs from the
+     * name on the row. An internal id last and shortened: a Telegram account number or a full Matrix ID
+     * says nothing a reader can decide on, and printed in full it ran out of the row - so it is trimmed to
+     * the end, which is the part that differs, with the whole of it on hover.
+     */
+    const tellApart = (account: Account, person: Person): string => {
+        const published = account.details?.[0]?.value ?? (account.keys[0] ? readKey(account.keys[0]) : undefined);
+        if (published) return published;
+        if (account.name && account.name !== person.name) return account.name;
+        const id = account.mxid ? account.mxid.replace(/^@/, "").split(":")[0] : account.remoteId;
+        return id.length > 18 ? `…${id.slice(-14)}` : id;
+    };
 
     const toggle = (id: string): void =>
         setChosen((was) => {
@@ -603,7 +618,9 @@ function SuggestionCard({
                                     </span>
                                     <span className="mx_Contacts_rowText">
                                         <span className="mx_Contacts_name">{account.name || person.name}</span>
-                                        <span className="mx_Contacts_detail">{tellApart(account)}</span>
+                                        <span className="mx_Contacts_detail" title={tellApart(account, person)}>
+                                            {tellApart(account, person)}
+                                        </span>
                                     </span>
                                     <ChevronRightIcon width="20" height="20" aria-hidden />
                                 </button>
@@ -1260,6 +1277,8 @@ export function ContactsView({ tab, onFinished }: Props): JSX.Element {
      * moment the state clears - otherwise back has nothing to animate, because the thing that would have
      * animated is already gone.
      */
+    /* Dragged off the edge as well as pressed back, which is how a handheld goes back. */
+    const cardRef = useRef<HTMLDivElement>(null);
     const {
         render: cardShown,
         leaving: cardLeaving,
@@ -1268,6 +1287,8 @@ export function ContactsView({ tab, onFinished }: Props): JSX.Element {
         !!open,
         useCallback(() => setOpen(undefined), []),
     );
+
+    useSwipeBack(cardRef, closeCard, cardShown);
 
     const toggle = useCallback((person: Person): void => {
         setPicked((was) => {
@@ -1425,7 +1446,7 @@ export function ContactsView({ tab, onFinished }: Props): JSX.Element {
      */
     const card =
         cardShown && open ? (
-            <div className="mx_Contacts_layer" data-leaving={cardLeaving || undefined}>
+            <div ref={cardRef} className="mx_Contacts_layer" data-leaving={cardLeaving || undefined}>
                 <div className="mx_Contacts mx_ContactsView">
                     <ContactCard
                         person={open}
@@ -1456,7 +1477,7 @@ export function ContactsView({ tab, onFinished }: Props): JSX.Element {
                          * contact used to open a form with an empty first and last name beside their display
                          * name, which asks the reader to retype what is already on the screen.
                          */
-                        card={cardFor(client, open) ?? splitName(open.name)}
+                        card={cardFor(client, open) ?? publishedCardOf(open) ?? splitName(open.name)}
                         onCard={(next) => {
                             /*
                              * What it said before is kept first, then the change is written: a record taken

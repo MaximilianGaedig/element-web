@@ -87,3 +87,19 @@ export function cardFromProfile(profile: Record<string, unknown>): ContactCard {
         jobTitle: text(profile[PROFILE_KEYS.jobTitle]),
     };
 }
+
+/**
+ * What any of their accounts published about itself, if any of them published anything.
+ *
+ * Shown only where the reader has written nothing of their own: what they typed is theirs, and somebody
+ * editing their Matrix profile must not silently rewrite a card here.
+ */
+export function publishedCardOf(person: {
+    accounts: readonly { publishedCard?: ContactCard }[];
+}): ContactCard | undefined {
+    for (const account of person.accounts) {
+        const card = account.publishedCard;
+        if (card && (card.phones?.length || card.emails?.length || card.company || card.jobTitle)) return card;
+    }
+    return undefined;
+}

@@ -206,6 +206,8 @@ describe("round-tripping everything", () => {
         suffix: "PhD",
         nickname: "Ola",
         previousName: "Nowak",
+        pronunciationFirst: "ah-lek-SAN-dra",
+        pronunciationLast: "ko-VAL-chik",
         jobTitle: "Engineer",
         department: "Engineering",
         company: "Vector Ltd",

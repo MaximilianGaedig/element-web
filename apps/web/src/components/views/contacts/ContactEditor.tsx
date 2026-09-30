@@ -313,6 +313,16 @@ export function ContactEditor({ card, onSave, onCancel }: Props): JSX.Element {
                     value={draft.previousName}
                     onChange={text("previousName")}
                 />
+                <Field
+                    label={_t("contacts|pronunciation_first")}
+                    value={draft.pronunciationFirst}
+                    onChange={text("pronunciationFirst")}
+                />
+                <Field
+                    label={_t("contacts|pronunciation_last")}
+                    value={draft.pronunciationLast}
+                    onChange={text("pronunciationLast")}
+                />
             </Group>
 
             <Group title={_t("contacts|work")} filled={!!(draft.jobTitle || draft.department)}>

@@ -32,7 +32,8 @@ import { type BridgeLogin, type BridgePerson, askBridge, askEveryBridge, bridgeL
 import { getBridgeInfo, getBridgedDmUserId } from "../bridge/bridgeInfo";
 import { type ContactDetail, type IdentityKey, identityDetails, identityKeys } from "./identity";
 import DMRoomMap from "../DMRoomMap";
-import { allCards, fullName } from "./card";
+import { type ContactCard, allCards, fullName } from "./card";
+import { cardFromProfile } from "./publish";
 
 /** Where links the reader made by hand are kept, so they follow the account and not the browser. */
 export const LINKS_EVENT_TYPE = "im.mxg.contact_links";
@@ -70,6 +71,13 @@ export interface Account {
     login?: BridgeLogin;
     /** Whether the network's own contact list holds them, rather than only a chat existing. */
     saved?: boolean;
+    /**
+     * What this account published about itself on its Matrix profile.
+     *
+     * Shown where the reader has written nothing of their own: theirs always wins, because a profile
+     * changing must not overwrite what somebody typed.
+     */
+    publishedCard?: ContactCard;
 }
 
 /** One person, however many networks that turns out to be. */
@@ -169,6 +177,7 @@ async function contactsFromChats(client: MatrixClient, profiles: boolean): Promi
             keys: identityKeys(published.identifiers),
             details: identityDetails(published.identifiers),
             identifiers: published.identifiers,
+            publishedCard: published.published,
         };
     });
 }
@@ -183,6 +192,8 @@ interface ProfileFacts {
     identifiers: string[];
     network?: string;
     remoteId?: string;
+    /** What the account published about itself, where it published anything. */
+    published?: ContactCard;
 }
 
 const strings = (raw: unknown): string[] =>
@@ -214,6 +225,12 @@ async function profileFacts(client: MatrixClient, userId: string): Promise<Profi
             identifiers: strings(profile[IDENTIFIERS_KEY]),
             network: text(profile[NETWORK_KEY]),
             remoteId: text(profile[REMOTE_ID_KEY]),
+            /*
+             * What a Matrix account publishes about itself, read off the same profile: this client can
+             * publish a card to a profile, so it reads one back - otherwise the publishing half would only
+             * ever be seen by other software.
+             */
+            published: cardFromProfile(profile),
         }))
         // A ghost whose profile cannot be read is a person without published identifiers, not an error:
         // the list is built from several sources and one of them being quiet is ordinary.

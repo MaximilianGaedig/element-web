@@ -898,6 +898,8 @@
         "postcode": "Postcode",
         "prefix": "Prefix",
         "previous_name": "Previous name",
+        "pronunciation_first": "Pronunciation, first name",
+        "pronunciation_last": "Pronunciation, last name",
         "publish": "On your Matrix profile",
         "publish_company": "Company",
         "publish_email": "Email addresses",

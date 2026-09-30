@@ -90,6 +90,15 @@ export interface ContactCard {
     nickname?: string;
     /** Maiden name and the like, which vCard has no field for and iOS keeps as a previous family name. */
     previousName?: string;
+    /**
+     * How the name is said, as distinct from how it sorts.
+     *
+     * A phone keeps these apart on purpose: the phonetic fields decide filing and are written in the
+     * reading a script sorts by, while the pronunciation is what a voice assistant says out loud. Somebody
+     * whose name is spelled nothing like it sounds has a use for the second without wanting the first.
+     */
+    pronunciationFirst?: string;
+    pronunciationLast?: string;
 
     jobTitle?: string;
     department?: string;
