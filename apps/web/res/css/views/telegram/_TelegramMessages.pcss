@@ -439,3 +439,76 @@ Please see LICENSE files in the repository root for full details.
         border-end-end-radius: var(--tg-bubble-radius-join);
     }
 }
+
+/*
+ * Dates and "New" as pills, the way Telegram, WhatsApp and Beeper mark them: a small plate centred over the
+ * chat rather than a rule across it with the words in the gap.
+ *
+ * tweb's .bubble.service.is-date .service-msg (src/scss/partials/_chatBubble.scss): padding .28125rem
+ * .625rem, a .875rem corner, the service text size (the message size less 1px) at the bold weight, text
+ * centred. tweb paints it with --message-highlighting-color, which it averages out of the chat's
+ * wallpaper; there is no wallpaper here, so the plate is the same glass as the top bar it hangs under,
+ * which is what keeps it readable over bubbles of either colour as it floats.
+ *
+ * The same rules draw the floating date (mx_NewTimelinePanel_stickyDate, which is also a mx_TimelineDate),
+ * so the one pinned under the bar and the ones in the list are one pill.
+ */
+[data-bubble-timeline="true"] {
+    .mx_TimelineDate,
+    .mx_TimelineUnread {
+        justify-content: center;
+        margin-block: var(--cpd-space-2x);
+        background: none;
+        border: none;
+
+        > hr {
+            display: none;
+        }
+    }
+
+    /* The pill: the separator's label row, or the read marker's line-with-label turned into one. */
+    /* Doubled to outrank the floating date's own pill (_NewTimelinePanel.pcss), whatever the file order. */
+    .mx_TimelineDate.mx_TimelineDate > :not(hr),
+    .mx_TimelineUnread.mx_TimelineUnread > [role="separator"] {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--cpd-space-1x);
+        margin-inline: auto;
+        padding: 0.28125rem 0.625rem;
+        border: none;
+        border-radius: 0.875rem;
+        background: var(--tg-glass-background, var(--cpd-color-bg-subtle-secondary));
+        backdrop-filter: var(--tg-glass-backdrop, none);
+        box-shadow: var(--tg-topbar-box-shadow, none);
+        color: var(--cpd-color-text-primary);
+
+        h2,
+        span {
+            font: var(--cpd-font-body-sm-semibold);
+            /* tweb's --messages-service-text-size at the default 16px message size, and its line height. */
+            font-size: 15px;
+            font-weight: 500;
+            line-height: 20px;
+            letter-spacing: normal;
+            text-transform: none;
+            color: inherit;
+        }
+
+        /* The jump-to-date chevron only shows on hover, and inside the plate it would widen it. */
+        svg {
+            width: 14px;
+            height: 14px;
+        }
+    }
+
+    /* The read marker's own box is a row the width of the list; the plate sits in its middle. */
+    .mx_TimelineUnread {
+        display: flex;
+        height: auto;
+    }
+
+    /* The floating one had its own look (_NewTimelinePanel.pcss); it takes the pill's instead. */
+    .mx_NewTimelinePanel_stickyDate > div {
+        box-shadow: var(--tg-topbar-box-shadow, none);
+    }
+}

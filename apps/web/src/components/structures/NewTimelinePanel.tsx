@@ -78,7 +78,14 @@ function renderTimelineItem(item: TimelineItem, ctx: RenderItemContext): ReactNo
         case "date-separator":
             // The same view model as the old timeline, so the label and
             // jump-to-date menu behave identically in both.
-            return <DateSeparatorWrapper key={item.key} roomId={ctx.room.roomId} ts={item.ts} />;
+            return (
+                <DateSeparatorWrapper
+                    key={item.key}
+                    roomId={ctx.room.roomId}
+                    ts={item.ts}
+                    className="mx_TimelineDate"
+                />
+            );
         case "read-marker":
             // Rendered as a div because the timeline already puts each row in
             // its own list item.
@@ -88,6 +95,7 @@ function renderTimelineItem(item: TimelineItem, ctx: RenderItemContext): ReactNo
                     eventId={item.key}
                     kind="current"
                     as="div"
+                    className="mx_TimelineUnread"
                     label={_t("timeline|read_marker_new")}
                 />
             );
@@ -277,7 +285,7 @@ export function NewTimelinePanel({
                 roomId={room.roomId}
                 ts={ts}
                 labelOnly
-                className="mx_NewTimelinePanel_stickyDate"
+                className="mx_NewTimelinePanel_stickyDate mx_TimelineDate"
             />
         ),
         [room.roomId],
