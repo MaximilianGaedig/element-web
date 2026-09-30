@@ -5,10 +5,41 @@ SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only OR LicenseRef-Element-Com
 Please see LICENSE files in the repository root for full details.
 */
 
-import { EventTimeline, EventType, type MatrixEvent, type Room } from "matrix-js-sdk/src/matrix";
+import {
+    EventTimeline,
+    EventType,
+    M_POLL_START,
+    MsgType,
+    RelationType,
+    type MatrixEvent,
+    type Room,
+} from "matrix-js-sdk/src/matrix";
 
 import { EffectiveMembership, getEffectiveMembership } from "../../../../../utils/membership";
-import * as Unread from "../../../../../Unread";
+import { rememberActivity, rememberedActivity } from "./lastActivity";
+
+/*
+ * Fork: what counts as activity in a room is somebody saying something - not everything Element can draw a
+ * tile for. The unread rules count room name, topic and avatar changes too, and bridges send those whenever
+ * they re-sync a chat's details, which reshuffled the list while nobody was talking.
+ */
+const ACTIVITY_TYPES = new Set<string>([
+    EventType.RoomMessage,
+    EventType.RoomMessageEncrypted,
+    EventType.Sticker,
+    M_POLL_START.name,
+    M_POLL_START.altName,
+    EventType.CallInvite,
+    EventType.CallNotify,
+    EventType.RTCNotification,
+]);
+
+function isActivity(event: MatrixEvent): boolean {
+    if (!ACTIVITY_TYPES.has(event.getType()) || event.isRedacted()) return false;
+    // An edit changes something already said, and a notice is a bot talking, not a person.
+    if (event.getRelation()?.rel_type === RelationType.Replace) return false;
+    return event.getContent().msgtype !== MsgType.Notice;
+}
 
 function shouldCauseReorder(event: MatrixEvent): boolean {
     const type = event.getType();
@@ -57,21 +88,51 @@ export const getLastTimestamp = (r: Room, userId: string): number => {
             }
         }
 
-        for (let i = timeline.length - 1; i >= 0; --i) {
-            const ev = timeline[i];
-            if (!ev.getTs()) continue; // skip events that don't have timestamps (tests only?)
-
-            if (
-                (ev.getSender() === userId && shouldCauseReorder(ev)) ||
-                Unread.eventTriggersUnreadCount(r.client, ev)
-            ) {
-                return ev.getTs();
+        /*
+         * Fork: the newest thing in the room that counts, by time rather than by position. Bridges append
+         * backfilled history after what is already there, so the last counting event in the timeline can be
+         * years older than one before it; taking it made the room drop down the list while a bridge caught up
+         * on it, and jump back when something new arrived.
+         *
+         * The reader's own membership changes still count, but only in a room with no messages loaded: a
+         * bridge creating a portal for an old chat joins the reader to it, and that join is not activity in
+         * the chat - the messages it brings are.
+         */
+        let latest = 0;
+        let ownMembership = 0;
+        for (const ev of timeline) {
+            const ts = ev.getTs();
+            if (!ts) continue; // skip events that don't have timestamps (tests only?)
+            if (isActivity(ev)) {
+                latest = Math.max(latest, ts);
+            } else if (ev.getSender() === userId && ev.getType() === EventType.RoomMember && shouldCauseReorder(ev)) {
+                ownMembership = Math.max(ownMembership, ts);
             }
         }
 
-        // we might only have events that don't trigger the unread indicator,
-        // in which case use the oldest event even if normally it wouldn't count.
-        // This is better than just assuming the last event was forever ago.
+        /*
+         * What was seen before is a floor, not a fallback only: events older than it arriving later
+         * (backfill again) must not move the room down.
+         */
+        const remembered = rememberedActivity(r.roomId);
+        if (latest) {
+            rememberActivity(r.roomId, latest);
+            return Math.max(latest, remembered ?? 0);
+        }
+        if (remembered !== undefined) return remembered;
+        if (ownMembership) return ownMembership;
+
+        /*
+         * Fork: nothing loaded counts - only renames, bridge bookkeeping and the like. The room's last
+         * activity is older than all of it, so the oldest loaded event is a guess that is always too recent:
+         * a burst of ghost renames put rooms silent for years at the top. If there is history before this
+         * window, how old the room is is not known, and it goes to the bottom rather than above rooms that
+         * are known to be active.
+         */
+        if (r.getLiveTimeline().getPaginationToken(EventTimeline.BACKWARDS)) return 0;
+
+        // The whole room is loaded and nothing in it counts (a room just created, say): its own events are
+        // all there is to go by.
         return timeline[0]?.getTs() ?? 0;
     })();
 

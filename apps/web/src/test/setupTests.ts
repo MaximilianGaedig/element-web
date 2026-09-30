@@ -13,6 +13,7 @@ import { mockIntlDateTimeFormat } from "test-utils/date";
 import SdkConfig, { DEFAULTS } from "../SdkConfig";
 import "./setupGlobals.ts";
 import { setupLanguageMock } from "./setupLanguage.ts";
+import { forgetActivity } from "../stores/room-list-v3/skip-list/sorters/utils/lastActivity.ts";
 
 declare global {
     var IS_REACT_ACT_ENVIRONMENT: boolean;
@@ -51,6 +52,10 @@ afterEach(async () => {
 
 // uninitialised SdkConfig causes lots of warnings in console, init with defaults
 SdkConfig.put(DEFAULTS);
+
+// The room list remembers each room's last activity across reloads; tests reuse room IDs, so each starts
+// with nothing remembered.
+beforeEach(() => forgetActivity());
 
 // Utility to check for React errors during the tests
 // Fails tests on errors like the following:

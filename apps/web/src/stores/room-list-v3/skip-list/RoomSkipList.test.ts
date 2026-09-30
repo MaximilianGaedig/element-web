@@ -84,13 +84,14 @@ describe("RoomSkipList", () => {
 
     it("Sorting order is maintained when rooms are inserted", () => {
         const { skipList, rooms, totalRooms } = generateSkipList();
-        // To simulate the worst case, let's say the order gets reversed one by one
+        // To simulate the worst case, let's say the order gets reversed one by one. Fork: with newer messages -
+        // a room never moves down because an older one turned up (see getLastTimestamp).
         for (let i = 0; i < rooms.length; ++i) {
             const room = rooms[i];
             const event = mkMessage({
                 room: room.roomId,
                 user: `@foo${i}:matrix.org`,
-                ts: totalRooms - i,
+                ts: 2 * totalRooms - i,
                 event: true,
             });
             vi.spyOn(room.getLiveTimeline(), "getEvents").mockReturnValue([event]);

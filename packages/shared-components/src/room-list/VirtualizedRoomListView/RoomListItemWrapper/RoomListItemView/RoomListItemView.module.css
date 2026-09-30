@@ -93,24 +93,6 @@
     min-width: 0;
 }
 
-/*
- * Fork: a hairline under each row, starting where the name does.
- *
- * The same rule the contacts list draws, for the same reason: a list of rows with nothing between them is
- * read as one block of text, and a line that runs under the avatar as well cuts the faces off from their
- * names. The inset is built from the parts in front of the text rather than a number, so moving the avatar
- * or the padding moves the line with it.
- */
-.roomListItem::after {
-    content: "";
-    position: absolute;
-    inset-inline: calc(var(--cpd-space-3x) + var(--cpd-space-2x) + 32px + var(--cpd-space-3x)) 0;
-    inset-block-end: 0;
-    height: 1px;
-    background: var(--cpd-color-gray-400);
-    pointer-events: none;
-}
-
 .dragging {
     outline: 1px solid var(--cpd-color-border-interactive-hovered);
     background-color: color-mix(in srgb, var(--cpd-color-bg-action-tertiary-hovered) 95%, transparent);
