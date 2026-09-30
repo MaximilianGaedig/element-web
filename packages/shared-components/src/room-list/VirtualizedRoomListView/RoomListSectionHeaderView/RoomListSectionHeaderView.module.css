@@ -13,10 +13,16 @@
 
     width: 100%;
     cursor: pointer;
-    font: var(--cpd-font-body-sm-regular);
+    /*
+     * Fork: the shape the contacts list gives a section - the name of the group set small and semibold in
+     * the margin above what it names, with a rule under it closing the section off from the one before.
+     * Favourites and Chats are the same kind of heading as A and B, so they are set the same way.
+     */
+    font: var(--cpd-font-body-sm-semibold);
     letter-spacing: var(--cpd-font-letter-spacing-body-sm);
     color: var(--cpd-color-text-secondary);
-    padding: var(--cpd-space-1x) 0;
+    padding: var(--cpd-space-2x) 0 var(--cpd-space-1x);
+    border-block-end: 1px solid var(--cpd-color-gray-400);
 
     /* keyboardActive is toggled in JS for keyboard focus only (see RoomListSectionHeaderView), and
        kept while focus is on the menu button so it stays reachable by Tab — without revealing the

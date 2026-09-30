@@ -20,7 +20,7 @@ import ExternalIcon from "@vector-im/compound-design-tokens/assets/web/icons/ext
 import CheckIcon from "@vector-im/compound-design-tokens/assets/web/icons/check";
 import BlockIcon from "@vector-im/compound-design-tokens/assets/web/icons/block";
 import ShareIcon from "@vector-im/compound-design-tokens/assets/web/icons/share";
-import ListIcon from "@vector-im/compound-design-tokens/assets/web/icons/list-bulleted";
+import TagIcon from "@vector-im/compound-design-tokens/assets/web/icons/list-bulleted";
 import UserProfileIcon from "@vector-im/compound-design-tokens/assets/web/icons/user-profile";
 import BackIcon from "@vector-im/compound-design-tokens/assets/web/icons/chevron-left";
 
@@ -28,7 +28,7 @@ import { _t } from "../../../languageHandler";
 import { type Person } from "../../../utils/contacts/people";
 import { fuzzyMatch } from "../../../utils/search/fuzzy";
 import { type AccountLink, accountLink } from "../../../utils/contacts/deepLinks";
-import { type ContactList, inList } from "../../../utils/contacts/lists";
+import { type ContactTag, inTag } from "../../../utils/contacts/tags";
 import { NetworkLogo } from "./NetworkLogo";
 
 /**
@@ -38,7 +38,7 @@ import { NetworkLogo } from "./NetworkLogo";
  * choosing who somebody is the same person as, and giving them a name are all one or two taps from the
  * row they are about, and none of them takes the list away to come back to.
  */
-type View = "root" | "voice" | "video" | "merge" | "rename" | "lists";
+type View = "root" | "voice" | "video" | "merge" | "rename" | "tags";
 
 export interface PersonActions {
     /** Open the chat with them, on a particular account if one is named. */
@@ -74,8 +74,8 @@ interface Props extends PersonActions {
     /** Whether every account of theirs is already ignored. */
     blocked?: boolean;
     /** The reader's own lists, and whether this person is in each. */
-    lists?: readonly ContactList[];
-    onList?: (list: ContactList, member: boolean) => void;
+    tags?: readonly ContactTag[];
+    onTag?: (tag: ContactTag, member: boolean) => void;
     trigger: ReactNode;
     open: boolean;
     onOpenChange: (open: boolean) => void;
@@ -129,8 +129,8 @@ export function PersonMenu({
     onExport,
     onSend,
     blocked,
-    lists,
-    onList,
+    tags,
+    onTag,
 }: Props): JSX.Element {
     const [view, setView] = useState<View>("root");
     const [query, setQuery] = useState("");
@@ -304,11 +304,11 @@ export function PersonMenu({
                             </MenuItem>
                         ))}
                     {/* Filing somebody, which on a phone is what Lists are for. */}
-                    {!batch && !!lists?.length && onList && (
+                    {!batch && !!tags?.length && onTag && (
                         <MenuItem
-                            Icon={ListIcon}
-                            label={_t("contacts|add_to_list")}
-                            onSelect={keepOpen(() => setView("lists"))}
+                            Icon={TagIcon}
+                            label={_t("contacts|add_to_tag")}
+                            onSelect={keepOpen(() => setView("tags"))}
                         />
                     )}
                     {/*
@@ -428,7 +428,7 @@ export function PersonMenu({
                 </>
             )}
 
-            {view === "lists" && (
+            {view === "tags" && (
                 <>
                     <MenuItem
                         hideChevron
@@ -436,16 +436,16 @@ export function PersonMenu({
                         label={_t("action|back")}
                         onSelect={keepOpen(() => setView("root"))}
                     />
-                    <MenuTitle title={_t("contacts|lists")} />
-                    {(lists ?? []).map((one) => {
-                        const member = inList(one, person);
+                    <MenuTitle title={_t("contacts|tags")} />
+                    {(tags ?? []).map((one) => {
+                        const member = inTag(one, person);
                         return (
                             <MenuItem
                                 hideChevron
                                 key={one.id}
-                                Icon={member ? CheckIcon : ListIcon}
+                                Icon={member ? CheckIcon : TagIcon}
                                 label={one.name}
-                                onSelect={() => act(() => onList?.(one, !member))}
+                                onSelect={() => act(() => onTag?.(one, !member))}
                             />
                         );
                     })}

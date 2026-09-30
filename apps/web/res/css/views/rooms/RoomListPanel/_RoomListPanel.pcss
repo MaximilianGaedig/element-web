@@ -126,6 +126,82 @@
  * but never where you are. The whole entry is the target rather than the icon, so it clears the 44px a
  * finger needs even though the glyph is 22.
  */
+/*
+ * The views and the field share the pill: pressing search collapses one and grows the other, so the shape
+ * stays one object doing something else rather than one control vanishing and another appearing.
+ */
+.mx_RoomListPill_views {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    max-width: 30rem;
+    overflow: hidden;
+    transition:
+        max-width 260ms cubic-bezier(0.2, 0, 0, 1),
+        opacity 160ms ease;
+}
+
+.mx_RoomListPill[data-searching] .mx_RoomListPill_views {
+    max-width: 0;
+    opacity: 0;
+}
+
+.mx_RoomListPill_search {
+    display: flex;
+    align-items: center;
+    max-width: 0;
+    overflow: hidden;
+    transition: max-width 260ms cubic-bezier(0.2, 0, 0, 1);
+
+    input {
+        /* No border and no box of its own: the pill around it is the field's edge. */
+        width: 100%;
+        min-width: 0;
+        min-height: 44px;
+        padding: 0 var(--cpd-space-3x);
+        border: none;
+        outline: none;
+        background: transparent;
+        color: var(--cpd-color-text-primary);
+        font: var(--cpd-font-body-md-regular);
+
+        &::-webkit-search-cancel-button {
+            display: none;
+        }
+    }
+}
+
+.mx_RoomListPill[data-searching] .mx_RoomListPill_search {
+    max-width: 20rem;
+}
+
+/* The one control that is always there, whichever state the pill is in. */
+.mx_RoomListPill_find {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 44px;
+    height: 44px;
+    border: none;
+    border-radius: 99px;
+    background: transparent;
+    color: var(--cpd-color-icon-secondary);
+    cursor: pointer;
+
+    &:hover,
+    &:focus-visible {
+        color: var(--cpd-color-icon-primary);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .mx_RoomListPill_views,
+    .mx_RoomListPill_search {
+        transition: none;
+    }
+}
+
 .mx_RoomListPill_entry {
     position: relative;
     z-index: 1;

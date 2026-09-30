@@ -19,6 +19,8 @@ Please see LICENSE files in the repository root for full details.
 
 import { useSyncExternalStore } from "react";
 
+import { clearSearch } from "./panelSearch";
+
 /*
  * The three things this column can be, which are the three entries in the bar at the bottom of it: the
  * chats, the people, and the calls. Contacts and calls are two views rather than one with a tab inside it
@@ -36,6 +38,11 @@ export const roomListPanelView = (): RoomListPanelView => view;
 export function setRoomListPanelView(next: RoomListPanelView): void {
     if (next === view) return;
     view = next;
+    /*
+     * A query typed against one list means nothing against the next: "Ada" looking for a person is not a
+     * search of the call history, and carrying it across would show an empty list nobody asked for.
+     */
+    clearSearch();
     // A copy, not the set: a listener may unsubscribe while being told, and mutating a Set mid-iteration
     // skips whoever came after it.
     // oxlint-disable-next-line unicorn/no-useless-spread

@@ -147,39 +147,20 @@ Please see LICENSE files in the repository root for full details.
     }
 
     /*
-     * A filled pill, the shape every other search in this client has.
-     *
-     * The grouped-list radius is the phone's shape for this, but the search box is chrome rather than
-     * layout - and Element writes its rounded chrome as pills, so one screen rounding its search a
-     * different amount reads as a mistake rather than as a reference.
+     * Shown when the row is pointed at, and always where there is no pointer to point with: a control
+     * revealed on hover takes the first tap to appear and the second to work on a touch screen.
      */
-    .mx_Contacts_search {
-        /*
-         * Stretched by the column rather than told to be all of it: `width: 100%` plus a margin on each
-         * side is the column's width and then some, which pushed the field - and the panel with it - a
-         * gutter's worth past its own right edge.
-         */
-        box-sizing: border-box;
-        min-height: var(--mx-contacts-row-height);
-        padding: var(--mx-contacts-row-padding-block) var(--cpd-space-4x);
-        margin: 0 var(--mx-contacts-gutter) var(--cpd-space-2x);
-        border: none;
-        border-radius: 99px;
-        background: var(--cpd-color-bg-subtle-secondary);
-        color: var(--cpd-color-text-primary);
-        font: var(--cpd-font-body-md-regular);
-
-        &::placeholder {
-            color: var(--cpd-color-text-secondary);
+    @media (hover: hover) and (pointer: fine) {
+        .mx_Contacts_more {
+            opacity: 0;
+            transition: opacity 100ms ease;
         }
-    }
 
-    /* Its own scroller, so a long list cannot push the tabs or the search off the dialog. */
-    .mx_Contacts_list {
-        display: flex;
-        flex-direction: column;
-        max-height: 60vh;
-        overflow-y: auto;
+        .mx_Contacts_rowWith:hover .mx_Contacts_more,
+        .mx_Contacts_rowWith:focus-within .mx_Contacts_more,
+        .mx_Contacts_more[data-open] {
+            opacity: 1;
+        }
     }
 
     /*
@@ -221,7 +202,6 @@ Please see LICENSE files in the repository root for full details.
         height: 1px;
         background: var(--mx-contacts-hairline);
     }
-
 
     /*
      * The row and its one control are one surface.
@@ -487,9 +467,15 @@ Please see LICENSE files in the repository root for full details.
         z-index: 1;
         margin: 0;
         padding: var(--cpd-space-2x) var(--mx-contacts-gutter) var(--cpd-space-1x);
-        background: transparent;
+        /*
+         * The canvas colour rather than nothing: it is sticky, so rows scrolling under it have to be
+         * covered by something or the letter reads over the top of a name.
+         */
+        background: var(--cpd-color-bg-canvas-default);
         color: var(--cpd-color-text-secondary);
         font: var(--cpd-font-body-sm-semibold);
+        /* A rule across the full width under it, which is what closes the section off from the one above. */
+        border-bottom: 1px solid var(--mx-contacts-hairline);
     }
 
     /*
@@ -615,6 +601,11 @@ Please see LICENSE files in the repository root for full details.
      * Element's semantic icon colours rather than a palette of this screen's own.
      */
     .mx_Contacts_callMark {
+        /*
+         * On the text's own line, explicitly: this client draws svg as a block by default, which put the
+         * mark above the duration instead of in front of it and made every call row two lines tall.
+         */
+        display: inline-block;
         flex-shrink: 0;
         vertical-align: -3px;
         margin-inline-end: var(--cpd-space-1x);
@@ -638,10 +629,15 @@ Please see LICENSE files in the repository root for full details.
         }
     }
 
-    /* The detail line carries an icon now, so it lays out rather than only wrapping. */
+    /*
+     * The detail line stays a line of text.
+     *
+     * Making it a flex container to seat the call mark quietly turned off the ellipsis every one of these
+     * lines relies on - `text-overflow` does nothing to flex children - so a long identifier ran out of the
+     * row instead of being cut. The mark is inline and sits on the text's own baseline instead.
+     */
     .mx_Contacts_detail {
-        display: flex;
-        align-items: center;
+        display: block;
     }
 
     .mx_Contacts_network {
@@ -703,10 +699,10 @@ Please see LICENSE files in the repository root for full details.
     max-height: none;
     flex: 1;
     /*
-     * Room at the end for the two floating pieces of chrome: the names pass under them while scrolling,
-     * which is what the glass is for, and the last row can still be brought clear of both.
+     * Room at the end for the bar floating over this column: the names pass under it while scrolling,
+     * which is what its glass is for, and the last row can still be brought clear of it.
      */
-    padding-bottom: calc(var(--mx-room-list-toast-bottom, 6rem) + var(--mx-contacts-row-height));
+    padding-bottom: var(--mx-room-list-toast-bottom, 6rem);
 }
 
 /*
@@ -1046,23 +1042,10 @@ Please see LICENSE files in the repository root for full details.
 }
 
 /*
- * Where the presence mark sits: on the corner of the face, not in the row's words.
- *
- * The mark itself is PresenceIconView, the same one the room list draws, so the colours and shapes match
- * the rest of the client; only its position is this screen's business.
+ * The presence mark is the room list's, placed by the room list's own rules (_RoomAvatarView.pcss): the
+ * avatar is masked and the indicator sits in the gap. Nothing here positions it - doing so would be a
+ * second answer to a question that file already answers, and the two would drift.
  */
-.mx_Contacts_presence {
-    position: absolute;
-    inset-block-end: -2px;
-    inset-inline-end: -2px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 14px;
-    height: 14px;
-    border-radius: 50%;
-    background: var(--cpd-color-bg-canvas-default);
-}
 
 /* In the card the same dot sits beside the words, where there is room for both. */
 .mx_ContactCard_presence {
@@ -1123,56 +1106,71 @@ Please see LICENSE files in the repository root for full details.
     }
 }
 
-.mx_ContactCard_colour[data-colour="1"] { background: var(--cpd-color-bg-decorative-1); }
-.mx_ContactCard_colour[data-colour="2"] { background: var(--cpd-color-bg-decorative-2); }
-.mx_ContactCard_colour[data-colour="3"] { background: var(--cpd-color-bg-decorative-3); }
-.mx_ContactCard_colour[data-colour="4"] { background: var(--cpd-color-bg-decorative-4); }
-.mx_ContactCard_colour[data-colour="5"] { background: var(--cpd-color-bg-decorative-5); }
-.mx_ContactCard_colour[data-colour="6"] { background: var(--cpd-color-bg-decorative-6); }
+.mx_ContactCard_colour[data-colour="1"] {
+    background: var(--cpd-color-bg-decorative-1);
+}
+.mx_ContactCard_colour[data-colour="2"] {
+    background: var(--cpd-color-bg-decorative-2);
+}
+.mx_ContactCard_colour[data-colour="3"] {
+    background: var(--cpd-color-bg-decorative-3);
+}
+.mx_ContactCard_colour[data-colour="4"] {
+    background: var(--cpd-color-bg-decorative-4);
+}
+.mx_ContactCard_colour[data-colour="5"] {
+    background: var(--cpd-color-bg-decorative-5);
+}
+.mx_ContactCard_colour[data-colour="6"] {
+    background: var(--cpd-color-bg-decorative-6);
+}
 
 /*
  * The head takes the chosen colour as a wash behind the face and the name, which is the part of the card
  * the reader sees first and the thing that tells two people of the same name apart at a glance.
  */
-.mx_ContactCard_head[data-colour="1"] { background: var(--cpd-color-bg-decorative-1); }
-.mx_ContactCard_head[data-colour="2"] { background: var(--cpd-color-bg-decorative-2); }
-.mx_ContactCard_head[data-colour="3"] { background: var(--cpd-color-bg-decorative-3); }
-.mx_ContactCard_head[data-colour="4"] { background: var(--cpd-color-bg-decorative-4); }
-.mx_ContactCard_head[data-colour="5"] { background: var(--cpd-color-bg-decorative-5); }
-.mx_ContactCard_head[data-colour="6"] { background: var(--cpd-color-bg-decorative-6); }
+.mx_ContactCard_head[data-colour="1"] {
+    background: var(--cpd-color-bg-decorative-1);
+}
+.mx_ContactCard_head[data-colour="2"] {
+    background: var(--cpd-color-bg-decorative-2);
+}
+.mx_ContactCard_head[data-colour="3"] {
+    background: var(--cpd-color-bg-decorative-3);
+}
+.mx_ContactCard_head[data-colour="4"] {
+    background: var(--cpd-color-bg-decorative-4);
+}
+.mx_ContactCard_head[data-colour="5"] {
+    background: var(--cpd-color-bg-decorative-5);
+}
+.mx_ContactCard_head[data-colour="6"] {
+    background: var(--cpd-color-bg-decorative-6);
+}
 
 /* A file input that is clicked by something else: it is never the control the reader sees. */
 .mx_Contacts_file {
     display: none;
 }
 
-/* The reader's own lists, as a strip they scroll through. */
-.mx_Contacts_lists {
+/*
+ * The tags, spaced as the room list spaces its filters: the chips are Compound's own ChatFilter, so the
+ * only thing this adds is where the strip sits and how it scrolls when there are more than fit.
+ */
+.mx_Contacts_tags {
     display: flex;
-    gap: var(--cpd-space-1x);
-    padding: 0 var(--mx-contacts-gutter) var(--cpd-space-2x);
+    align-items: center;
+    gap: var(--cpd-space-2x);
+    padding: var(--cpd-space-1x) var(--mx-contacts-gutter) var(--cpd-space-3x);
     overflow-x: auto;
     scrollbar-width: none;
 
-    button {
+    > * {
         flex-shrink: 0;
-        min-height: 32px;
-        padding: 0 var(--cpd-space-3x);
-        border: none;
-        border-radius: 99px;
-        background: var(--cpd-color-bg-subtle-secondary);
-        color: var(--cpd-color-text-secondary);
-        font: var(--cpd-font-body-sm-medium);
-        cursor: pointer;
-
-        &[aria-selected="true"] {
-            background: var(--cpd-color-bg-subtle-primary);
-            color: var(--cpd-color-text-action-accent);
-        }
     }
 }
 
-/* Naming a new list, in the column rather than in a dialog over it. */
+/* Naming a new tag, in the column rather than in a dialog over it. */
 .mx_Contacts_naming {
     display: flex;
     gap: var(--cpd-space-2x);
@@ -1371,8 +1369,6 @@ Please see LICENSE files in the repository root for full details.
     resize: vertical;
 }
 
-
-
 /* What a lookup would disclose, before it happens, and what it found after. */
 .mx_Contacts_discover {
     display: flex;
@@ -1392,47 +1388,6 @@ Please see LICENSE files in the repository root for full details.
 }
 
 /*
- * The search and the plus, floating over the list rather than sitting under it.
- *
- * In the flow it was a solid strip between the list and the bar, which is what the bar's glass was
- * blurring - so the glass had nothing to show and read as a flat panel. Floating, the names scroll under
- * both pieces of chrome and the blur has the list behind it, which is the whole point of it.
- */
-.mx_Contacts_find {
-    position: absolute;
-    inset-inline: var(--mx-contacts-gutter);
-    /*
-     * Above the bar, with a fallback for its height: the variable is declared by the room list panel this
-     * normally sits inside, and a calc with one unset variable is not "a bit wrong" - the whole declaration
-     * is dropped and the bar lands wherever static position puts it.
-     */
-    inset-block-end: calc(
-        var(--tg-safe-bottom, 0px) + var(--cpd-space-4x) + var(--mx-room-list-pill-height, 56px) +
-            var(--cpd-space-3x)
-    );
-    z-index: 3;
-    display: flex;
-    align-items: center;
-    gap: var(--cpd-space-1x);
-    padding: var(--cpd-space-1x);
-    border-radius: 99px;
-    /* The same glass as the bar below it, so the two read as one floating layer. */
-    background: color-mix(in srgb, var(--cpd-color-bg-canvas-default) 72%, transparent);
-    backdrop-filter: blur(16px) saturate(180%);
-    box-shadow:
-        0 1px 2px rgb(0 0 0 / 10%),
-        0 8px 24px rgb(0 0 0 / 14%);
-
-    .mx_Contacts_search {
-        flex: 1;
-        min-width: 0;
-        margin: 0;
-        min-height: 36px;
-        background: transparent;
-    }
-}
-
-/*
  * One line about the duplicates, above the names, opening the screen that holds them.
  *
  * A phone puts this here and the cards themselves elsewhere: deciding who is who is a job you sit down to,
@@ -1441,13 +1396,13 @@ Please see LICENSE files in the repository root for full details.
 .mx_Contacts_duplicates {
     display: flex;
     align-items: center;
-    gap: var(--cpd-space-2x);
-    width: 100%;
+    gap: var(--cpd-space-3x);
     box-sizing: border-box;
     min-height: var(--mx-contacts-row-height);
-    padding: var(--cpd-space-2x) var(--mx-contacts-gutter);
-    margin-bottom: var(--cpd-space-2x);
+    padding: var(--cpd-space-3x) var(--mx-contacts-gutter);
+    margin: 0 var(--mx-contacts-gutter) var(--cpd-space-3x);
     border: none;
+    border-radius: var(--mx-contacts-inset-radius);
     background: var(--cpd-color-bg-subtle-secondary);
     color: var(--cpd-color-text-primary);
     text-align: start;
@@ -1614,4 +1569,152 @@ Please see LICENSE files in the repository root for full details.
     & + & {
         border-top: 1px solid var(--mx-contacts-hairline);
     }
+}
+
+/* A section that needs saying what it is: the others are recognised by what is in them. */
+.mx_ContactCard_sectionTitle {
+    margin: 0;
+    padding: var(--mx-contacts-row-padding-block) var(--mx-contacts-gutter);
+    border-bottom: 1px solid var(--cpd-color-bg-subtle-primary);
+    color: var(--cpd-color-text-secondary);
+    font: var(--cpd-font-body-sm-semibold);
+}
+
+/*
+ * The versions of a card, as a password manager lists an entry's history.
+ *
+ * Rows of "when, and what changed", each opening that version; the version itself is the same grouped block
+ * of labelled lines the card uses, with the lines that differ from the current card marked.
+ */
+.mx_ContactHistory {
+    display: flex;
+    flex-direction: column;
+}
+
+.mx_ContactHistory_row {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    width: 100%;
+    box-sizing: border-box;
+    min-height: var(--mx-contacts-row-height);
+    justify-content: center;
+    padding: var(--mx-contacts-row-padding-block) var(--mx-contacts-gutter);
+    border: none;
+    background: transparent;
+    color: var(--cpd-color-text-primary);
+    text-align: start;
+    font: inherit;
+    cursor: pointer;
+
+    & + & {
+        border-top: 1px solid var(--cpd-color-bg-subtle-primary);
+    }
+
+    &:hover,
+    &:focus-visible {
+        background: var(--cpd-color-bg-subtle-primary);
+    }
+}
+
+.mx_ContactHistory_stamp {
+    color: var(--cpd-color-text-secondary);
+    font: var(--cpd-font-body-sm-regular);
+}
+
+.mx_ContactHistory_changed {
+    font: var(--cpd-font-body-md-regular);
+    /* One line of it: the list of changed fields can be long, and it is a hint, not the content. */
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.mx_ContactHistory_footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--cpd-space-2x);
+    padding: var(--mx-contacts-row-padding-block) var(--mx-contacts-gutter);
+    border-top: 1px solid var(--cpd-color-bg-subtle-primary);
+}
+
+.mx_ContactHistory_kept {
+    color: var(--cpd-color-text-secondary);
+    font: var(--cpd-font-body-xs-regular);
+}
+
+.mx_ContactHistory_versionHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--cpd-space-2x);
+    padding: var(--mx-contacts-row-padding-block) var(--mx-contacts-gutter);
+    border-bottom: 1px solid var(--cpd-color-bg-subtle-primary);
+}
+
+.mx_ContactHistory_back {
+    display: flex;
+    align-items: center;
+    gap: var(--cpd-space-1x);
+    /* The same negative start inset the chevron gets elsewhere, so the glyph lines up with the text under it
+       rather than the text box does. */
+    margin-inline-start: calc(-1 * var(--cpd-space-1x));
+    padding: 0;
+    border: none;
+    background: none;
+    color: var(--cpd-color-text-action-accent);
+    font: var(--cpd-font-body-sm-semibold);
+    cursor: pointer;
+}
+
+.mx_ContactHistory_lines {
+    display: flex;
+    flex-direction: column;
+}
+
+.mx_ContactHistory_line {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: var(--mx-contacts-row-padding-block) var(--mx-contacts-gutter);
+
+    & + & {
+        border-top: 1px solid var(--cpd-color-bg-subtle-primary);
+    }
+
+    /*
+     * A line that differs from what the card says now, marked with a bar in the margin rather than a colour
+     * over the text: the values are what is being read, and tinting them would make an old address look like
+     * a warning about the address rather than a note about the version.
+     */
+    &[data-changed] {
+        box-shadow: inset 2px 0 0 0 var(--cpd-color-icon-accent-primary);
+    }
+}
+
+.mx_ContactHistory_lineLabel {
+    color: var(--cpd-color-text-secondary);
+    font: var(--cpd-font-body-sm-regular);
+}
+
+.mx_ContactHistory_lineValue {
+    font: var(--cpd-font-body-md-regular);
+    /* Notes are the one field that can be a paragraph, so lines wrap rather than run off the block. */
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+.mx_ContactHistory_none {
+    padding: var(--mx-contacts-row-padding-block) var(--mx-contacts-gutter);
+    color: var(--cpd-color-text-secondary);
+    font: var(--cpd-font-body-sm-regular);
+}
+
+.mx_ContactHistory_actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--cpd-space-2x);
+    padding: var(--mx-contacts-row-padding-block) var(--mx-contacts-gutter);
+    border-top: 1px solid var(--cpd-color-bg-subtle-primary);
 }

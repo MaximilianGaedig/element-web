@@ -40,9 +40,10 @@ import { accountId } from "../../../utils/contacts/people";
 import { accountLink } from "../../../utils/contacts/deepLinks";
 import { AVATAR_COLOURS, type AvatarColour } from "../../../utils/contacts/appearance";
 import { type ContactCard as ContactCardFields } from "../../../utils/contacts/card";
-import { type Revision, changedFields } from "../../../utils/contacts/history";
+import { type Revision } from "../../../utils/contacts/history";
 import { type Tone } from "../../../utils/contacts/tones";
 import { ContactEditor } from "./ContactEditor";
+import { ContactHistory } from "./ContactHistory";
 import { type Presence } from "../../../utils/contacts/presence";
 import { type Verification } from "../../../utils/contacts/verification";
 import PresenceIconView from "../rooms/MemberList/tiles/common/PresenceIconView";
@@ -85,6 +86,9 @@ interface Props {
     /** What this card has said before now, newest first, and how to put one of them back. */
     history?: readonly Revision[];
     onRestore?: (revision: Revision) => void;
+    /** Throw one version away, or the lot; both needed before the panel offers either. */
+    onDeleteRevision?: (revision: Revision) => void;
+    onEmptyHistory?: () => void;
     /**
      * Whether the client has checked that they are who they say they are, and how to check.
      *
@@ -144,6 +148,8 @@ export function ContactCard({
     onPhoto,
     history,
     onRestore,
+    onDeleteRevision,
+    onEmptyHistory,
     verification,
     onVerify,
     ringtone,
@@ -630,40 +636,25 @@ export function ContactCard({
                      * the rooms you are both in, which is the part no single account's profile can tell you.
                      */}
                     {/*
-                     * What this card used to say.
+                     * What this card used to say, as versions rather than as a log.
                      *
                      * An address book quietly overwrites itself - a mis-edit, an import landing on the wrong
-                     * person, a merge bringing two cards together - and none of those announce themselves. Each
-                     * entry says when and what changed, and puts that version back.
+                     * person, a merge bringing two cards together - and none of those announce themselves. The
+                     * panel is the one a password manager gives an entry (see ContactHistory): read a version,
+                     * then put it back or throw it away.
                      */}
-                    {!!history?.length && onRestore && (
+                    {!!history?.length && onRestore && onDeleteRevision && onEmptyHistory && (
                         <section className="mx_ContactCard_section" aria-label={_t("contacts|history")}>
-                            {history.map((revision) => (
-                                <button
-                                    key={revision.ts}
-                                    type="button"
-                                    className="mx_ContactCard_account"
-                                    onClick={() => onRestore(revision)}
-                                >
-                                    <span className="mx_ContactCard_factLabel">
-                                        {new Date(revision.ts).toLocaleString(undefined, {
-                                            day: "numeric",
-                                            month: "short",
-                                            hour: "numeric",
-                                            minute: "2-digit",
-                                        })}
-                                        {" · "}
-                                        {_t(`contacts|edit_${revision.source}`)}
-                                    </span>
-                                    <span className="mx_ContactCard_factValue">
-                                        {changedFields(revision.was, card ?? {}).length
-                                            ? _t("contacts|restore_changed", {
-                                                  fields: changedFields(revision.was, card ?? {}).join(", "),
-                                              })
-                                            : _t("contacts|restore")}
-                                    </span>
-                                </button>
-                            ))}
+                            <h3 className="mx_ContactCard_sectionTitle">
+                                {_t("contacts|history_versions", { count: history.length })}
+                            </h3>
+                            <ContactHistory
+                                history={history}
+                                card={card}
+                                onRestore={onRestore}
+                                onDelete={(revision) => onDeleteRevision(revision)}
+                                onEmpty={onEmptyHistory}
+                            />
                         </section>
                     )}
 

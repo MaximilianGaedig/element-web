@@ -7,6 +7,8 @@ Please see LICENSE files in the repository root for full details.
 
 import React, { useState, useCallback, useContext } from "react";
 import { Flex, RoomListHeaderView, useCreateAutoDisposedViewModel } from "@element-hq/web-shared-components";
+import { IconButton } from "@vector-im/compound-web";
+import FoundIcon from "@vector-im/compound-design-tokens/assets/web/icons/search";
 
 import { shouldShowComponent } from "../../../../customisations/helpers/UIComponents";
 import { UIComponent } from "../../../../settings/UIFeature";
@@ -36,6 +38,13 @@ type RoomListPanelProps = {
 /**
  * The panel of the room list
  */
+/** The room list is part of the startup graph, so the dialog and Modal stay out of it until asked for. */
+function openFound(): void {
+    void Promise.all([import("../../dialogs/FoundDialog"), import("../../../../Modal")]).then(
+        ([{ default: FoundDialog }, { default: Modal }]) => Modal.createDialog(FoundDialog),
+    );
+}
+
 export const RoomListPanel: React.FC<RoomListPanelProps> = ({ activeSpace }) => {
     const sdkContext = useContext(SDKContext);
     const displayRoomSearch = shouldShowComponent(UIComponent.FilterContainer);
@@ -98,7 +107,26 @@ export const RoomListPanel: React.FC<RoomListPanelProps> = ({ activeSpace }) => 
                             <HistoryStatusMini />
                         </div>
                     )}
-                    <RoomListHeaderView vm={vm} />
+                    {/*
+                     * Fork: what is in these chats, beside the list's own menu.
+                     *
+                     * It belongs here rather than in the bar at the foot: the bar says which of the three
+                     * views this column is showing, and this opens something over all of them - it is not a
+                     * fourth place to be.
+                     */}
+                    <RoomListHeaderView
+                        vm={vm}
+                        actions={
+                            <IconButton
+                                size="28px"
+                                style={{ padding: "4px" }}
+                                onClick={openFound}
+                                tooltip={_t("found|open_it")}
+                            >
+                                <FoundIcon color="var(--cpd-color-icon-secondary)" aria-hidden />
+                            </IconButton>
+                        }
+                    />
                     <RoomListView />
                 </>
             )}

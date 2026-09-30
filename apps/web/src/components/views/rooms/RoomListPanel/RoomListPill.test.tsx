@@ -14,14 +14,18 @@ import { describe, expect, it, afterEach } from "vitest";
 
 import { RoomListPill } from "./RoomListPill";
 import { roomListPanelView, setRoomListPanelView } from "../../../../utils/roomListPanelView";
+import { clearSearch, panelSearch } from "../../../../utils/panelSearch";
 
-afterEach(() => setRoomListPanelView("rooms"));
+afterEach(() => {
+    setRoomListPanelView("rooms");
+    clearSearch();
+});
 
 describe("RoomListPill", () => {
     it("names every view it can move between, rather than only drawing an icon for it", () => {
         render(<RoomListPill />);
         expect(screen.getByRole("navigation", { name: "Chats, people and calls" })).toBeInTheDocument();
-        for (const name of ["Messages", "People", "Calls"]) {
+        for (const name of ["Messages", "People", "Calls", "Search"]) {
             expect(screen.getByRole("button", { name })).toBeInTheDocument();
         }
     });
@@ -42,9 +46,29 @@ describe("RoomListPill", () => {
         expect(roomListPanelView()).toBe("contacts");
     });
 
-    /* Search opens over whatever is showing, so it is never somewhere to be. */
-    it("never marks search as the view you are in", async () => {
+    /*
+     * Searching is a state of the bar, not a fourth place to be: pressing it turns the pill into the field
+     * rather than moving the reader somewhere, so nothing is marked as current and what was showing still is.
+     */
+    it("turns into a search field without changing which view you are in", async () => {
         render(<RoomListPill />);
-        expect(screen.getByRole("button", { name: "Found" })).not.toHaveAttribute("aria-current");
+        expect(screen.getByRole("button", { name: "Messages" })).toHaveAttribute("aria-current", "page");
+
+        await userEvent.click(screen.getByRole("button", { name: "Search" }));
+        expect(panelSearch().open).toBe(true);
+        expect(roomListPanelView()).toBe("rooms");
+        // The field is there and takes what is typed, for whichever list is showing.
+        await userEvent.type(screen.getByRole("searchbox"), "ada");
+        expect(panelSearch().query).toBe("ada");
+    });
+
+    /* A query against one list means nothing against the next, so changing view puts it away. */
+    it("clears the search when the column changes what it is showing", async () => {
+        render(<RoomListPill />);
+        await userEvent.click(screen.getByRole("button", { name: "Search" }));
+        await userEvent.type(screen.getByRole("searchbox"), "ada");
+
+        await userEvent.click(screen.getByRole("button", { name: "Calls" }));
+        expect(panelSearch()).toEqual({ open: false, query: "" });
     });
 });

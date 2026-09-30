@@ -45,12 +45,31 @@ export function ContactFace({
     selected?: boolean;
 }): JSX.Element {
     const url = avatarUrl ? mediaFromMxc(avatarUrl).getSquareThumbnailHttp(size * 2) : null;
+    /*
+     * The room list's own composition, not an imitation of it.
+     *
+     * It does not draw a ringed dot on top of the picture - it masks a hole out of the avatar
+     * (mx_RoomAvatarView_RoomAvatar_presence, _RoomAvatarView.pcss) and sits the indicator in the gap, which
+     * is why its badges look cut into the face rather than stuck onto it. Using the same classes means the
+     * same mask, the same 8px icon and the same placement, all driven by --room-avatar-size.
+     */
     return (
-        <span className="mx_Contacts_face" style={{ width: size, height: size }}>
-            <BaseAvatar name={name} idName={id ?? name} url={url ?? undefined} size={`${size}px`} />
-            {/* Bottom-left, as the room list puts it, so the two lists mark a network the same way. */}
+        <span
+            className="mx_Contacts_face mx_RoomAvatarView"
+            style={{ "--room-avatar-size": `${size}px` } as React.CSSProperties}
+        >
+            <BaseAvatar
+                className={`mx_RoomAvatarView_RoomAvatar${presence && !selected ? " mx_RoomAvatarView_RoomAvatar_presence" : ""}`}
+                name={name}
+                idName={id ?? name}
+                url={url ?? undefined}
+                size={`${size}px`}
+            />
+            {/* Bottom-left, as the room list puts a network, so the two lists mark one the same way. */}
             {!selected && <NetworkLogo client={client} roomId={roomId} size={Math.round(size / 2.6)} />}
-            {!selected && presence && <PresenceIconView className="mx_Contacts_presence" presenceState={presence} />}
+            {!selected && presence && (
+                <PresenceIconView className="mx_RoomAvatarView_PresenceDecoration" presenceState={presence} />
+            )}
         </span>
     );
 }

@@ -136,6 +136,8 @@ interface RoomListHeaderViewProps {
      * The view model for the room list header component.
      */
     vm: RoomListHeaderViewModel;
+    /** Fork: a control of the app's own, shown beside the list's menu. */
+    actions?: React.ReactNode;
 }
 
 /**
@@ -147,7 +149,7 @@ interface RoomListHeaderViewProps {
  * <RoomListHeaderView vm={roomListHeaderViewModel} />
  * ```
  */
-export function RoomListHeaderView({ vm }: Readonly<RoomListHeaderViewProps>): JSX.Element {
+export function RoomListHeaderView({ vm, actions }: Readonly<RoomListHeaderViewProps>): JSX.Element {
     const { translate: _t } = useI18n();
     const { title, displaySpaceMenu, collapseSections, areSectionsEnabled, canCreateRoom, canCreateVideoRoom } =
         useViewModel(vm);
@@ -169,6 +171,8 @@ export function RoomListHeaderView({ vm }: Readonly<RoomListHeaderViewProps>): J
                     {displaySpaceMenu && <SpaceMenuView vm={vm} />}
                 </Flex>
                 <Flex align="center" gap="var(--cpd-space-2x)">
+                    {/* Fork: room for a control of the app's own beside the list's menu. */}
+                    {actions}
                     <OptionMenuView vm={vm} />
                     {areSectionsEnabled && collapseSections && (
                         <IconButton

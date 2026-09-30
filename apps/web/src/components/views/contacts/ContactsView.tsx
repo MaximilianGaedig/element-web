@@ -17,7 +17,7 @@ Please see LICENSE files in the repository root for full details.
  */
 
 import React, { type JSX, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Button, IconButton, Menu, MenuItem, MenuTitle } from "@vector-im/compound-web";
+import { Button, ChatFilter, IconButton, Menu, MenuItem, MenuTitle } from "@vector-im/compound-web";
 import UserProfileIcon from "@vector-im/compound-design-tokens/assets/web/icons/user-profile";
 import VoiceCallIcon from "@vector-im/compound-design-tokens/assets/web/icons/voice-call";
 import VideoCallIcon from "@vector-im/compound-design-tokens/assets/web/icons/video-call";
@@ -82,7 +82,7 @@ import {
 } from "../../../utils/contacts/card";
 import { ContactEditor } from "./ContactEditor";
 import { type Discovered, discoverOnMatrix, lookupQuery } from "../../../utils/contacts/discover";
-import { historyFor, recordRevision } from "../../../utils/contacts/history";
+import { deleteRevision, forgetHistory, historyFor, recordRevision } from "../../../utils/contacts/history";
 import { ringtoneOf, setRingtone, setTextTone, textToneOf, uploadTone } from "../../../utils/contacts/tones";
 import {
     cardForExport,
@@ -93,7 +93,7 @@ import {
     toVCards,
 } from "../../../utils/contacts/vcard";
 import { importCards } from "../../../utils/contacts/importCards";
-import { addList, contactLists, peopleIn, removeList, setInList } from "../../../utils/contacts/lists";
+import { addTag, contactTags, peopleTagged, removeTag, setInTag } from "../../../utils/contacts/tags";
 import { PersonMenu } from "./PersonMenu";
 import { MatrixClientPeg } from "../../../MatrixClientPeg";
 import BaseAvatar from "../avatars/BaseAvatar";
@@ -110,6 +110,7 @@ import { type ViewUserPayload } from "../../../dispatcher/payloads/ViewUserPaylo
 import Spinner from "../elements/Spinner";
 import { useLongPress } from "../../../hooks/useLongPress";
 import { useLeaving } from "../../../hooks/useLeaving";
+import { setSearchQuery, usePanelSearch } from "../../../utils/panelSearch";
 import { useSwipeBack } from "../../../hooks/useSwipeBack";
 import { useSlidingIndicator } from "../../../hooks/useSlidingIndicator";
 
@@ -650,7 +651,8 @@ export function ContactsView({ tab, onFinished }: Props): JSX.Element {
      * client.getVisibleRooms() throws during render. Every other dialog here uses the peg for this reason.
      */
     const client = MatrixClientPeg.safeGet();
-    const [query, setQuery] = useState("");
+    /* The column is searched from the bar at its foot, which belongs to none of these views. */
+    const { query } = usePanelSearch();
     const [onlyMissed, setOnlyMissed] = useState(false);
     const [onlyUnknown, setOnlyUnknown] = useState(false);
     /* The person whose card is open, if one is: the list and one of its rows are one column's two depths. */
@@ -667,12 +669,12 @@ export function ContactsView({ tab, onFinished }: Props): JSX.Element {
     const [menuFor, setMenuFor] = useState<string>();
     const [managing, setManaging] = useState(false);
     /* Which of the reader's own lists is showing, or all of them. */
-    const [listId, setListId] = useState<string>();
+    const [tagId, setTagId] = useState<string>();
     const [naming, setNaming] = useState(false);
     /* Writing somebody down who is not in any chat yet: a card with nothing but what is typed. */
     const [adding, setAdding] = useState(false);
     const [reviewing, setReviewing] = useState(false);
-    const [newListName, setNewListName] = useState("");
+    const [newTagName, setNewTagName] = useState("");
     /* The file input is hidden and clicked by the menu item: a file button cannot live inside a menu. */
     const fileRef = useRef<HTMLInputElement>(null);
     /*
@@ -937,10 +939,10 @@ export function ContactsView({ tab, onFinished }: Props): JSX.Element {
      */
     // `at` counts the reader's decisions: account data is not reactive, so it is what says to read it again.
     // oxlint-disable-next-line react-hooks/exhaustive-deps
-    const lists = useMemo(() => contactLists(client), [client, at]);
+    const tags = useMemo(() => contactTags(client), [client, at]);
     /* A list the reader deleted while it was showing is not a filter any more. */
-    const list = lists.find((one) => one.id === listId);
-    const inScope = useMemo(() => (list ? peopleIn(list, people ?? []) : (people ?? [])), [list, people]);
+    const tag = tags.find((one) => one.id === tagId);
+    const inScope = useMemo(() => (tag ? peopleTagged(tag, people ?? []) : (people ?? [])), [tag, people]);
 
     const shown = useMemo(
         () =>
@@ -1331,8 +1333,8 @@ export function ContactsView({ tab, onFinished }: Props): JSX.Element {
                         onBlock={block}
                         onExport={exportPerson}
                         onSend={sendPerson}
-                        lists={lists}
-                        onList={(one, member) => void setInList(client, one.id, person, member).then(again)}
+                        tags={tags}
+                        onTag={(one, member) => void setInTag(client, one.id, person, member).then(again)}
                         blocked={person.accounts.every((a) => !a.mxid || ignored.has(a.mxid))}
                         trigger={
                             <IconButton
@@ -1361,7 +1363,7 @@ export function ContactsView({ tab, onFinished }: Props): JSX.Element {
             exportPerson,
             sendPerson,
             ignored,
-            lists,
+            tags,
             again,
             mergePeople,
             separate,
@@ -1502,12 +1504,20 @@ export function ContactsView({ tab, onFinished }: Props): JSX.Element {
                                 .then(again);
                         }}
                         history={historyFor(client, open)}
+                        /*
+                         * Restoring is itself a save: what the card says now is recorded first, so putting an
+                         * old version back can be put back too. The same thing a password manager does when
+                         * you restore an entry from its history, and for the same reason - a restore onto the
+                         * wrong contact is exactly the mistake the history exists to undo.
+                         */
                         onRestore={(revision) => {
                             const was = cardFor(client, open);
                             void recordRevision(client, open, was, "restore")
                                 .then(() => saveCard(client, open, revision.was))
                                 .then(again);
                         }}
+                        onDeleteRevision={(revision) => void deleteRevision(client, open, revision.ts).then(again)}
+                        onEmptyHistory={() => void forgetHistory(client, open).then(again)}
                         onExport={() =>
                             downloadVCard(`${open.name}.vcf`, toVCard(cardForExport(open, cardFor(client, open))))
                         }
@@ -1558,6 +1568,9 @@ export function ContactsView({ tab, onFinished }: Props): JSX.Element {
                      * being a dead end: the file a phone exports goes in here, and what is here goes back to a
                      * phone the same way.
                      */}
+                    <IconButton size="32px" aria-label={_t("contacts|add_contact")} onClick={() => setAdding(true)}>
+                        <PlusIcon />
+                    </IconButton>
                     <Menu
                         title={_t("contacts|title")}
                         showTitle={false}
@@ -1585,7 +1598,7 @@ export function ContactsView({ tab, onFinished }: Props): JSX.Element {
                         <MenuItem
                             hideChevron
                             Icon={ListIcon}
-                            label={_t("contacts|new_list")}
+                            label={_t("contacts|new_tag")}
                             onSelect={() => setNaming(true)}
                         />
                         <MenuItem
@@ -1594,15 +1607,15 @@ export function ContactsView({ tab, onFinished }: Props): JSX.Element {
                             label={_t("contacts|discover")}
                             onSelect={() => discover(false)}
                         />
-                        {!!list && (
+                        {!!tag && (
                             <MenuItem
                                 hideChevron
                                 Icon={DeleteIcon}
                                 kind="critical"
-                                label={_t("contacts|delete_list")}
+                                label={_t("contacts|delete_tag")}
                                 onSelect={() => {
-                                    void removeList(client, list.id).then(again);
-                                    setListId(undefined);
+                                    void removeTag(client, tag.id).then(again);
+                                    setTagId(undefined);
                                 }}
                             />
                         )}
@@ -1644,18 +1657,18 @@ export function ContactsView({ tab, onFinished }: Props): JSX.Element {
                         className="mx_Contacts_naming"
                         onSubmit={(event) => {
                             event.preventDefault();
-                            const name = newListName.trim();
-                            if (name) void addList(client, name).then(again);
-                            setNewListName("");
+                            const name = newTagName.trim();
+                            if (name) void addTag(client, name).then(again);
+                            setNewTagName("");
                             setNaming(false);
                         }}
                     >
                         <input
                             autoFocus
-                            value={newListName}
-                            placeholder={_t("contacts|list_name")}
-                            aria-label={_t("contacts|list_name")}
-                            onChange={(event) => setNewListName(event.target.value)}
+                            value={newTagName}
+                            placeholder={_t("contacts|tag_name")}
+                            aria-label={_t("contacts|tag_name")}
+                            onChange={(event) => setNewTagName(event.target.value)}
                         />
                         <Button kind="primary" size="md" type="submit">
                             {_t("action|save")}
@@ -1717,26 +1730,28 @@ export function ContactsView({ tab, onFinished }: Props): JSX.Element {
                          * or "the band" is theirs and is seen by nobody else, which is what makes it different
                          * from the rooms they happen to share. Only shown once there is one to choose.
                          */}
-                        {!!lists.length && (
-                            <div className="mx_Contacts_lists" role="tablist" aria-label={_t("contacts|lists")}>
-                                <button
-                                    type="button"
-                                    role="tab"
-                                    aria-selected={!list}
-                                    onClick={() => setListId(undefined)}
+                        {!!tags.length && (
+                            <div className="mx_Contacts_tags" role="listbox" aria-label={_t("contacts|tags")}>
+                                <ChatFilter
+                                    selected={!tag}
+                                    role="option"
+                                    tabIndex={0}
+                                    aria-selected={!tag}
+                                    onClick={() => setTagId(undefined)}
                                 >
                                     {_t("contacts|all_contacts")}
-                                </button>
-                                {lists.map((one) => (
-                                    <button
+                                </ChatFilter>
+                                {tags.map((one) => (
+                                    <ChatFilter
                                         key={one.id}
-                                        type="button"
-                                        role="tab"
-                                        aria-selected={one.id === listId}
-                                        onClick={() => setListId(one.id)}
+                                        selected={one.id === tagId}
+                                        role="option"
+                                        tabIndex={0}
+                                        aria-selected={one.id === tagId}
+                                        onClick={() => setTagId(one.id === tagId ? undefined : one.id)}
                                     >
                                         {one.name}
-                                    </button>
+                                    </ChatFilter>
                                 ))}
                             </div>
                         )}
@@ -1956,7 +1971,7 @@ export function ContactsView({ tab, onFinished }: Props): JSX.Element {
                                 <button
                                     type="button"
                                     className="mx_Contacts_dateChip"
-                                    onClick={() => setQuery(query.replace(when.text, "").trim())}
+                                    onClick={() => setSearchQuery(query.replace(when.text, "").trim())}
                                 >
                                     {when.date.toLocaleDateString(undefined, {
                                         day: "numeric",
@@ -2015,26 +2030,6 @@ export function ContactsView({ tab, onFinished }: Props): JSX.Element {
                     <ContactEditor card={{}} onCancel={() => setAdding(false)} onSave={addPerson} />
                 </div>
             )}
-
-            {/*
-             * The search, at the foot of the column with the control that adds somebody beside it.
-             *
-             * Both lists are searched, and both are reached with the thumb already at the bottom of the
-             * screen holding the bar - a search box at the top of a phone is the control furthest from the
-             * hand that uses it.
-             */}
-            <div className="mx_Contacts_find">
-                <input
-                    className="mx_Contacts_search"
-                    type="search"
-                    value={query}
-                    placeholder={tab === "people" ? _t("contacts|search_people") : _t("contacts|search_calls")}
-                    onChange={(event) => setQuery(event.target.value)}
-                />
-                <IconButton size="32px" aria-label={_t("contacts|add_contact")} onClick={() => setAdding(true)}>
-                    <PlusIcon />
-                </IconButton>
-            </div>
         </div>
     );
 }

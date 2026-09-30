@@ -8,7 +8,7 @@ Please see LICENSE files in the repository root for full details.
 // @vitest-environment happy-dom
 
 import React from "react";
-import { fireEvent, render, screen, waitFor, type RenderResult } from "test-utils-rtl";
+import { act, fireEvent, render, screen, waitFor, type RenderResult } from "test-utils-rtl";
 import userEvent from "@testing-library/user-event";
 import { vi, describe, it, expect, beforeEach } from "vitest";
 import { type MatrixClient } from "matrix-js-sdk/src/matrix";
@@ -20,6 +20,7 @@ import * as peopleModule from "../../../utils/contacts/people";
 import * as callsModule from "../../../utils/contacts/calls";
 import * as favouritesModule from "../../../utils/contacts/favourites";
 import * as appearanceModule from "../../../utils/contacts/appearance";
+import { clearSearch, setSearchQuery } from "../../../utils/panelSearch";
 import dis from "../../../dispatcher/dispatcher";
 import { MatrixClientPeg } from "../../../MatrixClientPeg";
 import { Action } from "../../../dispatcher/actions";
@@ -77,6 +78,7 @@ const open = (tab: "people" | "calls" = "people"): RenderResult =>
     render(<ContactsView tab={tab} onFinished={() => {}} />);
 
 beforeEach(() => {
+    clearSearch();
     vi.restoreAllMocks();
     /*
      * The peg, as the dialog reads it. Stubbing MatrixClientContext instead is what let a null client
@@ -109,8 +111,9 @@ describe("ContactsView people", () => {
         open();
         await waitFor(() => expect(screen.getByRole("navigation", { name: "Jump to a letter" })).toBeInTheDocument());
 
-        await userEvent.type(screen.getByPlaceholderText("Search people"), "ada");
-        expect(screen.getAllByText(/ada/i).length).toBeGreaterThan(1);
+        // The search is the bar at the foot of the column, not a box in this screen, so it is set there.
+        act(() => setSearchQuery("ada"));
+        await waitFor(() => expect(screen.getAllByText(/ada/i).length).toBeGreaterThan(1));
         expect(screen.queryByRole("navigation", { name: "Jump to a letter" })).not.toBeInTheDocument();
         expect(screen.queryByRole("heading", { name: "A" })).not.toBeInTheDocument();
     });
