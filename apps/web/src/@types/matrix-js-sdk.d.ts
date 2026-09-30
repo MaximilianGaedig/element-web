@@ -61,6 +61,10 @@ declare module "matrix-js-sdk/src/types" {
             };
         };
     }
+    export interface RoomAccountDataEvents {
+        // A ringtone chosen for whoever this room is with, so a caller sounds like themselves (utils/contacts/tones).
+        "im.mxg.ringtone": { url?: string; name?: string };
+    }
     export interface AccountDataEvents {
         // What the reader decided about accounts no identifier ties together (utils/contacts): which
         // ones are one person, and which pairings they turned down so they stop being offered.

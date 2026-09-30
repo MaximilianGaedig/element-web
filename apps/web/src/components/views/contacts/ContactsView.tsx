@@ -68,8 +68,10 @@ import PresenceIconView from "../rooms/MemberList/tiles/common/PresenceIconView"
 import { type Presence, personPresence, presenceNetwork } from "../../../utils/contacts/presence";
 import { callsWith, sharedRooms } from "../../../utils/contacts/shared";
 import { chosenColour, nameOrder, setColour, setNameOrder } from "../../../utils/contacts/appearance";
-import { cardFor, fullName, saveCard } from "../../../utils/contacts/card";
+import { allCards, cardFor, fullName, saveCard } from "../../../utils/contacts/card";
+import { type Discovered, discoverOnMatrix, lookupQuery } from "../../../utils/contacts/discover";
 import { historyFor, recordRevision } from "../../../utils/contacts/history";
+import { ringtoneOf, setRingtone, setTextTone, textToneOf, uploadTone } from "../../../utils/contacts/tones";
 import { cardForExport, downloadVCard, parseVCards, toVCard, toVCards } from "../../../utils/contacts/vcard";
 import { importCards } from "../../../utils/contacts/importCards";
 import { addList, contactLists, peopleIn, removeList, setInList } from "../../../utils/contacts/lists";
@@ -1059,6 +1061,28 @@ export function ContactsView({ tab, onFinished }: Props): JSX.Element {
         [client, people, again],
     );
 
+    /*
+     * Finding out which of the reader's contacts have Matrix accounts.
+     *
+     * Asked for and confirmed, never automatic: this tells the identity server which numbers and addresses
+     * are in the reader's address book, and how many are about to be sent is said before any are. The
+     * server hashes what it can, but a lookup is still a disclosure.
+     */
+    const [discovering, setDiscovering] = useState<{ asked: number; found?: Discovered[]; problem?: string }>();
+    const discover = useCallback(
+        (confirmed: boolean): void => {
+            const cards = Object.values(allCards(client));
+            if (!confirmed) {
+                setDiscovering({ asked: cards.flatMap(lookupQuery).length });
+                return;
+            }
+            void discoverOnMatrix(client, cards).then((result) =>
+                setDiscovering({ asked: result.asked, found: result.found, problem: result.problem }),
+            );
+        },
+        [client],
+    );
+
     const exportAll = useCallback((): void => {
         const cards = (people ?? []).map((person) => cardForExport(person, cardFor(client, person)));
         downloadVCard("contacts.vcf", toVCards(cards));
@@ -1245,6 +1269,18 @@ export function ContactsView({ tab, onFinished }: Props): JSX.Element {
                             .then(() => saveCard(client, open, next))
                             .then(again);
                     }}
+                    ringtone={ringtoneOf(client, open)}
+                    textTone={textToneOf(client, open)}
+                    onTone={(which, file) => {
+                        const set = which === "ring" ? setRingtone : setTextTone;
+                        if (!file) {
+                            void set(client, open, undefined).then(again);
+                            return;
+                        }
+                        void uploadTone(client, file)
+                            .then((tone) => set(client, open, tone))
+                            .then(again);
+                    }}
                     history={historyFor(client, open)}
                     onRestore={(revision) => {
                         const was = cardFor(client, open);
@@ -1318,6 +1354,12 @@ export function ContactsView({ tab, onFinished }: Props): JSX.Element {
                         label={_t("contacts|new_list")}
                         onSelect={() => setNaming(true)}
                     />
+                    <MenuItem
+                        hideChevron
+                        Icon={UserProfileIcon}
+                        label={_t("contacts|discover")}
+                        onSelect={() => discover(false)}
+                    />
                     {!!list && (
                         <MenuItem
                             hideChevron
@@ -1383,6 +1425,44 @@ export function ContactsView({ tab, onFinished }: Props): JSX.Element {
                         {_t("action|cancel")}
                     </Button>
                 </form>
+            )}
+            {/*
+             * What a lookup would disclose, before it happens - and what it found, after.
+             *
+             * The count is the point of the first state: "this sends 214 phone numbers to ident.example" is
+             * the fact the reader needs, and it is not one they can work out from a list they cannot see.
+             */}
+            {discovering && (
+                <div className="mx_Contacts_discover">
+                    {discovering.found ? (
+                        <span>
+                            {discovering.found.length
+                                ? _t("contacts|discovered", { count: discovering.found.length })
+                                : _t("contacts|discovered_none")}
+                        </span>
+                    ) : discovering.problem ? (
+                        <span>{_t(`contacts|discover_${discovering.problem}`)}</span>
+                    ) : (
+                        <>
+                            <span>
+                                {_t("contacts|discover_warning", {
+                                    count: discovering.asked,
+                                    server: client.getIdentityServerUrl() ?? "",
+                                })}
+                            </span>
+                            <Button kind="primary" size="md" onClick={() => discover(true)}>
+                                {_t("contacts|discover_go")}
+                            </Button>
+                        </>
+                    )}
+                    <IconButton
+                        size="24px"
+                        aria-label={_t("action|dismiss")}
+                        onClick={() => setDiscovering(undefined)}
+                    >
+                        <CloseIcon />
+                    </IconButton>
+                </div>
             )}
             {/* What the import did, said once and dismissable, rather than a list that silently grew. */}
             {imported && (

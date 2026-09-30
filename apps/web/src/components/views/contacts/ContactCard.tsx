@@ -38,6 +38,7 @@ import { accountLink } from "../../../utils/contacts/deepLinks";
 import { AVATAR_COLOURS, type AvatarColour } from "../../../utils/contacts/appearance";
 import { type ContactCard as ContactCardFields } from "../../../utils/contacts/card";
 import { type Revision, changedFields } from "../../../utils/contacts/history";
+import { type Tone } from "../../../utils/contacts/tones";
 import { ContactEditor } from "./ContactEditor";
 import { type Presence } from "../../../utils/contacts/presence";
 import PresenceIconView from "../rooms/MemberList/tiles/common/PresenceIconView";
@@ -80,6 +81,10 @@ interface Props {
     /** What this card has said before now, newest first, and how to put one of them back. */
     history?: readonly Revision[];
     onRestore?: (revision: Revision) => void;
+    /** What they ring with and what their messages sound like, and how to change either. */
+    ringtone?: Tone;
+    textTone?: Tone;
+    onTone?: (which: "ring" | "text", file?: File) => void;
     person: Person;
     /** Back to the list. */
     onBack: () => void;
@@ -127,6 +132,9 @@ export function ContactCard({
     onPhoto,
     history,
     onRestore,
+    ringtone,
+    textTone,
+    onTone,
     colour,
     onColour,
     onUnlinkAccount,
@@ -148,6 +156,7 @@ export function ContactCard({
     const [editing, setEditing] = useState(false);
     const [editingCard, setEditingCard] = useState(false);
     const photoRef = useRef<HTMLInputElement>(null);
+    const toneRefs = { ring: useRef<HTMLInputElement>(null), text: useRef<HTMLInputElement>(null) };
     const [calling, setCalling] = useState(false);
     const [draft, setDraft] = useState(nickname ?? person.name);
     /* The reader's own picture first: they chose it, and a bridge changing its avatar must not undo that. */
@@ -526,6 +535,60 @@ export function ContactCard({
                                     </span>
                                 </button>
                             ))}
+                        </section>
+                    )}
+
+                    {/*
+                     * What they sound like: the two tones a phone's card carries.
+                     *
+                     * Per person rather than per chat, so somebody merged from three networks rings the same
+                     * whichever one they call on - which is the whole point of their being one person here.
+                     */}
+                    {onTone && (
+                        <section className="mx_ContactCard_section" aria-label={_t("contacts|tones")}>
+                            {(["ring", "text"] as const).map((which) => {
+                                const tone = which === "ring" ? ringtone : textTone;
+                                return (
+                                    <div className="mx_ContactCard_accountRow" key={which}>
+                                        <button
+                                            type="button"
+                                            className="mx_ContactCard_account"
+                                            onClick={() => toneRefs[which].current?.click()}
+                                        >
+                                            <span className="mx_ContactCard_factLabel">
+                                                {which === "ring"
+                                                    ? _t("contacts|ringtone")
+                                                    : _t("contacts|text_tone")}
+                                            </span>
+                                            <span className="mx_ContactCard_factValue">
+                                                {tone?.name ?? _t("contacts|tone_default")}
+                                            </span>
+                                        </button>
+                                        {tone && (
+                                            <button
+                                                type="button"
+                                                className="mx_ContactCard_accountUnlink"
+                                                aria-label={_t("contacts|tone_clear")}
+                                                title={_t("contacts|tone_clear")}
+                                                onClick={() => onTone(which)}
+                                            >
+                                                <UnlinkIcon width="20" height="20" aria-hidden />
+                                            </button>
+                                        )}
+                                        <input
+                                            ref={toneRefs[which]}
+                                            className="mx_Contacts_file"
+                                            type="file"
+                                            accept="audio/*"
+                                            onChange={(event) => {
+                                                const file = event.target.files?.[0];
+                                                event.target.value = "";
+                                                if (file) onTone(which, file);
+                                            }}
+                                        />
+                                    </div>
+                                );
+                            })}
                         </section>
                     )}
 

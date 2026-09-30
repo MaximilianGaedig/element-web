@@ -25,6 +25,8 @@ import { logger } from "matrix-js-sdk/src/logger";
 import { CallEventHandlerEvent } from "matrix-js-sdk/src/webrtc/callEventHandler";
 
 import { MatrixClientPeg } from "./MatrixClientPeg";
+import { ringtoneFor } from "./utils/contacts/tones";
+import { mediaFromMxc } from "./customisations/Media";
 import Modal from "./Modal";
 import { _t } from "./languageHandler";
 import dis from "./dispatcher/dispatcher";
@@ -171,7 +173,9 @@ export default class LegacyCallHandler extends TypedEventEmitter<LegacyCallHandl
         if (!callId || this.isForcedSilent()) return;
         this.silencedCalls.delete(callId);
         this.emit(LegacyCallHandlerEvent.SilencedCallsChanged, this.silencedCalls);
-        void this.play(AudioID.Ring);
+        // The room the silenced call is in, so unsilencing plays that caller's tone rather than the default.
+        const ringing = [...this.calls.entries()].find(([, call]) => call.callId === callId)?.[0];
+        void this.play(AudioID.Ring, ringing);
     }
 
     public isCallSilenced(callId?: string): boolean {
@@ -324,7 +328,7 @@ export default class LegacyCallHandler extends TypedEventEmitter<LegacyCallHandl
         return this.transferees.get(callId);
     }
 
-    public async play(audioId: AudioID): Promise<void> {
+    public async play(audioId: AudioID, roomId?: string): Promise<void> {
         const logPrefix = `LegacyCallHandler.play(${audioId}):`;
         logger.debug(`${logPrefix} beginning of function`);
 
@@ -336,6 +340,26 @@ export default class LegacyCallHandler extends TypedEventEmitter<LegacyCallHandl
         };
 
         const [urlPrefix, loop] = audioInfo[audioId];
+
+        /*
+         * The caller's own ringtone, when one was chosen for them.
+         *
+         * Only the ring: a ringback or a busy tone is about this end of the call and is not the caller's to
+         * decide. Set per person on the contact card and stored per room, so a merged contact rings the
+         * same however they call.
+         */
+        if (audioId === AudioID.Ring && roomId) {
+            const client = MatrixClientPeg.get();
+            const tone = client ? ringtoneFor(client, roomId) : undefined;
+            const url = tone ? mediaFromMxc(tone.url, client ?? undefined).srcHttp : null;
+            if (url) {
+                const chosen = await this.backgroundAudio.play(url, loop);
+                this.playingSources[audioId] = chosen;
+                logger.debug(`${logPrefix} playing the caller's own ringtone`);
+                return;
+            }
+        }
+
         const source = await this.backgroundAudio.pickFormatAndPlay(urlPrefix, ["mp3", "ogg"], loop);
         if (this.playingSources[audioId]) {
             logger.warn(`${logPrefix} Already playing audio ${audioId}!`);
@@ -506,7 +530,7 @@ export default class LegacyCallHandler extends TypedEventEmitter<LegacyCallHandl
                 );
 
                 if (pushRuleEnabled && tweakSetToRing && !this.isForcedSilent()) {
-                    void this.play(AudioID.Ring);
+                    void this.play(AudioID.Ring, mappedRoomId ?? undefined);
                 } else {
                     this.silenceCall(call.callId);
                 }

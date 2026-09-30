@@ -1242,3 +1242,21 @@ Please see LICENSE files in the repository root for full details.
     justify-content: flex-end;
     gap: var(--cpd-space-2x);
 }
+
+/* What a lookup would disclose, before it happens, and what it found after. */
+.mx_Contacts_discover {
+    display: flex;
+    align-items: center;
+    gap: var(--cpd-space-2x);
+    margin: 0 var(--mx-contacts-gutter) var(--cpd-space-2x);
+    padding: var(--cpd-space-3x);
+    border-radius: var(--mx-contacts-inset-radius);
+    background: var(--cpd-color-bg-subtle-secondary);
+    color: var(--cpd-color-text-primary);
+    font: var(--cpd-font-body-sm-regular);
+
+    span {
+        flex: 1;
+        min-width: 0;
+    }
+}
