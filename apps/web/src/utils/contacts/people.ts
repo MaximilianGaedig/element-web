@@ -369,7 +369,7 @@ export function groupAccounts(accounts: Account[], links: string[][] = []): Pers
         for (const key of account.keys) join(`key:${key}`, at);
         if (account.mxid) join(`mxid:${account.mxid}`, at);
         for (const group of links) {
-            if (account.mxid && group.includes(account.mxid)) join(`link:${group[0]}`, at);
+            if (group.includes(accountId(account))) join(`link:${group[0]}`, at);
         }
     });
 
@@ -426,11 +426,18 @@ export function sameNameSuggestions(people: Person[], dismissed: string[][] = []
         .map((group) => ({ reason: "same name" as const, people: group }));
 }
 
-/** Every Matrix ID under these people: what a link, or a refusal to link, is recorded against. */
+/**
+ * What a link, or a refusal to link, is recorded against.
+ *
+ * A Matrix ID where there is one, and the account's own key where there is not. Recording links by Matrix
+ * ID alone meant an imported contact could never be merged by hand: a vCard has no Matrix ID, so the one
+ * merge a reader most wants to make - this card I imported is that WhatsApp contact - was the one the list
+ * refused. Its own key is just as stable and just as unique.
+ */
+export const accountId = (account: Account): string => account.mxid ?? account.remoteId;
+
 export function accountsOf(people: Person[]): string[] {
-    return [...new Set(people.flatMap((person) => person.accounts.map((account) => account.mxid)))].filter(
-        (mxid): mxid is string => !!mxid,
-    );
+    return [...new Set(people.flatMap((person) => person.accounts.map(accountId)))].filter(Boolean);
 }
 
 /**

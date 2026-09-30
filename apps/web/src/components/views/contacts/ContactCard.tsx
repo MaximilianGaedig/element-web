@@ -36,6 +36,7 @@ import UnverifiedIcon from "@vector-im/compound-design-tokens/assets/web/icons/e
 import { _t } from "../../../languageHandler";
 import { type Person } from "../../../utils/contacts/people";
 import { readKey } from "../../../utils/contacts/identity";
+import { accountId } from "../../../utils/contacts/people";
 import { accountLink } from "../../../utils/contacts/deepLinks";
 import { AVATAR_COLOURS, type AvatarColour } from "../../../utils/contacts/appearance";
 import { type ContactCard as ContactCardFields } from "../../../utils/contacts/card";
@@ -508,13 +509,13 @@ export function ContactCard({
                                         )}
                                     </button>
                                     {/* Only where the reader is the one who put it here: see onUnlinkAccount. */}
-                                    {onUnlinkAccount && account.mxid && linkedIds?.has(account.mxid) && (
+                                    {onUnlinkAccount && linkedIds?.has(accountId(account)) && (
                                         <button
                                             type="button"
                                             className="mx_ContactCard_accountUnlink"
                                             aria-label={_t("contacts|unlink_account", { network: account.network })}
                                             title={_t("contacts|unlink_account", { network: account.network })}
-                                            onClick={() => onUnlinkAccount(account.mxid!)}
+                                            onClick={() => onUnlinkAccount(accountId(account))}
                                         >
                                             <UnlinkIcon width="20" height="20" aria-hidden />
                                         </button>

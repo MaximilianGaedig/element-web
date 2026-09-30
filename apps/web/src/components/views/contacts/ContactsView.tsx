@@ -50,6 +50,7 @@ import { fuzzyMatch } from "../../../utils/search/fuzzy";
 import {
     type Person,
     type Account,
+    accountId,
     chosenName,
     namePerson,
     type Suggestion,
@@ -476,7 +477,7 @@ function SuggestionCard({
     );
     const [open, setOpen] = useState(false);
     const [chosen, setChosen] = useState<ReadonlySet<string>>(
-        () => new Set(accounts.map(({ account }) => account.mxid).filter((mxid): mxid is string => !!mxid)),
+        () => new Set(accounts.map(({ account }) => accountId(account))),
     );
 
     /*
@@ -490,10 +491,10 @@ function SuggestionCard({
     const tellApart = (account: Account): string =>
         account.details?.[0]?.value ?? account.keys[0] ?? readKey(account.remoteId);
 
-    const toggle = (mxid: string): void =>
+    const toggle = (id: string): void =>
         setChosen((was) => {
             const next = new Set(was);
-            if (!next.delete(mxid)) next.add(mxid);
+            if (!next.delete(id)) next.add(id);
             return next;
         });
 
@@ -560,8 +561,10 @@ function SuggestionCard({
             {open && (
                 <ul className="mx_Contacts_suggestionCards">
                     {accounts.map(({ person, account }) => {
-                        const mxid = account.mxid;
-                        const picked = !!mxid && chosen.has(mxid);
+                        // By the account's own identifier, so a card with no Matrix ID is still a card
+                        // the reader can include - which is the merge they most often want to make.
+                        const id = accountId(account);
+                        const picked = chosen.has(id);
                         /*
                          * Two controls, because there are two things to do with a card here: the tick keeps
                          * it in or leaves it out of the merge, and the rest of the row opens the person so
@@ -576,8 +579,7 @@ function SuggestionCard({
                                     role="checkbox"
                                     aria-checked={picked}
                                     aria-label={_t("contacts|merge_include", { name: account.name || person.name })}
-                                    disabled={!mxid}
-                                    onClick={() => mxid && toggle(mxid)}
+                                    onClick={() => toggle(id)}
                                 >
                                     <span className="mx_Contacts_tick" data-selected={picked || undefined} aria-hidden>
                                         {picked && <CheckIcon width="14" height="14" />}
@@ -1298,7 +1300,7 @@ export function ContactsView({ tab, onFinished }: Props): JSX.Element {
                         people={picked.size > 1 && picked.has(person.id) ? pickedPeople : [person]}
                         others={(people ?? []).filter((one) => one.id !== person.id)}
                         favourited={isFavourite(client, person.rooms)}
-                        linked={person.accounts.some((a) => a.mxid && state?.linked.has(a.mxid))}
+                        linked={person.accounts.some((a) => state?.linked.has(accountId(a)))}
                         open={menuFor === person.id}
                         onOpenChange={(next) => setMenuFor(next ? person.id : undefined)}
                         onMessage={messagePerson}
