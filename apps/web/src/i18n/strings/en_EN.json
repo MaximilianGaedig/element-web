@@ -4404,6 +4404,7 @@
         "undecryptable_tooltip": "This message could not be decrypted",
         "url_preview": {
             "open_link": "Open link",
+            "play_video": "Play video",
             "show_n_more": {
                 "one": "timeline|url_preview|show_n_more",
                 "other": "timeline|url_preview|show_n_more"

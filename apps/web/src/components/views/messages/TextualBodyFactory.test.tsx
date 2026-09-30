@@ -717,6 +717,39 @@ describe("<TextualBody />", () => {
                 expect(content.lastElementChild).toHaveClass("mx_TgWebPage_mediaResizer");
             });
 
+            it("plays a video link's player in place of its frame", async () => {
+                const video = "https://youtu.be/dQw4w9WgXcQ";
+                vi.mocked(matrixClient.getUrlPreview).mockResolvedValue(
+                    // What the homeserver returns for YouTube: the frame, and a player page it doesn't relay.
+                    ogData({
+                        ...ogImage,
+                        "og:image:width": 1280,
+                        "og:image:height": 720,
+                        "og:type": "video.other",
+                        "og:video:type": "text/html",
+                        "og:url": video,
+                    }),
+                );
+
+                const { container } = await renderPreviews(`Watch ${video}`);
+
+                expect(box(container).querySelector("iframe")).toBeNull();
+                fireEvent.click(box(container).querySelector(".mx_TgWebPage_play")!);
+
+                const player = box(container).querySelector("iframe")!;
+                expect(player).toHaveAttribute("src", "https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?autoplay=1");
+                expect(box(container).querySelector(".mx_TgWebPage_play")).toBeNull();
+            });
+
+            it("has no play button on a page that isn't a video", async () => {
+                vi.mocked(matrixClient.getUrlPreview).mockResolvedValue(ogData(ogImage));
+
+                const { container } = await renderPreviews();
+
+                expect(box(container).querySelector(".mx_TgWebPage_media")).not.toBeNull();
+                expect(box(container).querySelector(".mx_TgWebPage_play")).toBeNull();
+            });
+
             it("floats a square photo beside the text as a thumbnail", async () => {
                 vi.mocked(matrixClient.getUrlPreview).mockResolvedValue(
                     ogData({ ...ogImage, "og:image:width": 320, "og:image:height": 320 }),

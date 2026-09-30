@@ -121,6 +121,49 @@ Please see LICENSE files in the repository root for full details.
     }
 }
 
+/*
+ * tweb .video-play: the round play button in the middle of a video's frame (_chatBubble.scss), a
+ * translucent black disc with a white glyph.
+ */
+.mx_TgWebPage_play {
+    position: absolute;
+    inset-block-start: 50%;
+    inset-inline-start: 50%;
+    translate: -50% -50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 3.375rem;
+    height: 3.375rem;
+    border-radius: 50%;
+    background-color: rgb(0 0 0 / 40%);
+    color: #fff;
+    cursor: pointer;
+
+    svg {
+        width: 1.75rem;
+        height: 1.75rem;
+        margin-inline-start: 0.125rem; /* the triangle's weight sits left of its box */
+    }
+
+    &:hover {
+        background-color: rgb(0 0 0 / 60%);
+    }
+}
+
+/* Playing, the player takes the frame's place at the frame's size: the image stays to hold the box. */
+.mx_TgWebPage_media_playing > img {
+    visibility: hidden;
+}
+
+.mx_TgWebPage_player {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    border: 0;
+}
+
 /* tweb .webpage.has-square-photo: a 3rem thumbnail (bubbles.ts squareBoxSize = 48) floated to the end. */
 .mx_TgWebPage_squarePhoto {
     .mx_TgWebPage_mediaResizer {
