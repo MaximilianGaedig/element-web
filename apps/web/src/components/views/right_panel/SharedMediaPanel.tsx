@@ -38,10 +38,11 @@ import {
     monthAt,
     type MonthSpan,
     rowAtTime,
-    scrubberAt,
-    scrubberHandleTop,
+    scrubberDragAt,
+    scrubberLineTop,
+    scrubberPillTop,
     scrubberTrackHeight,
-    scrubberUsable,
+    scrubberWorthIt,
     sectionAt,
     visibleRows,
 } from "../../../utils/sharedMediaLayout";
@@ -977,46 +978,74 @@ function DateScrubber({
     scroll: { top: number; viewport: number; content: number; offset: number; belowScreen?: number };
     seek: (top: number) => void;
     /**
-     * What the whole history holds per month, from the server's index. With this the handle
-     * addresses history that has never been loaded, which is the difference between scrubbing the
-     * column and scrubbing the chat. Empty in an encrypted room, or against a homeserver with no
-     * index, and then everything below falls back to naming what is loaded.
+     * What the whole history holds per month, from the server's index. With this the bar addresses
+     * history that has never been loaded, which is the difference between scrubbing the column and
+     * scrubbing the chat. Empty in an encrypted room, or against a homeserver with no index, and then
+     * everything below falls back to naming what is loaded.
      */
     months: MonthSpan[];
-    /** Called once the handle is let go on a month, to go and fetch it. */
+    /** Called once the bar is let go on a month, to go and fetch it. */
     onPickMonth: (month: MonthSpan) => void;
 }): JSX.Element | null {
-    const track = useRef<HTMLDivElement>(null);
-    // Where the finger is, while it is down. The handle follows this rather than the scroll
-    // position: at either end the column stops moving before the finger does, and a handle that
-    // stopped with it would be left behind by the thing dragging it.
+    /*
+     * Telegram iOS's scrubber (SparseItemGridScrollingArea.swift): a thin bar at the edge and the month
+     * in a pill beside it, shown while the grid moves and gone two seconds after it stops. The bar or the
+     * pill is grabbed and dragged; the list follows the finger by how far it moves, not to where it is.
+     * Held still for 0.2s, the pill slides out from under the finger.
+     */
+    // Where the drag has taken the bar, while it is down (see the note on following the finger).
     const [held, setHeld] = useState<number | null>(null);
+    const [grabbed, setGrabbed] = useState(false);
+    const [active, setActive] = useState(false);
+    const drag = useRef<{ y: number; at: number; moved: boolean; timer?: number } | null>(null);
     // Everything the box can scroll, which includes the tabs and header above the column.
     const span = scroll.content - scroll.viewport;
+    const track = scrubberTrackHeight(scroll);
 
-    const to = useCallback(
-        (clientY: number) => {
-            const box = track.current?.getBoundingClientRect();
-            if (!box || box.height <= 0) return;
-            const at = scrubberAt(clientY - box.top, box.height);
-            setHeld(at);
-            // Only where there is something to scroll. With the column fitting, span is zero or
-            // negative and this drove scrollTop to the top on every move while the handle followed
-            // the finger - the picture of a scrubber that does nothing. The month is still picked on
-            // release, which is the part that matters when the history is not loaded.
-            if (span > 0) seek(at * span);
-        },
-        [seek, span],
-    );
+    // Shown while scrolling, and for two seconds after, as Telegram's activity timer does.
+    const first = useRef(true);
+    useEffect(() => {
+        if (first.current) {
+            first.current = false;
+            return;
+        }
+        setActive(true);
+        const timer = window.setTimeout(() => setActive(false), 2000);
+        return () => window.clearTimeout(timer);
+    }, [scroll.top]);
+
+    const current = span > 0 ? Math.min(1, Math.max(0, scroll.top / span)) : 0;
+    /*
+     * The bar follows the finger rather than the scroll position while held: at either end the column
+     * stops moving before the finger does, and a bar that stopped with it would be left behind by the
+     * thing dragging it.
+     */
+    const at = held ?? current;
 
     useEffect(() => {
         if (held === null) return;
-        const move = (e: PointerEvent): void => to(e.clientY);
+        const move = (e: PointerEvent): void => {
+            const d = drag.current;
+            if (!d) return;
+            if (!d.moved) {
+                d.moved = true;
+                window.clearTimeout(d.timer);
+                setGrabbed(true);
+            }
+            const next = scrubberDragAt(d.at, e.clientY - d.y, track);
+            setHeld(next);
+            // Only where there is something to scroll; the month is still picked on release.
+            if (span > 0) seek(next * span);
+        };
         const up = (): void => {
-            // On release, not during the drag: a fetch per pointermove would be a request every
-            // frame, and the reader has not chosen a month until they stop moving.
-            const picked = monthAt(months, held);
-            if (picked) onPickMonth(picked);
+            window.clearTimeout(drag.current?.timer);
+            // On release, not during the drag: a fetch per pointermove would be a request every frame.
+            if (drag.current?.moved) {
+                const picked = monthAt(months, held);
+                if (picked) onPickMonth(picked);
+            }
+            drag.current = null;
+            setGrabbed(false);
             setHeld(null);
         };
         window.addEventListener("pointermove", move);
@@ -1027,45 +1056,47 @@ function DateScrubber({
             window.removeEventListener("pointerup", up);
             window.removeEventListener("pointercancel", up);
         };
-    }, [held, to, months, onPickMonth]);
+    }, [held, months, onPickMonth, seek, span, track]);
 
-    if (!scrubberUsable(span, months)) return null;
-    const at = held ?? (span > 0 ? Math.min(1, Math.max(0, scroll.top / span)) : 0);
-    // The month under the handle: from the server's counts where we have them, so the label is
-    // right for history that is not loaded, and from the column itself otherwise.
+    if (!scrubberWorthIt(scroll.viewport, scroll.content, months)) return null;
+    // The month at the bar: from the server's counts where we have them, so the label is right for
+    // history that is not loaded, and from the column itself otherwise.
     const overall = monthAt(months, at);
     const under = overall ?? sectionAt(rows, Math.max(0, at * span - scroll.offset))?.section;
+    const lineTop = scrubberLineTop(at, track);
+    const dragging = held !== null;
+    const grab = (e: React.PointerEvent): void => {
+        e.preventDefault();
+        e.stopPropagation();
+        drag.current = {
+            y: e.clientY,
+            at,
+            moved: false,
+            // Held still for 0.2s: grabbed, so the pill moves out from under the finger.
+            timer: window.setTimeout(() => setGrabbed(true), 200),
+        };
+        setHeld(at);
+    };
     return (
         <div
-            ref={track}
             className="mx_SharedMedia_scrubber"
-            /*
-             * As long as what can be *seen of it*, which is not the same as the viewport.
-             *
-             * The track is sticky inside the column, and the column starts below the tabs and the
-             * header - so until those have scrolled away its top sits that far down, and a track a
-             * full viewport tall hangs that far below the fold. The reader could then only drag the
-             * part still on screen, which covered only part of the history: the scrubber did not
-             * stretch across the whole timespan. Take off however much of the chrome is still above.
-             */
-            style={{ height: scrubberTrackHeight(scroll) }}
-            data-dragging={held !== null || undefined}
-            onPointerDown={(e) => {
-                e.preventDefault();
-                to(e.clientY);
-            }}
+            // As long as what can be seen of it, which is not the same as the viewport.
+            style={{ height: track }}
+            data-active={active || dragging || undefined}
+            data-dragging={dragging || undefined}
+            data-grabbed={grabbed || undefined}
         >
-            <div
-                className="mx_SharedMedia_scrubberHandle"
-                style={{ insetBlockStart: scrubberHandleTop(at, scrubberTrackHeight(scroll)) }}
-            >
-                {held !== null && under && (
-                    <span className="mx_SharedMedia_scrubberDate">
-                        {/* A month's before_ts is its newest item's own time, so it names the month. */}
-                        {monthLabel("month" in under ? under.before_ts : under.time)}
-                    </span>
-                )}
-            </div>
+            <div className="mx_SharedMedia_scrubberLine" style={{ insetBlockStart: lineTop }} onPointerDown={grab} />
+            {under && (
+                <div
+                    className="mx_SharedMedia_scrubberDate"
+                    style={{ insetBlockStart: scrubberPillTop(lineTop) }}
+                    onPointerDown={grab}
+                >
+                    {/* A month's before_ts is its newest item's own time, so it names the month. */}
+                    {monthLabel("month" in under ? under.before_ts : under.time)}
+                </div>
+            )}
         </div>
     );
 }
@@ -1091,7 +1122,7 @@ function MediaGrid({
     const { ref, rows, height, window: shown, month, scroll, seek, setScrubbed } = useGridLayout(items, total);
 
     // The scrollbar goes only while the thing replacing it is usable, by the scrubber's own rule.
-    const usable = scrubberUsable(scroll.content - scroll.viewport, months);
+    const usable = scrubberWorthIt(scroll.viewport, scroll.content, months);
     useEffect(() => {
         setScrubbed(usable);
         return () => setScrubbed(false);

@@ -203,8 +203,10 @@ Please see LICENSE files in the repository root for full details.
     }
 
     /*
-     * Telegram's date scrubber: a handle down the edge carrying the whole history, so a date can be
-     * aimed at rather than scrolled to. Wide enough to grab with a thumb, drawn narrow.
+     * Telegram iOS's scrubber, in its numbers (SparseItemGridScrollingArea.swift): a bar 3pt wide and
+     * 44pt tall, 3pt in from the edge, 6pt wide while dragged; and the month in a 32pt pill, 12pt in,
+     * 13pt medium with even-width digits. Both appear while the grid moves and fade 0.3s two seconds
+     * after it stops. Only the bar and the pill take the pointer: the rest of the strip is the grid's.
      */
     /* Takes no room in the column: see SharedMediaPanel's comment on it. */
     .mx_SharedMedia_scrubberDock {
@@ -217,45 +219,80 @@ Please see LICENSE files in the repository root for full details.
     .mx_SharedMedia_scrubber {
         position: absolute;
         inset-block-start: 0;
-        inset-inline-end: calc(-1 * var(--cpd-space-1x));
-        width: 1.5rem;
-        touch-action: none;
-        cursor: grab;
+        inset-inline: 0;
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity 0.3s ease-in-out;
 
-        &[data-dragging] {
+        /* The states are written from here down: a nested ".state &" would put the column's own
+           scope in front of the scrubber's and match nothing. */
+        &[data-active] {
+            opacity: 1;
+
+            .mx_SharedMedia_scrubberLine,
+            .mx_SharedMedia_scrubberDate {
+                pointer-events: auto;
+            }
+        }
+
+        &[data-dragging] .mx_SharedMedia_scrubberLine {
+            width: 6px;
+            border-radius: 3px;
             cursor: grabbing;
         }
-    }
 
-    .mx_SharedMedia_scrubberHandle {
-        position: absolute;
-        inset-inline-end: var(--cpd-space-1x);
-        width: 0.25rem;
-        height: 2.5rem;
-        border-radius: 0.125rem;
-        background-color: var(--cpd-color-bg-action-primary-rest);
-        opacity: 0.35;
-        transition: opacity var(--SharedMedia-tabs-transition);
-
-        .mx_SharedMedia_scrubber:hover &,
-        .mx_SharedMedia_scrubber[data-dragging] & {
-            opacity: 0.9;
+        /* Held: out from under the finger, as Telegram slides it 80pt in 0.1s. */
+        &[data-grabbed] .mx_SharedMedia_scrubberDate {
+            transform: translateX(-80px);
+            transition-duration: 0.1s;
         }
     }
 
-    /* The month under the handle, said while it is being dragged. */
+    .mx_SharedMedia_scrubberLine {
+        position: absolute;
+        inset-inline-end: 3px;
+        width: 3px;
+        height: 44px;
+        border-radius: 1.5px;
+        background-color: var(--cpd-color-icon-tertiary);
+        touch-action: none;
+        cursor: grab;
+        transition: width 0.2s ease-in-out;
+
+        /* Easier to grab than it is to see: Telegram's hit area is the bar grown by 4pt and 2pt - except
+           past the edge, where it would make the panel scroll sideways by a pixel. */
+        &::before {
+            content: "";
+            position: absolute;
+            inset: -2px 0 -2px -4px;
+        }
+    }
+
     .mx_SharedMedia_scrubberDate {
         position: absolute;
-        inset-inline-end: 1rem;
-        inset-block-start: 50%;
-        transform: translateY(-50%);
-        padding: 0.25rem 0.625rem;
-        border-radius: 1rem;
-        background-color: var(--cpd-color-bg-action-primary-rest);
-        font: var(--cpd-font-body-sm-semibold);
-        color: var(--cpd-color-text-on-solid-primary);
+        inset-inline-end: 12px;
+        box-sizing: border-box;
+        height: 32px;
+        padding-inline: 13px;
+        display: flex;
+        align-items: center;
+        border-radius: 16px;
+        background-color: color-mix(in srgb, var(--cpd-color-bg-canvas-default) 72%, transparent);
+        backdrop-filter: blur(16px);
+        box-shadow: 0 1px 4px rgb(0 0 0 / 20%);
+        font: var(--cpd-font-body-sm-medium);
+        font-size: 13px;
+        font-variant-numeric: tabular-nums;
+        color: var(--cpd-color-text-primary);
         white-space: nowrap;
-        pointer-events: none;
+        touch-action: none;
+        cursor: grab;
+        transition: transform 0.2s ease-in-out;
+    }
+
+    /* One month label at a time: the scrubber's, while it is showing. */
+    .mx_SharedMedia_column:has(.mx_SharedMedia_scrubber[data-active]) .mx_SharedMedia_monthPill {
+        opacity: 0;
     }
 
     /* The same month, kept legible while its heading scrolls away above the column. */

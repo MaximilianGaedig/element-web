@@ -13,10 +13,11 @@ import {
     monthAt,
     monthKey,
     rowAtTime,
-    scrubberAt,
-    scrubberHandleTop,
+    scrubberDragAt,
+    scrubberLineTop,
+    scrubberPillTop,
     scrubberTrackHeight,
-    scrubberUsable,
+    scrubberWorthIt,
     sectionAt,
     visibleRows,
     type RowMetrics,
@@ -211,23 +212,6 @@ describe("monthAt", () => {
  * decided for itself, so there were states with no scrollbar and no working scrubber. Exported from
  * the panel and tested here because it is the agreement, not the drawing.
  */
-describe("scrubberUsable", () => {
-    const month = { month: "2026-09", count: 4, before_ts: 1 };
-
-    it("is usable when there is something to scroll", () => {
-        expect(scrubberUsable(400, [])).toBe(true);
-    });
-
-    it("is usable with nothing loaded to scroll but an index saying there is more", () => {
-        expect(scrubberUsable(0, [month])).toBe(true);
-    });
-
-    it("is not usable when the column fits and nothing says otherwise", () => {
-        expect(scrubberUsable(0, [])).toBe(false);
-        expect(scrubberUsable(-120, [])).toBe(false);
-    });
-});
-
 describe("scrubberTrackHeight", () => {
     /*
      * The bug: the track is sticky inside a column that starts below the tabs and header, so at the top
@@ -253,19 +237,30 @@ describe("scrubberTrackHeight", () => {
     });
 });
 
-describe("the scrubber handle stays on its track", () => {
-    // At the oldest end the handle's top sat at the track's bottom, so the handle hung off the screen.
-    it("puts the handle inside the track at both ends", () => {
-        expect(scrubberHandleTop(0, 600)).toBe(0);
-        expect(scrubberHandleTop(1, 600)).toBe(560);
-        expect(scrubberHandleTop(2, 600)).toBe(560);
+describe("the scrubber, in Telegram iOS's numbers", () => {
+    // The bar used to hang off the bottom of the screen at the oldest end.
+    it("keeps the bar on the track at both ends, 3px in", () => {
+        expect(scrubberLineTop(0, 600)).toBe(3);
+        expect(scrubberLineTop(1, 600)).toBe(600 - 3 - 44);
+        expect(scrubberLineTop(5, 600)).toBe(600 - 3 - 44);
     });
 
-    it("reads the pointer as the handle's middle, and the same both ways", () => {
-        expect(scrubberAt(20, 600)).toBe(0);
-        expect(scrubberAt(580, 600)).toBe(1);
-        expect(scrubberAt(300, 600)).toBeCloseTo(0.5);
-        expect(scrubberHandleTop(scrubberAt(300, 600), 600) + 20).toBeCloseTo(300);
+    it("centres the date pill on the bar", () => {
+        expect(scrubberPillTop(100)).toBe(106);
+    });
+
+    // Grabbing the bar must not jump the list to wherever the finger landed.
+    it("moves by how far the finger moves, not to where it is", () => {
+        const room = 600 - 6 - 44;
+        expect(scrubberDragAt(0.25, 0, 600)).toBe(0.25);
+        expect(scrubberDragAt(0.25, room / 2, 600)).toBeCloseTo(0.75);
+        expect(scrubberDragAt(0.25, -room, 600)).toBe(0);
+    });
+
+    it("shows none when most of the content is already on screen, unless there is history to fetch", () => {
+        expect(scrubberWorthIt(600, 1000, [])).toBe(false);
+        expect(scrubberWorthIt(600, 2000, [])).toBe(true);
+        expect(scrubberWorthIt(600, 1000, [{ month: "2026-09" }, { month: "2025-01" }])).toBe(true);
     });
 
     // A panel taller than the screen (a phone's keyboard or edge): the track stops at the screen.

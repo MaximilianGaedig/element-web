@@ -213,18 +213,6 @@ export function sectionAt(
 }
 
 /**
- * Whether the scrubber can actually move the column.
- *
- * It replaces the native scrollbar, and the scrollbar is hidden on the strength of that, so the two
- * have to agree. They did not: the attribute went on as soon as a scrolling box was found while the
- * handle decided for itself, which left states with no scrollbar and nothing that worked. It needs
- * either something to scroll, or an index saying there is history beyond what is loaded.
- */
-export function scrubberUsable(span: number, months: { month: string }[]): boolean {
-    return span > 0 || months.length > 0;
-}
-
-/**
  * How tall the scrubber's track is: what can be seen *of it*, not the whole viewport.
  *
  * The track is sticky inside the column, and the column starts below the tabs and header, so until
@@ -243,22 +231,46 @@ export function scrubberTrackHeight(scroll: {
     return Math.max(0, scroll.viewport - chromeStillAbove - Math.max(0, scroll.belowScreen ?? 0));
 }
 
-/** The scrubber handle's height, as _SharedMedia.pcss draws it (2.5rem). */
-export const SCRUBBER_HANDLE = 40;
-
-/**
- * Where the handle's top goes for a position `at` (0 newest, 1 oldest): within the track, handle and all.
- *
- * Placed at `at` of the whole track, the handle's top reached the bottom edge at the oldest end and the
- * handle itself hung below it, off the screen - a scrubber that did not stop where the track stops.
+/*
+ * Telegram iOS's scrubber, in its own numbers (SparseItemGridScrollingArea.swift): a 44pt bar that
+ * travels between 3pt from the top and 3pt from the bottom, and a 32pt date pill centred on it.
  */
-export function scrubberHandleTop(at: number, track: number, handle = SCRUBBER_HANDLE): number {
-    return Math.min(1, Math.max(0, at)) * Math.max(0, track - handle);
+export const SCRUBBER_LINE = 44;
+export const SCRUBBER_INSET = 3;
+export const SCRUBBER_PILL = 32;
+
+/** How far the bar can travel down a track of this height. */
+function travel(track: number): number {
+    return Math.max(0, track - 2 * SCRUBBER_INSET - SCRUBBER_LINE);
 }
 
-/** The position `at` a pointer at `y` (from the track's top) asks for: the handle's middle under it. */
-export function scrubberAt(y: number, track: number, handle = SCRUBBER_HANDLE): number {
-    const room = track - handle;
-    if (room <= 0) return 0;
-    return Math.min(1, Math.max(0, (y - handle / 2) / room));
+/** Where the bar's top goes for a position `at` (0 newest, 1 oldest): always on the track, bar and all. */
+export function scrubberLineTop(at: number, track: number): number {
+    return SCRUBBER_INSET + Math.min(1, Math.max(0, at)) * travel(track);
+}
+
+/** Where the date pill's top goes: centred on the bar, as Telegram lines them up. */
+export function scrubberPillTop(lineTop: number): number {
+    return lineTop + (SCRUBBER_LINE - SCRUBBER_PILL) / 2;
+}
+
+/**
+ * The position a drag has reached: where it started, moved by how far the finger has gone.
+ *
+ * Relative, as Telegram's is: grabbing the bar does not jump the list to wherever the finger landed,
+ * it only moves it as far as the finger then moves.
+ */
+export function scrubberDragAt(startAt: number, dy: number, track: number): number {
+    const room = travel(track);
+    if (room <= 0) return Math.min(1, Math.max(0, startAt));
+    return Math.min(1, Math.max(0, startAt + dy / room));
+}
+
+/**
+ * Whether there is enough to scrub: Telegram shows none when more than 55% of the content is on
+ * screen. The server's month counts count as content too - they are history not loaded yet.
+ */
+export function scrubberWorthIt(viewport: number, content: number, months: { month: string }[]): boolean {
+    if (months.length > 1) return true;
+    return content > 0 && viewport / content < 0.55;
 }
