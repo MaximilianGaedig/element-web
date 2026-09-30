@@ -70,10 +70,14 @@ exports[`<VirtualizedRoomListView /> > renders Default story 1`] = `
                         General
                       </div>
                       <div
-                        class="_typography_6v6n8_153 _font-body-sm-regular_6v6n8_31 RoomListItemView-module_ellipsis"
+                        class="_typography_6v6n8_153 _font-body-sm-regular_6v6n8_31 RoomListItemView-module_preview"
                         title="Last message in General"
                       >
-                        Last message in General
+                        <span
+                          class="RoomListItemView-module_ellipsis"
+                        >
+                          Last message in General
+                        </span>
                       </div>
                     </div>
                     <div
@@ -341,10 +345,14 @@ exports[`<VirtualizedRoomListView /> > renders Default story 1`] = `
                         Engineering
                       </div>
                       <div
-                        class="_typography_6v6n8_153 _font-body-sm-regular_6v6n8_31 RoomListItemView-module_ellipsis"
+                        class="_typography_6v6n8_153 _font-body-sm-regular_6v6n8_31 RoomListItemView-module_preview"
                         title="Last message in Engineering"
                       >
-                        Last message in Engineering
+                        <span
+                          class="RoomListItemView-module_ellipsis"
+                        >
+                          Last message in Engineering
+                        </span>
                       </div>
                     </div>
                     <div
@@ -591,10 +599,14 @@ exports[`<VirtualizedRoomListView /> > renders Default story 1`] = `
                         Product
                       </div>
                       <div
-                        class="_typography_6v6n8_153 _font-body-sm-regular_6v6n8_31 RoomListItemView-module_ellipsis"
+                        class="_typography_6v6n8_153 _font-body-sm-regular_6v6n8_31 RoomListItemView-module_preview"
                         title="Last message in Product"
                       >
-                        Last message in Product
+                        <span
+                          class="RoomListItemView-module_ellipsis"
+                        >
+                          Last message in Product
+                        </span>
                       </div>
                     </div>
                     <div
@@ -864,10 +876,14 @@ exports[`<VirtualizedRoomListView /> > renders Default story 1`] = `
                         Sales
                       </div>
                       <div
-                        class="_typography_6v6n8_153 _font-body-sm-regular_6v6n8_31 RoomListItemView-module_ellipsis"
+                        class="_typography_6v6n8_153 _font-body-sm-regular_6v6n8_31 RoomListItemView-module_preview"
                         title="Last message in Sales"
                       >
-                        Last message in Sales
+                        <span
+                          class="RoomListItemView-module_ellipsis"
+                        >
+                          Last message in Sales
+                        </span>
                       </div>
                     </div>
                     <div
@@ -1114,10 +1130,14 @@ exports[`<VirtualizedRoomListView /> > renders Default story 1`] = `
                         Announcements
                       </div>
                       <div
-                        class="_typography_6v6n8_153 _font-body-sm-regular_6v6n8_31 RoomListItemView-module_ellipsis"
+                        class="_typography_6v6n8_153 _font-body-sm-regular_6v6n8_31 RoomListItemView-module_preview"
                         title="Last message in Announcements"
                       >
-                        Last message in Announcements
+                        <span
+                          class="RoomListItemView-module_ellipsis"
+                        >
+                          Last message in Announcements
+                        </span>
                       </div>
                     </div>
                     <div
