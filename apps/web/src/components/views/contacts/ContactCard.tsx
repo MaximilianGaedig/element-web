@@ -386,7 +386,7 @@ export function ContactCard({
                             <span className="mx_ContactCard_actionMark">
                                 <ChatIcon width="24" height="24" aria-hidden />
                             </span>
-                            {_t("action|message")}
+                            {_t("contacts|message")}
                         </button>
                         {/*
                          * One way to call per chat that exists, rather than one call button.

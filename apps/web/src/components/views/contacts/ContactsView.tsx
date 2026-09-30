@@ -49,7 +49,6 @@ import { sectionsOf } from "../../../utils/contacts/sections";
 import { fuzzyMatch } from "../../../utils/search/fuzzy";
 import {
     type Person,
-    type Account,
     accountId,
     chosenName,
     namePerson,
@@ -227,6 +226,7 @@ function PersonRow({
                     id={person.id}
                     avatarUrl={person.avatarUrl}
                     roomId={networks[0]?.roomId}
+                    network={networks[0]?.network}
                     presence={selecting ? undefined : presence}
                     selected={selecting}
                 />
@@ -487,37 +487,37 @@ function SuggestionCard({
     /** Looking at one of them, which leaves what is ticked exactly as it was. */
     onOpen?: (person: Person) => void;
 }): JSX.Element {
-    const accounts = useMemo(
-        () => suggestion.people.flatMap((one) => one.accounts.map((account) => ({ person: one, account }))),
-        [suggestion],
-    );
+    /*
+     * One card per person, not per account.
+     *
+     * A person here is already every account the networks' own identifiers tie together - the same number
+     * on a WhatsApp ghost and its phone-number twin, say - and listing those accounts one by one showed the
+     * same person twice inside a question about whether two people are one. What is being decided is
+     * which of these people are the same, so that is what is listed and ticked.
+     */
+    const people = suggestion.people;
     const [open, setOpen] = useState(false);
-    const [chosen, setChosen] = useState<ReadonlySet<string>>(
-        () => new Set(accounts.map(({ account }) => accountId(account))),
-    );
+    const [chosen, setChosen] = useState<ReadonlySet<string>>(() => new Set(people.map((one) => one.id)));
 
     /*
-     * What tells one card from another.
-     *
-     * Two cards on the same network with the same name and the same picture are the case this list exists
-     * for, and a face beside a logo says nothing about which is which. The number, the handle or - when a
-     * network published neither - the account's own id is what the reader decides on, so that is what each
-     * card shows.
+     * What tells one card from another: the networks they are on, then a published number or handle, then
+     * what a network calls them when it differs from the name on the row. An internal id comes last and
+     * only when nothing else differs, shortened to the end, which is the part that differs.
      */
-    /*
-     * What tells one card from another, in the order of how much it helps.
-     *
-     * A published number or handle first, then whatever that network calls them when it differs from the
-     * name on the row. An internal id last and shortened: a Telegram account number or a full Matrix ID
-     * says nothing a reader can decide on, and printed in full it ran out of the row - so it is trimmed to
-     * the end, which is the part that differs, with the whole of it on hover.
-     */
-    const tellApart = (account: Account, person: Person): string => {
-        const published = account.details?.[0]?.value ?? (account.keys[0] ? readKey(account.keys[0]) : undefined);
-        if (published) return published;
-        if (account.name && account.name !== person.name) return account.name;
-        const id = account.mxid ? account.mxid.replace(/^@/, "").split(":")[0] : account.remoteId;
-        return id.length > 18 ? `…${id.slice(-14)}` : id;
+    const networksOf = (person: Person): string =>
+        [...new Set(person.accounts.map((account) => account.network))].join(" · ");
+    const tellApart = (person: Person): string => {
+        const published = person.accounts
+            .map((account) => account.details?.[0]?.value ?? (account.keys[0] ? readKey(account.keys[0]) : undefined))
+            .find(Boolean);
+        let apart = published ?? person.accounts.find((account) => account.name && account.name !== person.name)?.name;
+        const alike = people.filter((one) => networksOf(one) === networksOf(person)).length > 1;
+        if (!apart && alike) {
+            const account = person.accounts[0];
+            const id = account.mxid ? account.mxid.replace(/^@/, "").split(":")[0] : account.remoteId;
+            apart = id.length > 18 ? `…${id.slice(-14)}` : id;
+        }
+        return [networksOf(person), apart].filter(Boolean).join(" · ");
     };
 
     const toggle = (id: string): void =>
@@ -550,6 +550,7 @@ function SuggestionCard({
                                     id={one.id}
                                     avatarUrl={one.avatarUrl}
                                     roomId={one.accounts.find((account) => account.roomId)?.roomId}
+                                    network={one.accounts[0]?.network}
                                 />
                             </span>
                         ))}
@@ -557,7 +558,7 @@ function SuggestionCard({
                     <span className="mx_Contacts_rowText">
                         <span className="mx_Contacts_name">{suggestion.people[0].name}</span>
                         <span className="mx_Contacts_detail">
-                            {_t("contacts|cards_found", { count: accounts.length })}
+                            {_t("contacts|cards_found", { count: people.length })}
                         </span>
                     </span>
                     <ChevronIcon className="mx_Contacts_suggestionChevron" data-open={open || undefined} aria-hidden />
@@ -568,7 +569,7 @@ function SuggestionCard({
                         aria-label={_t("contacts|merge")}
                         tooltip={_t("contacts|merge")}
                         disabled={chosen.size < 2}
-                        onClick={() => onMerge(suggestion, [...chosen])}
+                        onClick={() => onMerge(suggestion, accountsOf(people.filter((one) => chosen.has(one.id))))}
                     >
                         <CheckIcon />
                     </IconButton>
@@ -589,11 +590,10 @@ function SuggestionCard({
              */}
             {open && (
                 <ul className="mx_Contacts_suggestionCards">
-                    {accounts.map(({ person, account }) => {
-                        // By the account's own identifier, so a card with no Matrix ID is still a card
-                        // the reader can include - which is the merge they most often want to make.
-                        const id = accountId(account);
-                        const picked = chosen.has(id);
+                    {people.map((person) => {
+                        const picked = chosen.has(person.id);
+                        // The chat that badges the face, or failing one, the network it is on.
+                        const withChat = person.accounts.find((account) => account.roomId);
                         /*
                          * Two controls, because there are two things to do with a card here: the tick keeps
                          * it in or leaves it out of the merge, and the rest of the row opens the person so
@@ -601,14 +601,14 @@ function SuggestionCard({
                          * what is ticked - that is the answer being composed.
                          */
                         return (
-                            <li className="mx_Contacts_suggestionCard" key={`${account.network}:${account.remoteId}`}>
+                            <li className="mx_Contacts_suggestionCard" key={person.id}>
                                 <button
                                     type="button"
                                     className="mx_Contacts_suggestionTick"
                                     role="checkbox"
                                     aria-checked={picked}
-                                    aria-label={_t("contacts|merge_include", { name: account.name || person.name })}
-                                    onClick={() => toggle(id)}
+                                    aria-label={_t("contacts|merge_include", { name: person.name })}
+                                    onClick={() => toggle(person.id)}
                                 >
                                     <span className="mx_Contacts_tick" data-selected={picked || undefined} aria-hidden>
                                         {picked && <CheckIcon width="14" height="14" />}
@@ -626,13 +626,20 @@ function SuggestionCard({
                                             name={person.name}
                                             id={person.id}
                                             avatarUrl={person.avatarUrl}
-                                            roomId={account.roomId}
+                                            roomId={withChat?.roomId}
+                                            network={(withChat ?? person.accounts[0])?.network}
                                         />
                                     </span>
                                     <span className="mx_Contacts_rowText">
-                                        <span className="mx_Contacts_name">{account.name || person.name}</span>
-                                        <span className="mx_Contacts_detail" title={tellApart(account, person)}>
-                                            {tellApart(account, person)}
+                                        {/*
+                                         * The name the list shows them by, not an account's own: a Signal
+                                         * account without a profile name is called by its number, and that
+                                         * put a number where the reader's name for them belongs. What the
+                                         * account calls itself still shows, under it, when it differs.
+                                         */}
+                                        <span className="mx_Contacts_name">{person.name}</span>
+                                        <span className="mx_Contacts_detail" title={tellApart(person)}>
+                                            {tellApart(person)}
                                         </span>
                                     </span>
                                     <ChevronRightIcon width="20" height="20" aria-hidden />

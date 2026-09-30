@@ -283,6 +283,62 @@ describe("ContactsView picking", () => {
     });
 });
 
+describe("ContactsView duplicates", () => {
+    /*
+     * Two accounts that share a name: one that a network's address book named, and one whose network knows
+     * them only by a number. Each card in the review has to read as the person, and say which network it is.
+     */
+    it("names each card by the person and says its network, not the account's own name", async () => {
+        const named: Person = {
+            ...person("Ada Klein"),
+            id: "a",
+            accounts: [{ network: "WhatsApp", mxid: "@wa:e", remoteId: "wa", name: "Ada Klein", keys: [] }],
+        };
+        const numbered: Person = {
+            ...person("Ada Klein"),
+            id: "b",
+            accounts: [{ network: "Signal", mxid: "@sig:e", remoteId: "sig", name: "+10000000000", keys: [] }],
+        };
+        /*
+         * One person already: two ghosts the networks' own identifiers tied together (a WhatsApp account and
+         * its phone-number twin). They are one card in the question, not two.
+         */
+        const twins: Person = {
+            ...person("Ada Klein"),
+            id: "c",
+            accounts: [
+                { network: "Messenger", mxid: "@fb1:e", remoteId: "fb1", name: "Ada Klein", keys: [] },
+                { network: "Messenger", mxid: "@fb2:e", remoteId: "fb2", name: "Ada Klein", keys: [] },
+            ],
+        };
+        vi.spyOn(peopleModule, "allPeople").mockResolvedValue([named, numbered, twins]);
+        const merge = vi.spyOn(peopleModule, "linkAccounts").mockResolvedValue(undefined);
+        open();
+        await userEvent.click(await screen.findByText("1 duplicate found"));
+        await userEvent.click(await screen.findByRole("button", { name: /3 cards found/ }));
+
+        const cards = [...document.querySelectorAll(".mx_Contacts_suggestionCard")];
+        expect(cards.map((card) => card.querySelector(".mx_Contacts_name")?.textContent)).toEqual([
+            "Ada Klein",
+            "Ada Klein",
+            "Ada Klein",
+        ]);
+        expect(cards.map((card) => card.querySelector(".mx_Contacts_detail")?.textContent)).toEqual([
+            "WhatsApp",
+            // What the account calls itself still tells it apart, after the network.
+            "Signal · +10000000000",
+            "Messenger",
+        ]);
+
+        // Merging still takes every account of every person ticked.
+        await userEvent.click(screen.getByRole("button", { name: "Same person" }));
+        expect(merge).toHaveBeenCalledWith(
+            expect.anything(),
+            expect.arrayContaining(["@wa:e", "@sig:e", "@fb1:e", "@fb2:e"]),
+        );
+    });
+});
+
 describe("ContactsView calls", () => {
     const openCalls = async (): Promise<void> => {
         open("calls");

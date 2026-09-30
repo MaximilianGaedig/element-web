@@ -31,6 +31,7 @@ export function ContactFace({
     avatarUrl,
     /** The chat whose network badges the face; the first of theirs, as the row's subject. */
     roomId,
+    network,
     presence,
     size = 36,
     /** A tick over the face while a selection is being made, in place of the network badge. */
@@ -41,6 +42,8 @@ export function ContactFace({
     id?: string;
     avatarUrl?: string;
     roomId?: string;
+    /** Their network, badging the face when there is no chat to read it from. */
+    network?: string;
     /** The room list's own presence reading, drawn with the room list's own badge. */
     presence?: PresenceInfo;
     size?: number;
@@ -71,7 +74,9 @@ export function ContactFace({
                 size={`${size}px`}
             />
             {/* Bottom-left, as the room list puts a network, so the two lists mark one the same way. */}
-            {!selected && <NetworkLogo client={client} roomId={roomId} size={Math.round(size / 2.6)} />}
+            {!selected && (
+                <NetworkLogo client={client} roomId={roomId} network={network} size={Math.round(size / 2.6)} />
+            )}
             {badge && (
                 <ActivityDot
                     info={presence}

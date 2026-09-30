@@ -51,6 +51,13 @@ describe("ContactCard", () => {
         expect(screen.getByText("Username")).toBeInTheDocument();
     });
 
+    // The label was the raw key "action|message", which no catalogue has.
+    it("labels the message button in words", () => {
+        render(<ContactCard person={person()} onBack={() => {}} onMessage={() => {}} />);
+        expect(screen.getByRole("button", { name: "Message" })).toBeInTheDocument();
+        expect(screen.queryByText("action|message")).toBeNull();
+    });
+
     it("shows the line a network uses to tell people of the same name apart", () => {
         const p = person();
         p.accounts[0].context = "Works at Acme";

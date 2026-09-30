@@ -305,7 +305,12 @@ export function PersonMenu({
                                 label={_t("contacts|open_on", { network: account.network })}
                                 onSelect={() => change(false)}
                             >
-                                <NetworkLogo client={client} roomId={account.roomId} size={20} />
+                                <NetworkLogo
+                                    client={client}
+                                    roomId={account.roomId}
+                                    network={account.network}
+                                    size={20}
+                                />
                             </MenuItem>
                         ))}
                     {/* Filing somebody, which on a phone is what Lists are for. */}
