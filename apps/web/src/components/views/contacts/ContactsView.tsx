@@ -747,8 +747,18 @@ export function ContactsView({ tab, onFinished }: Props): JSX.Element {
                 suggestions: asked ? sameNameSuggestions(found, dismissedSuggestions(client)) : [],
             });
         };
-        void allPeople(client, { ask: false }).then((found) => show(found, false));
-        void allPeople(client).then((found) => show(found, true));
+        /*
+         * Opening the view: both passes, the networks asked afresh. After a change the reader made (a merge, a
+         * dismissal - `at` moved on), only the full build, from the answers already held: the quick pass has
+         * no suggestions, so running it again emptied the duplicates and flashed the whole list on every merge.
+         * What is on screen stays until the rebuilt list replaces it.
+         */
+        if (at === 0) {
+            void allPeople(client, { ask: false }).then((found) => show(found, false));
+            void allPeople(client, { fresh: true }).then((found) => show(found, true));
+        } else {
+            void allPeople(client).then((found) => show(found, true));
+        }
         return () => {
             alive = false;
         };
@@ -1456,16 +1466,7 @@ export function ContactsView({ tab, onFinished }: Props): JSX.Element {
             </div>
             {!!suggestions.length && (
                 <div className="mx_Contacts_reviewActions">
-                    <Button
-                        kind="primary"
-                        size="lg"
-                        onClick={() => {
-                            for (const suggestion of suggestions) merge(suggestion, accountsOf(suggestion.people));
-                            closeReview();
-                        }}
-                    >
-                        {_t("contacts|merge_all")}
-                    </Button>
+                    {/* The way out on the left and the thing to do on the right, as a dialog puts them. */}
                     <Button
                         kind="tertiary"
                         size="lg"
@@ -1475,6 +1476,16 @@ export function ContactsView({ tab, onFinished }: Props): JSX.Element {
                         }}
                     >
                         {_t("contacts|ignore_all")}
+                    </Button>
+                    <Button
+                        kind="primary"
+                        size="lg"
+                        onClick={() => {
+                            for (const suggestion of suggestions) merge(suggestion, accountsOf(suggestion.people));
+                            closeReview();
+                        }}
+                    >
+                        {_t("contacts|merge_all")}
                     </Button>
                 </div>
             )}

@@ -37,6 +37,58 @@ const account = (network: string, mxid: string, name: string, keys: string[] = [
     roomId,
 });
 
+/*
+ * The same account from two places - the chat with them and the network's address book - used to be kept
+ * twice in one person, so somebody showed Telegram twice.
+ */
+describe("the same account described twice", () => {
+    it("is one account, pooling what each copy knew", () => {
+        const fromChat = account("Telegram", "@telegram_1:e", "Mark", [], "!dm:e");
+        const fromAddressBook: Account = {
+            network: "Telegram",
+            mxid: "@telegram_1:e",
+            remoteId: "1",
+            name: "Mark Otherson",
+            keys: ["tel:+491701234567" as never],
+            identifiers: ["tel:+491701234567"],
+            saved: true,
+        };
+        const [person] = groupAccounts([fromChat, fromAddressBook]);
+        expect(person.accounts).toHaveLength(1);
+        expect(person.accounts[0]).toMatchObject({
+            roomId: "!dm:e",
+            name: "Mark",
+            remoteId: "1",
+            saved: true,
+            identifiers: ["tel:+491701234567"],
+        });
+    });
+
+    it("is recognised by the network's id when one copy has no ghost", () => {
+        const withGhost: Account = {
+            network: "Telegram",
+            mxid: "@telegram_1:e",
+            remoteId: "1",
+            name: "Mark",
+            keys: [],
+        };
+        const addressBookOnly: Account = { network: "Telegram", remoteId: "1", name: "Mark", keys: [], saved: true };
+        const people = groupAccounts([withGhost, addressBookOnly]);
+        expect(people).toHaveLength(1);
+        expect(people[0].accounts).toHaveLength(1);
+        expect(people[0].accounts[0]).toMatchObject({ mxid: "@telegram_1:e", saved: true });
+    });
+
+    it("keeps two different accounts of the same network apart", () => {
+        const people = groupAccounts([
+            account("Telegram", "@telegram_1:e", "Mark", ["tel:+1" as never]),
+            account("Telegram", "@telegram_2:e", "Mark", ["tel:+1" as never]),
+        ]);
+        expect(people).toHaveLength(1);
+        expect(people[0].accounts).toHaveLength(2);
+    });
+});
+
 describe("grouping accounts into people", () => {
     it("makes one person out of two networks that publish the same number", () => {
         const people = groupAccounts([
@@ -87,7 +139,9 @@ describe("grouping accounts into people", () => {
             account("Signal", "@signal_2:example.org", "Alice", [], "!dm:example.org"),
         ]);
         expect(people).toHaveLength(1);
-        expect(people[0].accounts).toHaveLength(3);
+        // B and C are the same Signal account described twice, so they are one account of the person.
+        expect(people[0].accounts).toHaveLength(2);
+        expect(people[0].accounts.find((one) => one.network === "Signal")?.roomId).toBe("!dm:example.org");
     });
 
     it("sorts people by name, so the list reads like a list", () => {

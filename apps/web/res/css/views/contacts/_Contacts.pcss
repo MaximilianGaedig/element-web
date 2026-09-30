@@ -1504,8 +1504,11 @@ Please see LICENSE files in the repository root for full details.
 /* Merge all, or ignore all: the two answers to the whole screen. */
 .mx_Contacts_reviewActions {
     display: flex;
-    flex-direction: column;
     gap: var(--cpd-space-2x);
+
+    > * {
+        flex: 1 1 0;
+    }
     padding: var(--cpd-space-4x) var(--mx-contacts-gutter);
     padding-bottom: var(--mx-room-list-toast-bottom, var(--cpd-space-8x));
 }

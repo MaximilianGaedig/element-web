@@ -105,6 +105,27 @@ export interface Suggestion {
 const nameOf = (account: Account): string => account.name?.trim() || account.mxid || account.remoteId;
 
 /** What the bridges say is in your contacts, per network. */
+/** How long the bridges' address books are reused before being asked for again. */
+const BRIDGE_CONTACTS_FRESH_MS = 5 * 60 * 1000;
+const bridgeContactsCache = new WeakMap<MatrixClient, { at: number; accounts: Promise<Account[]> }>();
+
+/**
+ * The bridges' address books, asked for at most every few minutes.
+ *
+ * Every change the reader makes here - a merge, a dismissed suggestion - rebuilds the list, and asking every
+ * bridge again for each one made each merge a round trip to every network and the list flash while it
+ * waited. `fresh` asks regardless, for opening the view, when the reader expects the networks' latest.
+ */
+function bridgeContacts(client: MatrixClient, fresh: boolean): Promise<Account[]> {
+    const held = bridgeContactsCache.get(client);
+    if (!fresh && held && Date.now() - held.at < BRIDGE_CONTACTS_FRESH_MS) return held.accounts;
+    const accounts = contactsFromBridges(client);
+    bridgeContactsCache.set(client, { at: Date.now(), accounts });
+    // A failed ask is not kept: the next build asks again rather than reusing the failure.
+    accounts.catch(() => bridgeContactsCache.delete(client));
+    return accounts;
+}
+
 async function contactsFromBridges(client: MatrixClient): Promise<Account[]> {
     const logins = bridgeLogins(client).filter((login) => login.can.listContacts);
     const answers = await askEveryBridge(client, logins, (login, signal) =>
@@ -361,7 +382,63 @@ export async function dismissSuggestion(client: MatrixClient, mxids: string[]): 
  * Union-find over the things that prove two accounts are the same person: a shared identity key, the same
  * Matrix ID seen twice (a bridge's contact list and an existing chat), or a link the reader made.
  */
-export function groupAccounts(accounts: Account[], links: string[][] = []): Person[] {
+/**
+ * One account per account, however many places described it.
+ *
+ * The same account arrives from more than one source - the chat with them, and the network's own address
+ * book - and grouping put both copies into one person, so somebody showed Telegram twice. Copies are the
+ * same account when they share a Matrix ID, or a network and that network's id for them (an address book
+ * can know somebody without a ghost). What each copy knew is pooled: the chat from one, the identifiers
+ * and "saved" from the other.
+ */
+export function mergeSameAccounts(accounts: Account[]): Account[] {
+    const merged: Account[] = [];
+    const byIdentity = new Map<string, Account>();
+    const identities = (account: Account): string[] =>
+        [
+            account.mxid && `mxid:${account.mxid}`,
+            // A chat account with nothing published uses its Matrix ID as its remote id; that is not a
+            // network id, and matching on it would be matching the Matrix ID twice.
+            account.remoteId && account.remoteId !== account.mxid && `remote:${account.network}:${account.remoteId}`,
+        ].filter((identity): identity is string => !!identity);
+
+    for (const account of accounts) {
+        const same = identities(account)
+            .map((identity) => byIdentity.get(identity))
+            .find((found): found is Account => !!found);
+        if (!same) {
+            const copy = { ...account };
+            merged.push(copy);
+            for (const identity of identities(copy)) byIdentity.set(identity, copy);
+            continue;
+        }
+        Object.assign(same, {
+            mxid: same.mxid ?? account.mxid,
+            remoteId: same.remoteId && same.remoteId !== same.mxid ? same.remoteId : account.remoteId,
+            // The name of the copy in a chat is the one the reader has seen.
+            name: same.roomId ? (same.name ?? account.name) : (account.name ?? same.name),
+            avatarUrl: same.avatarUrl ?? account.avatarUrl,
+            roomId: same.roomId ?? account.roomId,
+            keys: [...new Set([...same.keys, ...account.keys])],
+            details: pool(same.details, account.details, (d) => `${d.kind}:${d.value}`),
+            identifiers: pool(same.identifiers, account.identifiers, (id) => id),
+            context: same.context ?? account.context,
+            login: same.login ?? account.login,
+            saved: same.saved || account.saved,
+            publishedCard: same.publishedCard ?? account.publishedCard,
+        });
+        for (const identity of identities(same)) byIdentity.set(identity, same);
+    }
+    return merged;
+}
+
+function pool<T>(a: T[] | undefined, b: T[] | undefined, key: (item: T) => string): T[] | undefined {
+    if (!a && !b) return undefined;
+    return [...new Map([...(a ?? []), ...(b ?? [])].map((item) => [key(item), item])).values()];
+}
+
+export function groupAccounts(described: Account[], links: string[][] = []): Person[] {
+    const accounts = mergeSameAccounts(described);
     const parent = new Map<number, number>();
     const find = (at: number): number => {
         let root = at;
@@ -499,9 +576,12 @@ function contactsFromCards(client: MatrixClient): Account[] {
  * so it is built both ways - from the rooms at once, and again when the answers arrive - and only the
  * second build can merge accounts or know who is saved. Answers are cached, so the wait happens once.
  */
-export async function allPeople(client: MatrixClient, { ask = true }: { ask?: boolean } = {}): Promise<Person[]> {
+export async function allPeople(
+    client: MatrixClient,
+    { ask = true, fresh = false }: { ask?: boolean; fresh?: boolean } = {},
+): Promise<Person[]> {
     const [fromBridges, fromChats] = await Promise.all([
-        ask ? contactsFromBridges(client) : [],
+        ask ? bridgeContacts(client, fresh) : [],
         contactsFromChats(client, ask),
     ]);
     return groupAccounts([...fromBridges, ...fromChats, ...contactsFromCards(client)], manualLinks(client));
