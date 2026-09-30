@@ -16,6 +16,7 @@ import { type MatrixClient } from "matrix-js-sdk/src/matrix";
 import { ContactCard } from "./ContactCard";
 import { MatrixClientPeg } from "../../../MatrixClientPeg";
 import { type Person } from "../../../utils/contacts/people";
+import { type Call } from "../../../utils/contacts/calls";
 
 const person = (over: Partial<Person> = {}): Person => ({
     id: "tel:+49170",
@@ -66,6 +67,36 @@ describe("ContactCard", () => {
     });
 
     // The label was the raw key "action|message", which no catalogue has.
+    // The card's calls were a label and a date; they are drawn as the calls tab draws them now.
+    it("draws its calls as the calls tab does: the mark, how long, and missed ones marked", () => {
+        const call = (over: Partial<Call>): Call => ({
+            eventId: "$c",
+            roomId: "!r:x",
+            userId: "@a:x",
+            name: "A",
+            network: "Messenger",
+            ts: Date.now(),
+            outgoing: false,
+            video: false,
+            outcome: "answered",
+            group: false,
+            title: "A",
+            ...over,
+        });
+        render(
+            <ContactCard
+                person={person()}
+                onBack={() => {}}
+                onMessage={() => {}}
+                calls={[call({ eventId: "$1", outcome: "missed" }), call({ eventId: "$2", seconds: 125 })]}
+            />,
+        );
+
+        expect(screen.getAllByRole("img", { name: "Missed" }).length).toBeGreaterThan(0);
+        expect(screen.getByText(/2m 5s/)).toBeInTheDocument();
+        expect(document.querySelector(".mx_ContactCard_call.mx_Contacts_row_missed")).not.toBeNull();
+    });
+
     it("labels the message button in words", () => {
         render(<ContactCard person={person()} onBack={() => {}} onMessage={() => {}} />);
         expect(screen.getByRole("button", { name: "Message" })).toBeInTheDocument();

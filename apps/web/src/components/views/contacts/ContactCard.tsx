@@ -54,6 +54,7 @@ import { MatrixClientPeg } from "../../../MatrixClientPeg";
 import { LinkedText } from "@element-hq/web-shared-components";
 import { type SharedRoom } from "../../../utils/contacts/shared";
 import { type Call } from "../../../utils/contacts/calls";
+import { CallMark, readDuration, timeOfDay } from "./CallMark";
 import BaseAvatar from "../avatars/BaseAvatar";
 import { mediaFromMxc } from "../../../customisations/Media";
 
@@ -149,6 +150,60 @@ function Fact({ label, value }: { label: string; value: string }): JSX.Element {
             <span className="mx_ContactCard_factLabel">{label}</span>
             <span className="mx_ContactCard_factValue">{value}</span>
         </div>
+    );
+}
+
+/** The day of a call, or its time when it was today: a card's list spans days, the calls tab's rows don't. */
+function whenOfCall(ts: number): string {
+    const date = new Date(ts);
+    if (date.toDateString() === new Date().toDateString()) return timeOfDay(ts);
+    return date.toLocaleDateString(undefined, { day: "numeric", month: "short" });
+}
+
+/**
+ * One call with them, drawn as the calls tab draws it - the coloured mark for which way it went and how it
+ * ended, how long it ran - without their face, which the card already shows at the top.
+ */
+function CardCallRow({
+    call,
+    showNetwork,
+    onOpen,
+}: {
+    call: Call;
+    showNetwork: boolean;
+    onOpen?: () => void;
+}): JSX.Element {
+    const missed = call.outcome === "missed" && !call.outgoing;
+    const label = call.outgoing
+        ? _t("contacts|call_outgoing")
+        : missed
+          ? _t("contacts|call_missed")
+          : call.outcome === "declined"
+            ? _t("contacts|call_declined")
+            : _t("contacts|call_incoming");
+    const detail = [
+        call.seconds !== undefined ? readDuration(call.seconds) : undefined,
+        call.group ? _t("contacts|call_group") : undefined,
+        showNetwork ? call.network : undefined,
+    ]
+        .filter(Boolean)
+        .join(" · ");
+    return (
+        <button
+            type="button"
+            className={`mx_Contacts_row mx_ContactCard_call${missed ? " mx_Contacts_row_missed" : ""}`}
+            onClick={onOpen}
+            disabled={!onOpen}
+        >
+            <span className="mx_Contacts_rowText">
+                <span className="mx_Contacts_name">{label}</span>
+                <span className="mx_Contacts_detail">
+                    <CallMark call={call} />
+                    {detail}
+                </span>
+            </span>
+            <span className="mx_Contacts_when">{whenOfCall(call.ts)}</span>
+        </button>
     );
 }
 
@@ -571,31 +626,13 @@ export function ContactCard({
                     {!!calls?.length && (
                         <section className="mx_ContactCard_section" aria-label={_t("contacts|calls")}>
                             {calls.map((call) => (
-                                <button
+                                <CardCallRow
                                     key={`${call.roomId}:${call.eventId}`}
-                                    type="button"
-                                    className="mx_ContactCard_account"
-                                    onClick={() => onOpenRoom?.(call.roomId, call.eventId)}
-                                    disabled={!onOpenRoom}
-                                >
-                                    <span className="mx_ContactCard_factLabel">
-                                        {call.outgoing
-                                            ? _t("contacts|call_outgoing")
-                                            : call.outcome === "missed"
-                                              ? _t("contacts|call_missed")
-                                              : call.outcome === "declined"
-                                                ? _t("contacts|call_declined")
-                                                : _t("contacts|call_incoming")}
-                                    </span>
-                                    <span className="mx_ContactCard_factValue">
-                                        {new Date(call.ts).toLocaleString(undefined, {
-                                            day: "numeric",
-                                            month: "short",
-                                            hour: "numeric",
-                                            minute: "2-digit",
-                                        })}
-                                    </span>
-                                </button>
+                                    call={call}
+                                    // Which account it was on, only when there is more than one to tell apart.
+                                    showNetwork={new Set(person.accounts.map((account) => account.network)).size > 1}
+                                    onOpen={onOpenRoom ? () => onOpenRoom(call.roomId, call.eventId) : undefined}
+                                />
                             ))}
                         </section>
                     )}
