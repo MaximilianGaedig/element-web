@@ -486,6 +486,26 @@ export function cardForExport(
     };
 }
 
+/**
+ * Hands a vCard to whatever the reader wants to do with it.
+ *
+ * The platform's own share sheet where there is one - which is how a contact reaches another app, another
+ * phone or a message on a handset - and a download where there is not. `canShare` is checked with the
+ * actual file, because a browser can support sharing text and refuse to share files.
+ */
+export async function shareVCard(filename: string, text: string): Promise<void> {
+    const file = new File([text], filename.replace(/[^\w. -]+/g, "_") || "contact.vcf", { type: "text/vcard" });
+    if (navigator.canShare?.({ files: [file] })) {
+        try {
+            await navigator.share({ files: [file], title: filename });
+            return;
+        } catch {
+            // Dismissed, or refused by the platform: fall through to the file, never leave them with nothing.
+        }
+    }
+    downloadVCard(filename, text);
+}
+
 /** Hands a vCard to the browser as a file, which is the only way out of a web client. */
 export function downloadVCard(filename: string, text: string): void {
     const blob = new Blob([text], { type: "text/vcard;charset=utf-8" });

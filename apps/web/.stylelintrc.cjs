@@ -72,6 +72,8 @@ module.exports = {
                     { from: "res/css/views/telegram/_TgBase.pcss", type: "css" },
                     // Fork: the layout metrics the contacts and calls screens are built from
                     { from: "res/css/views/contacts/_metrics.pcss", type: "css" },
+                    // Fork: the room list panel declares the floating bar's height, which contacts sits above
+                    { from: "res/css/views/rooms/RoomListPanel/_RoomListPanel.pcss", type: "css" },
                     // Compound vars
                     "./node_modules/@vector-im/compound-design-tokens/assets/web/css/cpd-common-base.css",
                     "./node_modules/@vector-im/compound-design-tokens/assets/web/css/cpd-common-semantic.css",

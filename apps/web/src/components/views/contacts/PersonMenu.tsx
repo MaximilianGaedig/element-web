@@ -55,8 +55,9 @@ export interface PersonActions {
     onOpen: (person: Person) => void;
     /** Stop hearing from them at all: every account they have goes on the ignore list. */
     onBlock?: (person: Person, blocked: boolean) => void;
-    /** Hand them to something else as a vCard. */
+    /** Hand them to something else as a vCard: to a file, or into a chat. */
     onExport?: (person: Person) => void;
+    onSend?: (person: Person) => void;
     /** Start picking several, with this one picked. */
     onSelect?: (person: Person) => void;
 }
@@ -126,6 +127,7 @@ export function PersonMenu({
     onSelect,
     onBlock,
     onExport,
+    onSend,
     blocked,
     lists,
     onList,
@@ -307,6 +309,19 @@ export function PersonMenu({
                             Icon={ListIcon}
                             label={_t("contacts|add_to_list")}
                             onSelect={keepOpen(() => setView("lists"))}
+                        />
+                    )}
+                    {/*
+                     * Handing somebody to a chat, which is what Share Contact does on a phone: a vCard as
+                     * a file, which every address book on the other end knows how to read - and which this
+                     * one offers to import when it arrives.
+                     */}
+                    {!batch && onSend && (
+                        <MenuItem
+                            hideChevron
+                            Icon={ChatIcon}
+                            label={_t("contacts|send_contact")}
+                            onSelect={() => act(() => onSend(person))}
                         />
                     )}
                     {!batch && onExport && (

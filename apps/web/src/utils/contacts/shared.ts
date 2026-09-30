@@ -32,6 +32,41 @@ export interface SharedRoom {
 }
 
 /**
+ * The rooms the server says you are both in, which is more than the client can see.
+ *
+ * MSC2666: the homeserver here advertises `uk.half-shot.msc2666.query_mutual_rooms.stable`, and asking it
+ * finds rooms the client has not synced - which on an account with a lot of rooms is most of the older
+ * ones. Falls back to what is loaded locally, because the answer has to exist even when the server has no
+ * such endpoint or refuses.
+ */
+export async function askSharedRooms(client: MatrixClient, person: Person): Promise<SharedRoom[]> {
+    const ids = idsOf(person);
+    const local = sharedRooms(client, person);
+    if (!ids.size) return local;
+    try {
+        const answers = await Promise.all(
+            [...ids].map((mxid) => client._unstable_getSharedRooms(mxid).catch(() => [] as string[])),
+        );
+        const dms = new Set(person.rooms);
+        const found = new Map(local.map((room) => [room.roomId, room]));
+        for (const roomId of new Set(answers.flat())) {
+            if (dms.has(roomId) || found.has(roomId)) continue;
+            const room = client.getRoom(roomId);
+            // A room the server named but the client has never loaded still has a name worth showing.
+            found.set(roomId, {
+                roomId,
+                name: room?.name ?? roomId,
+                avatarUrl: room?.getMxcAvatarUrl() ?? undefined,
+                members: room?.getJoinedMemberCount() ?? 0,
+            });
+        }
+        return [...found.values()];
+    } catch {
+        return local;
+    }
+}
+
+/**
  * The groups you are both in, newest activity first.
  *
  * The one-to-one chats are left out: those are the accounts, which the card lists above this as the ways

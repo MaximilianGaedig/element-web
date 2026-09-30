@@ -702,7 +702,11 @@ Please see LICENSE files in the repository root for full details.
 .mx_ContactsView .mx_Contacts_list {
     max-height: none;
     flex: 1;
-    padding-bottom: var(--mx-room-list-toast-bottom, var(--cpd-space-8x));
+    /*
+     * Room at the end for the two floating pieces of chrome: the names pass under them while scrolling,
+     * which is what the glass is for, and the last row can still be brought clear of both.
+     */
+    padding-bottom: calc(var(--mx-room-list-toast-bottom, 6rem) + var(--mx-contacts-row-height));
 }
 
 /*
@@ -1387,19 +1391,44 @@ Please see LICENSE files in the repository root for full details.
     }
 }
 
-/* The search and the control that adds somebody, at the foot of the column above the bar. */
+/*
+ * The search and the plus, floating over the list rather than sitting under it.
+ *
+ * In the flow it was a solid strip between the list and the bar, which is what the bar's glass was
+ * blurring - so the glass had nothing to show and read as a flat panel. Floating, the names scroll under
+ * both pieces of chrome and the blur has the list behind it, which is the whole point of it.
+ */
 .mx_Contacts_find {
+    position: absolute;
+    inset-inline: var(--mx-contacts-gutter);
+    /*
+     * Above the bar, with a fallback for its height: the variable is declared by the room list panel this
+     * normally sits inside, and a calc with one unset variable is not "a bit wrong" - the whole declaration
+     * is dropped and the bar lands wherever static position puts it.
+     */
+    inset-block-end: calc(
+        var(--tg-safe-bottom, 0px) + var(--cpd-space-4x) + var(--mx-room-list-pill-height, 56px) +
+            var(--cpd-space-3x)
+    );
+    z-index: 3;
     display: flex;
     align-items: center;
-    gap: var(--cpd-space-2x);
-    padding: var(--cpd-space-2x) var(--mx-contacts-gutter);
-    /* Clear of the bar that floats over this column. */
-    padding-bottom: var(--mx-room-list-toast-bottom, var(--cpd-space-8x));
+    gap: var(--cpd-space-1x);
+    padding: var(--cpd-space-1x);
+    border-radius: 99px;
+    /* The same glass as the bar below it, so the two read as one floating layer. */
+    background: color-mix(in srgb, var(--cpd-color-bg-canvas-default) 72%, transparent);
+    backdrop-filter: blur(16px) saturate(180%);
+    box-shadow:
+        0 1px 2px rgb(0 0 0 / 10%),
+        0 8px 24px rgb(0 0 0 / 14%);
 
     .mx_Contacts_search {
         flex: 1;
         min-width: 0;
         margin: 0;
+        min-height: 36px;
+        background: transparent;
     }
 }
 
@@ -1483,4 +1512,106 @@ Please see LICENSE files in the repository root for full details.
 
 .mx_Contacts_adding {
     overflow-y: auto;
+}
+
+/* Whether the client has checked who they are: the one line on a card only Matrix can write. */
+.mx_ContactCard_verification {
+    display: flex;
+    align-items: center;
+    gap: var(--cpd-space-1x);
+    padding: 2px var(--cpd-space-2x);
+    border: none;
+    border-radius: 99px;
+    background: var(--cpd-color-bg-subtle-secondary);
+    color: var(--cpd-color-text-secondary);
+    font: var(--cpd-font-body-sm-medium);
+    cursor: pointer;
+
+    &:disabled {
+        cursor: default;
+    }
+
+    &[data-state="verified"] {
+        color: var(--cpd-color-text-success-primary);
+    }
+
+    &[data-state="changed"] {
+        color: var(--cpd-color-text-critical-primary);
+    }
+}
+
+/*
+ * A card in the duplicates view: the tick that keeps it in the merge, and the rest of the row that opens
+ * the person. Two controls because there are two things to do, and doing one must not do the other.
+ */
+.mx_Contacts_suggestionCard {
+    display: flex;
+    align-items: center;
+
+    & + & {
+        border-top: 1px solid var(--mx-contacts-hairline);
+    }
+}
+
+.mx_Contacts_suggestionTick {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    min-width: var(--mx-contacts-row-height);
+    min-height: var(--mx-contacts-row-height);
+    border: none;
+    background: none;
+    cursor: pointer;
+
+    .mx_Contacts_tick {
+        position: static;
+        border: none;
+    }
+}
+
+.mx_Contacts_suggestionOpen {
+    display: flex;
+    align-items: center;
+    gap: var(--cpd-space-3x);
+    flex: 1;
+    min-width: 0;
+    min-height: var(--mx-contacts-row-height);
+    padding: var(--cpd-space-1x) var(--cpd-space-3x) var(--cpd-space-1x) 0;
+    border: none;
+    background: none;
+    color: var(--cpd-color-text-primary);
+    text-align: start;
+    cursor: pointer;
+
+    &:hover:not(:disabled),
+    &:focus-visible {
+        background: var(--cpd-color-bg-subtle-primary);
+    }
+
+    svg {
+        flex-shrink: 0;
+        color: var(--cpd-color-icon-secondary);
+    }
+}
+
+/* What publishing to a Matrix profile means, said before anything is published. */
+.mx_Contacts_publishWhy {
+    margin: 0;
+    padding: var(--cpd-space-3x) var(--mx-contacts-gutter);
+    color: var(--cpd-color-text-secondary);
+    font: var(--cpd-font-body-sm-regular);
+}
+
+.mx_Contacts_publishRow {
+    display: flex;
+    align-items: center;
+    gap: var(--cpd-space-3x);
+    min-height: var(--mx-contacts-row-height);
+    padding: 0 var(--mx-contacts-gutter);
+    cursor: pointer;
+
+    & + & {
+        border-top: 1px solid var(--mx-contacts-hairline);
+    }
 }

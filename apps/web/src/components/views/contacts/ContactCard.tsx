@@ -30,6 +30,8 @@ import FavouriteSolidIcon from "@vector-im/compound-design-tokens/assets/web/ico
 import ExternalIcon from "@vector-im/compound-design-tokens/assets/web/icons/link";
 import EmailIcon from "@vector-im/compound-design-tokens/assets/web/icons/email";
 import UnlinkIcon from "@vector-im/compound-design-tokens/assets/web/icons/close";
+import VerifiedIcon from "@vector-im/compound-design-tokens/assets/web/icons/verified";
+import UnverifiedIcon from "@vector-im/compound-design-tokens/assets/web/icons/error";
 
 import { _t } from "../../../languageHandler";
 import { type Person } from "../../../utils/contacts/people";
@@ -41,6 +43,7 @@ import { type Revision, changedFields } from "../../../utils/contacts/history";
 import { type Tone } from "../../../utils/contacts/tones";
 import { ContactEditor } from "./ContactEditor";
 import { type Presence } from "../../../utils/contacts/presence";
+import { type Verification } from "../../../utils/contacts/verification";
 import PresenceIconView from "../rooms/MemberList/tiles/common/PresenceIconView";
 import { type SharedRoom } from "../../../utils/contacts/shared";
 import { type Call } from "../../../utils/contacts/calls";
@@ -81,6 +84,14 @@ interface Props {
     /** What this card has said before now, newest first, and how to put one of them back. */
     history?: readonly Revision[];
     onRestore?: (revision: Revision) => void;
+    /**
+     * Whether the client has checked that they are who they say they are, and how to check.
+     *
+     * Absent for anyone it cannot be said about - a bridge ghost is a puppet the bridge controls, and
+     * verifying its keys would say something true about the bridge and nothing about the person.
+     */
+    verification?: Verification;
+    onVerify?: () => void;
     /** What they ring with and what their messages sound like, and how to change either. */
     ringtone?: Tone;
     textTone?: Tone;
@@ -132,6 +143,8 @@ export function ContactCard({
     onPhoto,
     history,
     onRestore,
+    verification,
+    onVerify,
     ringtone,
     textTone,
     onTone,
@@ -318,6 +331,27 @@ export function ContactCard({
                          * Whether they are about, and where. Nothing at all when no network has said anything,
                          * because "away" that no network reported is this card making it up.
                          */}
+                        {/*
+                         * The one line on a card that only Matrix can write: their cross-signing identity, checked
+                         * or not. A changed identity comes with the way to accept it, because that is the state
+                         * that needs the reader to do something.
+                         */}
+                        {verification && (
+                            <button
+                                type="button"
+                                className="mx_ContactCard_verification"
+                                data-state={verification}
+                                disabled={verification === "verified" || !onVerify}
+                                onClick={onVerify}
+                            >
+                                {verification === "verified" ? (
+                                    <VerifiedIcon width="16" height="16" aria-hidden />
+                                ) : (
+                                    <UnverifiedIcon width="16" height="16" aria-hidden />
+                                )}
+                                {_t(`contacts|verify_${verification}`)}
+                            </button>
+                        )}
                         {presence && (
                             <span className="mx_ContactCard_presence" data-presence={presence}>
                                 <PresenceIconView presenceState={presence} />

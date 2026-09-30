@@ -66,7 +66,8 @@ import { readKey } from "../../../utils/contacts/identity";
 import { ContactCard } from "./ContactCard";
 import { ContactFace } from "./ContactFace";
 import { type Presence, personPresence, presenceNetwork } from "../../../utils/contacts/presence";
-import { callsWith, sharedRooms } from "../../../utils/contacts/shared";
+import { type SharedRoom, askSharedRooms, callsWith, sharedRooms } from "../../../utils/contacts/shared";
+import { type Verification, realAccounts, verificationOf, verify } from "../../../utils/contacts/verification";
 import { chosenColour, nameOrder, setColour, setNameOrder } from "../../../utils/contacts/appearance";
 import {
     type ContactCard as ContactCardFields,
@@ -80,7 +81,14 @@ import { ContactEditor } from "./ContactEditor";
 import { type Discovered, discoverOnMatrix, lookupQuery } from "../../../utils/contacts/discover";
 import { historyFor, recordRevision } from "../../../utils/contacts/history";
 import { ringtoneOf, setRingtone, setTextTone, textToneOf, uploadTone } from "../../../utils/contacts/tones";
-import { cardForExport, downloadVCard, parseVCards, toVCard, toVCards } from "../../../utils/contacts/vcard";
+import {
+    cardForExport,
+    downloadVCard,
+    parseVCards,
+    shareVCard,
+    toVCard,
+    toVCards,
+} from "../../../utils/contacts/vcard";
 import { importCards } from "../../../utils/contacts/importCards";
 import { addList, contactLists, peopleIn, removeList, setInList } from "../../../utils/contacts/lists";
 import { PersonMenu } from "./PersonMenu";
@@ -89,6 +97,7 @@ import BaseAvatar from "../avatars/BaseAvatar";
 import { mediaFromMxc } from "../../../customisations/Media";
 import { DirectoryMember, startDmOnFirstMessage } from "../../../utils/direct-messages";
 import dis from "../../../dispatcher/dispatcher";
+import ContentMessages from "../../../ContentMessages";
 import { Action } from "../../../dispatcher/actions";
 import { type ViewRoomPayload } from "../../../dispatcher/payloads/ViewRoomPayload";
 import { CallType } from "matrix-js-sdk/src/webrtc/call";
@@ -451,12 +460,15 @@ function SuggestionCard({
     suggestion,
     onMerge,
     onDismiss,
+    onOpen,
 }: {
     client: MatrixClient;
     suggestion: Suggestion;
     /** The accounts the reader settled on, which is not always all of the ones offered. */
     onMerge: (suggestion: Suggestion, mxids: string[]) => void;
     onDismiss: (suggestion: Suggestion) => void;
+    /** Looking at one of them, which leaves what is ticked exactly as it was. */
+    onOpen?: (person: Person) => void;
 }): JSX.Element {
     const accounts = useMemo(
         () => suggestion.people.flatMap((one) => one.accounts.map((account) => ({ person: one, account }))),
@@ -550,18 +562,33 @@ function SuggestionCard({
                     {accounts.map(({ person, account }) => {
                         const mxid = account.mxid;
                         const picked = !!mxid && chosen.has(mxid);
+                        /*
+                         * Two controls, because there are two things to do with a card here: the tick keeps
+                         * it in or leaves it out of the merge, and the rest of the row opens the person so
+                         * the reader can see who they are actually looking at. Opening one must not change
+                         * what is ticked - that is the answer being composed.
+                         */
                         return (
-                            <li key={`${account.network}:${account.remoteId}`}>
+                            <li className="mx_Contacts_suggestionCard" key={`${account.network}:${account.remoteId}`}>
                                 <button
                                     type="button"
-                                    className="mx_Contacts_suggestionCard"
-                                    aria-pressed={picked}
+                                    className="mx_Contacts_suggestionTick"
+                                    role="checkbox"
+                                    aria-checked={picked}
+                                    aria-label={_t("contacts|merge_include", { name: account.name || person.name })}
                                     disabled={!mxid}
                                     onClick={() => mxid && toggle(mxid)}
                                 >
                                     <span className="mx_Contacts_tick" data-selected={picked || undefined} aria-hidden>
                                         {picked && <CheckIcon width="14" height="14" />}
                                     </span>
+                                </button>
+                                <button
+                                    type="button"
+                                    className="mx_Contacts_suggestionOpen"
+                                    onClick={() => onOpen?.(person)}
+                                    disabled={!onOpen}
+                                >
                                     <span className="mx_Contacts_faceWith">
                                         <ContactFace
                                             client={client}
@@ -575,6 +602,7 @@ function SuggestionCard({
                                         <span className="mx_Contacts_name">{account.name || person.name}</span>
                                         <span className="mx_Contacts_detail">{tellApart(account)}</span>
                                     </span>
+                                    <ChevronRightIcon width="20" height="20" aria-hidden />
                                 </button>
                             </li>
                         );
@@ -840,9 +868,27 @@ export function ContactsView({ tab, onFinished }: Props): JSX.Element {
         [client, again],
     );
 
+    /*
+     * Sending somebody into a chat as a vCard.
+     *
+     * A file rather than a custom event: every client can show it, every address book on the other end
+     * knows how to read it, and a contact shared into a room should not need this client at the far end.
+     */
+    const sendPerson = useCallback(
+        (person: Person): void => {
+            const text = toVCard(cardForExport(person, cardFor(client, person)));
+            const file = new File([text], `${person.name}.vcf`, { type: "text/vcard" });
+            const roomId = SDKContextClass.instance.roomViewStore.getRoomId();
+            if (!roomId) return;
+            void ContentMessages.sharedInstance().sendContentToRoom(file, roomId, undefined, client, undefined);
+        },
+        [client],
+    );
+
+    /* Out to another app, another phone or a file - whichever the platform can actually do. */
     const exportPerson = useCallback(
         (person: Person): void => {
-            downloadVCard(`${person.name}.vcf`, toVCard(cardForExport(person, cardFor(client, person))));
+            void shareVCard(`${person.name}.vcf`, toVCard(cardForExport(person, cardFor(client, person))));
         },
         [client],
     );
@@ -1189,6 +1235,27 @@ export function ContactsView({ tab, onFinished }: Props): JSX.Element {
     );
 
     /*
+     * What the server and the crypto say about whoever is open.
+     *
+     * Both are asked rather than worked out here: the rooms you are both in come from the homeserver
+     * (MSC2666, which it advertises) and find the ones this client has never synced, and the identity
+     * check is the crypto's answer about their cross-signing. Neither can be had synchronously, so the
+     * card shows what there is and fills in when they answer.
+     */
+    const [groups, setGroups] = useState<SharedRoom[]>([]);
+    const [verification, setVerification] = useState<Verification>();
+    useEffect(() => {
+        if (!open) return;
+        let alive = true;
+        setGroups(sharedRooms(client, open));
+        void askSharedRooms(client, open).then((found) => alive && setGroups(found));
+        void verificationOf(client, open).then((said) => alive && setVerification(said));
+        return () => {
+            alive = false;
+        };
+    }, [client, open]);
+
+    /*
      * Going back plays the way coming in did.
      *
      * The layer is held on screen for the length of the outgoing animation rather than being dropped the
@@ -1244,6 +1311,7 @@ export function ContactsView({ tab, onFinished }: Props): JSX.Element {
                         onSelect={toggle}
                         onBlock={block}
                         onExport={exportPerson}
+                        onSend={sendPerson}
                         lists={lists}
                         onList={(one, member) => void setInList(client, one.id, person, member).then(again)}
                         blocked={person.accounts.every((a) => !a.mxid || ignored.has(a.mxid))}
@@ -1272,6 +1340,7 @@ export function ContactsView({ tab, onFinished }: Props): JSX.Element {
             callPerson,
             block,
             exportPerson,
+            sendPerson,
             ignored,
             lists,
             again,
@@ -1288,56 +1357,62 @@ export function ContactsView({ tab, onFinished }: Props): JSX.Element {
      * control that takes all of them at once - which is what a reader who trusts the matching wants and
      * what answering them one at a time is not.
      */
-    if (reviewing) {
-        const suggestions = state?.suggestions ?? [];
-        return (
-            <div className="mx_Contacts mx_ContactsView">
-                <div className="mx_ContactsView_header">
-                    <IconButton aria-label={_t("action|back")} onClick={() => setReviewing(false)} size="32px">
-                        <BackIcon />
-                    </IconButton>
-                    <h2 className="mx_ContactsView_title">{_t("contacts|duplicates_title")}</h2>
-                    <span />
-                </div>
-                <div className="mx_Contacts_list">
-                    {!suggestions.length && <p className="mx_Contacts_empty">{_t("contacts|duplicates_none")}</p>}
-                    {suggestions.map((suggestion) => (
-                        <SuggestionCard
-                            key={accountsOf(suggestion.people).join(",")}
-                            client={client}
-                            suggestion={suggestion}
-                            onMerge={merge}
-                            onDismiss={dismiss}
-                        />
-                    ))}
-                </div>
-                {!!suggestions.length && (
-                    <div className="mx_Contacts_reviewActions">
-                        <Button
-                            kind="primary"
-                            size="lg"
-                            onClick={() => {
-                                for (const suggestion of suggestions) merge(suggestion, accountsOf(suggestion.people));
-                                setReviewing(false);
-                            }}
-                        >
-                            {_t("contacts|merge_all")}
-                        </Button>
-                        <Button
-                            kind="tertiary"
-                            size="lg"
-                            onClick={() => {
-                                for (const suggestion of suggestions) dismiss(suggestion);
-                                setReviewing(false);
-                            }}
-                        >
-                            {_t("contacts|ignore_all")}
-                        </Button>
-                    </div>
-                )}
+    /*
+     * The duplicates, as a layer rather than a screen returned in place of the list.
+     *
+     * A card opened from here has to sit over this without taking it away: which cards are ticked and how
+     * far down the reader had scrolled are the work in progress, and both were lost the moment looking at
+     * somebody replaced the screen holding them.
+     */
+    const suggestions = state?.suggestions ?? [];
+    const duplicates = reviewing ? (
+        <div className="mx_Contacts_layer">
+            <div className="mx_ContactsView_header">
+                <IconButton aria-label={_t("action|back")} onClick={() => setReviewing(false)} size="32px">
+                    <BackIcon />
+                </IconButton>
+                <h2 className="mx_ContactsView_title">{_t("contacts|duplicates_title")}</h2>
+                <span />
             </div>
-        );
-    }
+            <div className="mx_Contacts_list">
+                {!suggestions.length && <p className="mx_Contacts_empty">{_t("contacts|duplicates_none")}</p>}
+                {suggestions.map((suggestion) => (
+                    <SuggestionCard
+                        key={accountsOf(suggestion.people).join(",")}
+                        client={client}
+                        suggestion={suggestion}
+                        onMerge={merge}
+                        onDismiss={dismiss}
+                        onOpen={setOpen}
+                    />
+                ))}
+            </div>
+            {!!suggestions.length && (
+                <div className="mx_Contacts_reviewActions">
+                    <Button
+                        kind="primary"
+                        size="lg"
+                        onClick={() => {
+                            for (const suggestion of suggestions) merge(suggestion, accountsOf(suggestion.people));
+                            setReviewing(false);
+                        }}
+                    >
+                        {_t("contacts|merge_all")}
+                    </Button>
+                    <Button
+                        kind="tertiary"
+                        size="lg"
+                        onClick={() => {
+                            for (const suggestion of suggestions) dismiss(suggestion);
+                            setReviewing(false);
+                        }}
+                    >
+                        {_t("contacts|ignore_all")}
+                    </Button>
+                </div>
+            )}
+        </div>
+    ) : null;
 
     /*
      * The card instead of the list, not over it. Same reasoning as contacts replacing the room list:
@@ -1367,7 +1442,12 @@ export function ContactsView({ tab, onFinished }: Props): JSX.Element {
                         presence={personPresence(client, open)}
                         presenceOn={presenceNetwork(client, open)}
                         calls={callsWith(calls, open)}
-                        groups={sharedRooms(client, open)}
+                        groups={groups}
+                        verification={verification}
+                        onVerify={() => {
+                            const [mxid] = realAccounts(client, open);
+                            if (mxid) void verify(client, mxid);
+                        }}
                         onOpenRoom={openRoom}
                         onUnlinkAccount={unlinkOne}
                         linkedIds={state?.linked}
@@ -1438,7 +1518,7 @@ export function ContactsView({ tab, onFinished }: Props): JSX.Element {
              * into behind something covering it. `inert` is what says "this is not reachable", and the
              * wrapper uses display: contents so saying it costs the layout nothing.
              */}
-            <div className="mx_Contacts_under" inert={!!card || adding || undefined}>
+            <div className="mx_Contacts_under" inert={!!card || adding || reviewing || undefined}>
                 <div className="mx_ContactsView_header">
                     <IconButton aria-label={_t("action|back")} onClick={onFinished} size="32px">
                         <BackIcon />
@@ -1902,6 +1982,7 @@ export function ContactsView({ tab, onFinished }: Props): JSX.Element {
                 )}
             </div>
 
+            {duplicates}
             {card}
 
             {/* Somebody new: the same editor the card opens, with nothing in it yet. */}

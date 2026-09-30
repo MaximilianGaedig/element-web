@@ -40,6 +40,9 @@ const client = {
     getUser: () => null,
     // Blocking is the homeserver's ignore list, which the rows read to know whether somebody is on it.
     getIgnoredUsers: () => [],
+    // A card asks the crypto whether it has checked who somebody is, and the server which rooms are shared.
+    getCrypto: () => undefined,
+    _unstable_getSharedRooms: async () => [],
 } as unknown as MatrixClient;
 
 const person = (name: string, saved = false): Person => ({
