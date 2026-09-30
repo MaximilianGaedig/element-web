@@ -709,6 +709,20 @@ export default (env: string, argv: Record<string, any>): webpack.Configuration =
                         from: "**",
                         context: path.join(getPackageRoot("@element-hq/element-call-embedded"), "dist"),
                         to: path.join(__dirname, "webapp", "widgets", "element-call"),
+                        transform: {
+                            transformer(content, absoluteFrom) {
+                                if (path.basename(absoluteFrom) !== "config.json") return content;
+                                /*
+                                 * Cameras go out as H264, with Element Call's VP8 backup for anyone
+                                 * who can't take it. Messenger's iPhone app offers only H264, so a
+                                 * VP8 camera could not be bridged to it at all - the bridge relays
+                                 * video as it is and does not transcode.
+                                 */
+                                const config = JSON.parse(content.toString());
+                                config.media_quality = { ...config.media_quality, video_codec: "h264" };
+                                return JSON.stringify(config);
+                            },
+                        },
                     },
                     /*
                      * Reading text out of a picture, served from here rather than from the CDN the
