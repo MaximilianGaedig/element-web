@@ -129,7 +129,7 @@ Please see LICENSE files in the repository root for full details.
         /*
          * Outside a selection it is how one starts: hidden, and shown over the face on hover so picking
          * somebody is a single press there. Only where there is hover - on touch a control that appears on
-         * hover eats the first tap, so there the header's Select starts it instead.
+         * hover eats the first tap, so there a long press opens the person's menu instead.
          */
     }
 
@@ -146,10 +146,6 @@ Please see LICENSE files in the repository root for full details.
         .mx_Contacts_row:hover .mx_Contacts_rowTick:not([data-selecting]):hover {
             background: var(--cpd-color-bg-accent-rest);
         }
-    }
-
-    .mx_Contacts_selectToggle[aria-pressed="true"] {
-        color: var(--cpd-color-icon-accent-primary);
     }
 
     /*

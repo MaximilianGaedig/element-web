@@ -29,7 +29,7 @@ Please see LICENSE files in the repository root for full details.
 import { type MatrixClient, type Room } from "matrix-js-sdk/src/matrix";
 
 import { type BridgeLogin, type BridgePerson, askBridge, askEveryBridge, bridgeLogins } from "../bridge/provisioning";
-import { getBridgeInfo, getBridgedDmUserId } from "../bridge/bridgeInfo";
+import { getBridgeBots, getBridgeInfo, getBridgedDmUserId } from "../bridge/bridgeInfo";
 import { type ContactDetail, type IdentityKey, identityDetails, identityKeys } from "./identity";
 import DMRoomMap from "../DMRoomMap";
 import { type ContactCard, allCards, cardFor, cardLabel, fullName } from "./card";
@@ -78,6 +78,8 @@ export interface Account {
      * changing must not overwrite what somebody typed.
      */
     publishedCard?: ContactCard;
+    /** A bot, as its network or its bridge says: a Telegram bot, or the bridge's own bot account. */
+    bot?: boolean;
 }
 
 /** One person, however many networks that turns out to be. */
@@ -94,6 +96,8 @@ export interface Person {
     details: ContactDetail[];
     /** Whether any network's contact list holds them, which is what "in your contacts" means here. */
     saved: boolean;
+    /** A bot rather than a person: a network's bot, or a bridge's own. Kept out of the list by default. */
+    bot?: boolean;
 }
 
 /** Accounts that might be the same person but say nothing that proves it. */
@@ -115,7 +119,9 @@ function nameRank(account: Account): number {
     return 3;
 }
 
-const nameOf = (account: Account): string => account.name?.trim() || account.mxid || account.remoteId;
+/** Their name, or failing any, the number or handle they are known by, and only then the bare ID. */
+const nameOf = (account: Account): string =>
+    account.name?.trim() || account.details?.[0]?.value || account.mxid || account.remoteId;
 
 /** What the bridges say is in your contacts, per network. */
 /** How long the bridges' address books are reused before being asked for again. */
@@ -205,13 +211,26 @@ async function contactsFromChats(client: MatrixClient, profiles: boolean): Promi
             network: published.network ?? (info ? info.networkName : "Matrix"),
             mxid: otherId,
             remoteId: published.remoteId ?? otherId,
-            name: member?.rawDisplayName ?? undefined,
-            avatarUrl: member?.getMxcAvatarUrl() ?? undefined,
+            /*
+             * The member event first, then the profile, then the chat's own name. Members are loaded lazily,
+             * so for most chats the other person's member event is not in the client at all - and the name
+             * fell back to the bare Matrix ID. The profile carries the same display name, and a DM's name is
+             * the person's name when the bridge set one.
+             */
+            name:
+                nonId(member?.rawDisplayName, otherId) ??
+                nonId(published.displayName, otherId) ??
+                nonId(client.getUser(otherId)?.displayName, otherId) ??
+                (info && getBridgedDmUserId(room) === otherId ? nonId(room.name, otherId) : undefined),
+            avatarUrl:
+                member?.getMxcAvatarUrl() ?? published.avatarUrl ?? client.getUser(otherId)?.avatarUrl ?? undefined,
             roomId: room.roomId,
             keys: identityKeys(published.identifiers),
             details: identityDetails(published.identifiers),
             identifiers: published.identifiers,
             publishedCard: published.published,
+            // The bridge's own bot needs no profile to be known: the room's bridge event names it.
+            bot: published.bot || getBridgeBots(room).has(otherId) || undefined,
         };
     });
 }
@@ -220,6 +239,9 @@ async function contactsFromChats(client: MatrixClient, profiles: boolean): Promi
 const IDENTIFIERS_KEY = "com.beeper.bridge.identifiers";
 const NETWORK_KEY = "com.beeper.bridge.network";
 const REMOTE_ID_KEY = "com.beeper.bridge.remote_id";
+/** Set on a network's bots (a Telegram bot) and on the bridge's own bot, respectively. */
+const NETWORK_BOT_KEY = "com.beeper.bridge.is_network_bot";
+const BRIDGE_BOT_KEY = "com.beeper.bridge.is_bridge_bot";
 
 /** What a ghost's profile says about it, beyond the display name and avatar every member event carries. */
 interface ProfileFacts {
@@ -228,6 +250,15 @@ interface ProfileFacts {
     remoteId?: string;
     /** What the account published about itself, where it published anything. */
     published?: ContactCard;
+    bot?: boolean;
+    displayName?: string;
+    avatarUrl?: string;
+}
+
+/** A name that is a name, not the Matrix ID standing in for one (which is what a missing name renders as). */
+function nonId(name: string | undefined | null, mxid: string): string | undefined {
+    const trimmed = name?.trim();
+    return trimmed && trimmed !== mxid && trimmed !== mxid.slice(1).split(":")[0] ? trimmed : undefined;
 }
 
 const strings = (raw: unknown): string[] =>
@@ -265,6 +296,9 @@ async function profileFacts(client: MatrixClient, userId: string): Promise<Profi
              * ever be seen by other software.
              */
             published: cardFromProfile(profile),
+            bot: profile[NETWORK_BOT_KEY] === true || profile[BRIDGE_BOT_KEY] === true,
+            displayName: text(profile.displayname),
+            avatarUrl: text(profile.avatar_url),
         }))
         // A ghost whose profile cannot be read is a person without published identifiers, not an error:
         // the list is built from several sources and one of them being quiet is ordinary.
@@ -443,6 +477,7 @@ export function mergeSameAccounts(accounts: Account[]): Account[] {
             login: same.login ?? account.login,
             saved: same.saved || account.saved,
             publishedCard: same.publishedCard ?? account.publishedCard,
+            bot: same.bot || account.bot,
         });
         for (const identity of identities(same)) byIdentity.set(identity, same);
     }
@@ -506,6 +541,7 @@ export function groupAccounts(described: Account[], links: string[][] = []): Per
                 keys,
                 rooms: [...new Set(group.map((account) => account.roomId).filter((id): id is string => !!id))],
                 saved: group.some((account) => account.saved),
+                bot: group.some((account) => account.bot) || undefined,
                 // Once each, however many networks published it: the same number from three is one fact.
                 details: [
                     ...new Map(
@@ -603,9 +639,19 @@ export async function allPeople(
         ask ? bridgeContacts(client, fresh) : [],
         contactsFromChats(client, ask),
     ]);
+    /*
+     * Not the reader themselves. Their own account on each network is a ghost like any other - it turns up
+     * in the network's address book and in a chat with themselves - and it listed the reader among their
+     * own contacts. A bridge login's id is the network's id for the account it is logged in as.
+     */
+    const own = new Set(bridgeLogins(client).map((login) => login.loginId));
+    const notMine = (account: Account): boolean => !own.has(account.remoteId);
     return withReaderNames(
         client,
-        groupAccounts([...fromBridges, ...fromChats, ...contactsFromCards(client)], manualLinks(client)),
+        groupAccounts(
+            [...fromBridges, ...fromChats, ...contactsFromCards(client)].filter(notMine),
+            manualLinks(client),
+        ),
     );
 }
 

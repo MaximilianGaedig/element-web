@@ -27,6 +27,7 @@ import {
     unlinkAccounts,
 } from "./people";
 import DMRoomMap from "../DMRoomMap";
+import * as provisioningModule from "../bridge/provisioning";
 
 const account = (network: string, mxid: string, name: string, keys: string[] = [], roomId?: string): Account => ({
     network,
@@ -279,6 +280,7 @@ describe("identifiers a ghost publishes", () => {
             getSafeUserId: () => "@me:e",
             getVisibleRooms: () => [room],
             getRooms: () => [],
+            getUser: () => null,
             getExtendedProfile: vi.fn().mockResolvedValue({
                 "com.beeper.bridge.identifiers": ["tel:+447700900123", "telegram:ada"],
                 "displayname": "Ada",
@@ -316,6 +318,7 @@ describe("identifiers a ghost publishes", () => {
             getSafeUserId: () => "@me:e",
             getVisibleRooms: () => [room],
             getRooms: () => [],
+            getUser: () => null,
             getExtendedProfile: vi.fn().mockResolvedValue({
                 "com.beeper.bridge.network": "discord",
                 "com.beeper.bridge.remote_id": "212938191",
@@ -332,6 +335,66 @@ describe("identifiers a ghost publishes", () => {
         expect(people[0].accounts[0].remoteId).toBe("212938191");
         // Nothing to match on, so the row carries no keys rather than a made-up one.
         expect(people[0].keys).toEqual([]);
+    });
+});
+
+describe("who is in the list", () => {
+    const dm = (mxid: string, roomId: string, member?: string) => ({
+        room: {
+            roomId,
+            name: "",
+            getMember: () => (member ? { rawDisplayName: member, getMxcAvatarUrl: () => null } : null),
+            currentState: { getStateEvents: () => [] },
+        },
+        mxid,
+    });
+    const clientFor = (chats: ReturnType<typeof dm>[], profiles: Record<string, object>): MatrixClient => {
+        vi.spyOn(DMRoomMap, "shared").mockReturnValue({
+            getUserIdForRoomId: (roomId: string) => chats.find((one) => one.room.roomId === roomId)?.mxid,
+            getRoomIds: () => new Set(chats.map((one) => one.room.roomId)),
+        } as unknown as DMRoomMap);
+        return {
+            getSafeUserId: () => "@me:e",
+            getVisibleRooms: () => chats.map((one) => one.room),
+            getRooms: () => [],
+            getUser: () => null,
+            getExtendedProfile: vi.fn(async (mxid: string) => profiles[mxid] ?? {}),
+            getAccountData: () => undefined,
+        } as unknown as MatrixClient;
+    };
+
+    /*
+     * Members are loaded lazily, so the other person's member event is usually not in the client: the name
+     * came out as the bare Matrix ID. The profile has the same display name.
+     */
+    it("names somebody from their profile when their member event is not loaded", async () => {
+        const client = clientFor([dm("@lazy_1:e", "!l1:e")], { "@lazy_1:e": { displayname: "Ada Klein" } });
+        expect((await allPeople(client)).map((person) => person.name)).toEqual(["Ada Klein"]);
+    });
+
+    it("marks a network's bot and a bridge's bot as bots", async () => {
+        const client = clientFor([dm("@bot_1:e", "!b1:e", "Helper"), dm("@bot_2:e", "!b2:e", "Bridge bot")], {
+            "@bot_1:e": { "com.beeper.bridge.is_network_bot": true },
+            "@bot_2:e": { "com.beeper.bridge.is_bridge_bot": true },
+        });
+        expect((await allPeople(client)).map((person) => person.bot)).toEqual([true, true]);
+    });
+
+    // The reader's own account on a network is a ghost too, and it listed them among their own contacts.
+    it("leaves out the reader's own accounts on the networks", async () => {
+        vi.spyOn(provisioningModule, "bridgeLogins").mockReturnValue([
+            {
+                loginId: "own_1",
+                network: "Telegram",
+                provisioningUrl: "https://bridge.invalid",
+                can: { searchUsers: false, listContacts: false, createDm: false },
+            },
+        ]);
+        const client = clientFor([dm("@own_1:e", "!o1:e", "Me"), dm("@other_1:e", "!o2:e", "Ada")], {
+            "@own_1:e": { "com.beeper.bridge.remote_id": "own_1" },
+            "@other_1:e": { "com.beeper.bridge.remote_id": "other_1" },
+        });
+        expect((await allPeople(client, { ask: true })).map((person) => person.name)).toEqual(["Ada"]);
     });
 });
 

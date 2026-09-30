@@ -787,6 +787,8 @@
         "all_contacts": "All",
         "birthday": "Birthday",
         "block": "Block this caller",
+        "bot": "Bot",
+        "bots": "Bots",
         "call": "Call",
         "call_all": "All",
         "call_back": "Call back",

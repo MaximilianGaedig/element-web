@@ -77,7 +77,7 @@ export function splitName(display: string): SplitName {
     const comma = name.match(/^([^,]+),\s*(.+)$/);
     if (comma) return { lastName: comma[1].trim(), firstName: comma[2].trim() };
 
-    const words = name.split(/\s+/);
+    const words = nameWords(name);
     if (words.length < 2) return { firstName: name };
 
     // A suffix is not the family name, and there can be more than one.
@@ -103,6 +103,32 @@ export function splitName(display: string): SplitName {
  * most of them - filed under their first name whatever the setting said, so "sort by last name" appeared
  * to do nothing at all.
  */
+/*
+ * The name's words, with what is not a name kept on the word before it.
+ *
+ * "Marek (spektrum)" is Marek, with a note saying which Marek: split on spaces, "(spektrum)" became the
+ * family name and filed him under "(", which is to say under #. An aside in brackets or quotes, and a word
+ * with no letters in it (an emoji, a dash), stays with the word it follows - it still shows, and still
+ * comes back when the name is put together again, but it is never taken for a first or family name.
+ */
+const OPENERS: Record<string, string> = { "(": ")", "[": "]", "{": "}", '"': '"', "“": "”", "„": "“" };
+
+function nameWords(name: string): string[] {
+    const words: string[] = [];
+    let closing: string | undefined;
+    for (const word of name.split(/\s+/)) {
+        const aside = closing !== undefined || word[0] in OPENERS || !/\p{L}/u.test(word);
+        if (aside && words.length) words[words.length - 1] += ` ${word}`;
+        else words.push(word);
+        if (closing !== undefined) {
+            if (word.endsWith(closing)) closing = undefined;
+        } else if (word[0] in OPENERS && !word.slice(1).endsWith(OPENERS[word[0]])) {
+            closing = OPENERS[word[0]];
+        }
+    }
+    return words;
+}
+
 export function filingName(display: string, order: "first" | "last", card?: SplitName): string {
     const parts = card?.firstName || card?.lastName ? card : splitName(display);
     const first = parts.firstName ?? "";
@@ -110,5 +136,7 @@ export function filingName(display: string, order: "first" | "last", card?: Spli
     if (!first && !last) return display;
     // With only one part there is nothing to reorder, and an empty half must not lead the sort key.
     const ordered = order === "last" ? [last, first] : [first, last];
-    return ordered.filter(Boolean).join(" ");
+    // Filed by its first letter, not by an emoji or a bracket in front of it.
+    const key = ordered.filter(Boolean).join(" ");
+    return key.replace(/^[^\p{L}\p{N}]+/u, "") || key;
 }

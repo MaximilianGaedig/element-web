@@ -32,7 +32,6 @@ import BackIcon from "@vector-im/compound-design-tokens/assets/web/icons/chevron
 import ChevronIcon from "@vector-im/compound-design-tokens/assets/web/icons/chevron-down";
 import ChevronRightIcon from "@vector-im/compound-design-tokens/assets/web/icons/chevron-right";
 import CheckIcon from "@vector-im/compound-design-tokens/assets/web/icons/check";
-import CheckCircleIcon from "@vector-im/compound-design-tokens/assets/web/icons/check-circle";
 import OverflowIcon from "@vector-im/compound-design-tokens/assets/web/icons/overflow-horizontal";
 import GroupIcon from "@vector-im/compound-design-tokens/assets/web/icons/group";
 import ImportIcon from "@vector-im/compound-design-tokens/assets/web/icons/download";
@@ -172,6 +171,14 @@ function PersonRowMenu({
     );
 }
 
+/**
+ * An empty icon, for the choice that is not in force: without one compound lays the row out with no icon
+ * column, so moving the tick from one choice to the other shifted both labels sideways.
+ */
+function NoIcon(props: React.SVGAttributes<SVGElement>): JSX.Element {
+    return <svg {...props} aria-hidden />;
+}
+
 function PersonRow({
     client,
     person,
@@ -254,8 +261,12 @@ function PersonRow({
                  * every name; which networks somebody is on is the fact this list exists to carry, and it
                  * is what the reader picks between when they message or ring them.
                  */}
-                {networks.length > 1 && (
-                    <span className="mx_Contacts_detail">{networks.map((account) => account.network).join(" · ")}</span>
+                {(networks.length > 1 || person.bot) && (
+                    <span className="mx_Contacts_detail">
+                        {[person.bot ? _t("contacts|bot") : undefined, ...networks.map((account) => account.network)]
+                            .filter(Boolean)
+                            .join(" · ")}
+                    </span>
                 )}
             </span>
         </button>
@@ -708,13 +719,8 @@ export function ContactsView({ tab, onFinished }: Props): JSX.Element {
      * repeating a two-step pick for each pair.
      */
     const [picked, setPicked] = useState<ReadonlySet<string>>(new Set());
-    /* Picking started from the header's Select, which holds even before anybody is picked. */
-    const [selectMode, setSelectMode] = useState(false);
-    const selecting = selectMode || picked.size > 0;
-    const stopSelecting = useCallback((): void => {
-        setPicked(new Set());
-        setSelectMode(false);
-    }, []);
+    const selecting = picked.size > 0;
+    const stopSelecting = useCallback((): void => setPicked(new Set()), []);
     const [menuFor, setMenuFor] = useState<string>();
     const [managing, setManaging] = useState(false);
     /* Which of the reader's own lists is showing, or all of them. */
@@ -1013,7 +1019,20 @@ export function ContactsView({ tab, onFinished }: Props): JSX.Element {
     const tags = useMemo(() => contactTags(client), [client, at]);
     /* A list the reader deleted while it was showing is not a filter any more. */
     const tag = tags.find((one) => one.id === tagId);
-    const inScope = useMemo(() => (tag ? peopleTagged(tag, people ?? []) : (people ?? [])), [tag, people]);
+    /*
+     * Bots in a list of their own.
+     *
+     * A bridge's bot and a network's bots are accounts you talk to, but they are not people: mixed in, they
+     * sat among the contacts under names like "Telegram bridge bot". They are out of the list unless the
+     * Bots filter is chosen, which is the only place they show.
+     */
+    const [showBots, setShowBots] = useState(false);
+    const hasBots = useMemo(() => (people ?? []).some((person) => person.bot), [people]);
+    const inScope = useMemo(() => {
+        const all = people ?? [];
+        if (showBots) return all.filter((person) => person.bot);
+        return (tag ? peopleTagged(tag, all) : all).filter((person) => !person.bot);
+    }, [tag, people, showBots]);
 
     const shown = useMemo(
         () =>
@@ -1077,7 +1096,16 @@ export function ContactsView({ tab, onFinished }: Props): JSX.Element {
      * that they all filed under their display name whatever the setting said, so sorting by family name
      * looked like it did nothing at all.
      */
-    const order = nameOrder(client);
+    /*
+     * The order in force, held here and applied at once. Choosing one used to wait for the account data to
+     * be written back and then rebuild the whole list - asking every bridge again - just to re-file names
+     * already on screen; the choice is still stored, in the background.
+     */
+    const [order, setOrder] = useState(() => nameOrder(client));
+    const chooseOrder = (next: "first" | "last"): void => {
+        setOrder(next);
+        void setNameOrder(client, next);
+    };
     const filedAs = useCallback(
         (person: Person): string => filingName(person.name, order, cardFor(client, person)),
         [client, order],
@@ -1661,22 +1689,6 @@ export function ContactsView({ tab, onFinished }: Props): JSX.Element {
                      * being a dead end: the file a phone exports goes in here, and what is here goes back to a
                      * phone the same way.
                      */}
-                    {/*
-                     * Picking people out of the list, one press away at the top as a phone's list has it, rather
-                     * than behind a person's menu. Only on the people, which is the list that has a selection.
-                     */}
-                    {tab === "people" && (
-                        <IconButton
-                            className="mx_Contacts_selectToggle"
-                            aria-label={_t("contacts|select")}
-                            tooltip={_t("contacts|select")}
-                            aria-pressed={selecting}
-                            onClick={() => (selecting ? stopSelecting() : setSelectMode(true))}
-                            size="32px"
-                        >
-                            <CheckCircleIcon />
-                        </IconButton>
-                    )}
                     <Menu
                         className="mx_Contacts_menu"
                         title={_t("contacts|title")}
@@ -1734,15 +1746,15 @@ export function ContactsView({ tab, onFinished }: Props): JSX.Element {
                          */}
                         <MenuItem
                             hideChevron
-                            Icon={order === "first" ? CheckIcon : undefined}
+                            Icon={order === "first" ? CheckIcon : NoIcon}
                             label={_t("contacts|sort_first")}
-                            onSelect={() => void setNameOrder(client, "first").then(again)}
+                            onSelect={() => chooseOrder("first")}
                         />
                         <MenuItem
                             hideChevron
-                            Icon={order === "last" ? CheckIcon : undefined}
+                            Icon={order === "last" ? CheckIcon : NoIcon}
                             label={_t("contacts|sort_last")}
-                            onSelect={() => void setNameOrder(client, "last").then(again)}
+                            onSelect={() => chooseOrder("last")}
                         />
                     </Menu>
                     <input
@@ -1837,29 +1849,46 @@ export function ContactsView({ tab, onFinished }: Props): JSX.Element {
                          * or "the band" is theirs and is seen by nobody else, which is what makes it different
                          * from the rooms they happen to share. Only shown once there is one to choose.
                          */}
-                        {!!tags.length && (
+                        {(!!tags.length || hasBots) && (
                             <div className="mx_Contacts_tags" role="listbox" aria-label={_t("contacts|tags")}>
                                 <ChatFilter
-                                    selected={!tag}
+                                    selected={!tag && !showBots}
                                     role="option"
                                     tabIndex={0}
-                                    aria-selected={!tag}
-                                    onClick={() => setTagId(undefined)}
+                                    aria-selected={!tag && !showBots}
+                                    onClick={() => {
+                                        setTagId(undefined);
+                                        setShowBots(false);
+                                    }}
                                 >
                                     {_t("contacts|all_contacts")}
                                 </ChatFilter>
                                 {tags.map((one) => (
                                     <ChatFilter
                                         key={one.id}
-                                        selected={one.id === tagId}
+                                        selected={one.id === tagId && !showBots}
                                         role="option"
                                         tabIndex={0}
-                                        aria-selected={one.id === tagId}
-                                        onClick={() => setTagId(one.id === tagId ? undefined : one.id)}
+                                        aria-selected={one.id === tagId && !showBots}
+                                        onClick={() => {
+                                            setShowBots(false);
+                                            setTagId(one.id === tagId ? undefined : one.id);
+                                        }}
                                     >
                                         {one.name}
                                     </ChatFilter>
                                 ))}
+                                {hasBots && (
+                                    <ChatFilter
+                                        selected={showBots}
+                                        role="option"
+                                        tabIndex={0}
+                                        aria-selected={showBots}
+                                        onClick={() => setShowBots((was) => !was)}
+                                    >
+                                        {_t("contacts|bots")}
+                                    </ChatFilter>
+                                )}
                             </div>
                         )}
                         {/*

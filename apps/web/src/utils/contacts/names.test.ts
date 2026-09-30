@@ -66,6 +66,20 @@ describe("what a person files under", () => {
         expect(filingName("dave", "last", { firstName: "David", lastName: "Brent" })).toBe("Brent David");
     });
 
+    // "(work)" said which of two people it was, and was taken for the family name: filed under "(" = #.
+    it("never takes an aside in brackets for a family name", () => {
+        expect(filingName("Marek (work)", "last")).toBe("Marek (work)");
+        expect(filingName("Jan Nowak (work)", "last")).toBe("Nowak (work) Jan");
+        expect(filingName("Jan Nowak [old number]", "last")).toBe("Nowak [old number] Jan");
+        expect(filingName("Ola 🎸", "last")).toBe("Ola 🎸");
+    });
+
+    // Somebody known only by their Matrix ID files under its first letter, not under "@".
+    it("files a Matrix ID by its first letter", () => {
+        expect(filingName("@alice:example.org", "last")).toBe("alice:example.org");
+        expect(filingName("@alice:example.org", "first")).toBe("alice:example.org");
+    });
+
     it("leaves a name with no family name alone in either order", () => {
         expect(filingName("Prince", "last")).toBe("Prince");
         expect(filingName("+44 7700 900123", "last")).toBe("+44 7700 900123");

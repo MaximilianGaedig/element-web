@@ -244,12 +244,12 @@ describe("ContactsView merging by hand", () => {
         await waitFor(() => expect(screen.getByText("Ada")).toBeInTheDocument());
 
         /*
-         * Picking starts from the Select at the top, not from inside somebody's menu, and from then on a
-         * press picks rather than opens - so each person is one press.
+         * Picking starts from the tick on a face, not from inside somebody's menu, and from then on a press
+         * picks rather than opens - so each person is one press.
          */
-        await userEvent.click(screen.getByRole("button", { name: "Select" }));
-        expect(screen.getByText("0 selected")).toBeInTheDocument();
-        await userEvent.click(screen.getByText("Ada"));
+        await userEvent.click(
+            screen.getByText("Ada").closest(".mx_Contacts_row")!.querySelector(".mx_Contacts_rowTick")!,
+        );
         await userEvent.click(screen.getByText("Bob"));
         await userEvent.click(screen.getByText("Cyd"));
         expect(screen.getByText("3 selected")).toBeInTheDocument();
@@ -336,6 +336,44 @@ describe("ContactsView duplicates", () => {
             expect.anything(),
             expect.arrayContaining(["@wa:e", "@sig:e", "@fb1:e", "@fb2:e"]),
         );
+    });
+});
+
+describe("ContactsView bots", () => {
+    // A bridge's bot and a network's bots are not people: out of the list, and in a filter of their own.
+    it("keeps bots out of the list until the Bots filter is chosen", async () => {
+        vi.spyOn(peopleModule, "allPeople").mockResolvedValue([person("Ada"), { ...person("Helper"), bot: true }]);
+        open();
+        await waitFor(() => expect(screen.getByText("Ada")).toBeInTheDocument());
+        expect(screen.queryByText("Helper")).not.toBeInTheDocument();
+
+        await userEvent.click(screen.getByRole("option", { name: "Bots" }));
+        expect(await screen.findByText("Helper")).toBeInTheDocument();
+        expect(screen.queryByText("Ada")).not.toBeInTheDocument();
+        // Said on the row, too.
+        expect(screen.getByText("Bot · Signal")).toBeInTheDocument();
+    });
+});
+
+describe("ContactsView sorting", () => {
+    /*
+     * The choice waited for the server to store it and then rebuilt the whole list, asking every bridge
+     * again. It is applied at once now, however long the write takes.
+     */
+    it("re-files the list the moment the order is chosen", async () => {
+        const write = vi.fn(() => new Promise<void>(() => {}));
+        (client as unknown as { setAccountData: unknown }).setAccountData = write;
+        const all = vi.spyOn(peopleModule, "allPeople").mockResolvedValue([person("Zed Adams"), person("Amy Young")]);
+        open();
+        await waitFor(() => expect(screen.getByRole("heading", { name: "A" })).toBeInTheDocument());
+        const builds = all.mock.calls.length;
+
+        await userEvent.click(document.querySelector<HTMLElement>(".mx_ContactsView_header [aria-label='Options']")!);
+        await userEvent.click(await screen.findByRole("menuitem", { name: "Last name" }));
+        // Zed Adams now files under A and Amy Young under Y, before the write has answered.
+        expect(await screen.findByRole("heading", { name: "Y" })).toBeInTheDocument();
+        expect(write).toHaveBeenCalled();
+        expect(all.mock.calls.length).toBe(builds);
     });
 });
 
