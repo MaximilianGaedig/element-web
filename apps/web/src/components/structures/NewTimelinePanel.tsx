@@ -51,6 +51,12 @@ interface NewTimelinePanelProps {
     layout?: Layout;
     /** Keep the panel mounted but invisible (e.g. while search results are shown). */
     hidden?: boolean;
+    /**
+     * Whether this is the room on screen. A room kept mounted behind the one on screen (for instant
+     * switching back) is not being read: it sends no read receipts, and going off screen does what
+     * leaving the room does. Defaults to true. (Hiding it is the kept room's wrapper's job: see LoggedInView.)
+     */
+    active?: boolean;
     /** Used by tiles for permalinks in message bodies and context menus. */
     permalinkCreator?: RoomPermalinkCreator;
     /** Whether tiles render URL previews under messages. */
@@ -214,6 +220,7 @@ export function NewTimelinePanel({
     highlightedEventId,
     layout,
     hidden,
+    active = true,
     permalinkCreator,
     showUrlPreview,
     showReactions,
@@ -256,6 +263,10 @@ export function NewTimelinePanel({
                 initialEventId: highlightedEventId,
             }),
     );
+
+    useEffect(() => {
+        vm.setActive(active);
+    }, [vm, active]);
 
     useEffect(() => {
         vm.start();

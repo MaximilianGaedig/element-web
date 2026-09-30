@@ -30,6 +30,7 @@ import MediaDeviceHandler from "../../MediaDeviceHandler";
 import dis from "../../dispatcher/dispatcher";
 import { type IMatrixClientCreds } from "../../utils/createMatrixClient";
 import SettingsStore from "../../settings/SettingsStore";
+import { KnownMembership } from "matrix-js-sdk/src/types";
 import { SettingLevel } from "../../settings/SettingLevel";
 import PlatformPeg from "../../PlatformPeg";
 import { hideToast as hideServerLimitToast, showToast as showServerLimitToast } from "../../toasts/ServerLimitToast";
@@ -74,6 +75,8 @@ import { TgMetricsPanel } from "../views/telegram/TgMetricsPanel";
 // so each pinned message may trigger a request. Limit the number per room for sanity.
 // NB. this is just for server notices rather than pinned messages in general.
 const MAX_PINNED_NOTICES_PER_ROOM = 2;
+/** How many rooms stay mounted for instant switching back, the one on screen included. */
+const KEPT_ROOMS = 5;
 
 // Used to find the closest inputable thing. Because of how our composer works,
 // your caret might be within a paragraph/font/div/whatever within the
@@ -125,6 +128,8 @@ class LoggedInView extends React.Component<IProps, IState> {
 
     protected readonly _matrixClient: MatrixClient;
     protected readonly _roomView: React.RefObject<RoomView | null>;
+    /** The rooms kept mounted, most recently shown first (see keptRooms). */
+    private kept: string[] = [];
     protected layoutWatcherRef?: string;
     protected compactLayoutWatcherRef?: string;
     protected backgroundImageWatcherRef?: string;
@@ -634,6 +639,27 @@ class LoggedInView extends React.Component<IProps, IState> {
         this._roomView.current?.handleScrollKey(ev);
     };
 
+    /**
+     * The rooms to keep mounted: the one on screen and the last few before it, while they are still rooms
+     * the reader is in. Only with the new timeline, which knows when it is behind another room (it sends
+     * no read receipts then); with the old one a room is remounted on every switch, as before.
+     */
+    private keptRooms(current: string | null | undefined): string[] {
+        if (!current) return [];
+        if (!SettingsStore.getValue("feature_new_timeline")) {
+            this.kept = [current];
+            return this.kept;
+        }
+        const client = this._matrixClient;
+        const stillIn = (roomId: string): boolean =>
+            roomId === current || client.getRoom(roomId)?.getMyMembership() === KnownMembership.Join;
+        this.kept = [current, ...this.kept.filter((roomId) => roomId !== current && stillIn(roomId))].slice(
+            0,
+            KEPT_ROOMS,
+        );
+        return this.kept;
+    }
+
     public render(): React.ReactNode {
         let pageElement;
 
@@ -642,19 +668,48 @@ class LoggedInView extends React.Component<IProps, IState> {
             : undefined;
 
         switch (this.props.page_type) {
-            case PageTypes.RoomView:
+            case PageTypes.RoomView: {
+                const current = this.props.currentRoomId;
+                const kept = this.keptRooms(current);
+                /*
+                 * The last few rooms stay mounted, the one on screen over the others, so switching back to
+                 * one is instant - its timeline, scroll and composer as they were, no spinner in between -
+                 * as Telegram keeps the chats it has shown. Each room is still its own RoomView (it does not
+                 * support changing room); the ones behind are told so and keep out of the reader's way.
+                 */
                 pageElement = (
-                    <RoomView
-                        ref={this._roomView}
-                        onRegistered={this.props.onRegistered}
-                        threepidInvite={this.props.threepidInvite}
-                        oobData={this.props.roomOobData}
-                        key={this.props.currentRoomId || "roomview"}
-                        justCreatedOpts={this.props.roomJustCreatedOpts}
-                        forceTimeline={this.props.forceTimeline}
-                    />
+                    <>
+                        {kept.map((roomId) => {
+                            const active = roomId === current;
+                            return (
+                                <div key={roomId} className="mx_RoomView_kept" data-active={active}>
+                                    <RoomView
+                                        ref={active ? this._roomView : undefined}
+                                        active={active}
+                                        onRegistered={this.props.onRegistered}
+                                        threepidInvite={active ? this.props.threepidInvite : undefined}
+                                        oobData={active ? this.props.roomOobData : undefined}
+                                        justCreatedOpts={active ? this.props.roomJustCreatedOpts : undefined}
+                                        forceTimeline={active ? this.props.forceTimeline : undefined}
+                                    />
+                                </div>
+                            );
+                        })}
+                        {!current && (
+                            <RoomView
+                                ref={this._roomView}
+                                onRegistered={this.props.onRegistered}
+                                threepidInvite={this.props.threepidInvite}
+                                oobData={this.props.roomOobData}
+                                key="roomview"
+                                justCreatedOpts={this.props.roomJustCreatedOpts}
+                                forceTimeline={this.props.forceTimeline}
+                            />
+                        )}
+                    </>
                 );
                 break;
+            }
 
             case PageTypes.HomePage:
                 pageElement = <HomePage justRegistered={this.props.justRegistered} />;

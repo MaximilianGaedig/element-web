@@ -884,7 +884,8 @@ export class RoomTimelineViewModel
      * (see {@link dispose}), mirroring Element X iOS's behaviour.
      */
     private sendAutoReadReceipt(): void {
-        if (this.isDisposed) return;
+        // Behind the room on screen, nothing in it is being read.
+        if (this.isDisposed || !this.active) return;
         const eventId = this.lastBottomEventId;
         if (!eventId || eventId === this.lastSentReceiptEventId) return;
 
@@ -1031,38 +1032,64 @@ export class RoomTimelineViewModel
      *   {@link sendAutoReadReceipt} for the rationale.
      */
     public override dispose(): void {
-        if (this.readReceiptDebounceTimer !== null) {
-            clearTimeout(this.readReceiptDebounceTimer);
-            this.readReceiptDebounceTimer = null;
-        }
         if (this.decryptDebounceTimer !== null) {
             clearTimeout(this.decryptDebounceTimer);
             this.decryptDebounceTimer = null;
         }
+        this.leave();
+        super.dispose();
+    }
+
+    /** Whether this room is the one on screen (see {@link setActive}). */
+    private active = true;
+
+    /**
+     * Whether this room is the one on screen.
+     *
+     * A room switched away from stays mounted behind the one on screen, so switching back is instant
+     * (Telegram keeps the chats it has shown); while it is behind, it must not act as if it were being
+     * read. Going off screen does what leaving the room did - its place is saved and the FullyRead
+     * marker advanced - and no read receipt is sent until it is on screen again.
+     */
+    public setActive(active: boolean): void {
+        if (active === this.active) return;
+        this.active = active;
+        if (active) {
+            debug(`[TimelineVM] setActive(true) — back on screen`);
+            this.sendAutoReadReceipt();
+        } else {
+            debug(`[TimelineVM] setActive(false) — off screen`);
+            this.leave();
+        }
+    }
+
+    /** What leaving the room does: stop receipting, save the place, advance the FullyRead marker. */
+    private leave(): void {
+        if (this.readReceiptDebounceTimer !== null) {
+            clearTimeout(this.readReceiptDebounceTimer);
+            this.readReceiptDebounceTimer = null;
+        }
         if (!this.lastBottomEventId) {
-            debug(`[TimelineVM] dispose() — no visible range recorded, preserving saved position`);
-            super.dispose();
+            debug(`[TimelineVM] leave() — no visible range recorded, preserving saved position`);
             return;
         }
 
         if (this.isAtBottom) {
-            debug(`[TimelineVM] dispose() — clearing saved scroll position (at visual bottom)`);
+            debug(`[TimelineVM] leave() — clearing saved scroll position (at visual bottom)`);
             RoomTimelineViewModel.saveScrollTarget(this.opts.room.roomId, null);
         } else {
-            debug(`[TimelineVM] dispose() — saving scroll position eventId=${this.lastBottomEventId}`);
+            debug(`[TimelineVM] leave() — saving scroll position eventId=${this.lastBottomEventId}`);
             RoomTimelineViewModel.saveScrollTarget(this.opts.room.roomId, this.lastBottomEventId);
         }
 
         // Advance the FullyRead marker to the last bottommost event we saw.
         // Skip if it already matches what we last advanced to (avoids redundant network calls).
         if (this.lastBottomEventId !== this.readMarkerEventId) {
-            debug(`[TimelineVM] dispose() — advancing FullyRead marker to ${this.lastBottomEventId}`);
+            debug(`[TimelineVM] leave() — advancing FullyRead marker to ${this.lastBottomEventId}`);
             this.opts.client.setRoomReadMarkers(this.opts.room.roomId, this.lastBottomEventId).catch((err) => {
-                logger.warn(`[TimelineVM] dispose() — setRoomReadMarkers failed`, err);
+                logger.warn(`[TimelineVM] leave() — setRoomReadMarkers failed`, err);
             });
         }
-
-        super.dispose();
     }
 
     // ── Pagination ───────────────────────────────────────────────────

@@ -1228,6 +1228,21 @@ describe("RoomView", () => {
             } satisfies ComposerInsertPayload);
             await promise;
         });
+        // A room kept mounted behind the one on screen must not take what is meant for "the room".
+        it("is ignored by a room behind the one on screen", async () => {
+            await mountRoomView(undefined, { active: false });
+            const promise = untilDispatch(
+                (payload) => payload.action === Action.ComposerInsert && !!payload.composerType,
+                defaultDispatcher,
+                500,
+            );
+            defaultDispatcher.dispatch({
+                action: Action.ComposerInsert,
+                text: "Hello world",
+                timelineRenderingType: TimelineRenderingType.Room,
+            } satisfies ComposerInsertPayload);
+            await expect(promise).rejects.toThrow();
+        });
         it("ignores payloads with a timelineRenderingType != TimelineRenderingType.Thread", async () => {
             await mountRoomView();
             const promise = untilDispatch(

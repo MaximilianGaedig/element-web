@@ -26,6 +26,27 @@ Please see LICENSE files in the repository root for full details.
     contain: strict;
 }
 
+/*
+ * The rooms kept mounted for instant switching back (LoggedInView): the one on screen fills the wrapper as
+ * the room view always did; the others lie under it at exactly its size, invisible and unpainted. Not
+ * display: none - that would drop their scroll positions and make their timelines measure everything
+ * again on the way back, which is the wait keeping them was meant to remove.
+ */
+.mx_RoomView_kept {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+
+    &[data-active="false"] {
+        position: absolute;
+        inset: 0;
+        visibility: hidden;
+        content-visibility: hidden;
+        pointer-events: none;
+    }
+}
+
 .mx_RoomView {
     word-wrap: break-word;
     display: flex;

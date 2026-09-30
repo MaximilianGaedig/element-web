@@ -102,6 +102,9 @@ const SCROLL_IDLE_MS = 1350;
  *  - "placing" — rows are laid out but still hidden while we scroll to the right spot.
  *  - "live"    — the timeline is visible and the user is in control of scrolling.
  */
+/** How long placing the first rows may take before a spinner says something is happening. */
+const SPINNER_DELAY_MS = 600;
+
 type Phase = "init" | "placing" | "live";
 
 export function TimelineView({
@@ -136,6 +139,17 @@ export function TimelineView({
     // rows are measured and the scroll position corrected. A spinner covers the gap. This
     // happens once per room, as the panel is recreated when the room changes.
     const [revealed, setRevealed] = useState(false);
+    /*
+     * The spinner only once placing takes long enough to notice. Placing is usually a frame or two, and a
+     * spinner flashed for that long is what made switching chats feel like loading them; a chat opens
+     * blank for that moment instead, the way Telegram's does.
+     */
+    const [slowToPlace, setSlowToPlace] = useState(false);
+    useEffect(() => {
+        if (revealed) return;
+        const timer = window.setTimeout(() => setSlowToPlace(true), SPINNER_DELAY_MS);
+        return () => window.clearTimeout(timer);
+    }, [revealed]);
     const revealedRef = useRef(false);
 
     // ─── The floating date ─────────────────────────────────────────────────────
@@ -518,11 +532,7 @@ export function TimelineView({
                     })}
                 </ol>
             </div>
-            {!revealed && (
-                <div className={styles.cover}>
-                    <InlineSpinner size={32} />
-                </div>
-            )}
+            {!revealed && <div className={styles.cover}>{slowToPlace && <InlineSpinner size={32} />}</div>}
             {renderStickyDate && <StickyDate ref={stickyDateRef} render={renderStickyDate} />}
             {revealed && <TimelineOverlayButtons snapshot={snapshot} vm={vm} scrollNow={scrollNow} />}
         </div>

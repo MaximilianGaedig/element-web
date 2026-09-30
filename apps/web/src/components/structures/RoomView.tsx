@@ -165,6 +165,16 @@ if (DEBUG) {
     debuglog = logger.log.bind(console);
 }
 
+/** What a room behind the one on screen still acts on: its own state, never the reader's intent. */
+const ACTIONS_WHILE_HIDDEN = new Set<string>([
+    "MatrixActions.sync",
+    "local_room_event",
+    "notifier_enabled",
+    Action.UploadStarted,
+    Action.UploadFinished,
+    Action.UploadCanceled,
+]);
+
 interface IRoomProps extends RoomViewProps {
     threepidInvite?: IThreepidInvite;
     oobData?: IOOBData;
@@ -181,6 +191,14 @@ interface IRoomProps extends RoomViewProps {
      * Omitting this will mean that RoomView renders for the room held in SDKContext.RoomViewStore.
      */
     roomId?: string;
+
+    /**
+     * Whether this is the room on screen. The last few rooms stay mounted behind the one on screen, so
+     * switching back to one is instant (LoggedInView); one behind is not being read and does not act on
+     * what the app asks of "the room" - a sticker to send, text to insert, a composer to focus. Defaults
+     * to true.
+     */
+    active?: boolean;
 
     /*
      * If true, hide the header
@@ -1245,6 +1263,10 @@ export class RoomView extends React.Component<IRoomProps, IRoomState> {
 
     private onAction = async (payload: ActionPayload): Promise<void> => {
         if (!this.context.client) return;
+        // A room behind the one on screen keeps its own bookkeeping, and nothing else: the rest are
+        // addressed to "the room", which is the one on screen - a sticker or a snapshot sent here would
+        // land in a chat the reader isn't looking at.
+        if (this.props.active === false && !ACTIONS_WHILE_HIDDEN.has(payload.action)) return;
         switch (payload.action) {
             case "message_sent":
                 this.checkDesktopNotifications();
@@ -2566,7 +2588,12 @@ export class RoomView extends React.Component<IRoomProps, IRoomState> {
             );
         }
 
-        const auxPanel = (
+        /*
+         * Behind the room on screen, nothing that holds a widget or a call is kept: they would stay docked
+         * in a room nobody can see instead of moving to the floating window, as they do when a room is left.
+         */
+        const hiddenBehind = this.props.active === false;
+        const auxPanel = hiddenBehind ? null : (
             <AuxPanel
                 room={this.state.room}
                 userId={this.context.client.getSafeUserId()}
@@ -2639,6 +2666,7 @@ export class RoomView extends React.Component<IRoomProps, IRoomState> {
                         key={this.state.room.roomId}
                         room={this.state.room}
                         hidden={hideMessagePanel}
+                        active={this.props.active !== false}
                         highlightedEventId={highlightedEventId}
                         layout={this.state.layout}
                         permalinkCreator={this.permalinkCreator}
@@ -2701,7 +2729,11 @@ export class RoomView extends React.Component<IRoomProps, IRoomState> {
         }
 
         const showRightPanel =
-            !this.props.hideRightPanel && !isRoomEncryptionLoading && this.state.room && this.state.showRightPanel;
+            !this.props.hideRightPanel &&
+            !hiddenBehind &&
+            !isRoomEncryptionLoading &&
+            this.state.room &&
+            this.state.showRightPanel;
 
         const rightPanel = showRightPanel ? (
             <RightPanel
@@ -2758,6 +2790,7 @@ export class RoomView extends React.Component<IRoomProps, IRoomState> {
                 );
                 break;
             case MainSplitContentType.MaximisedWidget:
+                if (hiddenBehind) break;
                 mainSplitContentClassName = "mx_MainSplit_maximisedWidget";
                 mainSplitBody = (
                     <>
@@ -2772,6 +2805,7 @@ export class RoomView extends React.Component<IRoomProps, IRoomState> {
                 );
                 break;
             case MainSplitContentType.Call: {
+                if (hiddenBehind) break;
                 mainSplitContentClassName = "mx_MainSplit_call";
                 mainSplitBody = (
                     <>

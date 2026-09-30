@@ -693,6 +693,35 @@ describe("RoomTimelineViewModel", () => {
         });
     });
 
+    // A room kept mounted behind the one on screen (for instant switching back) is not being read.
+    describe("off screen", () => {
+        it("sends no read receipt while behind another room, and one once back on screen", async () => {
+            seedTimeline([makeMessage("$a"), makeMessage("$b")]);
+            const vm = await createStartedViewModel();
+            vm.onAnchorReached();
+
+            vm.setActive(false);
+            vm.onVisibleRangeChanged(0, vm.getSnapshot().items.length - 1);
+            await new Promise((r) => setTimeout(r, 700));
+            expect(client.sendReadReceipt).not.toHaveBeenCalled();
+
+            vm.setActive(true);
+            expect(client.sendReadReceipt).toHaveBeenCalledTimes(1);
+            expect(vi.mocked(client.sendReadReceipt).mock.calls[0][0]?.getId()).toBe("$b");
+        });
+
+        it("going off screen moves the unread marker as leaving the room did", async () => {
+            seedTimeline([makeMessage("$a"), makeMessage("$b")]);
+            const vm = await createStartedViewModel();
+            vm.onAnchorReached();
+            vm.onVisibleRangeChanged(0, indexOfKey(vm.getSnapshot().items, "$b"));
+
+            vm.setActive(false);
+
+            expect(client.setRoomReadMarkers).toHaveBeenCalledWith(ROOM_ID, "$b");
+        });
+    });
+
     describe("dispose", () => {
         it("stops listening to the room", async () => {
             seedTimeline([makeMessage("$a")]);

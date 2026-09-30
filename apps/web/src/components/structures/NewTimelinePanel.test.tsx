@@ -73,6 +73,7 @@ const { vmState } = vi.hoisted(() => ({
 vi.mock("../../viewmodels/room/timeline/RoomTimelineViewModel", () => ({
     RoomTimelineViewModel: class {
         public start = (): void => {};
+        public setActive = (): void => {};
         public dispose = (): void => {};
         public subscribe = (): (() => void) => (): void => {};
         public getSnapshot = (): Record<string, unknown> => vmState.snapshot;

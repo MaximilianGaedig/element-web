@@ -145,6 +145,17 @@ describe("<TimelineView />", () => {
         await waitFor(() => expect(scroller).toHaveStyle({ visibility: "visible" }));
     });
 
+    // Placing the first rows takes a frame or two; a spinner flashed for that long made switching chats
+    // look like loading them.
+    it("shows no spinner while the first rows are being placed", () => {
+        const { vm } = makeFakeVm({ items: eventItems(30) });
+        const { container } = renderTimeline(vm);
+
+        const cover = container.querySelector(`.${styles.cover}`);
+        expect(cover).not.toBeNull();
+        expect(cover).toBeEmptyDOMElement();
+    });
+
     it("reports the visible range and at-bottom state once live", async () => {
         const { vm, actions } = makeFakeVm({ items: eventItems(30) });
         renderTimeline(vm);
