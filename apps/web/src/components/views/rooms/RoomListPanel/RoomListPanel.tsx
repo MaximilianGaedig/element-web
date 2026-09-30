@@ -12,7 +12,6 @@ import FoundIcon from "@vector-im/compound-design-tokens/assets/web/icons/search
 
 import { shouldShowComponent } from "../../../../customisations/helpers/UIComponents";
 import { UIComponent } from "../../../../settings/UIFeature";
-import { RoomListSearch } from "./RoomListSearch";
 import { HistoryStatusMini } from "../../telegram/TgHistoryChip";
 import { RoomListView } from "./RoomListView";
 import { RoomListPill } from "./RoomListPill";
@@ -26,14 +25,7 @@ import { type IState as IRovingTabIndexState } from "../../../../accessibility/R
 import { RoomListHeaderViewModel } from "../../../../viewmodels/room-list/RoomListHeaderViewModel";
 import { useMatrixClientContext } from "../../../../contexts/MatrixClientContext";
 import { SDKContext } from "../../../../contexts/SDKContext.ts";
-
-type RoomListPanelProps = {
-    /**
-     * Current active space
-     * See {@link RoomListSearch}
-     */
-    activeSpace: string;
-};
+import { useConnectionStatus } from "../../../../hooks/useConnectionStatus";
 
 /**
  * The panel of the room list
@@ -45,7 +37,7 @@ function openFound(): void {
     );
 }
 
-export const RoomListPanel: React.FC<RoomListPanelProps> = ({ activeSpace }) => {
+export const RoomListPanel: React.FC = () => {
     const sdkContext = useContext(SDKContext);
     const displayRoomSearch = shouldShowComponent(UIComponent.FilterContainer);
     const [focusedElement, setFocusedElement] = useState<Element | null>(null);
@@ -76,6 +68,7 @@ export const RoomListPanel: React.FC<RoomListPanelProps> = ({ activeSpace }) => 
 
     const panelView = useRoomListPanelView();
     const matrixClient = useMatrixClientContext();
+    const connectionStatus = useConnectionStatus(matrixClient);
     const vm = useCreateAutoDisposedViewModel(
         () => new RoomListHeaderViewModel({ matrixClient, spaceStore: sdkContext.spaceStore }),
     );
@@ -99,14 +92,6 @@ export const RoomListPanel: React.FC<RoomListPanelProps> = ({ activeSpace }) => 
                 />
             ) : (
                 <>
-                    {displayRoomSearch && (
-                        /* Fork: the search row also carries what is left of the bridge status once the
-                   imports are done - a tick, rather than the full chip taking a row of its own. */
-                        <div className="mx_RoomListPanel_searchRow">
-                            <RoomListSearch activeSpace={activeSpace} />
-                            <HistoryStatusMini />
-                        </div>
-                    )}
                     {/*
                      * Fork: what is in these chats, beside the list's own menu.
                      *
@@ -114,17 +99,27 @@ export const RoomListPanel: React.FC<RoomListPanelProps> = ({ activeSpace }) => 
                      * views this column is showing, and this opens something over all of them - it is not a
                      * fourth place to be.
                      */}
+                    {/*
+                     * Fork: there is no search row above the list. Searching is the button beside the bar at
+                     * the foot (it opens the same dialog Ctrl+K does); what the row also said - whether the
+                     * connection is catching up, and the bridges' history import - moved up here, the status
+                     * in place of the title as Telegram's chat list shows it.
+                     */}
                     <RoomListHeaderView
                         vm={vm}
+                        status={connectionStatus}
                         actions={
-                            <IconButton
-                                size="28px"
-                                style={{ padding: "4px" }}
-                                onClick={openFound}
-                                tooltip={_t("found|open_it")}
-                            >
-                                <FoundIcon color="var(--cpd-color-icon-secondary)" aria-hidden />
-                            </IconButton>
+                            <>
+                                <HistoryStatusMini />
+                                <IconButton
+                                    size="28px"
+                                    style={{ padding: "4px" }}
+                                    onClick={openFound}
+                                    tooltip={_t("found|open_it")}
+                                >
+                                    <FoundIcon color="var(--cpd-color-icon-secondary)" aria-hidden />
+                                </IconButton>
+                            </>
                         }
                     />
                     <RoomListView />
@@ -134,7 +129,7 @@ export const RoomListPanel: React.FC<RoomListPanelProps> = ({ activeSpace }) => 
              * Over whichever of the three is showing, because it is what moves between them: kept out of
              * the branches so it does not unmount and remount - and so the list is never without it.
              */}
-            <RoomListPill />
+            <RoomListPill canSearch={displayRoomSearch} />
         </Flex>
     );
 };

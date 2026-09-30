@@ -36,7 +36,6 @@ import OverflowIcon from "@vector-im/compound-design-tokens/assets/web/icons/ove
 import GroupIcon from "@vector-im/compound-design-tokens/assets/web/icons/group";
 import ImportIcon from "@vector-im/compound-design-tokens/assets/web/icons/download";
 import ListIcon from "@vector-im/compound-design-tokens/assets/web/icons/list-bulleted";
-import PlusIcon from "@vector-im/compound-design-tokens/assets/web/icons/plus";
 import DeleteIcon from "@vector-im/compound-design-tokens/assets/web/icons/delete";
 import ExportIcon from "@vector-im/compound-design-tokens/assets/web/icons/share";
 import CloseIcon from "@vector-im/compound-design-tokens/assets/web/icons/close";
@@ -83,6 +82,7 @@ import {
 import { ContactEditor } from "./ContactEditor";
 import { type Discovered, discoverOnMatrix, lookupQuery } from "../../../utils/contacts/discover";
 import { deleteRevision, forgetHistory, historyFor, recordRevision } from "../../../utils/contacts/history";
+import { setAddingContact, useAddingContact } from "../../../utils/contacts/adding";
 import { ringtoneOf, setRingtone, setTextTone, textToneOf, uploadTone } from "../../../utils/contacts/tones";
 import {
     cardForExport,
@@ -641,6 +641,28 @@ function SuggestionCard({
  * phone does not have, and there is no room for both at once. This replaces the list and the back
  * control returns it, as the Contacts and Phone apps do. `onFinished` is that return.
  */
+const DISMISSED_DUPLICATES_KEY = "mx_contacts_duplicates_dismissed";
+
+/** The set of duplicates whose banner the reader put away, remembered on this device. */
+function useDismissedDuplicates(): [string | undefined, (key: string) => void] {
+    const [dismissed, setDismissed] = useState<string | undefined>(() => {
+        try {
+            return localStorage.getItem(DISMISSED_DUPLICATES_KEY) ?? undefined;
+        } catch {
+            return undefined;
+        }
+    });
+    const dismiss = useCallback((key: string): void => {
+        setDismissed(key);
+        try {
+            localStorage.setItem(DISMISSED_DUPLICATES_KEY, key);
+        } catch {
+            // Not remembered past this session; the banner is still put away for now.
+        }
+    }, []);
+    return [dismissed, dismiss];
+}
+
 export function ContactsView({ tab, onFinished }: Props): JSX.Element {
     /*
      * The peg, not the context.
@@ -671,9 +693,12 @@ export function ContactsView({ tab, onFinished }: Props): JSX.Element {
     /* Which of the reader's own lists is showing, or all of them. */
     const [tagId, setTagId] = useState<string>();
     const [naming, setNaming] = useState(false);
-    /* Writing somebody down who is not in any chat yet: a card with nothing but what is typed. */
-    const [adding, setAdding] = useState(false);
+    /* Writing somebody down who is not in any chat yet: started by the + beside the bar (see adding.ts). */
+    const adding = useAddingContact();
+    // Leaving the view puts the editor away: coming back to People should show People.
+    useEffect(() => () => setAddingContact(false), []);
     const [reviewing, setReviewing] = useState(false);
+    const [dismissedDuplicates, dismissDuplicates] = useDismissedDuplicates();
     const [newTagName, setNewTagName] = useState("");
     /* The file input is hidden and clicked by the menu item: a file button cannot live inside a menu. */
     const fileRef = useRef<HTMLInputElement>(null);
@@ -687,6 +712,15 @@ export function ContactsView({ tab, onFinished }: Props): JSX.Element {
      */
     const [at, setAt] = useState(0);
     const [state, setState] = useState<{ people: Person[]; linked: Set<string>; suggestions: Suggestion[] }>();
+    /* Which duplicates are being suggested, as one value: what a dismissal of the banner is remembered as. */
+    const duplicatesKey = useMemo(
+        () =>
+            (state?.suggestions ?? [])
+                .map((suggestion) => accountsOf(suggestion.people).join(","))
+                .sort()
+                .join("|"),
+        [state],
+    );
 
     /*
      * Twice: the chats the client already holds, then the same list again once the networks answer.
@@ -1180,7 +1214,7 @@ export function ContactsView({ tab, onFinished }: Props): JSX.Element {
     const addPerson = useCallback(
         (fields: ContactCardFields): void => {
             void saveLooseCard(client, fields).then(() => {
-                setAdding(false);
+                setAddingContact(false);
                 again();
             });
         },
@@ -1292,6 +1326,18 @@ export function ContactsView({ tab, onFinished }: Props): JSX.Element {
 
     useSwipeBack(cardRef, closeCard, cardShown);
 
+    /* The duplicates leave the way the card does: slid back out, and draggable off the edge. */
+    const reviewRef = useRef<HTMLDivElement>(null);
+    const {
+        render: reviewShown,
+        leaving: reviewLeaving,
+        leave: closeReview,
+    } = useLeaving(
+        reviewing,
+        useCallback(() => setReviewing(false), []),
+    );
+    useSwipeBack(reviewRef, closeReview, reviewShown);
+
     const toggle = useCallback((person: Person): void => {
         setPicked((was) => {
             const next = new Set(was);
@@ -1386,10 +1432,10 @@ export function ContactsView({ tab, onFinished }: Props): JSX.Element {
      * somebody replaced the screen holding them.
      */
     const suggestions = state?.suggestions ?? [];
-    const duplicates = reviewing ? (
-        <div className="mx_Contacts_layer">
+    const duplicates = reviewShown ? (
+        <div ref={reviewRef} className="mx_Contacts_layer" data-leaving={reviewLeaving || undefined}>
             <div className="mx_ContactsView_header">
-                <IconButton aria-label={_t("action|back")} onClick={() => setReviewing(false)} size="32px">
+                <IconButton aria-label={_t("action|back")} onClick={closeReview} size="32px">
                     <BackIcon />
                 </IconButton>
                 <h2 className="mx_ContactsView_title">{_t("contacts|duplicates_title")}</h2>
@@ -1415,7 +1461,7 @@ export function ContactsView({ tab, onFinished }: Props): JSX.Element {
                         size="lg"
                         onClick={() => {
                             for (const suggestion of suggestions) merge(suggestion, accountsOf(suggestion.people));
-                            setReviewing(false);
+                            closeReview();
                         }}
                     >
                         {_t("contacts|merge_all")}
@@ -1425,7 +1471,7 @@ export function ContactsView({ tab, onFinished }: Props): JSX.Element {
                         size="lg"
                         onClick={() => {
                             for (const suggestion of suggestions) dismiss(suggestion);
-                            setReviewing(false);
+                            closeReview();
                         }}
                     >
                         {_t("contacts|ignore_all")}
@@ -1568,9 +1614,6 @@ export function ContactsView({ tab, onFinished }: Props): JSX.Element {
                      * being a dead end: the file a phone exports goes in here, and what is here goes back to a
                      * phone the same way.
                      */}
-                    <IconButton size="32px" aria-label={_t("contacts|add_contact")} onClick={() => setAdding(true)}>
-                        <PlusIcon />
-                    </IconButton>
                     <Menu
                         title={_t("contacts|title")}
                         showTitle={false}
@@ -1821,22 +1864,38 @@ export function ContactsView({ tab, onFinished }: Props): JSX.Element {
                                  * and a stack of unanswered questions in front of the address book makes the
                                  * address book harder to use every time you open it.
                                  */}
-                                {!query && !!state?.suggestions.length && (
-                                    <button
-                                        type="button"
-                                        className="mx_Contacts_duplicates"
-                                        onClick={() => setReviewing(true)}
-                                    >
-                                        <span className="mx_Contacts_rowText">
-                                            <span className="mx_Contacts_name">
-                                                {_t("contacts|duplicates_found", {
-                                                    count: state.suggestions.length,
-                                                })}
+                                {!query && !!state?.suggestions.length && duplicatesKey !== dismissedDuplicates && (
+                                    <div className="mx_Contacts_duplicates">
+                                        <button
+                                            type="button"
+                                            className="mx_Contacts_duplicatesOpen"
+                                            onClick={() => setReviewing(true)}
+                                        >
+                                            <span className="mx_Contacts_rowText">
+                                                <span className="mx_Contacts_name">
+                                                    {_t("contacts|duplicates_found", {
+                                                        count: state.suggestions.length,
+                                                    })}
+                                                </span>
+                                                <span className="mx_Contacts_detail">
+                                                    {_t("contacts|duplicates_what")}
+                                                </span>
                                             </span>
-                                            <span className="mx_Contacts_detail">{_t("contacts|duplicates_what")}</span>
-                                        </span>
-                                        <ChevronRightIcon width="20" height="20" aria-hidden />
-                                    </button>
+                                            <ChevronRightIcon width="20" height="20" aria-hidden />
+                                        </button>
+                                        {/*
+                                         * Put away until something changes: the same suggestions stay
+                                         * hidden, and a new duplicate brings the line back, since that
+                                         * is news the reader has not seen.
+                                         */}
+                                        <IconButton
+                                            size="28px"
+                                            aria-label={_t("action|dismiss")}
+                                            onClick={() => dismissDuplicates(duplicatesKey)}
+                                        >
+                                            <CloseIcon />
+                                        </IconButton>
+                                    </div>
                                 )}
                                 {people !== undefined && !shown.length && (
                                     <p className="mx_Contacts_empty">{_t("contacts|no_people")}</p>
@@ -2027,7 +2086,7 @@ export function ContactsView({ tab, onFinished }: Props): JSX.Element {
             {/* Somebody new: the same editor the card opens, with nothing in it yet. */}
             {adding && (
                 <div className="mx_Contacts_adding">
-                    <ContactEditor card={{}} onCancel={() => setAdding(false)} onSave={addPerson} />
+                    <ContactEditor card={{}} onCancel={() => setAddingContact(false)} onSave={addPerson} />
                 </div>
             )}
         </div>

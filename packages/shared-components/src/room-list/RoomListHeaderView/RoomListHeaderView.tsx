@@ -138,6 +138,11 @@ interface RoomListHeaderViewProps {
     vm: RoomListHeaderViewModel;
     /** Fork: a control of the app's own, shown beside the list's menu. */
     actions?: React.ReactNode;
+    /**
+     * Fork: what the connection is doing ("Updating…"), shown in place of the title while there is anything
+     * to say, as Telegram's chat list does - so it needs no row of its own.
+     */
+    status?: string;
 }
 
 /**
@@ -149,7 +154,7 @@ interface RoomListHeaderViewProps {
  * <RoomListHeaderView vm={roomListHeaderViewModel} />
  * ```
  */
-export function RoomListHeaderView({ vm, actions }: Readonly<RoomListHeaderViewProps>): JSX.Element {
+export function RoomListHeaderView({ vm, actions, status }: Readonly<RoomListHeaderViewProps>): JSX.Element {
     const { translate: _t } = useI18n();
     const { title, displaySpaceMenu, collapseSections, areSectionsEnabled, canCreateRoom, canCreateVideoRoom } =
         useViewModel(vm);
@@ -165,8 +170,8 @@ export function RoomListHeaderView({ vm, actions }: Readonly<RoomListHeaderViewP
         >
             <Flex className={styles.container} justify="space-between" align="center" gap="var(--cpd-space-3x)">
                 <Flex className={styles.title} align="center" gap="var(--cpd-space-1x)">
-                    <H1 size="sm" title={title}>
-                        {title}
+                    <H1 size="sm" title={status ?? title} aria-live="polite">
+                        {status ?? title}
                     </H1>
                     {displaySpaceMenu && <SpaceMenuView vm={vm} />}
                 </Flex>

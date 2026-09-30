@@ -10,43 +10,14 @@ import React from "react";
 import classNames from "classnames";
 
 import type ResizeNotifier from "../../utils/ResizeNotifier";
-import { type SpaceKey, UPDATE_SELECTED_SPACE } from "../../stores/spaces";
 import { RoomListPanel } from "../views/rooms/RoomListPanel";
-import { SDKContext } from "../../contexts/SDKContext.ts";
 
 interface IProps {
     isMinimized: boolean;
     resizeNotifier: ResizeNotifier;
 }
 
-interface IState {
-    activeSpace: SpaceKey;
-}
-
-export default class LeftPanel extends React.Component<IProps, IState> {
-    public static contextType = SDKContext;
-    declare public context: React.ContextType<typeof SDKContext>;
-
-    public constructor(props: IProps, context: React.ContextType<typeof SDKContext>) {
-        super(props, context);
-
-        this.state = {
-            activeSpace: context.spaceStore.activeSpace,
-        };
-    }
-
-    public componentDidMount(): void {
-        this.context.spaceStore.on(UPDATE_SELECTED_SPACE, this.updateActiveSpace);
-    }
-
-    public componentWillUnmount(): void {
-        this.context.spaceStore.off(UPDATE_SELECTED_SPACE, this.updateActiveSpace);
-    }
-
-    private updateActiveSpace = (activeSpace: SpaceKey): void => {
-        this.setState({ activeSpace });
-    };
-
+export default class LeftPanel extends React.Component<IProps> {
     public render(): React.ReactNode {
         const containerClasses = classNames({
             mx_LeftPanel: true,
@@ -56,7 +27,7 @@ export default class LeftPanel extends React.Component<IProps, IState> {
         return (
             <div className={containerClasses}>
                 <div className="mx_LeftPanel_roomListContainer">
-                    <RoomListPanel activeSpace={this.state.activeSpace} />
+                    <RoomListPanel />
                 </div>
             </div>
         );

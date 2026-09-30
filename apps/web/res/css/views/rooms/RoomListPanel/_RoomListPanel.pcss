@@ -6,9 +6,12 @@
  */
 
 .mx_RoomListPanel {
-    /* A 32px target plus its padding: the pill's height, declared here because the toast needs it too. */
-    /* Icon, label and the padding around them: what the bar at the bottom of the column stands in. */
-    --mx-room-list-pill-height: 56px;
+    /*
+     * The bar's height: an icon, a label and the padding around them. Declared once and the pill held to
+     * it exactly, because every list under the bar reserves this much room at its foot - a pill that grew
+     * past its declared height hid the last row of every list behind it.
+     */
+    --mx-room-list-pill-height: 64px;
     /*
      * The unread-activity toast shares this edge, and had the higher z-index, so it simply hid the pill.
      * Lifted clear of it rather than the pill moved: the pill is the persistent control and belongs at
@@ -22,19 +25,6 @@
     position: relative;
     background-color: var(--cpd-color-bg-canvas-default);
     height: 100%;
-}
-
-/* Fork: the search field and what is left of the bridge status share one row. */
-.mx_RoomListPanel_searchRow {
-    display: flex;
-    align-items: center;
-    gap: var(--cpd-space-1x);
-    padding-inline-end: var(--cpd-space-2x);
-
-    > :first-child {
-        flex: 1 1 auto;
-        min-width: 0;
-    }
 }
 
 /*
@@ -69,20 +59,26 @@
  * power mode and scrolling drop the blur here exactly as they do everywhere else - a backdrop filter
  * over a scrolling list is the one that costs a fifth of a core.
  */
-.mx_RoomListPill {
+.mx_RoomListPill_bar {
     position: absolute;
     bottom: calc(var(--tg-safe-bottom, 0px) + var(--cpd-space-4x));
     left: 50%;
     transform: translateX(-50%);
-    /* Above the sticky section headers, as the toast is. */
-    z-index: 3;
+    /*
+     * Above the sticky section headers, as the toast is, and above the screens contacts opens over the
+     * column (a card, the duplicates, the editor - z-index 4): the bar is how you get anywhere else, so
+     * nothing opened from it covers it.
+     */
+    z-index: 5;
     display: flex;
     align-items: center;
-    min-height: var(--mx-room-list-pill-height);
-    box-sizing: border-box;
-    gap: 2px;
-    padding: var(--cpd-space-1x);
-    /* A pill, as Element's other rounded chrome writes it. */
+    gap: var(--cpd-space-2x);
+    max-width: calc(100% - 2 * var(--cpd-space-4x));
+}
+
+/* The glass all three are made of: the same as the composer's islands. */
+.mx_RoomListPill,
+.mx_RoomListPill_island {
     border-radius: 99px;
     /*
      * The same glass the shared media strip uses when it sticks: the list scrolling underneath is blurred
@@ -93,6 +89,26 @@
     box-shadow:
         0 1px 2px rgb(0 0 0 / 10%),
         0 8px 24px rgb(0 0 0 / 14%);
+}
+
+.mx_RoomListPill {
+    /* The containing block for the travelling selection mark. */
+    position: relative;
+    /* The islands beside it are the ones that give way; the pill's labels never get cut. */
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    height: var(--mx-room-list-pill-height);
+    box-sizing: border-box;
+    gap: 2px;
+    max-width: 30rem;
+    padding: var(--cpd-space-1x);
+    overflow: hidden;
+    transition:
+        max-width 260ms cubic-bezier(0.2, 0, 0, 1),
+        padding 260ms cubic-bezier(0.2, 0, 0, 1),
+        margin 260ms cubic-bezier(0.2, 0, 0, 1),
+        opacity 160ms ease;
 }
 
 /*
@@ -120,72 +136,54 @@
 }
 
 /*
- * One entry: the icon with its name under it, and the one you are in filled.
- *
- * A bar of bare icons is a guess per icon, and without a mark on the current one it says what you can do
- * but never where you are. The whole entry is the target rather than the icon, so it clears the 44px a
- * finger needs even though the glyph is 22.
+ * Search and add, apart from the pill: round islands as tall as the pill, the way the microphone stands
+ * beside the composer - search at the start of the row, add at the end. Searching a list in place turns
+ * the search island into the field and hands it the others' width - thinner than the pill, as a text field
+ * is, because it no longer holds labelled icons.
  */
-/*
- * The views and the field share the pill: pressing search collapses one and grows the other, so the shape
- * stays one object doing something else rather than one control vanishing and another appearing.
- */
-.mx_RoomListPill_views {
+.mx_RoomListPill_island {
     display: flex;
     align-items: center;
-    gap: 2px;
-    max-width: 30rem;
+    flex-shrink: 0;
+    /* The pill's height, as the microphone takes the composer's; the pill is held to it exactly. */
+    width: var(--mx-room-list-pill-height);
+    height: var(--mx-room-list-pill-height);
+    box-sizing: border-box;
     overflow: hidden;
     transition:
+        width 260ms cubic-bezier(0.2, 0, 0, 1),
+        height 260ms cubic-bezier(0.2, 0, 0, 1),
         max-width 260ms cubic-bezier(0.2, 0, 0, 1),
+        margin 260ms cubic-bezier(0.2, 0, 0, 1),
         opacity 160ms ease;
 }
 
-.mx_RoomListPill[data-searching] .mx_RoomListPill_views {
-    max-width: 0;
-    opacity: 0;
-}
+.mx_RoomListPill_find input {
+    /* No border and no box of its own: the island around it is the field's edge. */
+    flex: 1 1 auto;
+    width: 0;
+    min-width: 0;
+    padding: 0;
+    border: none;
+    outline: none;
+    background: transparent;
+    color: var(--cpd-color-text-primary);
+    font: var(--cpd-font-body-md-regular);
 
-.mx_RoomListPill_search {
-    display: flex;
-    align-items: center;
-    max-width: 0;
-    overflow: hidden;
-    transition: max-width 260ms cubic-bezier(0.2, 0, 0, 1);
-
-    input {
-        /* No border and no box of its own: the pill around it is the field's edge. */
-        width: 100%;
-        min-width: 0;
-        min-height: 44px;
-        padding: 0 var(--cpd-space-3x);
-        border: none;
-        outline: none;
-        background: transparent;
-        color: var(--cpd-color-text-primary);
-        font: var(--cpd-font-body-md-regular);
-
-        &::-webkit-search-cancel-button {
-            display: none;
-        }
+    &::-webkit-search-cancel-button {
+        display: none;
     }
 }
 
-.mx_RoomListPill[data-searching] .mx_RoomListPill_search {
-    max-width: 20rem;
-}
-
-/* The one control that is always there, whichever state the pill is in. */
-.mx_RoomListPill_find {
+.mx_RoomListPill_islandButton,
+.mx_RoomListPill_add {
     display: flex;
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
-    width: 44px;
-    height: 44px;
+    padding: 0;
     border: none;
     border-radius: 99px;
-    background: transparent;
     color: var(--cpd-color-icon-secondary);
     cursor: pointer;
 
@@ -195,9 +193,38 @@
     }
 }
 
+/* Inside the search island, the button is the island until the island becomes a field. */
+.mx_RoomListPill_islandButton {
+    width: 100%;
+    height: 100%;
+    background: transparent;
+}
+
+.mx_RoomListPill_bar[data-searching] {
+    .mx_RoomListPill,
+    .mx_RoomListPill_add {
+        max-width: 0;
+        padding: 0;
+        /* Hands back the gap as well, so the field is centred where the row was. */
+        margin-inline-start: calc(-1 * var(--cpd-space-2x));
+        border: none;
+        opacity: 0;
+    }
+
+    .mx_RoomListPill_find {
+        width: 20rem;
+        max-width: 100%;
+        height: 44px;
+
+        .mx_RoomListPill_islandButton {
+            width: 44px;
+        }
+    }
+}
+
 @media (prefers-reduced-motion: reduce) {
-    .mx_RoomListPill_views,
-    .mx_RoomListPill_search {
+    .mx_RoomListPill,
+    .mx_RoomListPill_island {
         transition: none;
     }
 }
@@ -210,9 +237,10 @@
     align-items: center;
     justify-content: center;
     gap: var(--cpd-space-1x);
-    min-width: 64px;
+    /* Three of these and two islands have to fit a phone-width column: 56px each, the label decides. */
+    min-width: 56px;
     min-height: 44px;
-    padding: var(--cpd-space-1x) var(--cpd-space-3x);
+    padding: var(--cpd-space-1x) var(--cpd-space-2x);
     border: none;
     border-radius: 99px;
     background: transparent;

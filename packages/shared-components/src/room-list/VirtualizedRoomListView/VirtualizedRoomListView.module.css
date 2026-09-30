@@ -10,4 +10,10 @@
  */
 .roomList {
     width: 100%;
+    /*
+     * Fork: room at the end for the bar the app floats over the list, so the last rooms can be scrolled
+     * clear of it instead of stopping underneath it. Nothing outside the app sets the variable.
+     */
+    padding-bottom: var(--mx-room-list-toast-bottom, 0px);
+    box-sizing: border-box;
 }

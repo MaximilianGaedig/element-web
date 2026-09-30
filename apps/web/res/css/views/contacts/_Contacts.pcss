@@ -163,6 +163,14 @@ Please see LICENSE files in the repository root for full details.
         }
     }
 
+    /* Its own scroller, so a long list cannot push the tabs or the search off the dialog. */
+    .mx_Contacts_list {
+        display: flex;
+        flex-direction: column;
+        max-height: 60vh;
+        overflow-y: auto;
+    }
+
     /*
      * A full-width row with a hairline under the words, which is the shape of a grouped list: the rounded
      * pill this used to be made every name look like a separate control rather than one list to read down.
@@ -698,6 +706,8 @@ Please see LICENSE files in the repository root for full details.
 .mx_ContactsView .mx_Contacts_list {
     max-height: none;
     flex: 1;
+    /* A flex child only scrolls once it is allowed to be shorter than its contents. */
+    min-height: 0;
     /*
      * Room at the end for the bar floating over this column: the names pass under it while scrolling,
      * which is what its glass is for, and the last row can still be brought clear of it.
@@ -1243,23 +1253,37 @@ Please see LICENSE files in the repository root for full details.
 }
 
 .mx_ContactEditor_group {
+    /* The inset where rows start, which is also where the hairline between them starts. */
+    --mx-editor-inset: var(--cpd-space-4x);
+    --mx-editor-row: 44px;
+
     display: flex;
     flex-direction: column;
     border-radius: var(--mx-contacts-inset-radius);
     background: var(--cpd-color-bg-subtle-secondary);
     overflow: hidden;
+
+    /*
+     * A hairline between every two rows, drawn on the row that follows - the rule a grouped iOS list has
+     * between first name and last name, phone and phone. `:not(:first-child)` rather than `* + *` so it
+     * outranks the `border: none` the inputs and buttons reset themselves with.
+     */
+    > :not(:first-child) {
+        border-top: 1px solid var(--mx-contacts-hairline);
+    }
 }
 
 .mx_ContactEditor_groupHead {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    min-height: var(--mx-contacts-row-height);
-    padding: 0 var(--cpd-space-3x);
+    min-height: var(--mx-editor-row);
+    padding: 0 var(--mx-editor-inset);
     border: none;
     background: none;
     color: var(--cpd-color-text-secondary);
-    font: var(--cpd-font-body-sm-semibold);
+    font: var(--cpd-font-body-md-regular);
+    text-align: start;
     cursor: pointer;
 
     svg {
@@ -1272,98 +1296,143 @@ Please see LICENSE files in the repository root for full details.
     }
 }
 
-.mx_ContactEditor_groupBody {
-    display: flex;
-    flex-direction: column;
-    padding: var(--cpd-space-1x) 0 var(--cpd-space-2x);
-}
-
 /*
  * A row, not a boxed field: the field's own name is its placeholder and the hairline between rows is what
  * separates them, which is how a phone writes a form of thirty facts without being thirty boxes tall.
  */
 .mx_ContactEditor_input,
-.mx_ContactEditor_row input,
-.mx_ContactEditor_row select,
 .mx_ContactEditor_label {
     box-sizing: border-box;
-    min-height: 36px;
-    padding: var(--cpd-space-1x) var(--cpd-space-3x);
+    min-width: 0;
+    min-height: var(--mx-editor-row);
+    padding: 0 var(--mx-editor-inset);
     border: none;
+    border-radius: 0;
+    outline: none;
     background: transparent;
     color: var(--cpd-color-text-primary);
     font: var(--cpd-font-body-md-regular);
+
+    &:focus-visible {
+        box-shadow: inset 0 0 0 2px var(--cpd-color-border-focused);
+    }
 }
 
-.mx_ContactEditor_input:not(:last-child),
-.mx_ContactEditor_row:not(:last-child) {
-    border-bottom: 1px solid var(--mx-contacts-hairline);
-}
-
-.mx_ContactEditor_field {
+/* One entry of a group of several: the minus that takes it out, and its fields. */
+.mx_ContactEditor_item {
     display: flex;
+    align-items: stretch;
+}
+
+.mx_ContactEditor_itemBody {
+    display: flex;
+    flex: 1 1 auto;
     flex-direction: column;
+    min-width: 0;
+
+    > :not(:first-child) {
+        border-top: 1px solid var(--mx-contacts-hairline);
+    }
 }
 
-.mx_ContactEditor_fieldLabel {
-    color: var(--cpd-color-text-secondary);
-    font: var(--cpd-font-body-xs-regular);
-}
-
-.mx_ContactEditor_row {
+/* The label beside its value, with a rule between the two - iOS's "mobile | +49 170 …". */
+.mx_ContactEditor_labelled {
     display: flex;
-    align-items: center;
+    align-items: stretch;
 
-    input:not(.mx_ContactEditor_label) {
-        flex: 1;
-        min-width: 0;
+    .mx_ContactEditor_input {
+        flex: 1 1 auto;
     }
 }
 
 /* Narrow enough to read as the label of the value beside it rather than as a field of its own. */
 .mx_ContactEditor_label {
     flex: 0 0 auto;
-    width: 8rem;
-    max-width: 38%;
-    color: var(--cpd-color-text-secondary);
+    width: 7.5rem;
+    max-width: 40%;
+    padding-inline-start: var(--cpd-space-2x);
+    color: var(--cpd-color-text-action-accent);
     font: var(--cpd-font-body-sm-regular);
-}
+    cursor: pointer;
 
-.mx_ContactEditor_address {
-    display: flex;
-    flex-direction: column;
-    padding: var(--cpd-space-1x) 0;
-
-    & + & {
-        border-top: 1px solid var(--mx-contacts-hairline);
+    .mx_ContactEditor_labelled > & {
+        border-inline-end: 1px solid var(--mx-contacts-hairline);
     }
 }
 
-.mx_ContactEditor_remove {
+/*
+ * The red minus and the green plus: filled circles with a white bar, iOS's editing controls. Drawn rather
+ * than taken from an icon set, because the icon sets here have no filled minus-in-a-circle, and these two
+ * are recognised by exactly that shape.
+ */
+.mx_ContactEditor_minus,
+.mx_ContactEditor_plus {
+    position: relative;
+    flex-shrink: 0;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+
+    &::before,
+    &::after {
+        content: "";
+        position: absolute;
+        inset: 50% auto auto 50%;
+        width: 12px;
+        height: 2px;
+        border-radius: 1px;
+        background: #fff;
+        transform: translate(-50%, -50%);
+    }
+}
+
+.mx_ContactEditor_minus {
+    align-self: center;
+    box-sizing: content-box;
+    /* The target is the row's height; the circle is what shows of it. */
+    margin-inline-start: var(--cpd-space-3x);
+    padding: 0;
+    border: none;
+    background: var(--cpd-color-icon-critical-primary);
+    cursor: pointer;
+
+    &::after {
+        display: none;
+    }
+}
+
+.mx_ContactEditor_plus {
+    background: var(--cpd-color-icon-success-primary);
+
+    &::after {
+        transform: translate(-50%, -50%) rotate(90deg);
+    }
+}
+
+.mx_ContactEditor_add {
     display: flex;
     align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-    min-width: 36px;
-    min-height: 36px;
+    gap: var(--cpd-space-3x);
+    min-height: var(--mx-editor-row);
+    padding: 0 var(--mx-editor-inset) 0 var(--cpd-space-3x);
     border: none;
     background: none;
-    color: var(--cpd-color-icon-secondary);
+    color: var(--cpd-color-text-primary);
+    font: var(--cpd-font-body-md-regular);
+    text-align: start;
     cursor: pointer;
 
     &:hover,
     &:focus-visible {
-        color: var(--cpd-color-icon-critical-primary);
+        background: var(--cpd-color-bg-subtle-primary);
     }
 }
 
 .mx_ContactEditor_notes {
-    min-height: 5rem;
-    margin: 0 var(--cpd-space-3x);
-    padding: var(--cpd-space-2x);
+    min-height: 6rem;
+    padding: var(--cpd-space-3x) var(--mx-editor-inset);
     border: none;
-    border-radius: var(--mx-contacts-inset-radius);
-    background: var(--cpd-color-bg-canvas-default);
+    background: transparent;
     color: var(--cpd-color-text-primary);
     font: var(--cpd-font-body-md-regular);
     resize: vertical;
@@ -1396,14 +1465,27 @@ Please see LICENSE files in the repository root for full details.
 .mx_Contacts_duplicates {
     display: flex;
     align-items: center;
-    gap: var(--cpd-space-3x);
+    /* Across the list, whatever lays the list out: a button on its own shrinks to its words. */
+    align-self: stretch;
+    gap: var(--cpd-space-1x);
     box-sizing: border-box;
-    min-height: var(--mx-contacts-row-height);
-    padding: var(--cpd-space-3x) var(--mx-contacts-gutter);
     margin: 0 var(--mx-contacts-gutter) var(--cpd-space-3x);
-    border: none;
+    padding-inline-end: var(--cpd-space-2x);
     border-radius: var(--mx-contacts-inset-radius);
     background: var(--cpd-color-bg-subtle-secondary);
+}
+
+.mx_Contacts_duplicatesOpen {
+    display: flex;
+    flex: 1 1 auto;
+    align-items: center;
+    gap: var(--cpd-space-3x);
+    min-width: 0;
+    min-height: var(--mx-contacts-row-height);
+    padding: var(--cpd-space-3x) 0 var(--cpd-space-3x) var(--mx-contacts-gutter);
+    border: none;
+    border-radius: var(--mx-contacts-inset-radius);
+    background: transparent;
     color: var(--cpd-color-text-primary);
     text-align: start;
     cursor: pointer;

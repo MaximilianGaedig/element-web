@@ -6,26 +6,29 @@ Please see LICENSE files in the repository root for full details.
 */
 
 /*
- * What this column is showing, and what it is being searched for, as one pill floating over it.
+ * What this column is showing, as one pill floating over it, and a search button of its own beside it.
  *
  * A row of controls above the list costs that row in every chat, permanently, on the screen with the least
  * of it to spare; a pill floats and the list scrolls under it. It is also where the switch between the
  * chats, the people and the calls belongs: those are three views of one column, so one control moves
  * between them and none of them needs a strip of its own underneath.
  *
- * Searching is the fourth thing in it rather than a box somewhere else, because it is a search of this
- * column whichever of the three is showing. Pressing it turns the pill into the field: the entries slide
- * aside and give up their width instead of being replaced, so it reads as the same object doing something
- * else rather than one control vanishing and another appearing.
+ * Search sits apart from the pill as the microphone sits apart from the composer: a round island of the
+ * same height at the start of the row, because it is a different kind of control from the three places the
+ * pill moves between. Over people, a + at the other end adds somebody, where iOS keeps its compose button.
+ * What it searches depends on the view. Over the chats it opens the search everything else in the app
+ * uses (the Ctrl+K dialog), which already covers rooms, people and messages. Over people and calls it
+ * searches that list in place: the pill gives up its width and the button grows into a field, so it reads
+ * as the same control doing something else rather than one control vanishing and another appearing.
  */
 
 import React, { type JSX, type ComponentType, type SVGAttributes, useEffect, useRef } from "react";
-
 import ChatIcon from "@vector-im/compound-design-tokens/assets/web/icons/chat";
 import UserProfileIcon from "@vector-im/compound-design-tokens/assets/web/icons/user-profile";
 import VoiceCallIcon from "@vector-im/compound-design-tokens/assets/web/icons/voice-call";
 import SearchIcon from "@vector-im/compound-design-tokens/assets/web/icons/search";
 import CloseIcon from "@vector-im/compound-design-tokens/assets/web/icons/close";
+import PlusIcon from "@vector-im/compound-design-tokens/assets/web/icons/plus";
 
 import { _t } from "../../../../languageHandler";
 import { useSlidingIndicator } from "../../../../hooks/useSlidingIndicator";
@@ -35,6 +38,9 @@ import {
     useRoomListPanelView,
 } from "../../../../utils/roomListPanelView";
 import { setSearchOpen, setSearchQuery, usePanelSearch } from "../../../../utils/panelSearch";
+import defaultDispatcher from "../../../../dispatcher/dispatcher";
+import { Action } from "../../../../dispatcher/actions";
+import { setAddingContact } from "../../../../utils/contacts/adding";
 
 function Entry({
     Icon,
@@ -64,7 +70,7 @@ function Entry({
     );
 }
 
-export function RoomListPill(): JSX.Element {
+export function RoomListPill({ canSearch = true }: { canSearch?: boolean }): JSX.Element {
     const view = useRoomListPanelView();
     const { open, query } = usePanelSearch();
     const go = (next: RoomListPanelView) => (): void => setRoomListPanelView(next);
@@ -80,17 +86,56 @@ export function RoomListPill(): JSX.Element {
         if (open) field.current?.focus();
     }, [open]);
 
-    const placeholder =
-        view === "calls"
-            ? _t("contacts|search_calls")
-            : view === "contacts"
-              ? _t("contacts|search_people")
-              : _t("action|search");
+    const placeholder = view === "calls" ? _t("contacts|search_calls") : _t("contacts|search_people");
+    const onSearch = (): void => {
+        if (view === "rooms") defaultDispatcher.fire(Action.OpenSpotlight);
+        else setSearchOpen(!open);
+    };
 
     return (
-        <nav className="mx_RoomListPill" aria-label={_t("room_list|pill_label")} data-searching={open || undefined}>
-            {style && !open && <span className="mx_RoomListPill_selection" style={style} aria-hidden />}
-            <div className="mx_RoomListPill_views" inert={open || undefined}>
+        <div className="mx_RoomListPill_bar" data-searching={open || undefined}>
+            {canSearch && (
+                <div className="mx_RoomListPill_island mx_RoomListPill_find">
+                    <button
+                        type="button"
+                        // Where keyboard landmark navigation (Ctrl+F6) takes you for "search the room list".
+                        id="room-list-search-button"
+                        className="mx_RoomListPill_islandButton"
+                        aria-label={_t("action|search")}
+                        aria-expanded={view === "rooms" ? undefined : open}
+                        // Open, it is the field's own magnifier: pressing it again goes back to the field.
+                        onClick={open ? () => field.current?.focus() : onSearch}
+                        tabIndex={open ? -1 : 0}
+                    >
+                        <SearchIcon width="22" height="22" aria-hidden />
+                    </button>
+                    {view !== "rooms" && (
+                        <input
+                            ref={field}
+                            type="search"
+                            value={query}
+                            placeholder={placeholder}
+                            aria-label={placeholder}
+                            tabIndex={open ? 0 : -1}
+                            onChange={(event) => setSearchQuery(event.target.value)}
+                            onKeyDown={(event) => event.key === "Escape" && setSearchOpen(false)}
+                        />
+                    )}
+                    {open && (
+                        <button
+                            type="button"
+                            className="mx_RoomListPill_islandButton mx_RoomListPill_close"
+                            aria-label={_t("action|close")}
+                            onClick={() => setSearchOpen(false)}
+                        >
+                            <CloseIcon width="20" height="20" aria-hidden />
+                        </button>
+                    )}
+                </div>
+            )}
+
+            <nav className="mx_RoomListPill" aria-label={_t("room_list|pill_label")} inert={open || undefined}>
+                {style && <span className="mx_RoomListPill_selection" style={style} aria-hidden />}
                 <Entry
                     Icon={ChatIcon}
                     label={_t("room_list|messages")}
@@ -112,30 +157,18 @@ export function RoomListPill(): JSX.Element {
                     onClick={go("calls")}
                     innerRef={itemRef("calls")}
                 />
-            </div>
+            </nav>
 
-            <div className="mx_RoomListPill_search">
-                <input
-                    ref={field}
-                    type="search"
-                    value={query}
-                    placeholder={placeholder}
-                    aria-label={placeholder}
-                    tabIndex={open ? 0 : -1}
-                    onChange={(event) => setSearchQuery(event.target.value)}
-                    onKeyDown={(event) => event.key === "Escape" && setSearchOpen(false)}
-                />
-            </div>
-
-            <button
-                type="button"
-                className="mx_RoomListPill_find"
-                aria-label={open ? _t("action|close") : _t("action|search")}
-                aria-expanded={open}
-                onClick={() => setSearchOpen(!open)}
-            >
-                {open ? <CloseIcon width="22" height="22" /> : <SearchIcon width="22" height="22" />}
-            </button>
-        </nav>
+            {view === "contacts" && (
+                <button
+                    type="button"
+                    className="mx_RoomListPill_island mx_RoomListPill_add"
+                    aria-label={_t("contacts|add_contact")}
+                    onClick={() => setAddingContact(true)}
+                >
+                    <PlusIcon width="22" height="22" aria-hidden />
+                </button>
+            )}
+        </div>
     );
 }

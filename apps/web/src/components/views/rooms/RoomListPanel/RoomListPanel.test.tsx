@@ -18,7 +18,6 @@ import { MatrixClientPeg } from "../../../../MatrixClientPeg";
 
 import { RoomListPanel } from "./RoomListPanel";
 import { shouldShowComponent } from "../../../../customisations/helpers/UIComponents";
-import { MetaSpace } from "../../../../stores/spaces";
 import { LandmarkNavigation } from "../../../../accessibility/LandmarkNavigation";
 import { ReleaseAnnouncementStore } from "../../../../stores/ReleaseAnnouncementStore";
 
@@ -45,10 +44,7 @@ describe("<RoomListPanel />", () => {
     sdkContext._client = client;
 
     function renderComponent() {
-        return render(
-            <RoomListPanel activeSpace={MetaSpace.Home} />,
-            clientAndSDKContextRenderOptions(client, sdkContext),
-        );
+        return render(<RoomListPanel />, clientAndSDKContextRenderOptions(client, sdkContext));
     }
 
     afterEach(() => setRoomListPanelView("rooms"));
@@ -73,19 +69,26 @@ describe("<RoomListPanel />", () => {
         vi.spyOn(MatrixClientPeg, "safeGet").mockReturnValue(client);
         renderComponent();
         await userEvent.click(screen.getByRole("button", { name: "People" }));
-        // The list's own search goes with the list: one column, one thing in it.
-        expect(screen.queryByRole("button", { name: "Search Ctrl K" })).toBeNull();
+        // The list's own header goes with the list: one column, one thing in it.
+        expect(screen.queryByTestId("room-list-header")).toBeNull();
     });
 
-    it("should render the RoomListSearch component when UIComponent.FilterContainer is at true", () => {
+    it("offers search beside the bar when UIComponent.FilterContainer is at true", () => {
         renderComponent();
-        expect(screen.getByRole("button", { name: "Search Ctrl K" })).toBeInTheDocument();
+        expect(screen.getByRole("button", { name: "Search" })).toBeInTheDocument();
     });
 
-    it("should not render the RoomListSearch component when UIComponent.FilterContainer is at false", () => {
+    it("does not offer search when UIComponent.FilterContainer is at false", () => {
         vi.mocked(shouldShowComponent).mockReturnValue(false);
         renderComponent();
+        expect(screen.queryByRole("button", { name: "Search" })).toBeNull();
+    });
+
+    /* There is no search row above the list any more: searching is the button beside the bar. */
+    it("has no search row or explore button above the list", () => {
+        renderComponent();
         expect(screen.queryByRole("button", { name: "Search Ctrl K" })).toBeNull();
+        expect(screen.queryByRole("button", { name: "Explore rooms" })).toBeNull();
     });
 
     it("should move to the next landmark when the shortcut key is pressed", async () => {
@@ -94,9 +97,9 @@ describe("<RoomListPanel />", () => {
         const userEv = userEvent.setup();
 
         // Pick something arbitrary and focusable in the room list component and focus it
-        const exploreRooms = screen.getByRole("button", { name: "Explore rooms" });
-        exploreRooms.focus();
-        expect(exploreRooms).toHaveFocus();
+        const people = screen.getByRole("button", { name: "People" });
+        people.focus();
+        expect(people).toHaveFocus();
 
         screen.getByRole("navigation", { name: "Room list" }).focus();
         await userEv.keyboard("{Control>}{F6}{/Control}");
@@ -110,12 +113,12 @@ describe("<RoomListPanel />", () => {
         const userEv = userEvent.setup();
 
         // Pick something arbitrary and focusable in the room list component and focus it
-        const exploreRooms = screen.getByRole("button", { name: "Explore rooms" });
-        exploreRooms.focus();
-        expect(exploreRooms).toHaveFocus();
+        const people = screen.getByRole("button", { name: "People" });
+        people.focus();
+        expect(people).toHaveFocus();
 
-        exploreRooms.blur();
-        expect(exploreRooms).not.toHaveFocus();
+        people.blur();
+        expect(people).not.toHaveFocus();
 
         await userEv.keyboard("{Control>}{F6}{/Control}");
 
