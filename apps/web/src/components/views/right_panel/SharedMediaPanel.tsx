@@ -38,6 +38,9 @@ import {
     monthAt,
     type MonthSpan,
     rowAtTime,
+    anchorAt,
+    anchoredTop,
+    type ScrollAnchor,
     scrubberDragAt,
     scrubberLineTop,
     scrubberPillTop,
@@ -923,6 +926,32 @@ function useGridLayout(
         () => mediaRows(items, GRID_COLUMNS, { header: MONTH_HEADER, cell, gap: GRID_GAP }, total),
         [items, cell, total],
     );
+    /*
+     * Held still while rows arrive above what is being looked at.
+     *
+     * After a jump, paging carries on from the newest history, which lands above the month jumped to;
+     * at the same scroll offset the column slid under the reader and showed somewhere far higher up.
+     * The item at the top of the viewport is noted after every layout, and put back where it was when
+     * the rows change. At the very top nothing is held, so new media still shows there.
+     */
+    const anchor = useRef<ScrollAnchor | undefined>(undefined);
+    useLayoutEffect(() => {
+        const box = scrollParentOf(ref.current);
+        const held = anchor.current;
+        if (!box || !held) return;
+        const top = anchoredTop(rows, items, held);
+        if (top === undefined) return;
+        const want = scroll.offset + top;
+        if (Math.abs(box.scrollTop - want) > 1) box.scrollTop = want;
+        // Only when the rows change: a scroll moving the anchor is the reader's doing, not a jump.
+        // oxlint-disable-next-line react-hooks/exhaustive-deps
+    }, [rows]);
+    useLayoutEffect(() => {
+        const box = scrollParentOf(ref.current);
+        if (!box) return;
+        const y = box.scrollTop - scroll.offset;
+        anchor.current = y > 0 ? anchorAt(rows, items, y) : undefined;
+    });
     // Before the first measurement there is no height to window against, so show the first screenful
     // rather than nothing: the measurement lands on the same frame and the window takes over.
     const shown = cell
@@ -991,13 +1020,13 @@ function DateScrubber({
      * Telegram iOS's scrubber (SparseItemGridScrollingArea.swift): a thin bar at the edge and the month
      * in a pill beside it, shown while the grid moves and gone two seconds after it stops. The bar or the
      * pill is grabbed and dragged; the list follows the finger by how far it moves, not to where it is.
-     * Held still for 0.2s, the pill slides out from under the finger.
+     * Held still for 0.2s under a finger, the pill slides out from under it.
      */
     // Where the drag has taken the bar, while it is down (see the note on following the finger).
     const [held, setHeld] = useState<number | null>(null);
     const [grabbed, setGrabbed] = useState(false);
     const [active, setActive] = useState(false);
-    const drag = useRef<{ y: number; at: number; moved: boolean; timer?: number } | null>(null);
+    const drag = useRef<{ y: number; at: number; moved: boolean; touch: boolean; timer?: number } | null>(null);
     // Everything the box can scroll, which includes the tabs and header above the column.
     const span = scroll.content - scroll.viewport;
     const track = scrubberTrackHeight(scroll);
@@ -1030,7 +1059,7 @@ function DateScrubber({
             if (!d.moved) {
                 d.moved = true;
                 window.clearTimeout(d.timer);
-                setGrabbed(true);
+                if (d.touch) setGrabbed(true);
             }
             const next = scrubberDragAt(d.at, e.clientY - d.y, track);
             setHeld(next);
@@ -1068,12 +1097,18 @@ function DateScrubber({
     const grab = (e: React.PointerEvent): void => {
         e.preventDefault();
         e.stopPropagation();
+        /*
+         * Held still for 0.2s: grabbed, so the pill moves out from under the finger. Only for a finger:
+         * a mouse pointer covers nothing, and the pill running off across the grid looked like it was
+         * getting away rather than making room.
+         */
+        const touch = e.pointerType === "touch";
         drag.current = {
             y: e.clientY,
             at,
             moved: false,
-            // Held still for 0.2s: grabbed, so the pill moves out from under the finger.
-            timer: window.setTimeout(() => setGrabbed(true), 200),
+            touch,
+            timer: touch ? window.setTimeout(() => setGrabbed(true), 200) : undefined,
         };
         setHeld(at);
     };

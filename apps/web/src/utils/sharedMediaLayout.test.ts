@@ -9,6 +9,8 @@ import { describe, expect, it } from "vitest";
 import { MatrixEvent } from "matrix-js-sdk/src/matrix";
 
 import {
+    anchorAt,
+    anchoredTop,
     mediaRows,
     monthAt,
     monthKey,
@@ -266,5 +268,32 @@ describe("the scrubber, in Telegram iOS's numbers", () => {
     // A panel taller than the screen (a phone's keyboard or edge): the track stops at the screen.
     it("stops the track at the bottom of the screen", () => {
         expect(scrubberTrackHeight({ viewport: 800, offset: 0, top: 0, belowScreen: 120 })).toBe(680);
+    });
+});
+
+describe("holding the view still while rows arrive above it", () => {
+    // Paging after a jump adds newer history above the month jumped to; the view must not slide.
+    it("puts the item at the top of the view back where it was", () => {
+        const march = [at(2026, 3, 20), at(2026, 3, 10), at(2026, 3, 5)];
+        const before = mediaRows(march, 3, METRICS);
+        const y = before.rows[1].top + 20;
+        const anchor = anchorAt(before.rows, march, y)!;
+        expect(anchor.eventId).toBe(march[0].getId());
+
+        const newer = [at(2026, 9, 1), at(2026, 8, 1), at(2026, 7, 1), at(2026, 6, 1)];
+        const all = [...newer, ...march];
+        const after = mediaRows(all, 3, METRICS);
+        const top = anchoredTop(after.rows, all, anchor)!;
+        // The same item, the same distance below the view's top as before.
+        const row = after.rows.find((r) => r.kind === "cells" && r.indices.includes(all.indexOf(march[0])))!;
+        expect(row.top - top).toBe(before.rows[1].top - y);
+        expect(top).toBeGreaterThan(y);
+    });
+
+    it("has nothing to hold when the item is gone", () => {
+        const one = [at(2026, 3, 20)];
+        const anchor = anchorAt(mediaRows(one, 3, METRICS).rows, one, 1)!;
+        const other = [at(2026, 4, 1)];
+        expect(anchoredTop(mediaRows(other, 3, METRICS).rows, other, anchor)).toBeUndefined();
     });
 });

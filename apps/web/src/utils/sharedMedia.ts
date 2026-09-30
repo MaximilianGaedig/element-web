@@ -204,6 +204,8 @@ export class SharedMediaLoader {
     /** What the server said each tab holds per month, once asked. */
     private readonly months = new Map<SharedMediaTab, MonthCount[]>();
     private readonly indexDone = new Set<SharedMediaTab>();
+    /** Tabs a jump has moved into the middle of the history: their next page is older than the oldest held. */
+    private readonly seeked = new Set<SharedMediaTab>();
     /** Whether the homeserver has a media index, once asked. */
     private indexSupported?: boolean;
 
@@ -332,7 +334,21 @@ export class SharedMediaLoader {
             // stickers as media, the tabs don't) would otherwise walk the whole room in one go.
             for (let i = 0; i < MAX_REQUESTS_PER_LOAD && !this.destroyed && !this.isDone(tab); i++) {
                 if (index) {
-                    await this.fetchIndexPage(tab);
+                    /*
+                     * After a jump, the end of the list is the end of the month jumped to, so that is
+                     * where more has to come from: older than the oldest item held. Paging from the
+                     * newest history instead added only what lies above, and the list never grew
+                     * where the reader was. Once nothing older comes back, paging takes over again.
+                     */
+                    if (this.seeked.has(tab)) {
+                        const list = this.items.get(tab)!;
+                        const oldest = list[list.length - 1]?.getTs();
+                        const had = list.length;
+                        if (oldest !== undefined) await this.fetchIndexPage(tab, oldest - 1);
+                        if (oldest === undefined || this.items.get(tab)!.length === had) this.seeked.delete(tab);
+                    } else {
+                        await this.fetchIndexPage(tab);
+                    }
                     if (enough()) break;
                     continue;
                 }
@@ -414,6 +430,7 @@ export class SharedMediaLoader {
         this.emit();
         try {
             await this.fetchIndexPage(tab, ts);
+            this.seeked.add(tab);
         } catch (e) {
             logger.warn("Shared media: failed to seek to a date", e);
         } finally {

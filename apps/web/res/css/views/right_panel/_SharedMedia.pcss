@@ -241,9 +241,10 @@ Please see LICENSE files in the repository root for full details.
             cursor: grabbing;
         }
 
-        /* Held: out from under the finger, as Telegram slides it 80pt in 0.1s. */
+        /* Held under a finger: out from under it, in 0.1s as Telegram does - but 48px rather than
+           Telegram's 80pt, which in a panel this narrow sent the pill most of the way across. */
         &[data-grabbed] .mx_SharedMedia_scrubberDate {
-            transform: translateX(-80px);
+            transform: translateX(-48px);
             transition-duration: 0.1s;
         }
     }

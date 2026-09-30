@@ -274,3 +274,42 @@ export function scrubberWorthIt(viewport: number, content: number, months: { mon
     if (months.length > 1) return true;
     return content > 0 && viewport / content < 0.55;
 }
+
+/** What the top of the viewport is resting on: an item, and how far above the viewport its row starts. */
+export interface ScrollAnchor {
+    eventId: string;
+    /** The row's top minus the viewport's top, in column coordinates (zero or negative). */
+    delta: number;
+}
+
+/**
+ * The item the viewport's top rests on, to hold still while rows are added above it.
+ *
+ * Paging after a jump brings in history newer than the month jumped to, which lands above it; kept at
+ * the same scroll offset, the column slid under the reader and showed somewhere far higher up.
+ */
+export function anchorAt(
+    rows: readonly MediaRow[],
+    items: readonly MatrixEvent[],
+    y: number,
+): ScrollAnchor | undefined {
+    for (const row of rows) {
+        if (row.kind !== "cells" || row.top + row.height <= y) continue;
+        const eventId = items[row.indices[0]]?.getId();
+        return eventId ? { eventId, delta: row.top - y } : undefined;
+    }
+    return undefined;
+}
+
+/** Where the column's top should now be for `anchor` to sit where it was, or undefined if it is gone. */
+export function anchoredTop(
+    rows: readonly MediaRow[],
+    items: readonly MatrixEvent[],
+    anchor: ScrollAnchor,
+): number | undefined {
+    for (const row of rows) {
+        if (row.kind !== "cells") continue;
+        if (row.indices.some((index) => items[index]?.getId() === anchor.eventId)) return row.top - anchor.delta;
+    }
+    return undefined;
+}

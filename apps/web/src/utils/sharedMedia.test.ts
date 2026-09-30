@@ -155,26 +155,43 @@ describe("SharedMediaLoader with the server's media index", () => {
         expect(loader.state("media").items.map((e) => e.getId())).toEqual([march.getId()]);
     });
 
-    it("a seek does not move where paging continues from", async () => {
-        const march = msg({ msgtype: "m.image", body: "march", url: "mxc://x/m" }, 300);
+    /*
+     * After a jump the reader is at the month jumped to, and scrolling on means older. Paging from the
+     * newest history instead added only what lies above, which slid the column up under the reader.
+     */
+    it("after a jump, loads what is older than the month jumped to, then pages from the newest", async () => {
         const newest = msg({ msgtype: "m.image", body: "newest", url: "mxc://x/n" }, 900);
-        const { loader, authedRequest } = setup({
-            media: [
-                { chunk: [march.event], end: "t-march" },
-                { chunk: [newest.event], end: undefined },
-            ],
+        const march = msg({ msgtype: "m.image", body: "march", url: "mxc://x/m" }, 300);
+        const feb = msg({ msgtype: "m.image", body: "feb", url: "mxc://x/f" }, 200);
+        const authedRequest = vi.fn(async (_method: any, _path: string, params: any) => {
+            if (params.before_ts === "350") return { chunk: [march.event], end: "t" };
+            if (params.before_ts === "299") return { chunk: [feb.event], end: "t" };
+            if (params.before_ts === "199") return { chunk: [] };
+            return { chunk: [newest.event] };
         });
+        const client = {
+            getSafeUserId: () => "@me:x",
+            isRoomEncrypted: () => false,
+            doesServerSupportUnstableFeature: vi.fn().mockResolvedValue(true),
+            http: { authedRequest },
+            getEventMapper: () => (raw: any) => new MatrixEvent(raw),
+            decryptEventIfNeeded: vi.fn(),
+        } as unknown as MatrixClient;
+        const room = {
+            roomId: "!r:x",
+            getLiveTimeline: () => ({ getEvents: () => [], getPaginationToken: () => null }),
+        } as unknown as Room;
+        const loader = new SharedMediaLoader(client, room);
 
-        // Seek first, so that if it moved the paging token the very next page would start from it.
         await loader.seekTo("media", 350);
         await loader.loadMore("media");
-
-        const firstPage = authedRequest.mock.calls.find((c: any) => !("before_ts" in c[2]));
-        // Paging still begins at the newest item, because a seek is a window onto the middle of the
-        // history rather than a step through it.
-        expect(firstPage![2]).not.toHaveProperty("from");
-        // And both arrive in one list, in time order, however they got there.
-        expect(loader.state("media").items.map((e) => e.getContent().body)).toEqual(["newest", "march"]);
+        // Older than the oldest held, not the newest history - until nothing older is left.
+        expect(authedRequest.mock.calls[1][2]).toMatchObject({ before_ts: "299" });
+        expect(authedRequest.mock.calls[2][2]).toMatchObject({ before_ts: "199" });
+        // Then paging from the newest takes over, without a token a seek moved.
+        expect(authedRequest.mock.calls[3][2]).not.toHaveProperty("before_ts");
+        expect(authedRequest.mock.calls[3][2]).not.toHaveProperty("from");
+        expect(loader.state("media").items.map((e) => e.getContent().body)).toEqual(["newest", "march", "feb"]);
     });
 
     it("a short seek does not declare the tab finished", async () => {
