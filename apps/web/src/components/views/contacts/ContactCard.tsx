@@ -180,10 +180,19 @@ export function ContactCard({
                         {favourite ? <FavouriteSolidIcon /> : <FavouriteIcon />}
                     </IconButton>
                 )}
-                {onRename && !editing && (
+                {/*
+                 * Edit opens the whole card, as it does on a phone - the name is one field among the
+                 * numbers, the addresses and the rest. Where there is nothing to edit but the name the
+                 * reader gave them, it still opens the inline rename rather than nothing.
+                 */}
+                {(onCard || onRename) && !editing && !editingCard && (
                     <IconButton
-                        aria-label={_t("contacts|rename")}
+                        aria-label={onCard ? _t("contacts|edit_contact") : _t("contacts|rename")}
                         onClick={() => {
+                            if (onCard) {
+                                setEditingCard(true);
+                                return;
+                            }
                             setDraft(nickname ?? person.name);
                             setEditing(true);
                         }}

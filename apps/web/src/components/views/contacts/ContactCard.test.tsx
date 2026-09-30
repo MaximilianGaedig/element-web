@@ -159,6 +159,22 @@ describe("ContactCard", () => {
     });
 
     /*
+     * The editor is reachable, which it was not when it was first built: the whole form existed and
+     * nothing on the card opened it, because Edit still only renamed the nickname.
+     */
+    it("opens the whole card from Edit, not just the name", async () => {
+        const onCard = vi.fn();
+        render(<ContactCard person={person()} onBack={() => {}} onMessage={() => {}} onCard={onCard} />);
+        await userEvent.click(screen.getByRole("button", { name: "Edit contact" }));
+
+        // A field that only the full editor has, rather than the one-line rename it used to open.
+        expect(screen.getByLabelText("Company")).toBeInTheDocument();
+        await userEvent.type(screen.getByLabelText("Company"), "Vector");
+        await userEvent.click(screen.getByRole("button", { name: "Save" }));
+        expect(onCard).toHaveBeenCalledWith(expect.objectContaining({ company: "Vector" }));
+    });
+
+    /*
      * Separating used to be a button on the card and another in the list. Both are gone: undoing a merge
      * is in the person's menu, as a destructive item, so it cannot be hit while reaching for anything else
      * - and the card shows that same menu rather than keeping its own copy of any of it.
