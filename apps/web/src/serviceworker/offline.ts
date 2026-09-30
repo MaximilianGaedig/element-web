@@ -134,6 +134,12 @@ async function appCacheReady(cache: Cache): Promise<boolean> {
 
 /** Answers an app request per {@link classifyAppRequest}; the network as before until a build is cached. */
 export async function respondApp(event: FetchEventLike, kind: AppRequestKind): Promise<Response> {
+    // A failed fetch (offline, or a file of a build that's gone) is a network error for the page either way.
+    // Returned rather than thrown, it isn't also logged as an uncaught rejection in the worker.
+    return respondAppOrThrow(event, kind).catch(() => Response.error());
+}
+
+async function respondAppOrThrow(event: FetchEventLike, kind: AppRequestKind): Promise<Response> {
     // This origin may still have a production app cached from before the dev server started.
     if (isDev()) return fetch(event.request);
     const cache = await caches.open(APP_CACHE);

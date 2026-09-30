@@ -39,3 +39,21 @@ describe("development app caching", () => {
         expect(fetch).not.toHaveBeenCalled();
     });
 });
+
+describe("build files", () => {
+    afterEach(() => {
+        vi.unstubAllEnvs();
+        vi.unstubAllGlobals();
+    });
+
+    it("answers a build file it can neither find nor fetch with a network error, not a rejection", async () => {
+        vi.stubEnv("NODE_ENV", "production");
+        vi.stubGlobal("caches", { open: vi.fn().mockResolvedValue({ match: vi.fn().mockResolvedValue(undefined) }) });
+        vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new TypeError("Failed to fetch")));
+        const request = new Request("https://chat.example.org/bundles/abc/gone.js");
+
+        const res = await respondApp({ request, waitUntil: vi.fn() }, "build");
+
+        expect(res.type).toBe("error");
+    });
+});
