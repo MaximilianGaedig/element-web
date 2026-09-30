@@ -53,6 +53,7 @@ import { AudioID } from "../LegacyCallHandler";
 import { useEventEmitter, useTypedEventEmitter } from "../hooks/useEventEmitter";
 import { CallStore, CallStoreEvent } from "../stores/CallStore";
 import DMRoomMap from "../utils/DMRoomMap";
+import { getBridgedDmUserId } from "../utils/bridge/bridgeInfo";
 import MemberAvatar from "../components/views/avatars/MemberAvatar";
 import { SDKContext } from "../contexts/SDKContext.ts";
 
@@ -290,7 +291,9 @@ export function IncomingCallToast({ notificationEvent, toastKey }: Props): JSX.E
     useEventEmitter(call ?? undefined, CallEvent.Participants, onParticipantChange);
     useEventEmitter(room, RoomEvent.Timeline, onTimelineChange);
 
-    const otherUserId = DMRoomMap.shared().getUserIdForRoomId(roomId);
+    // A bridged DM is often not in m.direct (no double puppeting), which made every call in one a
+    // "group call" here; the bridge says it is a DM, and who the other person is.
+    const otherUserId = DMRoomMap.shared().getUserIdForRoomId(roomId) ?? (room ? getBridgedDmUserId(room) : undefined);
     const members = useParticipatingMembers(call);
     const avatars = (): ReactNode => (
         <AvatarStack className="mx_IncomingCallToast_avatars">
@@ -302,7 +305,8 @@ export function IncomingCallToast({ notificationEvent, toastKey }: Props): JSX.E
 
     let detailsInformation: ReactNode;
     if (notificationContent.notification_type === "ring") {
-        detailsInformation = <span>{otherUserId}</span>;
+        // Their name: a bridged contact's id is a ghost's (@meta_6159…:server), not something to read.
+        detailsInformation = <span>{(otherUserId && room?.getMember(otherUserId)?.name) || otherUserId}</span>;
     } else if (members.length > 0) {
         detailsInformation =
             members.length > 3

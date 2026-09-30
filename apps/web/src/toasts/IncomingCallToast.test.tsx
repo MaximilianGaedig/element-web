@@ -44,6 +44,7 @@ import { Action } from "../dispatcher/actions";
 import { MatrixClientPeg } from "../MatrixClientPeg";
 import { CallStore, CallStoreEvent } from "../stores/CallStore";
 import { WidgetMessagingStore } from "../stores/widgets/WidgetMessagingStore";
+import * as bridgeInfo from "../utils/bridge/bridgeInfo";
 import DMRoomMap from "../utils/DMRoomMap";
 import ToastStore from "../stores/ToastStore";
 import { getIncomingCallToastKey, getNotificationEventSendTs, IncomingCallToast } from "./IncomingCallToast";
@@ -197,6 +198,22 @@ describe("IncomingCallToast", () => {
             expect(screen.getByRole("button", { name: "Expand" })).toBeVisible();
         } finally {
             vi.mocked(dmRoomMap.getUserIdForRoomId).mockReset();
+        }
+    });
+
+    // A bridged DM is often not in m.direct; the bridge's own word that it is a DM has to be enough.
+    it("shows a call in a bridged DM as a call from that person, not a group call", () => {
+        const spy = vi
+            .spyOn(bridgeInfo, "getBridgedDmUserId")
+            .mockImplementation((r) => (r.roomId === room.roomId ? alice.userId : undefined));
+        try {
+            call.participants = new Map([[alice, new Set("a")]]);
+            renderToast(makeNotificationEvent(room, { "m.call.intent": "audio", "notification_type": "ring" }));
+
+            expect(screen.getByText("Incoming voice call")).toBeVisible();
+            expect(screen.queryByText("Group call started")).toBeNull();
+        } finally {
+            spy.mockRestore();
         }
     });
 
