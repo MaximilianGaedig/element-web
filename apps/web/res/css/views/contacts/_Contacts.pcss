@@ -496,10 +496,16 @@ Please see LICENSE files in the repository root for full details.
     font: var(--cpd-font-heading-sm-semibold);
 }
 
-/* Fills the column, rather than the 60vh a dialog could afford to stop at. */
+/*
+ * Fills the column, rather than the 60vh a dialog could afford to stop at, and ends above the bar.
+ *
+ * The bar floats over this column, so without the room for it at the foot the last row scrolls to a stop
+ * underneath it - which on a phone is the row nearest the thumb.
+ */
 .mx_ContactsView .mx_Contacts_list {
     max-height: none;
     flex: 1;
+    padding-bottom: var(--mx-room-list-toast-bottom, var(--cpd-space-8x));
 }
 
 /*
