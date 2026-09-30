@@ -122,6 +122,25 @@ describe("ContactsView people", () => {
         expect(screen.queryByRole("heading", { name: "A" })).not.toBeInTheDocument();
     });
 
+    /*
+     * One person, two names: the row shows the imported card's, but the phone's address book saved them on
+     * WhatsApp as something else - and a search for that name has to find them.
+     */
+    it("finds somebody by the name any of their address books has for them", async () => {
+        const ada = person("Ada Lovelace");
+        ada.accounts = [
+            { network: "Contacts", remoteId: "card", name: "Ada Lovelace", keys: [], saved: true },
+            { network: "WhatsApp", mxid: "@wa:e", remoteId: "wa", name: "Countess", keys: [], saved: true },
+        ];
+        vi.spyOn(peopleModule, "allPeople").mockResolvedValue([ada, person("Bob")]);
+        open();
+        await waitFor(() => expect(screen.getByText("Ada Lovelace")).toBeInTheDocument());
+
+        act(() => setSearchQuery("countess"));
+        await waitFor(() => expect(screen.queryByText("Bob")).not.toBeInTheDocument());
+        expect(screen.getByText("Ada Lovelace")).toBeInTheDocument();
+    });
+
     it("offers no index when everybody files under one letter", async () => {
         vi.spyOn(peopleModule, "allPeople").mockResolvedValue([person("Ada"), person("Alan")]);
         open();

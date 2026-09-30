@@ -1023,6 +1023,13 @@ export function ContactsView({ tab, onFinished }: Props): JSX.Element {
                         item: person,
                         keys: [
                             person.name,
+                            /*
+                             * Every name they go by, not only the one the row shows: the name a phone's
+                             * address book saved them under on WhatsApp, an imported card's, and what a chat
+                             * calls them. A merged person shows one of those, and searching for any of the
+                             * others has to find them all the same.
+                             */
+                            ...person.accounts.flatMap((account) => (account.name ? [account.name] : [])),
                             ...person.keys,
                             ...person.accounts.map((account) => account.network),
                             ...(card
