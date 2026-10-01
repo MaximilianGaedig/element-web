@@ -250,6 +250,16 @@ class MatrixClientPegClass implements IMatrixClientPeg {
             throw new Error("createClient must be called first");
         }
 
+        // The two stores are separate databases and neither needs the other, so they open side by side:
+        // the saved sync is read (in the store's worker) while the crypto WASM loads and its store opens.
+        // Both are needed before the client starts - the saved sync holds events to decrypt - so the
+        // start still waits for whichever takes longer, rather than for one after the other.
+        const cryptoReady = SettingsStore.getValue("lowBandwidth")
+            ? Promise.resolve()
+            : this.initClientCrypto(assignOpts);
+        // Awaited below; until then a failure must not count as unhandled while the sync store opens.
+        cryptoReady.catch(() => {});
+
         for (const dbType of ["indexeddb", "memory"]) {
             try {
                 const promise = this.matrixClient.store.startup();
@@ -272,9 +282,7 @@ class MatrixClientPegClass implements IMatrixClientPeg {
         this.matrixClient.store.on?.("closed", this.onUnexpectedStoreClose);
 
         // try to initialise e2e on the new client
-        if (!SettingsStore.getValue("lowBandwidth")) {
-            await this.initClientCrypto(assignOpts);
-        }
+        await cryptoReady;
         bootMark("crypto_opened");
 
         const opts = utils.deepCopy(this.opts);

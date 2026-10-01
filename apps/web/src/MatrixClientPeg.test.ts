@@ -144,6 +144,86 @@ describe("MatrixClientPeg", () => {
             resetBootTimings();
         });
 
+        describe("opening the two stores", () => {
+            let storeOpen: PromiseWithResolvers<void>;
+            let cryptoOpen: PromiseWithResolvers<void>;
+            let client: MatrixClient;
+
+            beforeEach(() => {
+                storeOpen = Promise.withResolvers<void>();
+                cryptoOpen = Promise.withResolvers<void>();
+                // Quiet the handle itself; what the peg derives from it must still be handled by the peg.
+                cryptoOpen.promise.catch(() => {});
+                storeOpen.promise.catch(() => {});
+                client = testPeg.safeGet();
+                client.store = { startup: vi.fn(() => storeOpen.promise) } as any;
+                vi.spyOn(client, "initRustCrypto").mockImplementation(() => cryptoOpen.promise);
+            });
+
+            /** Let everything that can run without one of the stores opening run. */
+            const settle = (): Promise<void> => vi.advanceTimersByTimeAsync(0).then(() => {});
+
+            it("opens the crypto store while the sync store is still opening", async () => {
+                const started = testPeg.start();
+                await settle();
+
+                // The sync store has not opened, and the crypto store is already on its way.
+                expect(client.store.startup).toHaveBeenCalledTimes(1);
+                expect(client.initRustCrypto).toHaveBeenCalledTimes(1);
+
+                storeOpen.resolve();
+                cryptoOpen.resolve();
+                await started;
+            });
+
+            it.each([
+                ["the sync store", (): void => cryptoOpen.resolve(), (): void => storeOpen.resolve()],
+                ["the crypto store", (): void => storeOpen.resolve(), (): void => cryptoOpen.resolve()],
+            ])("does not start the client until %s is open too", async (_name, openOther, openThisOne) => {
+                const started = testPeg.start();
+                openOther();
+                await settle();
+                // The saved sync holds encrypted events and comes out of the sync store: it needs both.
+                expect(client.startClient).not.toHaveBeenCalled();
+
+                openThisOne();
+                await started;
+                expect(client.startClient).toHaveBeenCalledTimes(1);
+            });
+
+            it("still falls back to a memory store, and still waits for crypto, when IndexedDB fails", async () => {
+                vi.spyOn(logger, "error").mockImplementation(() => {});
+                const brokenStore = client.store;
+                const started = testPeg.start();
+                storeOpen.reject(new Error("IndexedDB is gone"));
+                await settle();
+
+                expect(client.store).not.toBe(brokenStore);
+                expect(client.startClient).not.toHaveBeenCalled();
+
+                cryptoOpen.resolve();
+                await started;
+                expect(client.startClient).toHaveBeenCalledTimes(1);
+            });
+
+            // A rejection nobody handled fails the whole run, so this also checks there is no stray one.
+            it("fails to start when crypto fails while the sync store is still opening", async () => {
+                const started = testPeg.start();
+                const outcome = started.then(
+                    () => "started",
+                    (e: Error) => e.message,
+                );
+
+                cryptoOpen.reject(new Error("no WASM today"));
+                await settle();
+                storeOpen.resolve();
+
+                expect(await outcome).toBe("no WASM today");
+                await settle();
+                expect(client.startClient).not.toHaveBeenCalled();
+            });
+        });
+
         it("Should migrate existing login", async () => {
             const mockInitRustCrypto = vi.spyOn(testPeg.safeGet(), "initRustCrypto").mockResolvedValue(undefined);
 
