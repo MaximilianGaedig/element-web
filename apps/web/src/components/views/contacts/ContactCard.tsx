@@ -54,6 +54,8 @@ import { MatrixClientPeg } from "../../../MatrixClientPeg";
 import { LinkedText } from "@element-hq/web-shared-components";
 import { type SharedRoom } from "../../../utils/contacts/shared";
 import { type Call } from "../../../utils/contacts/calls";
+import { type Week } from "../../../utils/contacts/activity";
+import { ActivityWeek } from "./ActivityWeek";
 import { CallMark, readDuration, timeOfDay } from "./CallMark";
 import BaseAvatar from "../avatars/BaseAvatar";
 import { mediaFromMxc } from "../../../customisations/Media";
@@ -73,6 +75,8 @@ interface Props {
     presence?: PersonPresence;
     /** The last few calls with them, whichever account they were with. */
     calls?: Call[];
+    /** The hours of their week they are usually around in, where the homeserver keeps a log of it. */
+    week?: Week;
     /** The groups you are both in. */
     groups?: SharedRoom[];
     /** Somewhere to go from either of those. */
@@ -229,6 +233,7 @@ export function ContactCard({
     linkedIds,
     presence,
     calls,
+    week,
     groups,
     onOpenRoom,
     person,
@@ -639,6 +644,17 @@ export function ContactCard({
                                     onOpen={onOpenRoom ? () => onOpenRoom(call.roomId, call.eventId) : undefined}
                                 />
                             ))}
+                        </section>
+                    )}
+
+                    {/*
+                     * When they are usually around: presence says where they are now, and this says when it
+                     * is worth writing to them.
+                     */}
+                    {week && (
+                        <section className="mx_ContactCard_section" aria-label={_t("contacts|usually_around")}>
+                            <h3 className="mx_ContactCard_sectionTitle">{_t("contacts|usually_around")}</h3>
+                            <ActivityWeek week={week} />
                         </section>
                     )}
 

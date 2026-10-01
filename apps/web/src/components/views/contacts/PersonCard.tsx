@@ -12,6 +12,7 @@ import { ContactCard } from "./ContactCard";
 import { type Person } from "../../../utils/contacts/people";
 import { type Call, callHistory, indexedCallHistory } from "../../../utils/contacts/calls";
 import { usePersonPresence } from "../../../utils/contacts/presence";
+import { type Week, personWeek } from "../../../utils/contacts/activity";
 import { type SharedRoom, askSharedRooms, callsWith, sharedRooms } from "../../../utils/contacts/shared";
 import { type Verification, realAccounts, verificationOf, verify } from "../../../utils/contacts/verification";
 import { callInRoom, messagePerson, openRoom } from "../../../utils/contacts/actions";
@@ -112,8 +113,11 @@ export function PersonCard({
      */
     const [groups, setGroups] = useState<SharedRoom[]>([]);
     const [verification, setVerification] = useState<Verification>();
+    const [week, setWeek] = useState<Week>();
     useEffect(() => {
         let alive = true;
+        setWeek(undefined);
+        void personWeek(client, person).then((found) => alive && setWeek(found));
         setGroups(sharedRooms(client, person));
         void askSharedRooms(client, person).then((found) => alive && setGroups(found));
         void verificationOf(client, person).then((said) => alive && setVerification(said));
@@ -137,6 +141,7 @@ export function PersonCard({
             menu={menu}
             presence={presence}
             calls={callsWith(calls ?? history, person)}
+            week={week}
             groups={groups}
             verification={verification}
             onVerify={() => {

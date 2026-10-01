@@ -1894,3 +1894,66 @@ Please see LICENSE files in the repository root for full details.
         font: var(--cpd-font-body-xs-semibold);
     }
 }
+
+/*
+ * When they are usually around: a row a weekday, a column an hour.
+ *
+ * The cells are squares that share the card's width, so the grid is as wide as the card and never
+ * scrolls sideways on a phone; the day names sit in a column of their own so the hours line up.
+ */
+.mx_ActivityWeek {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: var(--mx-contacts-row-padding-block) var(--mx-contacts-gutter);
+}
+
+.mx_ActivityWeek_hours,
+.mx_ActivityWeek_cells {
+    display: grid;
+    grid-template-columns: repeat(24, minmax(0, 1fr));
+    gap: 2px;
+}
+
+.mx_ActivityWeek_hours {
+    margin-inline-start: 36px;
+    color: var(--cpd-color-text-secondary);
+    font: var(--cpd-font-body-xs-regular);
+}
+
+.mx_ActivityWeek_day {
+    display: flex;
+    align-items: center;
+}
+
+.mx_ActivityWeek_dayName {
+    flex: 0 0 36px;
+    color: var(--cpd-color-text-secondary);
+    font: var(--cpd-font-body-xs-regular);
+}
+
+.mx_ActivityWeek_cells {
+    flex: 1;
+}
+
+.mx_ActivityWeek_cell {
+    aspect-ratio: 1;
+    border-radius: 2px;
+    background: var(--cpd-color-bg-subtle-primary);
+
+    &[data-level="1"] {
+        background: color-mix(in srgb, var(--cpd-color-icon-accent-primary) 25%, var(--cpd-color-bg-subtle-primary));
+    }
+
+    &[data-level="2"] {
+        background: color-mix(in srgb, var(--cpd-color-icon-accent-primary) 50%, var(--cpd-color-bg-subtle-primary));
+    }
+
+    &[data-level="3"] {
+        background: color-mix(in srgb, var(--cpd-color-icon-accent-primary) 75%, var(--cpd-color-bg-subtle-primary));
+    }
+
+    &[data-level="4"] {
+        background: var(--cpd-color-icon-accent-primary);
+    }
+}
