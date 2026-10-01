@@ -182,7 +182,10 @@ async function respondAppOrThrow(event: FetchEventLike, kind: AppRequestKind): P
         case "revalidate": {
             const cached = await matchApp(cache, event.request.url);
             const refresh = fetch(event.request).then(async (res) => {
-                if (res.ok) await cache.put(stripSearch(event.request.url), res.clone());
+                // "There is no such config" is kept only where no config is held: a 404 never replaces one.
+                if (res.ok || (isAbsentConfig(event.request.url, res) && !cached?.ok)) {
+                    await cache.put(stripSearch(event.request.url), res.clone());
+                }
                 return res;
             });
             if (cached) {
@@ -212,6 +215,19 @@ async function respondAppOrThrow(event: FetchEventLike, kind: AppRequestKind): P
             }
         }
     }
+}
+
+/**
+ * Whether this is the server saying the domain has no config of its own.
+ *
+ * The app asks for `config.<domain>.json` before it reads `config.json`, on every load, and most
+ * deployments have no such file. That answer is kept like the config itself: otherwise each start waits
+ * for the server to say 404 again - the one request of a warm start that leaves the machine - before
+ * using the config it already holds. It is asked again in the background all the same, so a file that
+ * appears is picked up on the following load.
+ */
+function isAbsentConfig(url: string, res: Response): boolean {
+    return res.status === 404 && /\/config\.[^/]+\.json$/.test(new URL(url).pathname);
 }
 
 function stripSearch(url: string): string {
