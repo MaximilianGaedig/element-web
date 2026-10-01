@@ -13,6 +13,7 @@ import {
     MatrixEventEvent,
     NotificationCountType,
     ReceiptType,
+    LOCAL_PAGINATION_PREFIX,
     type IRoomTimelineData,
     type MatrixClient,
     type MatrixEvent,
@@ -58,14 +59,19 @@ const INITIAL_SIZE = 100;
  * cannot be scrolled, so there is no scroll position to adjust and that trick does nothing.
  * Rows are then placed by layout alone, and anything loading in around them shoves them about.
  *
- * It bites hardest when we are holding a particular message in place — opening a permalink, or
- * returning to where someone left off. A permalink has to fill both above and below its target,
- * and letting those batches arrive progressively would shift the target around as each one lands,
- * which is precisely the message the reader came to see. Gathering them before we show anything
- * costs a slightly slower first paint, and we take that trade deliberately.
+ * It bites hardest when we are holding a particular message in the middle — opening a permalink.
+ * It has to fill both above and below its target, and letting those batches arrive progressively
+ * would shift the target around as each one lands, which is precisely the message the reader came
+ * to see. Gathering them before we show anything costs a slightly slower first paint, and for a
+ * permalink we take that trade deliberately.
  *
- * Starting at the newest message suffers a milder version: today the rows are laid out from the
- * top, so older history arriving above pushes everything down.
+ * Anywhere else only older history is missing, and it goes above what is being read. There the
+ * trade goes the other way: waiting for the server before drawing messages the client already
+ * holds is what made opening a chat feel like loading it. So those are shown as soon as whatever
+ * the browser's own store has is in, and the server's share follows once they are placed (see
+ * {@link RoomTimelineViewModel.fillInitialWindow}). A list still shorter than the window when it
+ * does suffers the milder version of the problem: today the rows are laid out from the top, so
+ * older history arriving above pushes everything down.
  *
  * The intended fix for that second case (not built yet) is to lay the rows out from the bottom
  * instead whenever we are at the live end and there is still history above us. Older messages
@@ -172,6 +178,17 @@ export class RoomTimelineViewModel
 
     /** Set by {@link start} so a double-start (e.g. via StrictMode) is a no-op. */
     private started = false;
+
+    /**
+     * Set when the timeline was shown with fewer messages than {@link MIN_INITIAL_EVENTS} because
+     * the rest are on the server. They are fetched once the view has placed what it was given
+     * ({@link onAnchorReached}): rows arriving above while it is still scrolling to its starting
+     * message would move that message from under it.
+     */
+    private fillAfterPlacing = false;
+
+    /** Whether the fetch in flight is that one (see {@link fillAfterPlacing}). */
+    private initialFillInFlight = false;
 
     /**
      * In-flight backward pagination chain, or null when idle.
@@ -632,11 +649,29 @@ export class RoomTimelineViewModel
         const sdkLoadTarget = target.kind !== "live" ? target.eventId : undefined;
 
         try {
+            await this.bringInStoredRoom(sdkLoadTarget);
+            if (this.isDisposed) return;
             await this.timelineWindow.load(sdkLoadTarget, INITIAL_SIZE);
             if (this.isDisposed) return;
-            // Gather enough messages to fill the window before we show anything. Only a permalink
-            // needs messages on both sides of its target; see fillInitialWindow.
-            await this.fillInitialWindow(target.kind === "permalink" ? sdkLoadTarget : undefined);
+            this.fillAfterPlacing = false;
+            if (target.kind === "permalink") {
+                // Gather enough messages on both sides of the target before we show anything.
+                await this.fillInitialWindow(sdkLoadTarget, "server");
+            } else {
+                // What this browser has stored costs no round trip, so it is worth having before the
+                // first paint; what only the server has is not, unless there is nothing to show at all.
+                await this.fillInitialWindow(undefined, "stored");
+                if (this.isDisposed) return;
+                await this.waitForDecryption(this.timelineWindow.getEvents(), PAGINATE_DECRYPT_WAIT_MS);
+                if (this.isDisposed) return;
+                const renderable = this.renderableEventCount(undefined, Direction.Backward);
+                if (renderable === 0) {
+                    await this.fillInitialWindow(undefined, "server");
+                } else {
+                    this.fillAfterPlacing =
+                        renderable < MIN_INITIAL_EVENTS && this.timelineWindow.canPaginate(Direction.Backward);
+                }
+            }
             if (this.isDisposed) return;
             const windowEvents = this.timelineWindow.getEvents();
             debug(
@@ -716,6 +751,35 @@ export class RoomTimelineViewModel
     }
 
     /**
+     * After a restart a room is in memory only as far as the room list needs it: its last few
+     * events and a handful of state. The rest of what was synced is in the browser's store, and
+     * this brings in the parts of it the timeline is about to use.
+     *
+     * The state comes first, and is waited for: an event takes its sender's name and avatar from
+     * the room's state at the moment it is added to the timeline, so history read back before the
+     * members were would be drawn under bare user IDs for good.
+     *
+     * Then, when the timeline is to open on a particular message (`eventId`) that is not in
+     * memory, the stored history is read back before the server is asked for that message's
+     * surroundings — it is most often there, a little above where the replay cut the room off, and
+     * finding it locally saves the round trip the first paint would otherwise wait for.
+     */
+    private async bringInStoredRoom(eventId: string | undefined): Promise<void> {
+        const { client, room } = this.opts;
+        await client.loadStoredRoomState?.(room.roomId);
+        if (!eventId || this.isDisposed) return;
+
+        const timelineSet = room.getUnfilteredTimelineSet();
+        const live = timelineSet.getLiveTimeline();
+        if (
+            !timelineSet.getTimelineForEvent(eventId) &&
+            live.getPaginationToken(Direction.Backward)?.startsWith(LOCAL_PAGINATION_PREFIX)
+        ) {
+            await client.paginateEventTimeline(live, { backwards: true, limit: PAGINATE_SIZE });
+        }
+    }
+
+    /**
      * Fetches extra messages so the first thing the reader sees is longer than the window and
      * can be scrolled — see {@link MIN_INITIAL_EVENTS} for why that matters. All of this happens
      * before anything is shown.
@@ -732,8 +796,14 @@ export class RoomTimelineViewModel
      * direction gets a couple of attempts at most, so a room that keeps returning events we
      * do not display cannot hold up the first paint — we show what we have, and the reader's
      * first scroll fetches more in the normal way.
+     *
+     * `from` says how far to go for them. "stored" stops where the next batch would have to come
+     * from the server: after a restart a room has only its last few events in memory and the rest
+     * of what was synced in the browser's store, which is a local read. "server" goes on to ask
+     * the homeserver, and is only awaited before the first paint where nothing can be shown
+     * without it (see {@link load}).
      */
-    private async fillInitialWindow(centreOn: string | undefined): Promise<void> {
+    private async fillInitialWindow(centreOn: string | undefined, from: "stored" | "server"): Promise<void> {
         const MAX_FILL_REQUESTS_PER_DIRECTION = 2;
         const perDirectionTarget = centreOn ? Math.ceil(MIN_INITIAL_EVENTS / 2) : MIN_INITIAL_EVENTS;
 
@@ -749,8 +819,11 @@ export class RoomTimelineViewModel
             ) {
                 requests++;
                 const before = this.timelineWindow.getEvents().length;
-                await this.timelineWindow.paginate(direction, PAGINATE_SIZE);
+                // Without a request the window still takes in whatever the room already holds beyond it.
+                const mayRequest = from === "server" || this.nextBatchIsStored(direction);
+                const extended = await this.timelineWindow.paginate(direction, PAGINATE_SIZE, mayRequest);
                 if (this.isDisposed) return;
+                if (!mayRequest && !extended) break;
                 debug(
                     `[TimelineVM] fillInitialWindow — paginate(${direction === Direction.Backward ? "backward" : "forward"}) ` +
                         `window: ${before}→${this.timelineWindow.getEvents().length}, ` +
@@ -758,6 +831,16 @@ export class RoomTimelineViewModel
                 );
             }
         }
+    }
+
+    /**
+     * Whether paginating the window this way is answered from the browser's store rather than by
+     * the server: the window's edge is the start of a trimmed replay (see the SDK's
+     * `savedSyncTrim`), whose pagination token names the stored events before it.
+     */
+    private nextBatchIsStored(direction: Direction): boolean {
+        const edge = this.timelineWindow.getTimelineIndex(direction)?.timeline;
+        return !!edge?.getPaginationToken(direction)?.startsWith(LOCAL_PAGINATION_PREFIX);
     }
 
     /**
@@ -809,6 +892,14 @@ export class RoomTimelineViewModel
         if (this.snapshot.current.pendingAnchor === null) return;
         debug(`[TimelineVM] onAnchorReached — placement settled, clearing pendingAnchor`);
         this.mergeSnapshot({ pendingAnchor: null }, "anchor-settled");
+        if (this.fillAfterPlacing) {
+            // The history the first paint did not wait for. From here it is an ordinary fetch of
+            // older messages: they land above the reader, who is held in place by the view.
+            this.fillAfterPlacing = false;
+            const idle = this.backwardPaginateChain === null;
+            this.triggerBackwardPaginate();
+            this.initialFillInFlight = idle && this.backwardPaginateChain !== null;
+        }
     };
 
     public onAtBottomStateChange = (atBottom: boolean): void => {
@@ -1123,6 +1214,16 @@ export class RoomTimelineViewModel
 
         this.backwardPaginateChain = this.runPaginateChain(Direction.Backward).finally(() => {
             this.backwardPaginateChain = null;
+            if (this.initialFillInFlight) {
+                this.initialFillInFlight = false;
+                // A list opened short has its first row on screen, so the view asks for older
+                // messages too, moments after we did. That fetch was already the answer to it, and
+                // running a second one would double the history requested by every room opened.
+                // Only while the list is still short is the request kept: the view may not ask again.
+                if (this.renderableEventCount(undefined, Direction.Backward) >= MIN_INITIAL_EVENTS) {
+                    this.backwardRerunRequested = false;
+                }
+            }
             if (this.backwardRerunRequested && !this.isDisposed) {
                 this.backwardRerunRequested = false;
                 debug(`[TimelineVM] paginate(backward) — running queued rerun`);
