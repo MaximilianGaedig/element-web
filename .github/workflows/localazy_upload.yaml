@@ -8,6 +8,8 @@ on:
 permissions: {} # No permissions needed
 jobs:
     upload:
+        # Fork: the write key is upstream's, so the upload can only fail anywhere else.
+        if: github.repository == 'element-hq/element-web'
         environment: Localazy
         runs-on: ubuntu-latest
         steps:
