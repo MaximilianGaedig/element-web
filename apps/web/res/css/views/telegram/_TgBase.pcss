@@ -56,6 +56,29 @@ Please see LICENSE files in the repository root for full details.
      */
     --tg-safe-top: env(safe-area-inset-top, 0px);
     --tg-safe-bottom: env(safe-area-inset-bottom, 0px);
+    /*
+     * Layers. Only the ones this layout adds; Element's own numbers are left alone.
+     *
+     * Between the children of <body> a z-index decides nothing: each is its own stacking context, so the
+     * later one in the document is on top. From the bottom:
+     *   #matrixchat                    the app - toasts (101) and the call picture-in-picture (102) inside
+     *   #mx_PersistedElement_container widgets
+     *   #mx_TgOverlay_Container        the layout's overlays (overlayHost.ts), ordered by --mx-z-overlay-*
+     *   #mx_Dialog_StaticContainer     the settings
+     *   #mx_Dialog_Container           every other dialog, the lightbox
+     *   #mx_ContextualMenu_Container   menus, so one opened from a dialog is above it
+     *   whatever Compound appends      its drawers, menus and tooltips
+     */
+    /* Inside the chat: the handheld chat-info sheet, over the chat it is opened from. */
+    --mx-z-room-sheet: 10;
+    /* Inside the overlay container: the viewer covers the panel if both are up. */
+    --mx-z-overlay-picker: 1;
+    --mx-z-overlay-viewer: 2;
+}
+
+#mx_TgOverlay_Container {
+    /* Like its siblings (_common.pcss): its layers are its own. */
+    isolation: isolate;
 }
 
 /*

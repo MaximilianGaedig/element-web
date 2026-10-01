@@ -46,6 +46,7 @@ import MemberAvatar from "../avatars/MemberAvatar";
 import dis from "../../../dispatcher/dispatcher";
 import { Action } from "../../../dispatcher/actions";
 import { type ViewRoomPayload } from "../../../dispatcher/payloads/ViewRoomPayload";
+import { getOverlayHost } from "../../../utils/telegram/tgLayout/overlayHost";
 
 // tweb base.ts
 const ZOOM_INITIAL_VALUE = 1;
@@ -1146,7 +1147,8 @@ function TgMediaViewer({ items, index: startIndex, source, onClosed }: Props): J
 export function openTgMediaViewer(items: MatrixEvent[], index: number, source: HTMLElement | null): void {
     if (!items.length) return;
     const container = document.createElement("div");
-    document.body.append(container);
+    // Not the end of <body>: there the viewer covers the dialogs it opens (see overlayHost.ts).
+    getOverlayHost().append(container);
     const root = createRoot(container);
     const onClosed = (): void => {
         root.unmount();

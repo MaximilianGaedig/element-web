@@ -18,8 +18,11 @@ Please see LICENSE files in the repository root for full details.
 
     position: fixed;
     inset: 0;
-    /* Under the dialog wrapper (4000), so Forward / Delete open on top of the viewer like tweb's popups. */
-    z-index: calc(var(--dialog-zIndex-wrapper-default) - 1);
+    /*
+     * Forward / Delete open on top of the viewer, like tweb's popups: it is mounted in the overlay
+     * container, which lies under the dialogs' (overlayHost.ts). This only orders it within that container.
+     */
+    z-index: var(--mx-z-overlay-viewer);
     user-select: none;
     touch-action: none;
     color: #fff;

@@ -117,11 +117,23 @@ html[data-tg-screen="mobile"] {
         -webkit-touch-callout: none;
     }
 
-    /* Chat info / member info: a full-screen sheet over the chat. */
+    /*
+     * Chat info / member info: a full-screen sheet over the chat, so over everything the chat floats.
+     *
+     * The chat's own layers reach z-index 1000 (the jump-to-bottom button, the unread bar; the drop
+     * target is 3000) and the sheet is the chat's sibling, so whether its 10 beat them depended on the
+     * chat being a stacking context. It was one only by accident - `container-type` used to imply layout
+     * containment - and engines have stopped implying it, which let those buttons show through the sheet.
+     * Say it outright: the chat keeps its layers to itself, and the sheet is ordered against the chat.
+     */
+    .mx_RoomView_body {
+        isolation: isolate;
+    }
+
     .mx_RightPanel_ResizeWrapper {
         position: fixed !important;
         inset: 0;
-        z-index: 10;
+        z-index: var(--mx-z-room-sheet);
         width: 100% !important;
         max-width: none !important;
         height: var(--tg-app-height) !important;
