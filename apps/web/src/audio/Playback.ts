@@ -54,6 +54,7 @@ export class Playback extends EventEmitter implements IDestroyable, PlaybackInte
     private waveformObservable = new SimpleObservable<number[]>();
     private readonly clock: PlaybackClock;
     private readonly fileSize: number;
+    private destroyed = false;
 
     /**
      * Creates a new playback instance from a buffer.
@@ -127,9 +128,16 @@ export class Playback extends EventEmitter implements IDestroyable, PlaybackInte
     }
 
     public destroy(): void {
+        this.destroyed = true;
         // Dev note: It's critical that we call stop() during cleanup to ensure that downstream callers
         // are aware of the final clock position before the user triggered an unload.
-        void this.stop();
+        void this.stop()
+            .catch(() => {})
+            // Closed rather than left suspended: a context holds an audio device and a rendering graph
+            // until it is closed or collected, and a chat's worth of voice messages is a chat's worth of
+            // contexts. After the stop, so the suspend it asks for is not refused by a closed context.
+            .then(() => this.context.close())
+            .catch((e) => logger.warn("Could not close a playback's audio context", e));
         this.removeAllListeners();
         this.clock.destroy();
         this.waveformObservable.close();
@@ -138,6 +146,12 @@ export class Playback extends EventEmitter implements IDestroyable, PlaybackInte
             URL.revokeObjectURL(this.element.src);
             this.element.remove();
         }
+        // The decoded samples are by far the largest thing here (48,000 floats per second of audio, per
+        // channel) and live outside the JS heap. Anything still holding this playback - a closure, a
+        // queue - must not be holding them too.
+        this.source = undefined;
+        this.audioBuf = undefined;
+        this.buf = new ArrayBuffer(0);
     }
 
     public async prepare(): Promise<void> {
@@ -166,6 +180,12 @@ export class Playback extends EventEmitter implements IDestroyable, PlaybackInte
             this.element.onerror = deferred.reject;
             this.element.src = URL.createObjectURL(new Blob([this.buf]));
             await deferred.promise; // make sure the audio element is ready for us
+            if (this.destroyed) {
+                // destroy() ran before there was an element for it to clean up.
+                URL.revokeObjectURL(this.element.src);
+                this.element.remove();
+                return;
+            }
         } else {
             // decodeAudioData detaches the buffer it is given, so the copy the fallback needs has
             // to be taken before we call it rather than inside the error handler.
@@ -173,6 +193,8 @@ export class Playback extends EventEmitter implements IDestroyable, PlaybackInte
             try {
                 this.audioBuf = await this.context.decodeAudioData(this.buf);
             } catch (e) {
+                // Nothing to fall back for: the context was closed under the decode.
+                if (this.destroyed) return;
                 logger.error("Error decoding recording:", e);
                 logger.warn("Trying to re-encode to WAV instead...");
 
@@ -186,12 +208,21 @@ export class Playback extends EventEmitter implements IDestroyable, PlaybackInte
                 }
             }
 
+            if (this.destroyed) {
+                // Destroyed while it was decoding: what was just decoded is nobody's to play.
+                this.audioBuf = undefined;
+                return;
+            }
+
             // Update the waveform to the real waveform once we have channel data to use. We don't
             // exactly trust the user-provided waveform to be accurate...
             this.resampledWaveform = await PlaybackEncoder.instance.getPlaybackWaveform(
                 this.audioBuf.getChannelData(0),
             );
         }
+
+        // Destroyed while the waveform was being worked out, or while the element was loading.
+        if (this.destroyed) return;
 
         this.waveformObservable.update(this.resampledWaveform);
 

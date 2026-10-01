@@ -45,6 +45,7 @@ describe("Playback", () => {
         resume: vi.fn(),
         createBufferSource: vi.fn().mockReturnValue(mockAudioBufferSourceNode),
         createMediaElementSource: vi.fn().mockReturnValue(mockMediaElementSourceNode),
+        close: vi.fn(),
         currentTime: 1337,
     };
 
@@ -62,6 +63,7 @@ describe("Playback", () => {
         mockAudioContext.decodeAudioData.mockReset().mockResolvedValue(mockAudioBuffer);
         mockAudioContext.resume.mockClear().mockResolvedValue(undefined);
         mockAudioContext.suspend.mockClear().mockResolvedValue(undefined);
+        mockAudioContext.close.mockClear().mockResolvedValue(undefined);
         vi.mocked(decodeOgg).mockClear().mockResolvedValue(new ArrayBuffer(1));
         vi.mocked(createAudioContext).mockReturnValue(mockAudioContext as unknown as AudioContext);
     });
@@ -135,6 +137,45 @@ describe("Playback", () => {
         expect(playback.currentState).toEqual(PlaybackState.Stopped);
         // Clock should be reset to 0
         expect(playback.timeSeconds).toEqual(0);
+    });
+
+    describe("destroy()", () => {
+        // What a playback holds outside the JS heap: an audio context, and the decoded samples, which
+        // are far larger than the file (48,000 floats for every second of it).
+        it("closes its audio context, once", async () => {
+            const playback = new Playback(new ArrayBuffer(8));
+            await playback.prepare();
+
+            playback.destroy();
+            await vi.waitFor(() => expect(mockAudioContext.close).toHaveBeenCalledTimes(1));
+        });
+
+        it("lets go of the decoded audio", async () => {
+            const playback = new Playback(new ArrayBuffer(8));
+            await playback.prepare();
+            // @ts-ignore
+            expect(playback.audioBuf).toBe(mockAudioBuffer);
+
+            playback.destroy();
+
+            // @ts-ignore
+            expect(playback.audioBuf).toBeUndefined();
+        });
+
+        it("does not keep audio that finished decoding after it was destroyed", async () => {
+            // A tile scrolled past while its audio was still decoding.
+            const decoding = Promise.withResolvers<typeof mockAudioBuffer>();
+            mockAudioContext.decodeAudioData.mockReturnValue(decoding.promise);
+            const playback = new Playback(new ArrayBuffer(8));
+            const prepared = playback.prepare();
+
+            playback.destroy();
+            decoding.resolve(mockAudioBuffer);
+            await prepared;
+
+            // @ts-ignore
+            expect(playback.audioBuf).toBeUndefined();
+        });
     });
 
     describe("prepare()", () => {
