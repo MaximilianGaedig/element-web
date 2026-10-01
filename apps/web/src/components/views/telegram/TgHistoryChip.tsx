@@ -86,10 +86,12 @@ const useHistoryStatusOpen = (): boolean => useSyncExternalStore(subscribe, isOp
 /** Where the import has got to, in the one line the chip has for it; nothing where nothing is bridged. */
 function importLine(headline: ImportHeadline): string | undefined {
     if (headline.total === 0) return undefined;
-    const counts = { done: headline.done.toLocaleString(), total: headline.total.toLocaleString() };
-    if (headline.open > 0) return _t("tg_layout|chip_importing", counts);
+    // Written out at each call: the i18n check reads the substitutions off the call itself.
+    const done = headline.done.toLocaleString();
+    const total = headline.total.toLocaleString();
+    if (headline.open > 0) return _t("tg_layout|chip_importing", { done, total });
     // Everything that is left waits on a bridge that is not connected: nothing is being imported.
-    if (headline.blocked > 0) return _t("tg_layout|chip_import_paused", counts);
+    if (headline.blocked > 0) return _t("tg_layout|chip_import_paused", { done, total });
     return _t("tg_layout|chip_all_imported", { count: headline.total });
 }
 
