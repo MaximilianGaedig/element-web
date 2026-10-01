@@ -290,7 +290,10 @@ export function savedSyncSize(saved: SavedSyncLike | null | undefined): BootMark
     return { rooms, timelineEvents, stateEvents, accountData: saved.accountData?.length ?? 0 };
 }
 
-/** Forget the marks made so far. For tests. */
+/**
+ * Forget the marks made so far.
+ * @knipignore - exported for tests
+ */
 export function resetBootTimings(): void {
     seen.clear();
     reported = false;

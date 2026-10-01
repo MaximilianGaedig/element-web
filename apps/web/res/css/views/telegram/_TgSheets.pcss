@@ -325,7 +325,10 @@ html[data-tg-screen="mobile"] {
         list-style: none;
     }
 
-    .mx_SettingsDialog_content[data-page="list"] .mx_TabbedView_tabsOnLeft .mx_TabbedView_tabLabels .mx_TabbedView_tabLabel {
+    .mx_SettingsDialog_content[data-page="list"]
+        .mx_TabbedView_tabsOnLeft
+        .mx_TabbedView_tabLabels
+        .mx_TabbedView_tabLabel {
         position: relative;
         display: flex;
         gap: 1rem;
@@ -439,14 +442,14 @@ html[data-tg-screen="mobile"] {
          * the tap grows around it.
          */
         .mx_AccessibleButton:is(
-                .mx_AccessibleButton_kind_primary,
-                .mx_AccessibleButton_kind_primary_outline,
-                .mx_AccessibleButton_kind_primary_sm,
-                .mx_AccessibleButton_kind_secondary,
-                .mx_AccessibleButton_kind_danger,
-                .mx_AccessibleButton_kind_danger_outline,
-                .mx_AccessibleButton_kind_danger_sm
-            ),
+            .mx_AccessibleButton_kind_primary,
+            .mx_AccessibleButton_kind_primary_outline,
+            .mx_AccessibleButton_kind_primary_sm,
+            .mx_AccessibleButton_kind_secondary,
+            .mx_AccessibleButton_kind_danger,
+            .mx_AccessibleButton_kind_danger_outline,
+            .mx_AccessibleButton_kind_danger_sm
+        ),
         button[data-kind][data-size],
         .mx_Field input,
         .mx_Field select,
