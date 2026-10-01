@@ -36,6 +36,9 @@ export function readBiography(raw: unknown): string | undefined {
 
 const cache = new Map<string, { at: number; bio: Promise<string | undefined> }>();
 
+/** How many people's bios are held, for the memory report. */
+export const biographiesKept = (): number => cache.size;
+
 /** Somebody's bio, asked of their profile at most every few minutes. */
 export function fetchBiography(client: MatrixClient, userId: string): Promise<string | undefined> {
     const held = cache.get(userId);

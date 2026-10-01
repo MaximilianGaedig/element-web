@@ -164,3 +164,7 @@ export { PerformanceEntryNames };
 // Exposing those to the window object to bridge them from tests
 window.mxPerformanceMonitor = PerformanceMonitor.instance;
 window.mxPerformanceEntryNames = PerformanceEntryNames;
+
+// What the page is holding, counted (utils/memoryReport.ts): for comparing a fresh session with one that
+// has been open all day. Only this stub is loaded at startup; the report itself comes when it is asked for.
+window.mxMemoryReport = async () => (await import("../utils/memoryReport")).memoryReport();

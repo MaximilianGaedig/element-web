@@ -60,6 +60,11 @@ export function forgetUploadedMedia(mxcUrl: string): void {
     cachedBytes -= entry.size;
 }
 
+/** How much the cache holds, for the memory report. */
+export function uploadedMediaCacheStats(): { entries: number; bytes: number } {
+    return { entries: cache.size, bytes: cachedBytes };
+}
+
 /**
  * Drop everything, for when the session ends.
  */

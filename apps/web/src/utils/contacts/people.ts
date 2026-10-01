@@ -311,6 +311,9 @@ const text = (raw: unknown): string | undefined => (typeof raw === "string" && r
  */
 const profileCache = new Map<string, Promise<ProfileFacts>>();
 
+/** How many people's profile facts are held, for the memory report. */
+export const profileFactsKept = (): number => profileCache.size;
+
 const NOTHING_PUBLISHED: ProfileFacts = { identifiers: [] };
 
 async function profileFacts(client: MatrixClient, userId: string): Promise<ProfileFacts> {
