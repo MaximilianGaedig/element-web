@@ -79,6 +79,14 @@ export class PlaybackQueue {
         return queue;
     }
 
+    /**
+     * {@link dequeue} for a room's queue, if it has one. Unlike {@link forRoom} this never makes a queue
+     * and never throws, so a tile can call it while going away from a room that has itself gone.
+     */
+    public static dequeue(roomId: string, mxEvent: MatrixEvent, playback: Playback): void {
+        PlaybackQueue.queues.get(roomId)?.dequeue(mxEvent, playback);
+    }
+
     private persistClocks(): void {
         localStorage.setItem(
             `mx_voice_message_clocks_${this.room.roomId}`,
@@ -99,11 +107,38 @@ export class PlaybackQueue {
         }
     }
 
+    /** How many playbacks this room's queue holds on to: one per voice message on screen. */
+    public get playbackCount(): number {
+        return this.playbacks.size;
+    }
+
+    /** Playbacks held across every room's queue, for the memory report. */
+    public static get retainedPlaybackCount(): number {
+        let count = 0;
+        for (const queue of PlaybackQueue.queues.values()) count += queue.playbackCount;
+        return count;
+    }
+
     public unsortedEnqueue(mxEvent: MatrixEvent, playback: Playback): void {
         // We don't ever detach our listeners: we expect the Playback to clean up for us
         this.playbacks.set(mxEvent.getId()!, playback);
         playback.on(UPDATE_EVENT, (state) => this.onPlaybackStateChange(playback, mxEvent, state));
         playback.clockInfo.liveData.onUpdate((clock) => this.onPlaybackClock(playback, mxEvent, clock));
+    }
+
+    /**
+     * Lets go of a playback whose tile has gone away.
+     *
+     * The queue lives as long as the page does, so a playback left in it is never collected - and with
+     * it the decoded audio, which is far larger than the file it came from. A destroyed playback cannot
+     * be played either, so there is nothing to keep it for.
+     *
+     * Only the playback that was queued is removed: a tile mounted again for the same message has put
+     * its own playback under the same event ID by the time the old tile goes.
+     */
+    public dequeue(mxEvent: MatrixEvent, playback: Playback): void {
+        const eventId = mxEvent.getId()!;
+        if (this.playbacks.get(eventId) === playback) this.playbacks.delete(eventId);
     }
 
     private onPlaybackStateChange(playback: Playback, mxEvent: MatrixEvent, newState: PlaybackState): void {

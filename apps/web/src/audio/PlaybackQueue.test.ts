@@ -88,4 +88,33 @@ describe("PlaybackQueue", () => {
         // @ts-ignore
         expect(playbackQueue.clockStates.has("c")).toBe(true);
     });
+
+    describe("dequeue", () => {
+        const eventWithId = (id: string): Mocked<MatrixEvent> =>
+            ({ getId: vi.fn().mockReturnValue(id) }) as unknown as Mocked<MatrixEvent>;
+        const newPlayback = (): Mocked<Playback> =>
+            new MockedPlayback(PlaybackState.Stopped, 0, 0) as unknown as Mocked<Playback>;
+
+        it("holds nothing once every playback has been taken out again", () => {
+            for (let i = 0; i < 200; i++) {
+                const event = eventWithId(`$voice${i}`);
+                const playback = newPlayback();
+                playbackQueue.unsortedEnqueue(event, playback);
+                playbackQueue.dequeue(event, playback);
+            }
+            expect(playbackQueue.playbackCount).toBe(0);
+        });
+
+        it("keeps the playback of a tile that was mounted again before the old one went", () => {
+            const event = eventWithId("$voice");
+            const old = newPlayback();
+            const current = newPlayback();
+            playbackQueue.unsortedEnqueue(event, old);
+            playbackQueue.unsortedEnqueue(event, current);
+
+            playbackQueue.dequeue(event, old);
+
+            expect(playbackQueue.playbackCount).toBe(1);
+        });
+    });
 });

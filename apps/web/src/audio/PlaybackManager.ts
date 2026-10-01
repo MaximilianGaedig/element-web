@@ -26,6 +26,11 @@ export class PlaybackManager {
         return PlaybackManager.internalInstance;
     }
 
+    /** How many playbacks are alive, for the memory report. */
+    public get instanceCount(): number {
+        return this.instances.length;
+    }
+
     /**
      * Pauses all other playback instances. If no playback is provided, all playing
      * instances are paused.

@@ -34,6 +34,9 @@ export default class MAudioBody extends React.PureComponent<IBodyProps, IState> 
 
     public state: IState = {};
 
+    /** Set once the tile is gone, so audio that arrives afterwards is dropped rather than set up. */
+    private unmounted = false;
+
     public async componentDidMount(): Promise<void> {
         let buffer: ArrayBuffer;
         try {
@@ -50,6 +53,10 @@ export default class MAudioBody extends React.PureComponent<IBodyProps, IState> 
             logger.warn("Unable to decrypt/download audio message", e);
             return; // stop processing the audio file
         }
+
+        // Scrolled away while it was downloading: a playback made now would never be destroyed, and the
+        // manager (and a voice message's queue) would hold it and its audio for the rest of the session.
+        if (this.unmounted) return;
 
         // We should have a buffer to work with now: let's set it up
 
@@ -69,6 +76,7 @@ export default class MAudioBody extends React.PureComponent<IBodyProps, IState> 
     protected onMount(playback: Playback): void {}
 
     public componentWillUnmount(): void {
+        this.unmounted = true;
         this.state.playback?.destroy();
     }
 
