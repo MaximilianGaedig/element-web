@@ -3693,6 +3693,7 @@
         "bridges_summary": "%(connected)s of %(total)s connected",
         "bridges_tab": "Bridges",
         "chip_all_imported": "All %(count)s chats imported",
+        "chip_import_paused": "Import paused · %(done)s of %(total)s chats",
         "chip_importing": "Importing history · %(done)s of %(total)s chats",
         "chip_login_problem": {
             "one": "%(names)s is not connected",

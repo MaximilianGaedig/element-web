@@ -164,4 +164,33 @@ describe("importHeadline", () => {
         const headline = importHeadline(overview, [login("Telegram", "connected")]);
         expect(headline).toMatchObject({ open: 1, blocked: 2, blockedNetworks: ["WhatsApp"] });
     });
+
+    it("says a bridge needs you when its login is down, even with nothing of its own left to import", () => {
+        const done = {
+            getRooms: () => [
+                room("!tg-now", { ...base, state: "running", active: true, network: "Telegram" }),
+                room("!wa-1", { ...base, state: "complete", network: "WhatsApp", bridged_messages: 10 }),
+            ],
+        } as unknown as MatrixClient;
+        const overview = collectImports(done, 1_000 + 1000);
+        const headline = importHeadline(overview, [login("Telegram", "connected"), login("WhatsApp", "disconnected")]);
+        // Nothing is blocked - WhatsApp's chats are all in - and it is still not connected.
+        expect(headline).toMatchObject({ open: 1, blocked: 0, blockedNetworks: [], attention: ["WhatsApp"] });
+    });
+
+    it("names a bridge that needs you once, however many of its accounts are down or blocked", () => {
+        const overview = collectImports(client, 1_000 + 1000);
+        const headline = importHeadline(overview, [
+            login("Telegram", "connected"),
+            login("WhatsApp", "problem"),
+            login("WhatsApp", "disconnected"),
+        ]);
+        expect(headline.attention).toEqual(["WhatsApp"]);
+    });
+
+    it("asks for nobody while every bridge is connected or merely still connecting", () => {
+        const overview = collectImports(client, 1_000 + 1000);
+        const headline = importHeadline(overview, [login("Telegram", "connected"), login("WhatsApp", "connecting")]);
+        expect(headline.attention).toEqual([]);
+    });
 });

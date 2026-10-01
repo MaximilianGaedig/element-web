@@ -229,6 +229,12 @@ export interface ImportHeadline {
     /** Chats that cannot move until a bridge is logged in again, and which networks they belong to. */
     blocked: number;
     blockedNetworks: string[];
+    /**
+     * Every network whose bridge needs you: the blocked ones, and any whose login is down whatever its
+     * import is doing. A bridge that logged out after its last chat came in has nothing blocked, and is
+     * exactly as disconnected.
+     */
+    attention: string[];
     /** 0-99, by messages, across the networks that can count them. */
     percent?: number;
 }
@@ -254,12 +260,19 @@ export function importHeadline(overview: ImportOverview, logins: BridgeLogin[]):
             blockedNetworks.push(network.network);
         }
     }
+    const attention = new Set(blockedNetworks);
+    for (const login of logins) {
+        if (login.network && (login.health === "disconnected" || login.health === "problem")) {
+            attention.add(login.network);
+        }
+    }
     return {
         done: overview.chats - open - blocked,
         total: overview.chats,
         open,
         blocked,
         blockedNetworks,
+        attention: [...attention],
         percent: overview.countedTotal
             ? Math.min(99, Math.floor((overview.countedImported / overview.countedTotal) * 100))
             : undefined,
