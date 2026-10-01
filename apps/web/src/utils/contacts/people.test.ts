@@ -304,6 +304,55 @@ describe("identifiers a ghost publishes", () => {
     });
 
     /*
+     * A group's member, opened from the member list. The reader has no chat with their Telegram account,
+     * so it was not among the people at all - and the card showed whoever it was as a bare profile, or,
+     * for somebody the reader does know on another network, as that other account alone.
+     */
+    it("finds somebody asked for by name, and ties them to who they already are", async () => {
+        const room = {
+            roomId: "!dm:e",
+            getMember: () => ({ rawDisplayName: "Ada", getMxcAvatarUrl: () => null }),
+            currentState: { getStateEvents: () => [] },
+        };
+        const profiles: Record<string, object> = {
+            "@signal_x:e": { "com.beeper.bridge.identifiers": ["tel:+447700900123"], "displayname": "Ada" },
+            "@telegram_7:e": {
+                "com.beeper.bridge.identifiers": ["tel:+447700900123", "telegram:ada"],
+                "com.beeper.bridge.network": "Telegram",
+                "displayname": "Ada K",
+            },
+            "@telegram_9:e": { "com.beeper.bridge.network": "Telegram", "displayname": "Bo" },
+        };
+        const client = {
+            getSafeUserId: () => "@me:e",
+            getVisibleRooms: () => [room],
+            getRooms: () => [],
+            getUser: () => null,
+            getExtendedProfile: vi.fn(async (userId: string) => profiles[userId] ?? {}),
+            getAccountData: () => undefined,
+        } as unknown as MatrixClient;
+        vi.spyOn(DMRoomMap, "shared").mockReturnValue({
+            getUserIdForRoomId: () => "@signal_x:e",
+            getRoomIds: () => new Set(["!dm:e"]),
+        } as unknown as DMRoomMap);
+
+        // Without being asked for, the group members are nobody: only the chat partner is a person.
+        expect(await allPeople(client)).toHaveLength(1);
+
+        const people = await allPeople(client, { also: ["@telegram_7:e", "@telegram_9:e", "@signal_x:e", "@me:e"] });
+
+        // The same number: one person with both accounts, not two people.
+        const ada = people.find((one) => one.accounts.some((account) => account.mxid === "@telegram_7:e"))!;
+        expect(ada.accounts.map((account) => account.mxid).sort()).toEqual(["@signal_x:e", "@telegram_7:e"]);
+        expect(ada.details).toContainEqual({ kind: "handle", value: "telegram:ada" });
+        // A stranger is still somebody, on the network their profile names.
+        const bo = people.find((one) => one.accounts.some((account) => account.mxid === "@telegram_9:e"))!;
+        expect(bo.accounts[0]).toMatchObject({ network: "Telegram", name: "Bo" });
+        // The partner asked for again is not added twice, and the reader is never their own contact.
+        expect(people).toHaveLength(2);
+    });
+
+    /*
      * Discord publishes no identifiers at all, so a row built only from identifiers would say nothing
      * about it. The same profile does say which network and which account, and those are read from the
      * profile too rather than guessed from the mxid or from the room's bridge state event.

@@ -235,6 +235,38 @@ async function contactsFromChats(client: MatrixClient, profiles: boolean): Promi
     });
 }
 
+/**
+ * Somebody there is no chat with: a member of a group, opened from its member list.
+ *
+ * They are a person all the same, and often one already known - the same number on another network, a
+ * card in the address book. What their profile publishes is what ties them to the rest of themselves, so
+ * it is asked for like any chat partner's.
+ */
+async function accountOfUser(client: MatrixClient, userId: string): Promise<Account> {
+    const published = await profileFacts(client, userId);
+    const user = client.getUser(userId);
+    return {
+        network: published.network ?? "Matrix",
+        mxid: userId,
+        remoteId: published.remoteId ?? userId,
+        name: nonId(published.displayName, userId) ?? nonId(user?.displayName, userId),
+        avatarUrl: published.avatarUrl ?? user?.avatarUrl ?? undefined,
+        keys: identityKeys(published.identifiers),
+        details: identityDetails(published.identifiers),
+        identifiers: published.identifiers,
+        publishedCard: published.published,
+        bot: published.bot || undefined,
+    };
+}
+
+/**
+ * The network an account is on, as its profile says it, or undefined for a Matrix account: what a face
+ * is badged with where there is no chat to read the network from. Cached with the rest of the profile.
+ */
+export async function networkOfUser(client: MatrixClient, userId: string): Promise<string | undefined> {
+    return (await profileFacts(client, userId)).network;
+}
+
 /** Where mautrix writes what a network knows about a ghost, as MSC4133 extended profile fields. */
 const IDENTIFIERS_KEY = "com.beeper.bridge.identifiers";
 const NETWORK_KEY = "com.beeper.bridge.network";
@@ -633,12 +665,19 @@ function contactsFromCards(client: MatrixClient): Account[] {
  */
 export async function allPeople(
     client: MatrixClient,
-    { ask = true, fresh = false }: { ask?: boolean; fresh?: boolean } = {},
+    { ask = true, fresh = false, also = [] }: { ask?: boolean; fresh?: boolean; also?: string[] } = {},
 ): Promise<Person[]> {
     const [fromBridges, fromChats] = await Promise.all([
         ask ? bridgeContacts(client, fresh) : [],
         contactsFromChats(client, ask),
     ]);
+    // People asked for by name who are in neither: a group's member the reader has no chat with.
+    const known = new Set([...fromBridges, ...fromChats].map((account) => account.mxid));
+    const others = await Promise.all(
+        also
+            .filter((userId) => !known.has(userId) && userId !== client.getSafeUserId())
+            .map((userId) => accountOfUser(client, userId)),
+    );
     /*
      * Not the reader themselves. Their own account on each network is a ghost like any other - it turns up
      * in the network's address book and in a chat with themselves - and it listed the reader among their
@@ -649,7 +688,7 @@ export async function allPeople(
     return withReaderNames(
         client,
         groupAccounts(
-            [...fromBridges, ...fromChats, ...contactsFromCards(client)].filter(notMine),
+            [...fromBridges, ...fromChats, ...others, ...contactsFromCards(client)].filter(notMine),
             manualLinks(client),
         ),
     );

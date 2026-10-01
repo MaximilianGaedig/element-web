@@ -63,8 +63,13 @@ function useCallHistory(client: MatrixClient, wanted: boolean): Call[] {
 }
 
 /**
- * The person an account belongs to - one of the reader's contacts, with every account they have - or
- * undefined for somebody who isn't. From the accounts the client already knows, so it costs no requests.
+ * The person an account belongs to, with every account they have - or undefined until that is known.
+ *
+ * Twice, as the contacts list does it: at once from what the client already holds, which finds the people
+ * the reader has chats with, and then with what the networks publish about everyone. The second is what
+ * ties somebody's accounts together and carries their numbers and usernames; from the first alone the
+ * card opened from a chat's member list was the same person with half of them missing, and a group's
+ * member the reader has no chat with was nobody at all.
  */
 export function usePersonFor(client: MatrixClient, userId: string | undefined): [Person | undefined, () => void] {
     const [person, setPerson] = useState<Person>();
@@ -72,13 +77,20 @@ export function usePersonFor(client: MatrixClient, userId: string | undefined): 
     useEffect(() => {
         if (!userId) return;
         let alive = true;
+        let whole = false;
+        const find = (people: Person[]): Person | undefined =>
+            people.find((one) => one.accounts.some((account) => account.mxid === userId));
         void allPeople(client, { ask: false })
+            // Only while the whole answer is still out, and only somebody: it must not undo the answer.
+            .then((people) => alive && !whole && find(people) && setPerson(find(people)))
+            .catch(() => undefined);
+        void allPeople(client, { also: [userId] })
             .then((people) => {
-                if (!alive) return;
-                setPerson(people.find((one) => one.accounts.some((account) => account.mxid === userId)));
+                whole = true;
+                if (alive) setPerson(find(people));
             })
             // Not knowing who they are is not knowing them: Element's own profile shows instead.
-            .catch(() => alive && setPerson(undefined));
+            .catch(() => alive && !whole && setPerson(undefined));
         return () => {
             alive = false;
         };
