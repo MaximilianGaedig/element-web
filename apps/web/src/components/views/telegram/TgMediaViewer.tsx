@@ -248,6 +248,9 @@ class ViewerController {
         window.clearTimeout(this.clampTimer);
         this.restoreSource();
         this.helpers.forEach((h) => h.destroy());
+        // A destroyed helper hands out no more URLs: if this controller is used again (React re-runs
+        // the owning effect in development) it must make new ones rather than find these.
+        this.helpers.clear();
     }
 
     private hideSource(el: HTMLElement | null): void {
