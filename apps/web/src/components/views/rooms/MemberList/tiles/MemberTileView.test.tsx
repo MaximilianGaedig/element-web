@@ -23,6 +23,7 @@ import {
     sdkRoomMemberToRoomMember,
 } from "../../../../viewmodels/memberlist/MemberListViewModel";
 import { RoomMemberTileView } from "./RoomMemberTileView";
+import MatrixClientContext from "../../../../../contexts/MatrixClientContext";
 import { ThreePidInviteTileView } from "./ThreePidInviteTileView";
 import { type ThreePIDInvite } from "../../../../../models/rooms/ThreePIDInvite";
 
@@ -47,6 +48,57 @@ describe("MemberTileView", () => {
             const e2eIcon = container.querySelector(".mx_E2EIconView");
             expect(e2eIcon).toBeNull();
             expect(container).toMatchSnapshot();
+        });
+
+        // The room list badges a chat's face with its network; the member list drew the same person with
+        // no badge at all, so the two lists disagreed about who is on what.
+        it("badges a member's face with their network, as the room list does", async () => {
+            const ghost = sdkRoomMemberToRoomMember(new SdkRoomMember("roomId", "@telegram_7:example.org"))!.member!;
+            (matrixClient as any).getExtendedProfile = vi.fn(async (userId: string) =>
+                userId === ghost.userId ? { "com.beeper.bridge.network": "telegram" } : {},
+            );
+            const bridged = new Room("!tg:example.org", matrixClient, matrixClient.getSafeUserId());
+            bridged.currentState.setStateEvents([
+                TestUtils.mkEvent({
+                    event: true,
+                    type: "m.bridge",
+                    skey: "telegram",
+                    room: bridged.roomId,
+                    user: "@telegrambot:example.org",
+                    content: { protocol: { id: "telegram", displayname: "Telegram" } },
+                }),
+            ]);
+            vi.mocked(matrixClient.getRooms).mockReturnValue([bridged]);
+
+            const tile = (shown: RoomMember, index: number): React.JSX.Element => (
+                <MatrixClientContext.Provider value={matrixClient}>
+                    <RoomMemberTileView
+                        item={{ member: shown }}
+                        member={shown}
+                        index={index}
+                        memberCount={2}
+                        onFocus={vi.fn()}
+                    />
+                </MatrixClientContext.Provider>
+            );
+            const { container } = render(tile(ghost, 0));
+            // The room list's own size for it: a 14px logo on a 32px face.
+            // (The people module is loaded on first use, which here is this test: give it the time.)
+            await waitFor(
+                () =>
+                    expect(
+                        container
+                            .querySelector<HTMLElement>(".mx_Contacts_networkLogo")
+                            ?.style.getPropertyValue("--cpd-avatar-size"),
+                    ).toBe("14px"),
+                { timeout: 10_000 },
+            );
+
+            // The reader's own account is on no network, and is not badged.
+            const mine = render(tile(member, 1));
+            await waitFor(() => expect((matrixClient as any).getExtendedProfile).toHaveBeenCalledWith(member.userId));
+            await Promise.resolve();
+            expect(mine.container.querySelector(".mx_Contacts_networkLogo")).toBeNull();
         });
 
         it("should display an warning E2EIcon when the e2E status = Warning", async () => {

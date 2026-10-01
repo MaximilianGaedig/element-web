@@ -6,6 +6,28 @@ Please see LICENSE files in the repository root for full details.
 */
 
 /* Element's own list shapes, not a new set: a row is an avatar, two lines of text and a trailing note. */
+/*
+ * Where the marks go on a face, which is where the room list puts them: the network in the bottom-left
+ * corner, presence in the bottom-right (see _BridgeInfo.pcss). Both ringed in the canvas colour so they
+ * read as badges on the face rather than as part of the picture.
+ *
+ * Not inside .mx_Contacts: a face is drawn wherever a person is - the member list too - and there the
+ * network's logo had no place to go, so it was left out and the same person looked different in each list.
+ */
+.mx_Contacts_face {
+    position: relative;
+    display: flex;
+    flex-shrink: 0;
+
+    .mx_Contacts_networkLogo {
+        position: absolute;
+        inset-inline-start: -3px;
+        inset-block-end: -3px;
+        border-radius: 4px;
+        box-shadow: 0 0 0 2px var(--cpd-color-bg-canvas-default);
+    }
+}
+
 .mx_Contacts {
     /*
      * One control with two positions: a tinted track with the chosen half raised out of it, which is how a
@@ -82,25 +104,6 @@ Please see LICENSE files in the repository root for full details.
         position: relative;
         display: flex;
         flex-shrink: 0;
-    }
-
-    /*
-     * Where the marks go, which is where the room list puts them: the network in the bottom-left corner,
-     * presence in the bottom-right (see _BridgeInfo.pcss). Both ringed in the canvas colour so they read
-     * as badges on the face rather than as part of the picture.
-     */
-    .mx_Contacts_face {
-        position: relative;
-        display: flex;
-        flex-shrink: 0;
-
-        .mx_Contacts_networkLogo {
-            position: absolute;
-            inset-inline-start: -3px;
-            inset-block-end: -3px;
-            border-radius: 4px;
-            box-shadow: 0 0 0 2px var(--cpd-color-bg-canvas-default);
-        }
     }
 
     /*

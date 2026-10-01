@@ -5,7 +5,7 @@ SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only OR LicenseRef-Element-Com
 Please see LICENSE files in the repository root for full details.
 */
 
-import React, { type JSX, useEffect } from "react";
+import React, { type JSX, useEffect, useState } from "react";
 import { useCreateAutoDisposedViewModel, DisambiguatedProfileView } from "@element-hq/web-shared-components";
 
 import { type RoomMember } from "../../../../../models/rooms/RoomMember";
@@ -43,6 +43,24 @@ export function RoomMemberTileView(props: IProps): JSX.Element {
      */
     const client = useMatrixClientContext();
     const presence = usePresenceInfo(client, vm.showPresence ? member.userId : undefined);
+    /*
+     * And their network, as the room list badges a chat's: each member's own, from their profile, since
+     * a room holds the reader, the bridge's bot and sometimes ghosts of more than one network.
+     */
+    const [network, setNetwork] = useState<string>();
+    useEffect(() => {
+        let alive = true;
+        setNetwork(undefined);
+        // Loaded when a tile first asks, not with the room: the people module pulls in the bridges and
+        // the address book, none of which the timeline's bundle should wait for.
+        void import("../../../../../utils/contacts/people")
+            .then(({ networkOfUser }) => networkOfUser(client, member.userId))
+            .then((found) => alive && setNetwork(found))
+            .catch(() => undefined);
+        return () => {
+            alive = false;
+        };
+    }, [client, member.userId]);
     const av = (
         <ContactFace
             client={client}
@@ -50,7 +68,9 @@ export function RoomMemberTileView(props: IProps): JSX.Element {
             id={member.userId}
             thumbnailUrl={member.avatarThumbnailUrl}
             presence={presence}
+            network={network}
             size={32}
+            logoSize={14}
         />
     );
     const name = vm.name;

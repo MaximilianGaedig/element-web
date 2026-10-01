@@ -35,6 +35,7 @@ export function ContactFace({
     network,
     presence,
     size = 36,
+    logoSize,
     /** A tick over the face while a selection is being made, in place of the network badge. */
     selected,
 }: {
@@ -50,6 +51,8 @@ export function ContactFace({
     /** The room list's own presence reading, drawn with the room list's own badge. */
     presence?: PresenceInfo;
     size?: number;
+    /** The network logo's size, where the face stands beside the room list's and has to match its 14px. */
+    logoSize?: number;
     selected?: boolean;
 }): JSX.Element {
     const badge = !selected && hasPresenceBadge(presence);
@@ -78,7 +81,12 @@ export function ContactFace({
             />
             {/* Bottom-left, as the room list puts a network, so the two lists mark one the same way. */}
             {!selected && (
-                <NetworkLogo client={client} roomId={roomId} network={network} size={Math.round(size / 2.6)} />
+                <NetworkLogo
+                    client={client}
+                    roomId={roomId}
+                    network={network}
+                    size={logoSize ?? Math.round(size / 2.6)}
+                />
             )}
             {badge && (
                 <ActivityDot
