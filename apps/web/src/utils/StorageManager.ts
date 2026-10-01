@@ -117,9 +117,16 @@ export async function checkConsistency(): Promise<{
         error("Local storage cannot be used on this browser");
     }
 
-    if (getIDBFactory() && localStorage) {
-        const results = await checkSyncStore();
-        if (!results.healthy) {
+    // This runs on the startup path, and each check opens a database: ask both at once rather than
+    // the crypto store only after the sync store has answered.
+    const idb = getIDBFactory();
+    const [syncStore, cryptoStore] = await Promise.all([
+        idb && localStorage ? checkSyncStore() : undefined,
+        idb ? checkCryptoStore() : undefined,
+    ]);
+
+    if (syncStore) {
+        if (!syncStore.healthy) {
             healthy = false;
         }
     } else {
@@ -127,10 +134,9 @@ export async function checkConsistency(): Promise<{
         error("Sync store cannot be used on this browser");
     }
 
-    if (getIDBFactory()) {
-        const results = await checkCryptoStore();
-        dataInCryptoStore = results.exists;
-        if (!results.healthy) {
+    if (cryptoStore) {
+        dataInCryptoStore = cryptoStore.exists;
+        if (!cryptoStore.healthy) {
             healthy = false;
         }
     } else {
