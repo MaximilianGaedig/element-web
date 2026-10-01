@@ -280,8 +280,11 @@ html[data-tg-screen="mobile"] {
             height: 1.5rem;
         }
 
-        &:hover {
-            background: var(--cpd-color-bg-action-tertiary-hovered);
+        /* A finger has no hover: on a touch screen the highlight would stay on after the tap. */
+        @media (hover: hover) {
+            &:hover {
+                background: var(--cpd-color-bg-action-tertiary-hovered);
+            }
         }
 
         &:focus-visible {
@@ -304,19 +307,25 @@ html[data-tg-screen="mobile"] {
         display: none;
     }
 
-    /* The list: plain rows, like the user menu's. */
-    .mx_RoomSettingsDialog .mx_TabbedView_tabsOnLeft .mx_TabbedView_tabLabels {
+    /*
+     * The list: plain rows, like the user menu's. It belongs to every dialog that carries its own - the
+     * room settings and the space settings, which is what [data-page] says - rather than to one of them
+     * by name: named for the room settings alone, it left the space settings a strip of bare icons.
+     */
+    .mx_SettingsDialog_content[data-page="list"] .mx_TabbedView_tabsOnLeft .mx_TabbedView_tabLabels {
         display: flex;
         flex-direction: column;
         gap: 0;
         width: auto;
         max-width: none;
         margin: 0;
-        padding: 0 0 1rem;
+        /* The last row clears the home indicator. */
+        padding: 0 0 calc(1rem + var(--tg-safe-bottom, 0px));
+        overflow-x: visible;
         list-style: none;
     }
 
-    .mx_RoomSettingsDialog .mx_TabbedView_tabLabel {
+    .mx_SettingsDialog_content[data-page="list"] .mx_TabbedView_tabsOnLeft .mx_TabbedView_tabLabels .mx_TabbedView_tabLabel {
         position: relative;
         display: flex;
         gap: 1rem;
@@ -325,6 +334,8 @@ html[data-tg-screen="mobile"] {
         min-height: 3.25rem;
         padding: 0.5rem 2.5rem 0.5rem 1.25rem;
         border-radius: 0;
+        /* Nothing is "the current one" on a list you have yet to choose from. */
+        background: none;
         font: var(--cpd-font-body-lg-regular);
         color: var(--cpd-color-text-primary);
         white-space: normal;
@@ -333,6 +344,7 @@ html[data-tg-screen="mobile"] {
             flex: 0 0 auto;
             width: 1.5rem;
             height: 1.5rem;
+            margin: 0;
             color: var(--cpd-color-icon-secondary);
             fill: currentcolor;
         }
@@ -355,7 +367,7 @@ html[data-tg-screen="mobile"] {
     }
 
     /* The responsive strip hides the words on narrow screens; this list has room and needs them. */
-    .mx_RoomSettingsDialog .mx_TabbedView_tabsOnLeft.mx_TabbedView_responsive {
+    .mx_SettingsDialog_content[data-page] .mx_TabbedView_tabsOnLeft.mx_TabbedView_responsive {
         .mx_TabbedView_tabLabel_text {
             display: inline;
         }
@@ -412,6 +424,119 @@ html[data-tg-screen="mobile"] {
         .mx_SettingsDropdown .mx_Dropdown_input,
         .mx_SettingsSubsection_dropdown .mx_Dropdown_input {
             width: 100%;
+        }
+
+        /* The 80px kept clear at the end of a row is a third of a phone's column. */
+        .mx_SettingsTab_subsectionText,
+        .mx_SettingsTab_section .mx_SettingsFlag,
+        .mx_SettingsTab_section > p {
+            margin-inline-end: 0;
+        }
+
+        /*
+         * Touch targets: 44px, the least a finger hits reliably. Where the visible control is meant to be
+         * smaller (a switch, a radio mark, a round icon button) it keeps its look and only what answers
+         * the tap grows around it.
+         */
+        .mx_AccessibleButton:is(
+                .mx_AccessibleButton_kind_primary,
+                .mx_AccessibleButton_kind_primary_outline,
+                .mx_AccessibleButton_kind_primary_sm,
+                .mx_AccessibleButton_kind_secondary,
+                .mx_AccessibleButton_kind_danger,
+                .mx_AccessibleButton_kind_danger_outline,
+                .mx_AccessibleButton_kind_danger_sm
+            ),
+        button[data-kind][data-size],
+        .mx_Field input,
+        .mx_Field select,
+        .mx_AutocompleteInput input,
+        .mx_StyledRadioButton,
+        .mx_StyledCheckbox,
+        [class*="_inline-field_"] {
+            min-height: 2.75rem;
+        }
+
+        /* Their padding is theirs already; the 44px is the whole field, not what is inside it. */
+        .mx_Field input,
+        .mx_Field select,
+        .mx_AutocompleteInput input,
+        .mx_StyledRadioButton,
+        .mx_StyledCheckbox {
+            box-sizing: border-box;
+        }
+
+        /* A row is the target, with its mark in the middle of it, as a list row has on a phone. */
+        .mx_StyledRadioButton,
+        .mx_StyledCheckbox,
+        [class*="_inline-field_"] {
+            align-items: center;
+        }
+
+        /* Compound's switch, radio and checkbox: the invisible input is what is tapped. */
+        [class*="_container_"] > input:is([type="checkbox"], [type="radio"]) {
+            inline-size: 2.75rem;
+            block-size: 2.75rem;
+            place-self: center;
+        }
+
+        .mx_AvatarSetting_uploadButton,
+        .mx_EditableItem_delete,
+        .mx_CopyableText_copyButton {
+            &::after {
+                content: "";
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                width: 2.75rem;
+                height: 2.75rem;
+                transform: translate(-50%, -50%);
+            }
+        }
+
+        /* The first is already positioned, and the last is sticky; this one is the only one in flow. */
+        .mx_EditableItem_delete {
+            position: relative;
+        }
+
+        /* ---- Room settings: the parts laid out for a wide pane -------------------------------- */
+
+        /* Name and topic beside a 120px picture left the fields 80px on a 320px phone, and pushed the
+           picture off the screen. The picture goes on top, the fields take the row. */
+        .mx_RoomProfileSettings_profile {
+            flex-direction: column-reverse;
+            align-items: center;
+            gap: var(--cpd-space-4x);
+        }
+
+        .mx_RoomProfileSettings_profile .mx_RoomProfileSettings_profile_controls {
+            align-self: stretch;
+            margin-inline-end: 0;
+        }
+
+        .mx_RoomProfileSettings_buttons {
+            flex-wrap: wrap;
+        }
+
+        /* A fixed 360px, with the radio mark at its far end: off the screen on anything narrower. */
+        .mx_NotificationSettingsTab_notificationsSection {
+            width: 100%;
+        }
+
+        /* Long things that cannot wrap on their own: addresses, user ids. */
+        .mx_EditableItem_item,
+        .mx_SettingsFieldset_description,
+        .mx_SettingsSubsection_text {
+            overflow-wrap: anywhere;
+        }
+
+        .mx_PollHistoryList_list {
+            padding-right: 0;
+        }
+
+        /* A bordered tag broken across two lines reads as two tags. */
+        .mx_JoinRuleSettings_upgradeRequired {
+            display: inline-block;
         }
     }
 }
