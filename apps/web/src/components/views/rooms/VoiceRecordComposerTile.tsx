@@ -8,7 +8,7 @@ Please see LICENSE files in the repository root for full details.
 
 import React, { type ReactNode } from "react";
 import { MediaBody } from "@element-hq/web-shared-components";
-import { type Room, type IEventRelation, type MatrixEvent } from "matrix-js-sdk/src/matrix";
+import { type Room, type IEventRelation, type MatrixEvent, THREAD_RELATION_TYPE } from "matrix-js-sdk/src/matrix";
 import { logger } from "matrix-js-sdk/src/logger";
 import { DeleteIcon, StopSolidIcon } from "@vector-im/compound-design-tokens/assets/web/icons";
 
@@ -36,6 +36,8 @@ import RoomContext from "../../../contexts/RoomContext";
 import { type IUpload, type VoiceMessageRecording } from "../../../audio/VoiceMessageRecording";
 import { createVoiceMessageContent } from "../../../utils/createVoiceMessageContent";
 import AccessibleButton from "../elements/AccessibleButton";
+import { holdSelfTypingActivity } from "../../../stores/TypingStore";
+import { type TypingActivity } from "../../../TypingKinds";
 
 interface IProps {
     room: Room;
@@ -56,6 +58,8 @@ export default class VoiceRecordComposerTile extends React.PureComponent<IProps,
     public static contextType = RoomContext;
     declare public context: React.ContextType<typeof RoomContext>;
     private voiceRecordingId: string;
+    // What the room is being told we are doing, and the function that ends it.
+    private typingActivity?: { kind: TypingActivity; stop: () => void };
 
     public constructor(props: IProps) {
         super(props);
@@ -76,7 +80,34 @@ export default class VoiceRecordComposerTile extends React.PureComponent<IProps,
         }
     }
 
+    public componentDidUpdate(_prevProps: IProps, prevState: IState): void {
+        if (prevState.recordingPhase !== this.state.recordingPhase) this.tellRoomWhatWeAreDoing();
+    }
+
+    /**
+     * Tells the room that a voice message is being recorded, or uploaded, for as long as it is. A
+     * recording that has ended and waits to be sent or deleted is not an activity.
+     */
+    private tellRoomWhatWeAreDoing(): void {
+        let kind: TypingActivity | undefined;
+        if (this.state.recordingPhase === RecordingState.Started) kind = "recording_voice";
+        else if (this.state.recordingPhase === RecordingState.Uploading) kind = "uploading_voice";
+        if (this.typingActivity?.kind === kind) return;
+
+        this.stopTellingRoom();
+        if (!kind) return;
+        const { room, relation } = this.props;
+        const threadId = relation?.rel_type === THREAD_RELATION_TYPE.name ? (relation.event_id ?? null) : null;
+        this.typingActivity = { kind, stop: holdSelfTypingActivity(room.roomId, threadId, kind) };
+    }
+
+    private stopTellingRoom(): void {
+        this.typingActivity?.stop();
+        this.typingActivity = undefined;
+    }
+
     public async componentWillUnmount(): Promise<void> {
+        this.stopTellingRoom();
         // Stop recording, but keep the recording memory (don't dispose it). This is to let the user
         // come back and finish working with it.
         const recording = VoiceRecordingStore.instance.getActiveRecording(this.voiceRecordingId);

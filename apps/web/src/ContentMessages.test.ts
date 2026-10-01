@@ -31,6 +31,7 @@ import ErrorDialog from "./components/views/dialogs/ErrorDialog";
 import UploadConfirmDialog from "./components/views/dialogs/UploadConfirmDialog";
 import { _t } from "./languageHandler";
 import { PosthogAnalytics } from "./PosthogAnalytics";
+import { holdSelfTypingActivity } from "./stores/TypingStore";
 
 vi.mock("matrix-encrypt-attachment", () => ({ default: { encryptAttachment: vi.fn().mockResolvedValue({}) } }));
 
@@ -44,6 +45,11 @@ vi.mock("./BlurhashEncoder", () => ({
 
 vi.mock("./utils/local-room", () => ({
     doMaybeLocalRoomAction: vi.fn(),
+}));
+
+vi.mock("./stores/TypingStore", async (importOriginal) => ({
+    ...(await importOriginal<typeof import("./stores/TypingStore")>()),
+    holdSelfTypingActivity: vi.fn().mockReturnValue(() => {}),
 }));
 
 const createElement = document.createElement.bind(document);
@@ -150,6 +156,57 @@ describe("ContentMessages", () => {
                     msgtype: "m.file",
                 }),
             );
+        });
+
+        describe("tells the room what is being sent", () => {
+            let stopTypingActivity: () => void;
+
+            beforeEach(() => {
+                stopTypingActivity = vi.fn();
+                vi.mocked(holdSelfTypingActivity).mockReset().mockReturnValue(stopTypingActivity);
+            });
+
+            // Which kind each type of file is, is tested with uploadTypingKind.
+            it.each([
+                ["image/jpeg", "uploading_photo"],
+                ["application/pdf", "uploading_file"],
+                ["", "uploading_file"],
+            ])("a file of type '%s' is %s", async (type, kind) => {
+                vi.mocked(client.uploadContent).mockResolvedValue({ content_uri: "mxc://server/file" });
+                const file = new File([], "fileName", { type });
+                await contentMessages.sendContentToRoom(file, roomId, undefined, client, undefined);
+                expect(holdSelfTypingActivity).toHaveBeenCalledExactlyOnceWith(roomId, null, kind);
+            });
+
+            it("for as long as the upload takes", async () => {
+                const deferred = Promise.withResolvers<UploadResponse>();
+                vi.mocked(client.uploadContent).mockReturnValue(deferred.promise);
+                const file = new File([], "fileName", { type: "application/pdf" });
+                const sent = contentMessages.sendContentToRoom(file, roomId, undefined, client, undefined);
+                await flushPromises();
+                expect(holdSelfTypingActivity).toHaveBeenCalledTimes(1);
+                expect(stopTypingActivity).not.toHaveBeenCalled();
+
+                deferred.resolve({ content_uri: "mxc://server/file" });
+                await sent;
+                expect(stopTypingActivity).toHaveBeenCalledTimes(1);
+            });
+
+            it("and stops when the upload fails", async () => {
+                vi.spyOn(Modal, "createDialog").mockReturnValue({} as ReturnType<typeof Modal.createDialog>);
+                vi.mocked(client.uploadContent).mockRejectedValue(new Error("no"));
+                const file = new File([], "fileName", { type: "application/pdf" });
+                await contentMessages.sendContentToRoom(file, roomId, undefined, client, undefined);
+                expect(stopTypingActivity).toHaveBeenCalledTimes(1);
+            });
+
+            it("names the thread an upload goes to, where typing is not sent", async () => {
+                vi.mocked(client.uploadContent).mockResolvedValue({ content_uri: "mxc://server/file" });
+                const file = new File([], "fileName", { type: "application/pdf" });
+                const relation = { rel_type: RelationType.Thread, event_id: "$root" };
+                await contentMessages.sendContentToRoom(file, roomId, relation, client, undefined);
+                expect(holdSelfTypingActivity).toHaveBeenCalledExactlyOnceWith(roomId, "$root", "uploading_file");
+            });
         });
 
         it("should use m.video for video files", async () => {

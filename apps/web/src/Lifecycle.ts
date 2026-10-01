@@ -71,6 +71,7 @@ import { checkBrowserSupport } from "./SupportedBrowser";
 import { type URLParams } from "./vector/url_utils.ts";
 import { type OnLoggedInPayload } from "./dispatcher/payloads/OnLoggedInPayload.ts";
 import { clearUploadedMediaCache } from "./utils/UploadedMediaCache";
+import { watchTypingKinds } from "./TypingKinds";
 import { CallStatusListener } from "./CallStatusListener.ts";
 import { CallStore } from "./stores/CallStore.ts";
 import { ModuleApi } from "./modules/Api.ts";
@@ -1043,6 +1044,8 @@ async function startMatrixClient(
     // reset things first just in case
     SDKContextClass.instance.typingStore.reset();
     ToastStore.sharedInstance().reset();
+    // From before the first sync, so that what somebody is doing is known when a room is opened.
+    watchTypingKinds(client);
 
     DialogOpener.instance.prepare(client);
     SDKContextClass.instance.notifier.start();

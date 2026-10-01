@@ -13,6 +13,7 @@ import * as WhoIsTyping from "../../../WhoIsTyping";
 import Timer from "../../../utils/Timer";
 import { MatrixClientPeg } from "../../../MatrixClientPeg";
 import MemberAvatar from "../avatars/MemberAvatar";
+import { onTypingKindsChanged, type TypingKind, typingKindOf, watchTypingKinds } from "../../../TypingKinds";
 
 interface IProps {
     // the room this statusbar is representing.
@@ -32,6 +33,9 @@ interface IState {
     // with the sent message by the other side
     // resulting in less timeline jumpiness
     delayedStopTypingTimers: Record<string, Timer>;
+    // What each user shown is doing, by user ID. Kept apart from the live kinds because a user who
+    // stopped stays on the tile for a moment, and should not turn into "typing" for it.
+    typingKinds: Record<string, TypingKind>;
 }
 
 export default class WhoIsTypingTile extends React.Component<IProps, IState> {
@@ -39,14 +43,27 @@ export default class WhoIsTypingTile extends React.Component<IProps, IState> {
         whoIsTypingLimit: 3,
     };
 
+    private stopWatchingKinds?: () => void;
+
     public state: IState = {
         usersTyping: WhoIsTyping.usersTypingApartFromMe(this.props.room),
         delayedStopTypingTimers: {},
+        typingKinds: this.typingKinds(WhoIsTyping.usersTypingApartFromMe(this.props.room), {}, {}),
     };
 
     public componentDidMount(): void {
-        MatrixClientPeg.safeGet().on(RoomMemberEvent.Typing, this.onRoomMemberTyping);
-        MatrixClientPeg.safeGet().on(RoomEvent.Timeline, this.onRoomTimeline);
+        const client = MatrixClientPeg.safeGet();
+        watchTypingKinds(client);
+        client.on(RoomMemberEvent.Typing, this.onRoomMemberTyping);
+        client.on(RoomEvent.Timeline, this.onRoomTimeline);
+        // Somebody can go from typing to recording without ever having stopped typing, which the
+        // listener above does not hear of.
+        this.stopWatchingKinds = onTypingKindsChanged((roomId) => {
+            if (roomId !== this.props.room.roomId) return;
+            this.setState((state) => ({
+                typingKinds: this.typingKinds(state.usersTyping, state.delayedStopTypingTimers, state.typingKinds),
+            }));
+        });
     }
 
     public componentDidUpdate(prevProps: IProps, prevState: IState): void {
@@ -66,7 +83,30 @@ export default class WhoIsTypingTile extends React.Component<IProps, IState> {
             client.removeListener(RoomMemberEvent.Typing, this.onRoomMemberTyping);
             client.removeListener(RoomEvent.Timeline, this.onRoomTimeline);
         }
+        this.stopWatchingKinds?.();
         Object.values(this.state.delayedStopTypingTimers).forEach((t) => t.abort());
+    }
+
+    /**
+     * What each user on the tile is doing: the live kind for those typing, and the last one known for
+     * those who stopped but are still shown.
+     */
+    private typingKinds(
+        usersTyping: RoomMember[],
+        delayedStopTypingTimers: Record<string, Timer>,
+        previous: Record<string, TypingKind>,
+    ): Record<string, TypingKind> {
+        const kinds: Record<string, TypingKind> = {};
+        for (const userId of Object.keys(delayedStopTypingTimers)) {
+            if (previous[userId]) kinds[userId] = previous[userId];
+        }
+        for (const member of usersTyping) {
+            // The kind of somebody who just stopped is gone already, while the list may still have them.
+            kinds[member.userId] = member.typing
+                ? typingKindOf(this.props.room, member.userId)
+                : (previous[member.userId] ?? "text");
+        }
+        return kinds;
     }
 
     private static isVisible(state: IState): boolean {
@@ -92,9 +132,11 @@ export default class WhoIsTypingTile extends React.Component<IProps, IState> {
 
     private onRoomMemberTyping = (): void => {
         const usersTyping = WhoIsTyping.usersTypingApartFromMeAndIgnored(this.props.room);
+        const delayedStopTypingTimers = this.updateDelayedStopTypingTimers(usersTyping);
         this.setState({
-            delayedStopTypingTimers: this.updateDelayedStopTypingTimers(usersTyping),
+            delayedStopTypingTimers,
             usersTyping,
+            typingKinds: this.typingKinds(usersTyping, delayedStopTypingTimers, this.state.typingKinds),
         });
     };
 
@@ -201,7 +243,11 @@ export default class WhoIsTypingTile extends React.Component<IProps, IState> {
         const collator = new Intl.Collator();
         usersTyping.sort((a, b) => collator.compare(a.name, b.name));
 
-        const typingString = WhoIsTyping.whoIsTypingString(usersTyping, this.props.whoIsTypingLimit);
+        const typingString = WhoIsTyping.whoIsTypingString(
+            usersTyping,
+            this.props.whoIsTypingLimit,
+            (member) => this.state.typingKinds[member.userId] ?? "text",
+        );
         if (!typingString) {
             return null;
         }

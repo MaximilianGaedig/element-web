@@ -508,6 +508,24 @@
         "telegram_state_delivered": "Delivered",
         "telegram_state_read": "Read",
         "typing_dm": "typing",
+        "typing_kind_dm": {
+            "choosing_sticker": "choosing a sticker",
+            "recording_video": "recording a video",
+            "recording_voice": "recording a voice message",
+            "uploading_file": "sending a file",
+            "uploading_photo": "sending a photo",
+            "uploading_video": "sending a video",
+            "uploading_voice": "sending a voice message"
+        },
+        "typing_kind_one": {
+            "choosing_sticker": "%(name)s is choosing a sticker",
+            "recording_video": "%(name)s is recording a video",
+            "recording_voice": "%(name)s is recording a voice message",
+            "uploading_file": "%(name)s is sending a file",
+            "uploading_photo": "%(name)s is sending a photo",
+            "uploading_video": "%(name)s is sending a video",
+            "uploading_voice": "%(name)s is sending a voice message"
+        },
         "typing_many": {
             "one": "%(name)s and %(count)s other are typing",
             "other": "%(name)s and %(count)s others are typing"
@@ -4376,6 +4394,15 @@
                 "other": "%(names)s and %(count)s others are typing …"
             },
             "one_user": "%(displayName)s is typing …",
+            "one_user_kind": {
+                "choosing_sticker": "%(displayName)s is choosing a sticker …",
+                "recording_video": "%(displayName)s is recording a video …",
+                "recording_voice": "%(displayName)s is recording a voice message …",
+                "uploading_file": "%(displayName)s is sending a file …",
+                "uploading_photo": "%(displayName)s is sending a photo …",
+                "uploading_video": "%(displayName)s is sending a video …",
+                "uploading_voice": "%(displayName)s is sending a voice message …"
+            },
             "two_users": "%(names)s and %(lastPerson)s are typing …"
         },
         "undecryptable_tooltip": "This message could not be decrypted",

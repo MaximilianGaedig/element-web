@@ -61,6 +61,8 @@ import { doMaybeLocalRoomAction } from "./utils/local-room";
 import { blobIsAnimated } from "./utils/Image.ts";
 import { PosthogAnalytics } from "./PosthogAnalytics.ts";
 import { cacheUploadedMedia } from "./utils/UploadedMediaCache";
+import { holdSelfTypingActivity } from "./stores/TypingStore";
+import { uploadTypingKind } from "./TypingKinds";
 
 // scraped out of a macOS hidpi (5660ppm) screenshot png
 //                  5669 px (x-axis)      , 5669 px (y-axis)      , per metre
@@ -624,6 +626,13 @@ export default class ContentMessages {
         const upload = new RoomUpload(roomId, fileName, relation, file.size);
         this.inprogress.push(upload);
         dis.dispatch<UploadStartedPayload>({ action: Action.UploadStarted, upload });
+        // The room sees "sending a photo" for as long as this takes, rather than nothing at all until
+        // the message appears.
+        const stopTypingActivity = holdSelfTypingActivity(
+            roomId,
+            relation?.rel_type === THREAD_RELATION_TYPE.name ? (relation.event_id ?? null) : null,
+            uploadTypingKind(file.type),
+        );
 
         function onProgress(progress: UploadProgress): void {
             upload.onProgress(progress);
@@ -713,6 +722,7 @@ export default class ContentMessages {
                 dis.dispatch<UploadErrorPayload>({ action: Action.UploadFailed, upload, error });
             }
         } finally {
+            stopTypingActivity();
             removeElement(this.inprogress, (e) => e.promise === upload.promise);
         }
     }

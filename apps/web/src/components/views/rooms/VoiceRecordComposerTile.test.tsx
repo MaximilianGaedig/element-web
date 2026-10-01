@@ -10,7 +10,7 @@ Please see LICENSE files in the repository root for full details.
 
 import React, { createRef, type RefObject } from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render } from "test-utils-rtl";
+import { act, render } from "test-utils-rtl";
 import { type MatrixClient, MsgType, type Room } from "matrix-js-sdk/src/matrix";
 import { mkEvent } from "test-utils";
 
@@ -20,6 +20,8 @@ import { MatrixClientPeg } from "../../../MatrixClientPeg";
 import { type IUpload, type VoiceMessageRecording } from "../../../audio/VoiceMessageRecording";
 import { VoiceRecordingStore } from "../../../stores/VoiceRecordingStore";
 import { type PlaybackClock } from "../../../audio/PlaybackClock";
+import { RecordingState } from "../../../audio/VoiceRecording";
+import { holdSelfTypingActivity } from "../../../stores/TypingStore";
 
 vi.mock("../../../utils/local-room", () => ({
     doMaybeLocalRoomAction: vi.fn(),
@@ -35,11 +37,17 @@ vi.mock("../../../stores/VoiceRecordingStore", () => ({
     },
 }));
 
+vi.mock("../../../stores/TypingStore", () => ({
+    holdSelfTypingActivity: vi.fn(),
+}));
+
 describe("<VoiceRecordComposerTile/>", () => {
     let voiceRecordComposerTile: RefObject<VoiceRecordComposerTile | null>;
     let mockRecorder: VoiceMessageRecording;
     let mockUpload: IUpload;
     let mockClient: MatrixClient;
+    let stopTypingActivity: () => void;
+    let unmount: () => void;
     const roomId = "!room:example.com";
 
     beforeEach(() => {
@@ -66,6 +74,7 @@ describe("<VoiceRecordComposerTile/>", () => {
             on: vi.fn(),
             off: vi.fn(),
             stop: vi.fn(),
+            liveData: { onUpdate: vi.fn() },
             upload: () => Promise.resolve(mockUpload),
             durationSeconds: 1337,
             contentType: "audio/ogg",
@@ -87,13 +96,55 @@ describe("<VoiceRecordComposerTile/>", () => {
             }),
         } as unknown as VoiceMessageRecording;
         vi.mocked(VoiceRecordingStore.instance.getActiveRecording).mockReturnValue(mockRecorder);
-        render(<VoiceRecordComposerTile {...props} />);
+        stopTypingActivity = vi.fn();
+        vi.mocked(holdSelfTypingActivity).mockReset().mockReturnValue(stopTypingActivity);
+        ({ unmount } = render(<VoiceRecordComposerTile {...props} />));
 
         vi.mocked(doMaybeLocalRoomAction).mockImplementation(
             <T,>(roomId: string, fn: (actualRoomId: string) => Promise<T>, _client?: MatrixClient) => {
                 return fn(roomId);
             },
         );
+    });
+
+    describe("telling the room", () => {
+        // The recorder reports each phase to the tile the way it does while one is recorded and sent.
+        const enter = (phase: RecordingState): void => {
+            const onUpdate = vi.mocked(mockRecorder.on).mock.calls[0][1];
+            act(() => {
+                onUpdate(phase);
+            });
+        };
+
+        it("says nothing for a recording that waits to be sent", () => {
+            expect(holdSelfTypingActivity).not.toHaveBeenCalled();
+        });
+
+        it("says a voice message is being recorded, then uploaded, and then nothing", () => {
+            enter(RecordingState.Started);
+            expect(holdSelfTypingActivity).toHaveBeenCalledExactlyOnceWith(roomId, null, "recording_voice");
+            expect(stopTypingActivity).not.toHaveBeenCalled();
+
+            // Close to the length limit: still recording, and not said again.
+            enter(RecordingState.EndingSoon);
+            expect(holdSelfTypingActivity).toHaveBeenCalledTimes(1);
+
+            enter(RecordingState.Ended);
+            expect(stopTypingActivity).toHaveBeenCalledTimes(1);
+
+            enter(RecordingState.Uploading);
+            expect(holdSelfTypingActivity).toHaveBeenLastCalledWith(roomId, null, "uploading_voice");
+
+            enter(RecordingState.Uploaded);
+            expect(stopTypingActivity).toHaveBeenCalledTimes(2);
+            expect(holdSelfTypingActivity).toHaveBeenCalledTimes(2);
+        });
+
+        it("stops saying it when the composer goes away mid-recording", () => {
+            enter(RecordingState.Started);
+            unmount();
+            expect(stopTypingActivity).toHaveBeenCalledTimes(1);
+        });
     });
 
     describe("send", () => {
