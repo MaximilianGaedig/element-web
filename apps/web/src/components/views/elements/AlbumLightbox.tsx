@@ -31,7 +31,15 @@ export default function AlbumLightbox({ items, startIndex, permalinkCreator, onF
     const [index, setIndex] = useState(() => Math.min(Math.max(startIndex, 0), items.length - 1));
     const [src, setSrc] = useState<{ event: MatrixEvent; url: string | null } | null>(null);
     const helpers = useMemo(() => new Map<MatrixEvent, MediaEventHelper>(), []);
-    useEffect(() => () => helpers.forEach((h) => h.destroy()), [helpers]);
+    useEffect(
+        () => () => {
+            helpers.forEach((h) => h.destroy());
+            // A destroyed helper hands out no more URLs: if the effect runs again (React does that in
+            // development) the lightbox must make new ones rather than find these.
+            helpers.clear();
+        },
+        [helpers],
+    );
 
     const event = items[index];
     const isVideo = event.getContent().msgtype === MsgType.Video;

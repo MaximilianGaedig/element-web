@@ -50,6 +50,11 @@ export class LruCache<K, V> {
         this.map = new Map();
     }
 
+    /** How many items the cache holds. */
+    public get size(): number {
+        return this.map.size;
+    }
+
     /**
      * Whether the cache contains an item under this key.
      * Marks the item as most recently used.

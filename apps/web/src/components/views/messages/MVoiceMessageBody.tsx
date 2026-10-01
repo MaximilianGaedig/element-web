@@ -33,6 +33,15 @@ export default class MVoiceMessageBody extends MAudioBody {
         }
     }
 
+    public componentWillUnmount(): void {
+        const playback = this.state.playback;
+        if (playback && isVoiceMessage(this.props.mxEvent)) {
+            // The queue outlives this tile; what it is not told to drop it holds for the session.
+            PlaybackQueue.dequeue(this.props.mxEvent.getRoomId()!, this.props.mxEvent, playback);
+        }
+        super.componentWillUnmount();
+    }
+
     // A voice message is an audio file but rendered in a special way.
     public render(): React.ReactNode {
         if (this.state.error) {

@@ -66,4 +66,22 @@ describe("<MAudioBody />", () => {
         expect(screen.getByText("recording.ogg")).toBeInTheDocument();
         expect(screen.queryByText("Listen to this!")).not.toBeInTheDocument();
     });
+
+    it("makes no playback for a tile that was gone before its audio arrived", async () => {
+        // Scrolled past while still downloading: nothing is left to destroy a playback made now, so it
+        // would stay in the manager (and its audio in memory) for the rest of the session.
+        const download = Promise.withResolvers<{ arrayBuffer: () => ArrayBuffer }>();
+        const slowHelper = { sourceBlob: { value: download.promise } } as unknown as MediaEventHelper;
+        const create = vi.mocked(PlaybackManager.instance.createPlaybackInstance);
+        create.mockClear();
+
+        const { unmount } = render(<MAudioBody mxEvent={event} mediaEventHelper={slowHelper} />);
+        unmount();
+        await act(async () => {
+            download.resolve({ arrayBuffer: () => new ArrayBuffer(8) });
+            await download.promise;
+        });
+
+        expect(create).not.toHaveBeenCalled();
+    });
 });

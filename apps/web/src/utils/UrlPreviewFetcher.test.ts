@@ -632,6 +632,24 @@ describe("UrlPreviewFetcher", () => {
                 expect(revokeObjectUrl).toHaveBeenCalledWith("blob:decrypted-0");
             });
 
+            // A tile scrolled away while its preview image was still decrypting.
+            it("should not leave an object URL behind when disposed before the image is decrypted", async () => {
+                const decrypting = Promise.withResolvers<Blob>();
+                vi.mocked(decryptFile).mockReturnValue(decrypting.promise);
+                const fetchers = Array.from({ length: 200 }, () => getFetcher().fetcher);
+                const previews = fetchers.map((fetcher) =>
+                    fetcher.previewFromBundle(ENCRYPTED_BUNDLE, BASIC_EVENT, true),
+                );
+
+                fetchers.forEach((fetcher) => fetcher.dispose());
+                decrypting.resolve(new Blob(["decrypted"]));
+                await Promise.all(previews);
+
+                const made = createObjectUrl.mock.results.map((result) => result.value);
+                const revoked = revokeObjectUrl.mock.calls.map(([url]) => url);
+                expect(made.filter((url) => !revoked.includes(url))).toEqual([]);
+            });
+
             it("should revoke the object URLs and decrypt again after clearCache", async () => {
                 const { fetcher } = getFetcher();
                 await fetcher.previewFromBundle(ENCRYPTED_BUNDLE, BASIC_EVENT, true);

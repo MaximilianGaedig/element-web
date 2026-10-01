@@ -161,6 +161,9 @@ export class UrlPreviewGroupViewModel
             props.showTooltips,
             props.moduleUrlPreviewApi,
         );
+        // The fetcher holds an object URL for every preview image it had to decrypt, and each keeps
+        // that image in memory until it is revoked.
+        this.disposables.track(() => this.fetcher.dispose());
     }
 
     /**

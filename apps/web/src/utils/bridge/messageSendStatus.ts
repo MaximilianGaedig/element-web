@@ -77,6 +77,11 @@ export class MessageSendStatusStore {
         this.record(ev);
     };
 
+    /** How many messages' statuses are held, for the memory report. */
+    public get size(): number {
+        return this.statuses.size;
+    }
+
     private record(ev: MatrixEvent): void {
         const parsed = parseMessageSendStatus(ev);
         if (!parsed) return;

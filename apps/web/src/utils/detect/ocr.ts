@@ -15,12 +15,14 @@ Please see LICENSE files in the repository root for full details.
  *
  * The engine and the language data together are several megabytes, so nothing is loaded until someone
  * asks to read a picture; from then on the service worker has them and the second read is immediate.
- * One worker is kept for the session, because starting it is most of the cost of a short read.
+ * One worker is kept while pictures are being read, because starting it is most of the cost of a short
+ * read - and stopped once they stop coming (see ENGINE_IDLE_MS), because what it holds is not small.
  */
 
 import { logger } from "matrix-js-sdk/src/logger";
 
 import type { createWorker as CreateWorker, Page } from "tesseract.js";
+import { LruCache } from "../LruCache";
 
 /**
  * Whether to say out loud what every reading does (`?ocr` in the address).
@@ -59,12 +61,54 @@ const MIN_CONFIDENCE = 40;
 
 type Worker = Awaited<ReturnType<typeof CreateWorker>>;
 
+/**
+ * How long the engine is kept after the last picture was read.
+ *
+ * The engine is WebAssembly, and WebAssembly memory only ever grows: the worker's heap stays at whatever
+ * the largest photograph it has read needed - tens of megabytes for a phone's camera picture, on top of
+ * the engine and its language data - until the worker itself is gone. Kept for the session, that was
+ * memory held from the first picture of the morning until the tab was closed.
+ *
+ * A minute covers reading through a chat (pictures arrive seconds apart, one at a time) so the engine
+ * is started once per burst rather than once per picture; starting it again afterwards costs a few
+ * hundred milliseconds from the service worker's cache, before a read that takes longer than that.
+ */
+export const ENGINE_IDLE_MS = 60_000;
+
 let createWorker: typeof CreateWorker;
 let worker: Promise<Worker> | undefined;
+/** Reads that hold the engine: it is not stopped under any of them. */
+let reading = 0;
+let idleTimer: ReturnType<typeof setTimeout> | undefined;
 
-/** The one worker for this session, started on the first read and kept for the rest. */
+/** Stops the engine and gives its memory back. The next read starts a new one. */
+function stopWorker(): void {
+    idleTimer = undefined;
+    const stopping = worker;
+    worker = undefined;
+    void stopping?.then((engine) => engine.terminate()).catch(() => {});
+}
+
+/** Whether the engine is running, for the memory report. */
+export function ocrEngineRunning(): boolean {
+    return worker !== undefined;
+}
+
+/** Holds the engine for one read; the returned function lets go and starts the idle clock. */
+function holdWorker(): () => void {
+    reading++;
+    clearTimeout(idleTimer);
+    idleTimer = undefined;
+    return () => {
+        if (--reading > 0) return;
+        clearTimeout(idleTimer);
+        idleTimer = setTimeout(stopWorker, ENGINE_IDLE_MS);
+    };
+}
+
+/** The one worker, started on the first read and kept until reading stops. */
 async function getWorker(): Promise<Worker> {
-    worker ??= (async () => {
+    const starting = (worker ??= (async () => {
         // Imported here, not at the top: none of this belongs on the startup path.
         say("starting the engine");
         ({ createWorker } = await import("tesseract.js"));
@@ -83,8 +127,13 @@ async function getWorker(): Promise<Worker> {
             gzip: true,
             logger: () => {},
         });
-    })();
-    return worker;
+    })());
+    // An engine that could not start is not the engine: without this the failure is what every later
+    // read is handed, and nothing is read again until the page is reloaded.
+    starting.catch(() => {
+        if (worker === starting) worker = undefined;
+    });
+    return starting;
 }
 
 /**
@@ -95,6 +144,7 @@ async function getWorker(): Promise<Worker> {
  * dates, search - takes what this says at face value.
  */
 export async function readImage(source: Blob | string, size?: ImageSize): Promise<OcrResult | undefined> {
+    const letGo = holdWorker();
     try {
         const tesseract = await getWorker();
         // The event usually says how big the picture is, but not always - a sticker, a bridged photo
@@ -116,6 +166,8 @@ export async function readImage(source: Blob | string, size?: ImageSize): Promis
         // which is exactly how this went unnoticed once already.
         logger.warn("Could not read the text in an image", error);
         return undefined;
+    } finally {
+        letGo();
     }
 }
 
@@ -172,10 +224,21 @@ function wordsOf(page: Page, { width, height }: ImageSize): OcrWord[] {
  * What has already been read, by event.
  *
  * Reading a picture costs real work, and the same pictures come back every time a chat is opened; a
- * result is the same every time, so it is kept for the session. Promises are cached rather than
- * results, so two things asking at once wait for one read.
+ * result is the same every time, so it is kept. Promises are cached rather than results, so two things
+ * asking at once wait for one read.
+ *
+ * Kept for the pictures seen lately rather than for all of them: a screenshot full of text is a few
+ * hundred words, each with its place, which is tens of kilobytes - and a day of reading chats is
+ * thousands of pictures. 300 is more pictures than the chats kept open hold between them, so going
+ * back to one reads nothing twice; a picture from further back than that is simply read again.
  */
-const cache = new Map<string, Promise<OcrResult | undefined>>();
+export const RESULTS_KEPT = 300;
+const cache = new LruCache<string, Promise<OcrResult | undefined>>(RESULTS_KEPT);
+
+/** How many pictures' readings are held, for the memory report. */
+export function ocrResultsKept(): number {
+    return cache.size;
+}
 
 /** Reads a picture, or returns what an earlier read of the same event already found. */
 export function readImageForEvent(

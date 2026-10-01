@@ -20,6 +20,9 @@ type CacheResult = { roomId: string; viaServers: string[] };
  */
 const cache = new Map<string, CacheResult>();
 
+/** How many aliases are held, for the memory report. */
+export const roomAliasesKept = (): number => cache.size;
+
 export function storeRoomAliasInCache(alias: string, roomId: string, viaServers: string[]): void {
     cache.set(alias, { roomId, viaServers });
 }

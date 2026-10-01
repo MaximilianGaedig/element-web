@@ -30,9 +30,51 @@ const SAMPLE_RATE = 16_000;
 /** Small enough to fetch on a phone, good enough to trust with a name or a number. */
 const MODEL = "onnx-community/whisper-base";
 
-type Transcriber = (audio: Float32Array, options?: object) => Promise<{ text: string } | Array<{ text: string }>>;
+type Transcriber = ((audio: Float32Array, options?: object) => Promise<{ text: string } | Array<{ text: string }>>) & {
+    /** Gives back the model's sessions and their memory. */
+    dispose?: () => Promise<unknown>;
+};
+
+/**
+ * How long the model is kept after the last transcript.
+ *
+ * It is tens of megabytes of weights and the runtime that runs them (or the same on the GPU), and it
+ * was kept from the first transcript until the tab was closed - for a feature that is asked for by
+ * hand, a message at a time. Two minutes covers working through several voice messages in a row
+ * without loading it for each; after that the browser's cache has the files and loading it again is
+ * a few seconds in front of a transcript that takes about as long.
+ */
+export const MODEL_IDLE_MS = 2 * 60_000;
 
 let transcriber: Promise<Transcriber> | undefined;
+/** Transcripts being worked out: the model is not let go under any of them. */
+let working = 0;
+let idleTimer: ReturnType<typeof setTimeout> | undefined;
+
+/** Lets the model go. The next transcript loads it again. */
+function releaseTranscriber(): void {
+    idleTimer = undefined;
+    const releasing = transcriber;
+    transcriber = undefined;
+    void releasing?.then((engine) => engine.dispose?.()).catch(() => {});
+}
+
+/** Whether the model is loaded, for the memory report. */
+export function transcriberLoaded(): boolean {
+    return transcriber !== undefined;
+}
+
+/** Holds the model for one transcript; the returned function lets go and starts the idle clock. */
+function holdTranscriber(): () => void {
+    working++;
+    clearTimeout(idleTimer);
+    idleTimer = undefined;
+    return () => {
+        if (--working > 0) return;
+        clearTimeout(idleTimer);
+        idleTimer = setTimeout(releaseTranscriber, MODEL_IDLE_MS);
+    };
+}
 
 /** Whether the device has a GPU to do this on, which decides how long it takes rather than whether. */
 async function bestDevice(): Promise<"webgpu" | "wasm"> {
@@ -45,9 +87,9 @@ async function bestDevice(): Promise<"webgpu" | "wasm"> {
     }
 }
 
-/** The one engine for this session: loading it is most of the cost of a short transcript. */
+/** The one engine while transcripts are being asked for: loading it is most of the cost of a short one. */
 async function getTranscriber(): Promise<Transcriber> {
-    transcriber ??= (async () => {
+    const loading = (transcriber ??= (async () => {
         const { pipeline } = await import("@huggingface/transformers");
         const device = await bestDevice();
         const engine = await pipeline("automatic-speech-recognition", MODEL, {
@@ -56,8 +98,13 @@ async function getTranscriber(): Promise<Transcriber> {
             device,
         });
         return engine;
-    })();
-    return transcriber;
+    })());
+    // A model that could not be fetched (offline, the first time) is not the model: without this the
+    // failure is what every later request is handed until the page is reloaded.
+    loading.catch(() => {
+        if (transcriber === loading) transcriber = undefined;
+    });
+    return loading;
 }
 
 /**
@@ -88,6 +135,7 @@ async function samplesOf(audio: ArrayBuffer): Promise<Float32Array> {
  * switches language between messages needs.
  */
 export async function transcribe(audio: ArrayBuffer, language?: string): Promise<string | undefined> {
+    const letGo = holdTranscriber();
     try {
         const [engine, samples] = await Promise.all([getTranscriber(), samplesOf(audio)]);
         const result = await engine(samples, {
@@ -102,5 +150,7 @@ export async function transcribe(audio: ArrayBuffer, language?: string): Promise
     } catch (error) {
         logger.warn("Could not transcribe a voice message", error);
         return undefined;
+    } finally {
+        letGo();
     }
 }

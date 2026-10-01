@@ -153,6 +153,12 @@ const STATS_PREFIX = "/_matrix/client/unstable/im.mxg.stats";
 const STATS_TTL_MS = 60_000;
 const cache = new Map<string, { at: number; stats: Promise<RoomStats | undefined> }>();
 
+/** How many rooms' counts and import samples are held, for the memory report. */
+export const chatHistoryKept = (): { roomStats: number; importSamples: number } => ({
+    roomStats: cache.size,
+    importSamples: samples.size,
+});
+
 /** The room's message counts, or undefined if the homeserver doesn't keep them. */
 export function fetchRoomStats(client: MatrixClient, roomId: string): Promise<RoomStats | undefined> {
     const hit = cache.get(roomId);

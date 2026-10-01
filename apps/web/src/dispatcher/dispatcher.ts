@@ -28,6 +28,11 @@ export class MatrixDispatcher {
     private pendingPayload?: ActionPayload;
     private lastId = 1;
 
+    /** How many callbacks are registered, for the memory report. */
+    public get callbackCount(): number {
+        return this.callbacks.size;
+    }
+
     /**
      * Registers a callback to be invoked with every dispatched payload. Returns
      * a token that can be used with `waitFor()`.

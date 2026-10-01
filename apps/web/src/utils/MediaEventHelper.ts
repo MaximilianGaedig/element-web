@@ -55,15 +55,30 @@ export class MediaEventHelper implements IDestroyable {
         return queryUploadedMediaCache(this.media.srcMxc) !== undefined;
     }
 
+    private destroyed = false;
+
     public destroy(): void {
+        this.destroyed = true;
         if (this.sourceUrl.cachedValue?.startsWith("blob:")) URL.revokeObjectURL(this.sourceUrl.cachedValue);
         if (this.thumbnailUrl.cachedValue?.startsWith("blob:")) URL.revokeObjectURL(this.thumbnailUrl.cachedValue);
+    }
+
+    /**
+     * An object URL for media that had to be decrypted, or null if the helper is already destroyed.
+     *
+     * {@link destroy} can only revoke the URLs that exist when it runs. A tile that goes away while its
+     * media is still downloading or decrypting is destroyed first and handed its URL afterwards; nothing
+     * would ever revoke that one, and an unrevoked object URL keeps the whole decrypted file alive until
+     * the page is closed. So none is made for a helper that is already gone.
+     */
+    private objectUrlFor(blob: Blob): string | null {
+        return this.destroyed ? null : URL.createObjectURL(blob);
     }
 
     private prepareSourceUrl = async (): Promise<string | null> => {
         if (this.media.isEncrypted || this.isFromLocalUpload) {
             const blob = await this.sourceBlob.value;
-            return URL.createObjectURL(blob);
+            return this.objectUrlFor(blob);
         } else {
             return this.media.srcHttp;
         }
@@ -73,7 +88,7 @@ export class MediaEventHelper implements IDestroyable {
         if (this.media.isEncrypted || queryUploadedMediaCache(this.media.thumbnailMxc)) {
             const blob = await this.thumbnailBlob.value;
             if (blob === null) return null;
-            return URL.createObjectURL(blob);
+            return this.objectUrlFor(blob);
         } else {
             return this.media.thumbnailHttp;
         }

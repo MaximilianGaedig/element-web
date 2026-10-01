@@ -44,6 +44,81 @@ describe("MediaEventHelper", () => {
         expect(blob?.type).toBe(event.getContent().info.thumbnail_info?.mimetype);
     });
 
+    describe("object URLs", () => {
+        afterEach(() => {
+            vi.restoreAllMocks();
+        });
+
+        it("leaves none behind when tiles go away while their media is still decrypting", async () => {
+            // Scrolling through an encrypted chat: each tile asks for its picture, and is gone before
+            // the decryption finishes. An object URL made after that has nobody left to revoke it, and
+            // an unrevoked URL keeps the whole decrypted file in memory until the page is closed.
+            stubClient();
+            let made = 0;
+            const outstanding = new Set<string>();
+            vi.spyOn(URL, "createObjectURL").mockImplementation(() => {
+                const url = `blob:test/${made++}`;
+                outstanding.add(url);
+                return url;
+            });
+            vi.spyOn(URL, "revokeObjectURL").mockImplementation((url) => void outstanding.delete(url));
+            const decrypting = Promise.withResolvers<Blob>();
+            vi.spyOn(DecryptFile, "decryptFile").mockReturnValue(decrypting.promise);
+
+            const asked: Promise<unknown>[] = [];
+            for (let i = 0; i < 200; i++) {
+                const helper = new MediaEventHelper(
+                    new MatrixEvent({
+                        type: "m.room.message",
+                        content: {
+                            msgtype: "m.image",
+                            body: "image.png",
+                            info: { thumbnail_file: { url: `mxc://matrix.org/thumb${i}` } },
+                            file: { url: `mxc://matrix.org/source${i}` },
+                        },
+                    }),
+                );
+                asked.push(helper.sourceUrl.value, helper.thumbnailUrl.value);
+                helper.destroy();
+            }
+            decrypting.resolve(new Blob(["decrypted"]));
+            await Promise.all(asked);
+
+            expect(outstanding.size).toBe(0);
+        });
+
+        it("still revokes the URLs of a tile that goes away after its media arrived", async () => {
+            stubClient();
+            const outstanding = new Set<string>();
+            let made = 0;
+            vi.spyOn(URL, "createObjectURL").mockImplementation(() => {
+                const url = `blob:test/${made++}`;
+                outstanding.add(url);
+                return url;
+            });
+            vi.spyOn(URL, "revokeObjectURL").mockImplementation((url) => void outstanding.delete(url));
+            vi.spyOn(DecryptFile, "decryptFile").mockResolvedValue(new Blob(["decrypted"]));
+            const helper = new MediaEventHelper(
+                new MatrixEvent({
+                    type: "m.room.message",
+                    content: {
+                        msgtype: "m.image",
+                        body: "image.png",
+                        info: { thumbnail_file: { url: "mxc://matrix.org/thumb" } },
+                        file: { url: "mxc://matrix.org/source" },
+                    },
+                }),
+            );
+
+            expect(await helper.sourceUrl.value).toMatch(/^blob:/);
+            expect(await helper.thumbnailUrl.value).toMatch(/^blob:/);
+            expect(outstanding.size).toBe(2);
+            helper.destroy();
+
+            expect(outstanding.size).toBe(0);
+        });
+    });
+
     describe("for media this client uploaded", () => {
         const uploaded = new Blob(["uploaded bytes"], { type: "image/png" });
         const thumbnail = new Blob(["thumbnail bytes"], { type: "image/jpeg" });

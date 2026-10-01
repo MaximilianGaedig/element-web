@@ -22,6 +22,8 @@ Please see LICENSE files in the repository root for full details.
 import { logger } from "matrix-js-sdk/src/logger";
 import type * as ZXing from "zxing-wasm/reader";
 
+import { LruCache } from "../LruCache";
+
 /** A code found in a picture, and where it sits, as a fraction of the picture's own size. */
 export interface FoundBarcode {
     /** What it says, verbatim. */
@@ -135,8 +137,18 @@ export async function readBarcodes(
 /*
  * What has already been read, by event: the same pictures come back every time a chat is opened and a
  * code says the same thing every time.
+ *
+ * For the pictures seen lately, not all of them: every picture that comes into view is read, so a map
+ * of everything is a map that grows all day. An entry is small (most pictures hold no code at all), so
+ * a thousand of them cost little and cover any going back and forth between chats.
  */
-const cache = new Map<string, Promise<FoundBarcode[]>>();
+export const BARCODES_KEPT = 1000;
+const cache = new LruCache<string, Promise<FoundBarcode[]>>(BARCODES_KEPT);
+
+/** How many pictures' codes are held, for the memory report. */
+export function barcodeResultsKept(): number {
+    return cache.size;
+}
 
 /** The codes in an event's picture, read once. */
 export function readBarcodesForEvent(

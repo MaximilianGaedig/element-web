@@ -206,6 +206,11 @@ export default class SettingsStore {
         return watcherId;
     }
 
+    /** How many watchers are registered and not yet unwatched, for the memory report. */
+    public static get activeWatcherCount(): number {
+        return SettingsStore.watchers.size;
+    }
+
     /**
      * Stops the SettingsStore from watching a setting. This is a no-op if the watcher
      * provided is not found.

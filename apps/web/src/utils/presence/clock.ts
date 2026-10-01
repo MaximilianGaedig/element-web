@@ -53,6 +53,9 @@ function subscribe(listener: () => void): () => void {
     };
 }
 
+/** How many presence displays are following the clock, for the memory report. */
+export const presenceClockListeners = (): number => listeners.size;
+
 /** The shared presence clock's current time. */
 export function presenceNow(): number {
     return now;

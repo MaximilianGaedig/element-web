@@ -84,6 +84,9 @@ void cacheDownloadIcon();
 // the downside of using a sandboxed iframe is that the browers are overly
 // restrictive in what you are allowed to do with the generated URL.
 
+/** How long a download's object URL is left for the browser to start reading from. */
+const DOWNLOAD_URL_LIFETIME_MS = 10_000;
+
 /**
  * Get the current CSS style for a DOMElement.
  * @param {HTMLElement} element The element to get the current style of.
@@ -311,6 +314,9 @@ export class FileBodyViewModel
             document.body.appendChild(tempAnchor);
             tempAnchor.click();
             tempAnchor.remove();
+            // The URL keeps the whole file alive until it is revoked. Not at once: the browser reads
+            // from it to start the download, which happens after this click handler has returned.
+            window.setTimeout(() => URL.revokeObjectURL(blobUrl), DOWNLOAD_URL_LIFETIME_MS);
         });
     };
 
