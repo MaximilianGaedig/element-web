@@ -17,6 +17,7 @@ import { shouldPolyfill as shouldPolyFillIntlSegmenter } from "@formatjs/intl-se
 import { parseAppUrl } from "./url_utils";
 import "./modernizr.cjs";
 import { polyfillTouchEvent } from "../@types/polyfill";
+import { bootMark } from "../utils/bootTimings";
 
 import "../../res/css/_index.pcss";
 // Require common CSS here; this will make webpack process it into bundle.css.
@@ -24,6 +25,10 @@ import "../../res/css/_index.pcss";
 // in webpack.config.js
 // eslint-disable-next-line @typescript-eslint/no-require-imports,import/no-commonjs,unicorn/prefer-module
 require("./localstorage-fix");
+
+// Startup timing (utils/bootTimings.ts): the entry script is running. Its time since the navigation started
+// is the page load itself; `sw` says whether the service worker served it.
+bootMark("script_start", { sw: Boolean(navigator.serviceWorker?.controller) });
 
 // Patch a fake window.TouchEvent for re-resizable's unguarded `instanceof TouchEvent`.
 polyfillTouchEvent();
@@ -127,6 +132,7 @@ async function start(): Promise<void> {
         /* webpackPreload: true */
         "./init"
     );
+    bootMark("init_loaded");
 
     // Now perform the next stage of initialisation. This has its own try/catch in which we render
     // a react error page on failure.
@@ -144,6 +150,7 @@ async function start(): Promise<void> {
         // load config requires the platform to be ready
         const loadConfigPromise = loadConfig();
         await settled(loadConfigPromise); // wait for it to settle
+        bootMark("config_loaded");
         // keep initialising so that we can show any possible error with as many features (theme, i18n) as possible
 
         // now that the config is ready, try to persist logs
@@ -155,9 +162,11 @@ async function start(): Promise<void> {
         const loadThemePromise = loadTheme();
         // await things settling so that any errors we have to render have features like i18n running
         await settled(loadThemePromise, loadLanguagePromise);
+        bootMark("i18n_theme_loaded");
 
         const loadPluginsPromise = loadPlugins();
         await settled(loadPluginsPromise);
+        bootMark("modules_loaded");
 
         let acceptBrowser = supportedBrowser;
         if (!acceptBrowser && window.localStorage) {

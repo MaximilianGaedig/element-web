@@ -74,6 +74,7 @@ import { clearUploadedMediaCache } from "./utils/UploadedMediaCache";
 import { CallStatusListener } from "./CallStatusListener.ts";
 import { CallStore } from "./stores/CallStore.ts";
 import { ModuleApi } from "./modules/Api.ts";
+import { bootMark } from "./utils/bootTimings.ts";
 
 const HOMESERVER_URL_KEY = "mx_hs_url";
 const ID_SERVER_URL_KEY = "mx_is_url";
@@ -664,6 +665,7 @@ export async function restoreSessionFromStorage(opts?: { ignoreGuest?: boolean }
         return false;
     }
 
+    bootMark("session_restore_start");
     const { hsUrl, isUrl, hasAccessToken, accessToken, refreshToken, userId, deviceId, isGuest } =
         await getStoredSessionVars();
 
@@ -689,6 +691,7 @@ export async function restoreSessionFromStorage(opts?: { ignoreGuest?: boolean }
         const decryptedAccessToken = await tryDecryptToken(pickleKey, accessToken, ACCESS_TOKEN_NAME);
         const decryptedRefreshToken =
             refreshToken && (await tryDecryptToken(pickleKey, refreshToken, REFRESH_TOKEN_NAME));
+        bootMark("credentials_loaded");
 
         const freshLogin = sessionStorage.getItem("mx_fresh_login") === "true";
         sessionStorage.removeItem("mx_fresh_login");
@@ -836,6 +839,7 @@ async function doSetLoggedIn(
     }
 
     const results = await StorageManager.checkConsistency();
+    bootMark("storage_checked");
     // If there's an inconsistency between account data in local storage and the
     // crypto store, we'll be generally confused when handling encrypted data.
     // Show a modal recommending a full reset of storage.
@@ -881,6 +885,7 @@ async function doSetLoggedIn(
     // We are now logged in, so fire this. We have yet to start the client but the client_started dispatch is for that.
     // Dispatch this synchronously so SDKContextClass can set the client for other modules to consume.
     dis.dispatch<OnLoggedInPayload>({ action: Action.OnLoggedIn, client }, true);
+    bootMark("logged_in");
 
     const clientPegOpts: MatrixClientPegAssignOpts = {
         x509: ModuleApi.instance.client.creationManagement.x509 ?? undefined,

@@ -22,6 +22,7 @@ import { GenericToast } from "@element-hq/web-shared-components";
 import SdkConfig from "../../SdkConfig.ts";
 import type { ActionPayload } from "../../dispatcher/payloads.ts";
 import * as SessionLock from "../../utils/SessionLock.ts";
+import { bootMark } from "../../utils/bootTimings.ts";
 
 const POKE_RATE_MS = 10 * 60 * 1000; // 10 min
 
@@ -70,8 +71,15 @@ export default class WebPlatform extends BasePlatform {
     }
 
     private async registerServiceWorker(): Promise<void> {
-        // sw.js is exported by webpack, sourced from `/src/serviceworker/index.ts`
-        const registration = await navigator.serviceWorker.register("sw.js");
+        let registration: ServiceWorkerRegistration | undefined;
+        try {
+            // sw.js is exported by webpack, sourced from `/src/serviceworker/index.ts`
+            registration = await navigator.serviceWorker.register("sw.js");
+        } finally {
+            // Startup timing: nothing on the boot path waits for this, the mark says when it happened.
+            if (registration) bootMark("sw_ready", { controlled: Boolean(navigator.serviceWorker.controller) });
+            else bootMark("sw_skipped");
+        }
         if (!registration) {
             throw new Error("Service worker registration failed");
         }

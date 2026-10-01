@@ -17,6 +17,7 @@ import { advanceDateAndTime, stubClient, createTestClient } from "test-utils";
 import { type IMatrixClientPeg, MatrixClientPeg as peg } from "./MatrixClientPeg";
 import SdkConfig from "./SdkConfig";
 import { createClientWithCreds } from "./utils/createMatrixClient";
+import { resetBootTimings } from "./utils/bootTimings";
 
 vi.useFakeTimers();
 
@@ -110,6 +111,37 @@ describe("MatrixClientPeg", () => {
             await testPeg.start({ rustCryptoStoreKey: cryptoStoreKey });
             expect(mockInitRustCrypto).toHaveBeenCalledWith({ storageKey: cryptoStoreKey });
             expect(mockStartDehydration).toHaveBeenCalledWith({ onlyIfKeyCached: true, rehydrate: false });
+        });
+
+        it("marks the boot steps it completes, and the saved sync with its size", async () => {
+            resetBootTimings();
+            // The file runs on fake timers, which stub User Timing out: watch the calls instead.
+            const mark = vi.spyOn(performance, "mark").mockImplementation(() => ({}) as PerformanceMark);
+            const client = testPeg.safeGet();
+            vi.spyOn(client, "initRustCrypto").mockResolvedValue(undefined);
+            const getSavedSync = vi.fn().mockResolvedValue({
+                nextBatch: "s1",
+                roomsData: { join: { "!a:example.com": { timeline: { events: [{}, {}] } } } },
+                accountData: [{}],
+            });
+            client.store = { startup: vi.fn().mockResolvedValue(undefined), getSavedSync } as any;
+
+            await testPeg.start();
+            // The sync loop reads the saved sync once, as the client starts.
+            await client.store.getSavedSync();
+
+            expect(mark.mock.calls.map(([name]) => name)).toEqual([
+                "mx_boot:store_opened",
+                "mx_boot:crypto_opened",
+                "mx_boot:client_started",
+                "mx_boot:saved_sync_loaded",
+            ]);
+            expect(mark.mock.calls[3][1]).toEqual({
+                detail: { rooms: 1, timelineEvents: 2, stateEvents: 0, accountData: 1 },
+            });
+            // The store has its own method back: only the boot's read is timed.
+            expect(client.store.getSavedSync).toBe(getSavedSync);
+            resetBootTimings();
         });
 
         it("Should migrate existing login", async () => {
