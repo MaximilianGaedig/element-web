@@ -8,6 +8,7 @@ Please see LICENSE files in the repository root for full details.
 import React, { type JSX, type RefObject, useCallback, useContext, useEffect, useRef } from "react";
 import { type MatrixEvent, MsgType } from "matrix-js-sdk/src/matrix";
 import { type ImageContent } from "matrix-js-sdk/src/types";
+import classNames from "classnames";
 import {
     DecryptionFailureBodyView,
     FileBodyView,
@@ -22,6 +23,7 @@ import { type IBodyProps } from "./IBodyProps";
 import RoomContext, { TimelineRenderingType } from "../../../contexts/RoomContext";
 import { TgLiveText, TgLiveTextVideo } from "../telegram/TgLiveText";
 import { compactMediaEnabled } from "../../../utils/telegram/telegramLayout";
+import { isRoundVideo } from "../../../utils/bridge/roundVideo";
 import { LocalDeviceVerificationStateContext } from "../../../contexts/LocalDeviceVerificationStateContext";
 import { useMediaVisible } from "../../../hooks/useMediaVisible";
 import { useSettingValue } from "../../../hooks/useSettings";
@@ -180,7 +182,7 @@ export function VideoBodyFactory({
     return (
         <VideoBodyView
             vm={vm}
-            className="mx_MVideoBody"
+            className={classNames("mx_MVideoBody", { mx_MVideoBody_round: isRoundVideo(mxEvent) })}
             containerClassName="mx_MVideoBody_container"
             videoRef={videoRef}
         >

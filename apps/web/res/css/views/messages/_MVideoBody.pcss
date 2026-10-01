@@ -1,0 +1,27 @@
+/*
+Copyright 2026 New Vector Ltd.
+
+SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only OR LicenseRef-Element-Commercial
+Please see LICENSE files in the repository root for full details.
+*/
+
+/*
+ * A round "video note" (info `fi.mau.telegram.round_message`) is shown as a circle, as it is on the
+ * networks that have them. The view sizes its container inline from the event's own dimensions, hence
+ * the !important: a note is a fixed circle whatever shape the file is, cropped rather than squashed.
+ */
+.mx_MVideoBody_round {
+    --MVideoBody-round-size: 240px;
+
+    .mx_MVideoBody_container {
+        width: min(100%, var(--MVideoBody-round-size)) !important;
+        max-width: var(--MVideoBody-round-size) !important;
+        max-height: var(--MVideoBody-round-size) !important;
+        aspect-ratio: 1 !important;
+        border-radius: 50%;
+    }
+
+    video {
+        object-fit: cover;
+    }
+}

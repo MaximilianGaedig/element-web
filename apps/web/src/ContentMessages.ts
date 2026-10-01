@@ -64,6 +64,7 @@ import { cacheUploadedMedia } from "./utils/UploadedMediaCache";
 import { ALBUM_KEY, MAX_ALBUM_ITEMS } from "./utils/MediaAlbum";
 import { getBridgeNetworkName, type ViewLimit } from "./utils/bridge/roomFeatures";
 import { canSendViewOnce, VIEW_LIMITED_KEY, VIEW_ONCE } from "./utils/bridge/viewOnce";
+import { ROUND_VIDEO_KEY } from "./utils/bridge/roundVideo";
 import {
     isAlbumCandidate,
     type OutgoingAlbumMarker,
@@ -99,6 +100,11 @@ export interface SendContentOptions {
      * whose bridge declares it: see canSendViewOnce. The Matrix event itself stays viewable.
      */
     viewOnce?: boolean;
+    /**
+     * The file is a round "video note": if it is sent as a video, its info carries
+     * `fi.mau.telegram.round_message`, which bridges turn into a video note and we draw as a circle.
+     */
+    roundVideo?: boolean;
 }
 
 /** The content keys this client adds to a media event on top of the spec's. */
@@ -721,6 +727,7 @@ export default class ContentMessages {
                 try {
                     const videoInfo = await infoForVideoFile(matrixClient, roomId, file);
                     Object.assign(content.info, videoInfo);
+                    if (options.roundVideo) Object.assign(content.info, { [ROUND_VIDEO_KEY]: true });
                 } catch (e) {
                     // Failed to thumbnail, fall back to uploading an m.file
                     logger.error(e);

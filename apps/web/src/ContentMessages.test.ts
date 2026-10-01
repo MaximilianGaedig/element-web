@@ -195,6 +195,66 @@ describe("ContentMessages", () => {
             );
         });
 
+        describe("round video notes", () => {
+            beforeEach(() => {
+                vi.spyOn(document, "createElement").mockImplementation((tagName) => {
+                    const element = createElement(tagName);
+                    if (tagName === "video") {
+                        (<HTMLVideoElement>element).load = vi.fn();
+                        (<HTMLVideoElement>element).play = () => element.onloadeddata!(new Event("loadeddata"));
+                        (<HTMLVideoElement>element).pause = vi.fn();
+                        Object.defineProperty(element, "videoHeight", { get: () => 384 });
+                        Object.defineProperty(element, "videoWidth", { get: () => 384 });
+                        Object.defineProperty(element, "duration", { get: () => 12 });
+                    }
+                    return element;
+                });
+                vi.mocked(client.uploadContent).mockResolvedValue({ content_uri: "mxc://server/file" });
+            });
+
+            afterEach(() => {
+                vi.mocked(document.createElement).mockRestore();
+            });
+
+            const sentInfo = (): Record<string, unknown> =>
+                (vi.mocked(client.sendMessage).mock.calls[0][2] as any).info;
+
+            it("marks a video sent as a round video note", async () => {
+                const file = new File([], "note.mp4", { type: "video/mp4" });
+                await contentMessages.sendContentToRoom(file, roomId, undefined, client, undefined, undefined, {
+                    roundVideo: true,
+                });
+
+                expect(client.sendMessage).toHaveBeenCalledWith(
+                    roomId,
+                    null,
+                    expect.objectContaining({ msgtype: "m.video" }),
+                );
+                expect(sentInfo()["fi.mau.telegram.round_message"]).toBe(true);
+            });
+
+            it("does not mark an ordinary video", async () => {
+                const file = new File([], "clip.mp4", { type: "video/mp4" });
+                await contentMessages.sendContentToRoom(file, roomId, undefined, client, undefined);
+
+                expect(sentInfo()).not.toHaveProperty("fi.mau.telegram.round_message");
+            });
+
+            it("does not mark something that is not a video", async () => {
+                const file = new File([], "photo.jpg", { type: "image/jpeg" });
+                await contentMessages.sendContentToRoom(file, roomId, undefined, client, undefined, undefined, {
+                    roundVideo: true,
+                });
+
+                expect(client.sendMessage).toHaveBeenCalledWith(
+                    roomId,
+                    null,
+                    expect.objectContaining({ msgtype: "m.image" }),
+                );
+                expect(sentInfo()).not.toHaveProperty("fi.mau.telegram.round_message");
+            });
+        });
+
         it("should use m.audio for audio files", async () => {
             vi.spyOn(document, "createElement").mockImplementation((tagName) => {
                 const element = createElement(tagName);
