@@ -7,11 +7,12 @@ SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only OR LicenseRef-Element-Com
 Please see LICENSE files in the repository root for full details.
 */
 
-import React, { useCallback, type JSX } from "react";
+import React, { useCallback, useState, type JSX } from "react";
 
 import { _t } from "../../../languageHandler";
 import BaseDialog from "./BaseDialog";
 import DialogButtons from "../elements/DialogButtons";
+import StyledCheckbox from "../elements/StyledCheckbox";
 import { fileSize } from "../../../utils/FileUtils";
 import {
     attachmentIcon,
@@ -28,7 +29,18 @@ interface IProps {
     currentIndex?: number;
     /** Defaults to 1. */
     totalFiles?: number;
-    onFinished: (uploadConfirmed: boolean, uploadAll?: boolean) => void;
+    /**
+     * The network the room is bridged to, if its bridge takes this file as view-once media: the dialog
+     * then offers to send it that way. Leave unset anywhere else (a plain Matrix room cannot honour it).
+     */
+    viewOnceNetwork?: string;
+    onFinished: (uploadConfirmed: boolean, uploadAll?: boolean, choices?: UploadConfirmChoices) => void;
+}
+
+/** What the user chose for the file in the dialog, besides sending it. */
+export interface UploadConfirmChoices {
+    /** Send as view-once media. */
+    viewOnce: boolean;
 }
 
 const previewableFormats = ["video", "audio", "image"];
@@ -101,9 +113,11 @@ export default function UploadConfirmDialog({
     file,
     currentIndex = 0,
     totalFiles = 1,
+    viewOnceNetwork,
     onFinished,
 }: IProps): JSX.Element {
     const vm = useCreateAutoDisposedViewModel(() => new UploadPreviewViewModel(file));
+    const [viewOnce, setViewOnce] = useState(false);
 
     let title: string;
     if (totalFiles > 1 && currentIndex !== undefined) {
@@ -120,8 +134,9 @@ export default function UploadConfirmDialog({
     }, [onFinished]);
 
     const onUploadClick = useCallback((): void => {
-        onFinished(true);
-    }, [onFinished]);
+        if (viewOnceNetwork !== undefined) onFinished(true, false, { viewOnce });
+        else onFinished(true);
+    }, [onFinished, viewOnceNetwork, viewOnce]);
 
     const onUploadAllClick = useCallback((): void => {
         onFinished(true, true);
@@ -148,6 +163,16 @@ export default function UploadConfirmDialog({
                 <div className="mx_UploadConfirmDialog_previewOuter">
                     <div className="mx_UploadConfirmDialog_previewInner">
                         <MediaPreviewGroupPreview vm={vm} />
+                        {viewOnceNetwork !== undefined && (
+                            <StyledCheckbox
+                                className="mx_UploadConfirmDialog_viewOnce"
+                                checked={viewOnce}
+                                onChange={(ev) => setViewOnce(ev.target.checked)}
+                                description={_t("upload_file|view_once_description", { network: viewOnceNetwork })}
+                            >
+                                {_t("upload_file|view_once")}
+                            </StyledCheckbox>
+                        )}
                     </div>
                 </div>
             </div>

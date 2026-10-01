@@ -62,6 +62,8 @@ import { blobIsAnimated } from "./utils/Image.ts";
 import { PosthogAnalytics } from "./PosthogAnalytics.ts";
 import { cacheUploadedMedia } from "./utils/UploadedMediaCache";
 import { ALBUM_KEY, MAX_ALBUM_ITEMS } from "./utils/MediaAlbum";
+import { getBridgeNetworkName, type ViewLimit } from "./utils/bridge/roomFeatures";
+import { canSendViewOnce, VIEW_LIMITED_KEY, VIEW_ONCE } from "./utils/bridge/viewOnce";
 import {
     isAlbumCandidate,
     type OutgoingAlbumMarker,
@@ -92,11 +94,17 @@ export interface SendContentOptions {
      * the whole album has uploaded, and carries the `fi.mau.album` marker if at least two made it.
      */
     album?: OutgoingAlbumMember;
+    /**
+     * Ask the room's bridge to send the file as view-once media (`com.beeper.view_limited`). Only for rooms
+     * whose bridge declares it: see canSendViewOnce. The Matrix event itself stays viewable.
+     */
+    viewOnce?: boolean;
 }
 
 /** The content keys this client adds to a media event on top of the spec's. */
 interface MediaEventExtensions {
     [ALBUM_KEY]?: OutgoingAlbumMarker;
+    [VIEW_LIMITED_KEY]?: ViewLimit;
 }
 
 /**
@@ -513,7 +521,8 @@ export default class ContentMessages {
         }
 
         // Drop files the bridged network would reject, explaining why.
-        await dropUnsupportedBridgeFiles(matrixClient.getRoom(roomId), okFiles);
+        const room = matrixClient.getRoom(roomId);
+        await dropUnsupportedBridgeFiles(room, okFiles);
 
         let uploadAll = false;
         // Promise to complete before sending next file into room, used for synchronisation of file-sending
@@ -529,21 +538,28 @@ export default class ContentMessages {
                 const file = okFiles[i];
                 const loopPromiseBefore = promBefore;
 
+                const options: SendContentOptions = {};
                 if (!uploadAll) {
+                    // View-once is for one picture or video on its own, where the bridge takes it.
+                    const viewOnceNetwork =
+                        okFiles.length === 1 && room && canSendViewOnce(room, file)
+                            ? getBridgeNetworkName(room)
+                            : undefined;
                     const { finished } = Modal.createDialog(UploadConfirmDialog, {
                         file,
                         currentIndex: i,
                         totalFiles: okFiles.length,
+                        viewOnceNetwork,
                     });
-                    const [shouldContinue, shouldUploadAll] = await finished;
+                    const [shouldContinue, shouldUploadAll, choices] = await finished;
                     if (!shouldContinue) break;
                     if (shouldUploadAll) {
                         uploadAll = true;
                     }
+                    if (viewOnceNetwork !== undefined && choices?.viewOnce) options.viewOnce = true;
                 }
                 sentFileTypes.push(file.type.split("/")[0]);
 
-                const options: SendContentOptions = {};
                 if (makeAlbums && isAlbumCandidate(file)) {
                     if (!album || album.size >= MAX_ALBUM_ITEMS) {
                         album?.seal();
@@ -656,6 +672,10 @@ export default class ContentMessages {
         if (SettingsStore.getValue("Performance.addSendMessageTimingMetadata")) {
             decorateStartSendingTime(content);
         }
+
+        // Stays on the event even if the file ends up an m.file: the bridge then refuses it, which is
+        // better than a picture meant to be seen once going out as an ordinary one.
+        if (options.viewOnce) content[VIEW_LIMITED_KEY] = { ...VIEW_ONCE };
 
         // if we have a mime type for the file, add it to the message metadata
         if (file.type) {

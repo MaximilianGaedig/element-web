@@ -513,7 +513,9 @@
             "other": "%(name)s and %(count)s others are typing"
         },
         "typing_one": "%(name)s is typing",
-        "typing_two": "%(name1)s and %(name2)s are typing"
+        "typing_two": "%(name1)s and %(name2)s are typing",
+        "view_once": "View once",
+        "view_once_sent": "Sent to be viewed once on %(network)s. Your copy here stays viewable."
     },
     "bug_reporting": {
         "additional_context": "If there is additional context that would help in analysing the issue, such as what you were doing at the time, room IDs, user IDs, etc., please include those things here.",
@@ -4435,7 +4437,9 @@
         "upload_n_others_button": {
             "one": "Upload %(count)s other file",
             "other": "Upload %(count)s other files"
-        }
+        },
+        "view_once": "View once",
+        "view_once_description": "%(network)s lets it be opened only once. Your copy in this chat stays viewable."
     },
     "user_info": {
         "admin_tools_section": "Admin Tools",

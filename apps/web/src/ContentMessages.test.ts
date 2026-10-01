@@ -16,6 +16,7 @@ import {
     type MatrixClient,
     MatrixError,
     RelationType,
+    Room,
     type UploadResponse,
 } from "matrix-js-sdk/src/matrix";
 import { type ImageInfo } from "matrix-js-sdk/src/types";
@@ -750,5 +751,132 @@ describe("sendContentListToRoom albums", () => {
         expect(new Set(albums.slice(0, 10).map((album) => album.id)).size).toBe(1);
         expect(albums[10].id).toBe(albums[11].id);
         expect(albums[10].id).not.toBe(albums[0].id);
+    });
+});
+
+describe("sendContentListToRoom view once", () => {
+    const roomId = "!roomId:server";
+    const VIEW_ONCE = { type: "count", count: 1 };
+    let client: MatrixClient;
+    let room: Room;
+    let contentMessages: ContentMessages;
+    /** What the confirmation dialog answers, and the props it was last shown with. */
+    let answer: unknown[];
+    let dialogProps: Record<string, unknown>[];
+
+    const bridgeTo = (file: Record<string, unknown>): void => {
+        room.currentState.setStateEvents([
+            mkEvent({
+                event: true,
+                type: "m.bridge",
+                skey: "whatsapp",
+                room: roomId,
+                user: "@bot:x",
+                content: { protocol: { id: "whatsapp", displayname: "WhatsApp" } },
+            }),
+            mkEvent({
+                event: true,
+                type: "com.beeper.room_features",
+                skey: "whatsapp",
+                room: roomId,
+                user: "@bot:x",
+                content: { file },
+            }),
+        ]);
+    };
+
+    beforeEach(() => {
+        Object.defineProperty(global.Image.prototype, "src", {
+            configurable: true,
+            set() {
+                window.setTimeout(() => this.onload());
+            },
+        });
+        Object.defineProperty(global.Image.prototype, "height", { configurable: true, get: () => 600 });
+        Object.defineProperty(global.Image.prototype, "width", { configurable: true, get: () => 800 });
+        vi.mocked(BlurhashEncoder.instance.getBlurhash).mockResolvedValue("blurhashstring");
+
+        client = createTestClient();
+        room = new Room(roomId, client, client.getSafeUserId());
+        vi.mocked(client.getRoom).mockReturnValue(room);
+        vi.mocked(client.getMediaConfig).mockResolvedValue({});
+        vi.mocked(client.uploadContent).mockResolvedValue({ content_uri: "mxc://server/file" });
+        vi.mocked(client.sendMessage).mockResolvedValue({ event_id: "$sent" });
+        vi.mocked(doMaybeLocalRoomAction).mockImplementation(
+            <T>(roomId: string, fn: (actualRoomId: string) => Promise<T>) => fn(roomId),
+        );
+        contentMessages = new ContentMessages();
+        vi.spyOn(PosthogAnalytics.instance, "trackEvent").mockImplementation(() => {});
+        answer = [true, false, { viewOnce: true }];
+        dialogProps = [];
+        vi.spyOn(Modal, "createDialog").mockImplementation((component: unknown, props: any) => {
+            if (component === UploadConfirmDialog) {
+                dialogProps.push(props);
+                return { finished: Promise.resolve(answer) } as any;
+            }
+            return { finished: new Promise(() => {}), close: vi.fn() } as any;
+        });
+    });
+
+    afterEach(() => {
+        vi.restoreAllMocks();
+    });
+
+    const image = (name: string): File => new File(["content"], name, { type: "image/jpeg" });
+    const sent = (): Record<string, any>[] => vi.mocked(client.sendMessage).mock.calls.map((call) => call[2] as any);
+
+    async function send(files: File[]): Promise<void> {
+        await contentMessages.sendContentListToRoom(files, roomId, undefined, undefined, client);
+        await vi.waitFor(() => expect(contentMessages.getCurrentUploads()).toHaveLength(0));
+    }
+
+    it("offers view once where the bridge takes it, and marks the event when chosen", async () => {
+        bridgeTo({ "m.image": { mime_types: { "image/*": 2 }, view_limited_types: [VIEW_ONCE] } });
+        await send([image("a.jpg")]);
+
+        expect(dialogProps[0].viewOnceNetwork).toBe("WhatsApp");
+        expect(sent()).toHaveLength(1);
+        expect(sent()[0]["com.beeper.view_limited"]).toEqual(VIEW_ONCE);
+        expect(sent()[0].msgtype).toBe("m.image");
+    });
+
+    it("sends an ordinary picture when view once is left off", async () => {
+        bridgeTo({ "m.image": { mime_types: { "image/*": 2 }, view_limited_types: [VIEW_ONCE] } });
+        answer = [true, false, { viewOnce: false }];
+        await send([image("a.jpg")]);
+
+        expect(sent()[0]).not.toHaveProperty("com.beeper.view_limited");
+    });
+
+    it("does not offer view once in a room whose bridge does not declare it", async () => {
+        bridgeTo({ "m.image": { mime_types: { "image/*": 2 } } });
+        await send([image("a.jpg")]);
+
+        expect(dialogProps[0].viewOnceNetwork).toBeUndefined();
+        expect(sent()[0]).not.toHaveProperty("com.beeper.view_limited");
+    });
+
+    it("does not offer view once in a plain Matrix room", async () => {
+        await send([image("a.jpg")]);
+
+        expect(dialogProps[0].viewOnceNetwork).toBeUndefined();
+        expect(sent()[0]).not.toHaveProperty("com.beeper.view_limited");
+    });
+
+    it("does not offer view once for several files at once", async () => {
+        bridgeTo({ "m.image": { mime_types: { "image/*": 2 }, view_limited_types: [VIEW_ONCE] } });
+        await send([image("a.jpg"), image("b.jpg")]);
+
+        expect(dialogProps.map((props) => props.viewOnceNetwork)).toEqual([undefined, undefined]);
+        expect(sent()).toHaveLength(2);
+        for (const content of sent()) expect(content).not.toHaveProperty("com.beeper.view_limited");
+    });
+
+    it("marks a file sent directly as view once", async () => {
+        await contentMessages.sendContentToRoom(image("a.jpg"), roomId, undefined, client, undefined, undefined, {
+            viewOnce: true,
+        });
+
+        expect(sent()[0]["com.beeper.view_limited"]).toEqual(VIEW_ONCE);
     });
 });

@@ -10,13 +10,14 @@ import { type MatrixEvent } from "matrix-js-sdk/src/matrix";
 
 import MessageSendStatus from "./MessageSendStatus";
 import DisappearingMessageBadge from "./DisappearingMessageBadge";
+import ViewOnceBadge from "./ViewOnceBadge";
 
 interface Props {
     mxEvent: MatrixEvent;
     /** Called when a disappearing message's timer runs out. */
     onDisappeared?: () => void;
     /**
-     * Telegram-style bubbles: the disappearing timer and the pending/delivered state live in the
+     * Telegram-style bubbles: the view-once mark, the disappearing timer and the pending/delivered state live in the
      * bubble's time (TelegramTimeSlot), so only delivery failures are left to show here.
      */
     telegramTime?: boolean;
@@ -30,6 +31,7 @@ export default function BridgeEventTileExtras({ mxEvent, onDisappeared, telegram
     if (telegramTime) return <MessageSendStatus mxEvent={mxEvent} failuresOnly />;
     return (
         <>
+            <ViewOnceBadge mxEvent={mxEvent} />
             <DisappearingMessageBadge mxEvent={mxEvent} onDisappeared={onDisappeared} />
             <MessageSendStatus mxEvent={mxEvent} />
         </>

@@ -10,6 +10,7 @@ import { type EventStatus, type MatrixEvent } from "matrix-js-sdk/src/matrix";
 
 import TelegramTime from "./TelegramTime";
 import DisappearingMessageBadge from "../bridge/DisappearingMessageBadge";
+import ViewOnceBadge from "../bridge/ViewOnceBadge";
 import { useMessageSendStatus } from "../bridge/MessageSendStatus";
 import { getTelegramSendState, getTelegramTimePlacement } from "../../../utils/telegram/telegramTime";
 import MatrixClientContext from "../../../contexts/MatrixClientContext";
@@ -94,7 +95,12 @@ export default function TelegramTimeSlot({
             sendState={sendState}
             onFailed={onFailed}
             placement={getTelegramTimePlacement(mxEvent)}
-            parts={<DisappearingMessageBadge mxEvent={mxEvent} onDisappeared={onDisappeared} />}
+            parts={
+                <>
+                    <ViewOnceBadge mxEvent={mxEvent} />
+                    <DisappearingMessageBadge mxEvent={mxEvent} onDisappeared={onDisappeared} />
+                </>
+            }
         />
     );
 }
