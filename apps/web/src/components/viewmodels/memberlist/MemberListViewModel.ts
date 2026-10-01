@@ -183,6 +183,10 @@ export function useMemberListViewModel(roomId: string): MemberListViewState {
         [sdkContext.memberListStore, roomId, room, memberCountWithout3Pid],
     );
 
+    // A load still waiting its turn belongs to the list that asked for it: once that list is closed, or
+    // shows another room, it would run against nothing.
+    useEffect(() => () => loadMembers.cancel(), [loadMembers]);
+
     const isPresenceEnabled = useMemo(
         () => sdkContext.memberListStore.isPresenceEnabled(),
         [sdkContext.memberListStore],

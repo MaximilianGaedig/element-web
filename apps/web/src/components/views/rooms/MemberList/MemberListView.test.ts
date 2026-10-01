@@ -16,6 +16,7 @@ import { filterConsole, mkThirdPartyInviteEvent } from "test-utils";
 import { type Room, type RoomMember, MatrixEvent } from "matrix-js-sdk/src/matrix";
 
 import { type Rendered, renderMemberList } from "./__mocks__";
+import { MemberListStore } from "../../../../stores/MemberListStore";
 
 vi.mock("../../../../customisations/helpers/UIComponents", () => ({
     shouldShowComponent: vi.fn(),
@@ -149,6 +150,32 @@ describe("MemberListView and MemberlistHeaderView", () => {
                 );
             });
             await waitFor(() => expect(dots()).toBe(before - 1));
+        });
+
+        // A change queues one more load for when the throttle lets it through; closing the list has to
+        // drop it, or it runs against a list that is gone (and, in a test, an environment that is too).
+        it("loads nothing more once it is closed", async () => {
+            const { root, defaultUsers } = rendered;
+            const load = vi.spyOn(MemberListStore.prototype, "loadMemberList");
+            await act(async () => {
+                // Two changes in a row: the first loads at once, the second waits its turn.
+                for (const presence of ["offline", "online"]) {
+                    defaultUsers[0].user!.setPresenceEvent(
+                        new MatrixEvent({
+                            type: "m.presence",
+                            sender: defaultUsers[0].userId,
+                            content: { presence },
+                        }),
+                    );
+                }
+            });
+            root.unmount();
+            const loaded = load.mock.calls.length;
+
+            await new Promise((resolve) => setTimeout(resolve, 700));
+
+            expect(load.mock.calls.length).toBe(loaded);
+            load.mockRestore();
         });
 
         it("should prevent default form submission", async () => {
