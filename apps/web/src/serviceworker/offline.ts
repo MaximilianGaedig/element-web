@@ -18,7 +18,9 @@ Please see LICENSE files in the repository root for full details.
  * cache before any network or auth work.
  */
 
-export const APP_CACHE = "element-app-v1";
+// v2: v1 kept every file it had ever cached under the same name (see isContentNamed), so it is
+// thrown away rather than repaired - it cannot say which of its files are the stale ones.
+export const APP_CACHE = "element-app-v2";
 export const MEDIA_CACHE = "element-media-v1";
 const KNOWN_CACHES = new Set([APP_CACHE, MEDIA_CACHE]);
 
@@ -99,6 +101,22 @@ export function classifyAppRequest(request: Request, scope: string): AppRequestK
 }
 
 /** Runtime entries (not build files): kept when a new build replaces the old one. */
+/**
+ * Whether a build file's name changes when its content does: a bundle under its build's hash, or a
+ * file with a content hash in its name (`index-Bz16m3ir.js`).
+ *
+ * Only those can be kept from one build to the next without asking. The rest keep their name while
+ * their content moves on - Element Call's `config.json`, its `index.html`, the icons and sounds - and
+ * the cache used to hold on to the first copy it ever saw of each: a setting written into that
+ * config.json reached the server and never the browser.
+ */
+export function isContentNamed(path: string): boolean {
+    if (/^bundles\/[^/]+\//.test(path)) return true;
+    const hash = /[.-]([A-Za-z0-9_-]{8,})\.[a-z0-9]+(\.map)?$/.exec(path)?.[1];
+    // A hash has digits or mixed case in it; a word that happens to be eight letters long has neither.
+    return !!hash && (/\d/.test(hash) || (/[a-z]/.test(hash) && /[A-Z]/.test(hash)));
+}
+
 function isRuntimeEntry(url: string, scope: string): boolean {
     const path = new URL(url).pathname.slice(new URL(scope).pathname.length);
     return (
@@ -230,8 +248,11 @@ async function doSyncAppCache(): Promise<void> {
     console.log(`[ServiceWorker] Caching build ${manifest.version} (${manifest.files.length} files) for offline use`);
     await forEachLimit(manifest.files, 6, async (file) => {
         const url = scopeUrl(file);
-        if (await cache.match(url)) return;
-        const r = await fetch(url);
+        // A file named after its content is the same file in every build that has it. Any other can
+        // differ under the same name, so each new build's copy replaces the one held.
+        const named = isContentNamed(file);
+        if (named && (await cache.match(url))) return;
+        const r = await fetch(url, named ? undefined : { cache: "no-store" });
         if (!r.ok) throw new Error(`${file}: ${r.status}`);
         await cache.put(url, r);
     });
