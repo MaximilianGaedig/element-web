@@ -63,6 +63,16 @@ import { PosthogAnalytics } from "./PosthogAnalytics.ts";
 import { cacheUploadedMedia } from "./utils/UploadedMediaCache";
 import { holdSelfTypingActivity } from "./stores/TypingStore";
 import { uploadTypingKind } from "./TypingKinds";
+import { ALBUM_KEY, MAX_ALBUM_ITEMS } from "./utils/MediaAlbum";
+import { getBridgeNetworkName, type ViewLimit } from "./utils/bridge/roomFeatures";
+import { canSendViewOnce, VIEW_LIMITED_KEY, VIEW_ONCE } from "./utils/bridge/viewOnce";
+import { ROUND_VIDEO_KEY } from "./utils/bridge/roundVideo";
+import {
+    isAlbumCandidate,
+    type OutgoingAlbumMarker,
+    type OutgoingAlbumMember,
+    OutgoingMediaAlbum,
+} from "./utils/OutgoingMediaAlbum";
 
 // scraped out of a macOS hidpi (5660ppm) screenshot png
 //                  5669 px (x-axis)      , 5669 px (y-axis)      , per metre
@@ -78,6 +88,31 @@ export class UploadFailedError extends Error {
 
 interface IMediaConfig {
     "m.upload.size"?: number;
+}
+
+/** What can be said about a file beyond the file itself, see {@link ContentMessages.sendContentToRoom}. */
+export interface SendContentOptions {
+    /**
+     * The file's seat in an album of pictures and videos sent together. The event is then held back until
+     * the whole album has uploaded, and carries the `fi.mau.album` marker if at least two made it.
+     */
+    album?: OutgoingAlbumMember;
+    /**
+     * Ask the room's bridge to send the file as view-once media (`com.beeper.view_limited`). Only for rooms
+     * whose bridge declares it: see canSendViewOnce. The Matrix event itself stays viewable.
+     */
+    viewOnce?: boolean;
+    /**
+     * The file is a round "video note": if it is sent as a video, its info carries
+     * `fi.mau.telegram.round_message`, which bridges turn into a video note and we draw as a circle.
+     */
+    roundVideo?: boolean;
+}
+
+/** The content keys this client adds to a media event on top of the spec's. */
+interface MediaEventExtensions {
+    [ALBUM_KEY]?: OutgoingAlbumMarker;
+    [VIEW_LIMITED_KEY]?: ViewLimit;
 }
 
 /**
@@ -494,44 +529,71 @@ export default class ContentMessages {
         }
 
         // Drop files the bridged network would reject, explaining why.
-        await dropUnsupportedBridgeFiles(matrixClient.getRoom(roomId), okFiles);
+        const room = matrixClient.getRoom(roomId);
+        await dropUnsupportedBridgeFiles(room, okFiles);
 
         let uploadAll = false;
         // Promise to complete before sending next file into room, used for synchronisation of file-sending
         // to match the order the files were specified in
         let promBefore: Promise<any> = Promise.resolve();
         const sentFileTypes: string[] = [];
-        for (let i = 0; i < okFiles.length; ++i) {
-            const file = okFiles[i];
-            const loopPromiseBefore = promBefore;
+        // Several pictures/videos sent in one go are an album (at most MAX_ALBUM_ITEMS each, like the
+        // grouper shows them). Documents and audio sent along are ordinary messages.
+        const makeAlbums = okFiles.filter(isAlbumCandidate).length >= 2;
+        let album: OutgoingMediaAlbum | undefined;
+        try {
+            for (let i = 0; i < okFiles.length; ++i) {
+                const file = okFiles[i];
+                const loopPromiseBefore = promBefore;
 
-            if (!uploadAll) {
-                const { finished } = Modal.createDialog(UploadConfirmDialog, {
-                    file,
-                    currentIndex: i,
-                    totalFiles: okFiles.length,
-                });
-                const [shouldContinue, shouldUploadAll] = await finished;
-                if (!shouldContinue) break;
-                if (shouldUploadAll) {
-                    uploadAll = true;
-                }
-            }
-            sentFileTypes.push(file.type.split("/")[0]);
-
-            promBefore = doMaybeLocalRoomAction(
-                roomId,
-                (actualRoomId) =>
-                    this.sendContentToRoom(
+                const options: SendContentOptions = {};
+                if (!uploadAll) {
+                    // View-once is for one picture or video on its own, where the bridge takes it.
+                    const viewOnceNetwork =
+                        okFiles.length === 1 && room && canSendViewOnce(room, file)
+                            ? getBridgeNetworkName(room)
+                            : undefined;
+                    const { finished } = Modal.createDialog(UploadConfirmDialog, {
                         file,
-                        actualRoomId,
-                        relation,
-                        matrixClient,
-                        replyToEvent ?? undefined,
-                        loopPromiseBefore,
-                    ),
-                matrixClient,
-            );
+                        currentIndex: i,
+                        totalFiles: okFiles.length,
+                        viewOnceNetwork,
+                    });
+                    const [shouldContinue, shouldUploadAll, choices] = await finished;
+                    if (!shouldContinue) break;
+                    if (shouldUploadAll) {
+                        uploadAll = true;
+                    }
+                    if (viewOnceNetwork !== undefined && choices?.viewOnce) options.viewOnce = true;
+                }
+                sentFileTypes.push(file.type.split("/")[0]);
+
+                if (makeAlbums && isAlbumCandidate(file)) {
+                    if (!album || album.size >= MAX_ALBUM_ITEMS) {
+                        album?.seal();
+                        album = new OutgoingMediaAlbum();
+                    }
+                    options.album = album.join();
+                }
+
+                promBefore = doMaybeLocalRoomAction(
+                    roomId,
+                    (actualRoomId) =>
+                        this.sendContentToRoom(
+                            file,
+                            actualRoomId,
+                            relation,
+                            matrixClient,
+                            replyToEvent ?? undefined,
+                            loopPromiseBefore,
+                            options,
+                        ),
+                    matrixClient,
+                );
+            }
+        } finally {
+            // Whatever was confirmed is all there will be: the album can now be counted.
+            album?.seal();
         }
         if (sentFileTypes.length) {
             // Find the most common type.
@@ -597,9 +659,10 @@ export default class ContentMessages {
         matrixClient: MatrixClient,
         replyToEvent: MatrixEvent | undefined,
         promBefore?: Promise<any>,
+        options: SendContentOptions = {},
     ): Promise<void> {
         const fileName = file.name || _t("common|attachment");
-        const content: Omit<MediaEventContent, "info"> & { info: Partial<MediaEventInfo> } = {
+        const content: Omit<MediaEventContent, "info"> & { info: Partial<MediaEventInfo> } & MediaEventExtensions = {
             body: fileName,
             info: {
                 size: file.size,
@@ -617,6 +680,10 @@ export default class ContentMessages {
         if (SettingsStore.getValue("Performance.addSendMessageTimingMetadata")) {
             decorateStartSendingTime(content);
         }
+
+        // Stays on the event even if the file ends up an m.file: the bridge then refuses it, which is
+        // better than a picture meant to be seen once going out as an ordinary one.
+        if (options.viewOnce) content[VIEW_LIMITED_KEY] = { ...VIEW_ONCE };
 
         // if we have a mime type for the file, add it to the message metadata
         if (file.type) {
@@ -669,6 +736,7 @@ export default class ContentMessages {
                 try {
                     const videoInfo = await infoForVideoFile(matrixClient, roomId, file);
                     Object.assign(content.info, videoInfo);
+                    if (options.roundVideo) Object.assign(content.info, { [ROUND_VIDEO_KEY]: true });
                 } catch (e) {
                     // Failed to thumbnail, fall back to uploading an m.file
                     logger.error(e);
@@ -682,6 +750,18 @@ export default class ContentMessages {
             const result = await uploadFile(matrixClient, roomId, file, onProgress, upload.abortController);
             content.file = result.file;
             content.url = result.url;
+
+            if (options.album) {
+                // An album is pictures and videos: one that ends up a plain file is sent on its own.
+                if (content.msgtype === MsgType.Image || content.msgtype === MsgType.Video) {
+                    options.album.ready(() => !upload.cancelled);
+                } else {
+                    options.album.leave();
+                }
+                // Wait for the rest of the album to upload: only then is its size known.
+                const marker = await options.album.marker;
+                if (marker) content[ALBUM_KEY] = marker;
+            }
 
             if (upload.cancelled) throw new UploadCanceledError();
             // Await previous message being sent into the room
@@ -723,6 +803,8 @@ export default class ContentMessages {
             }
         } finally {
             stopTypingActivity();
+            // Failed or cancelled before the album was counted: the others must not wait for this file.
+            options.album?.leave();
             removeElement(this.inprogress, (e) => e.promise === upload.promise);
         }
     }

@@ -17,7 +17,8 @@ import { ALBUM_MAX_WIDTH, type AlbumGridLayout, layoutAlbum, type MediaSize, Rec
  * Like Telegram, only adjacent events from the same sender that share an album id are rendered as one
  * grid tile (at most {@link MAX_ALBUM_ITEMS}), ordered by `index` and laid out with Telegram's layouter.
  *
- * Element-sent media (and media bridged before bridges tagged albums) carries no album marker; with
+ * Pictures and videos we send together carry the same marker (see OutgoingMediaAlbum.ts). Media from
+ * other Matrix clients (and media bridged before bridges tagged albums) carries none; with
  * the `groupConsecutiveImages` setting enabled (default),
  * consecutive m.image/m.video events from the same sender sent within {@link NATIVE_GROUP_WINDOW_MS}
  * of each other are grouped the same way.

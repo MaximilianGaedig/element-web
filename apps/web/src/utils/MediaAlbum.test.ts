@@ -8,7 +8,7 @@ Please see LICENSE files in the repository root for full details.
 // @vitest-environment happy-dom
 
 import { describe, it, expect } from "vitest";
-import { type MatrixEvent } from "matrix-js-sdk/src/matrix";
+import { EventStatus, type MatrixEvent } from "matrix-js-sdk/src/matrix";
 
 import { mkEvent } from "test-utils";
 import {
@@ -126,6 +126,29 @@ describe("MediaAlbum utils", () => {
     it("sorts Telegram-style items (index = msgID offset, no count) by index", () => {
         const items = [7, 0, 3].map((index) => mkMedia(`$${index}`, { album: { id: "tg:-123", index } }));
         expect(sortAlbumItems(items).map((e) => e.getId())).toEqual(["$0", "$3", "$7"]);
+    });
+
+    it("groups our own album while it is still being sent", () => {
+        // The local echo of an album item: no event id from the server yet, still on its way.
+        const echoes = [0, 1].map((index) => {
+            const ev = mkMedia(`~echo${index}`, { album: { id: "ours", index, count: 2 }, ts: 1000 + index * 9000 });
+            ev.setStatus(EventStatus.SENDING);
+            ev.setTxnId(`txn${index}`);
+            return ev;
+        });
+        const key = getGroupKey(echoes[0], false)!;
+        expect(key).toEqual({ kind: "album", sender: ALICE, albumId: "ours" });
+        // Album items join whatever the time between them and whether or not native grouping is on.
+        expect(canJoinGroup(key, echoes[0], echoes[1], false)).toBe(true);
+    });
+
+    it("groups an album that never reaches its declared count, in index order", () => {
+        // Item 1 of 3 was never sent: the declared count is not what holds an album together.
+        const first = mkMedia("$first", { album: { id: "x", index: 0, count: 3 } });
+        const last = mkMedia("$last", { album: { id: "x", index: 2, count: 3 } });
+        const key = getGroupKey(first, false)!;
+        expect(canJoinGroup(key, first, last, false)).toBe(true);
+        expect(sortAlbumItems([last, first]).map((e) => e.getId())).toEqual(["$first", "$last"]);
     });
 
     describe("getMediaSize", () => {

@@ -20,6 +20,13 @@ export const ROOM_FEATURES_EVENT_TYPE = "com.beeper.room_features";
 /** -2 rejected, -1 dropped, 0 unsupported (may have a fallback), 1 partial, 2 full. Allowed if > 0. */
 export type CapabilitySupportLevel = -2 | -1 | 0 | 1 | 2;
 
+/** A limit on how media may be viewed: so many times, or for so long (ms) once opened. */
+export interface ViewLimit {
+    type: "count" | "time";
+    count?: number;
+    time?: number;
+}
+
 export interface FileFeatures {
     mime_types?: Record<string, CapabilitySupportLevel>;
     caption?: CapabilitySupportLevel;
@@ -28,6 +35,8 @@ export interface FileFeatures {
     max_width?: number;
     max_height?: number;
     max_duration?: number;
+    /** The view limits (e.g. view-once) this kind of file may be sent with; none if absent. */
+    view_limited_types?: ViewLimit[];
 }
 
 export interface RoomFeatures {

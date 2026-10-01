@@ -135,6 +135,41 @@ describe("VideoBodyFactory", () => {
         expect(container.querySelector("video")).not.toBeNull();
     });
 
+    describe("round video notes", () => {
+        const mkVideo = (info: Record<string, unknown>): MatrixEvent =>
+            new MatrixEvent({
+                room_id: "!room:server",
+                sender: senderUserId,
+                type: EventType.RoomMessage,
+                event_id: "$round:bar",
+                content: {
+                    msgtype: "m.video",
+                    body: "note.mp4",
+                    url: "mxc://server/note",
+                    info: { w: 384, h: 384, mimetype: "video/mp4", ...info },
+                },
+            });
+
+        const renderVideo = (mxEvent: MatrixEvent): HTMLElement =>
+            render(
+                <VideoBodyFactory mxEvent={mxEvent} mediaEventHelper={new MediaEventHelper(mxEvent)} />,
+                withClientContextRenderOptions(cli),
+            ).container;
+
+        it("draws a video flagged as a round message as a circle", () => {
+            const container = renderVideo(mkVideo({ "fi.mau.telegram.round_message": true }));
+
+            expect(container.querySelector(".mx_MVideoBody")).toHaveClass("mx_MVideoBody_round");
+        });
+
+        it("leaves an ordinary video as it is", () => {
+            const container = renderVideo(mkVideo({}));
+
+            expect(container.querySelector(".mx_MVideoBody")).not.toBeNull();
+            expect(container.querySelector(".mx_MVideoBody_round")).toBeNull();
+        });
+    });
+
     it("should show poster for encrypted media before downloading it", async () => {
         fetchMock.getOnce(thumbUrl, { status: 200 });
         render(

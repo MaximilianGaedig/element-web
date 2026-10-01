@@ -2656,10 +2656,17 @@ export class RoomView extends React.Component<IRoomProps, IRoomState> {
         }
 
         let messagePanel: JSX.Element | undefined;
-        if (!isRoomEncryptionLoading && SettingsStore.getValue("feature_new_timeline")) {
+        if (SettingsStore.getValue("feature_new_timeline")) {
             // New MVVM timeline behind the Labs flag. It manages its own scrolling, read
             // receipts and read marker, so none of TimelinePanel's plumbing is mounted.
             // The `messagePanel` ref stays null; every RoomView use of it is null-guarded.
+            //
+            // Fork: it is mounted without waiting to learn whether the room is encrypted. That
+            // answer comes from the crypto store, and holding the timeline back for it put a
+            // lookup (and a second render of the whole room) between the click and the messages
+            // already in memory. The one thing that must not happen before it is known is a URL
+            // preview being asked of the server for a room that turns out to be encrypted, so
+            // previews stay off until then.
             messagePanel = (
                 <EventPresentationContextProvider layout={this.state.layout}>
                     <NewTimelinePanel
@@ -2670,7 +2677,7 @@ export class RoomView extends React.Component<IRoomProps, IRoomState> {
                         highlightedEventId={highlightedEventId}
                         layout={this.state.layout}
                         permalinkCreator={this.permalinkCreator}
-                        showUrlPreview={this.state.showTimelineUrlPreview}
+                        showUrlPreview={!isRoomEncryptionLoading && this.state.showTimelineUrlPreview}
                         showReactions={true}
                         editState={this.state.editState}
                     />

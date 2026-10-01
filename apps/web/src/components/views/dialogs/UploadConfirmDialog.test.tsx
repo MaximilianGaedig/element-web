@@ -8,7 +8,7 @@ Please see LICENSE files in the repository root for full details.
 // @vitest-environment happy-dom
 
 import React from "react";
-import { render, waitFor } from "test-utils-rtl";
+import { fireEvent, render, waitFor } from "test-utils-rtl";
 import { secureRandomString } from "matrix-js-sdk/src/randomstring";
 import { vi, describe, it, expect, beforeEach, afterEach } from "vitest";
 
@@ -99,6 +99,49 @@ describe("<UploadConfirmDialog />", () => {
         );
 
         await waitFor(() => expect(container.querySelector(tag)).toHaveAttribute("src", url));
+    });
+
+    describe("view once", () => {
+        const file = new File(["hello"], "image.png", { type: "image/png" });
+
+        beforeEach(() => {
+            vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:null/1234-5678-9101-1121");
+        });
+
+        it("is not offered unless the room's bridge takes it", () => {
+            const onFinished = vi.fn();
+            const { queryByRole, getByRole } = render(<UploadConfirmDialog file={file} onFinished={onFinished} />);
+
+            expect(queryByRole("checkbox")).toBeNull();
+            fireEvent.click(getByRole("button", { name: "Upload" }));
+            expect(onFinished).toHaveBeenCalledWith(true);
+        });
+
+        it("is offered, off, where the bridge takes it", () => {
+            const onFinished = vi.fn();
+            const { getByRole, getByText } = render(
+                <UploadConfirmDialog file={file} viewOnceNetwork="WhatsApp" onFinished={onFinished} />,
+            );
+
+            expect(getByRole("checkbox", { name: "View once" })).not.toBeChecked();
+            expect(
+                getByText("WhatsApp lets it be opened only once. Your copy in this chat stays viewable."),
+            ).toBeInTheDocument();
+            fireEvent.click(getByRole("button", { name: "Upload" }));
+            expect(onFinished).toHaveBeenCalledWith(true, false, { viewOnce: false });
+        });
+
+        it("reports the choice when ticked", () => {
+            const onFinished = vi.fn();
+            const { getByRole } = render(
+                <UploadConfirmDialog file={file} viewOnceNetwork="WhatsApp" onFinished={onFinished} />,
+            );
+
+            fireEvent.click(getByRole("checkbox", { name: "View once" }));
+            expect(getByRole("checkbox", { name: "View once" })).toBeChecked();
+            fireEvent.click(getByRole("button", { name: "Upload" }));
+            expect(onFinished).toHaveBeenCalledWith(true, false, { viewOnce: true });
+        });
     });
 
     it("should display a file with no media preview", () => {
