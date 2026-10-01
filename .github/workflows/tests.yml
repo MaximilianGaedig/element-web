@@ -7,7 +7,7 @@ on:
     merge_group:
         types: [checks_requested]
     push:
-        branches: [develop, master]
+        branches: [develop, master, "agent/**", "check/**"]
     workflow_call:
         inputs:
             disable_coverage:

@@ -728,7 +728,14 @@ html[data-floating-bars] .mx_RoomView_body > .mx_TgImport {
     box-shadow: var(--tg-topbar-box-shadow);
 }
 
-/* The chip above the chat list: bridges that aren't connected, else the import's progress. */
+/*
+ * The chip above the chat list: bridges that aren't connected, and the import's progress.
+ *
+ * Its box is the chat rows' box: 12px from either edge of the column, as their highlight is. 12px
+ * above it too, and 12px below - 4px of its own margin and the 8px the list's header keeps over its
+ * buttons while the chip is there (see the header rule below) - which is also what the header keeps
+ * under them. One measure all round, where it had been 4px above and 24px below.
+ */
 .mx_TgHistoryChip {
     all: unset;
     box-sizing: border-box;
@@ -736,7 +743,7 @@ html[data-floating-bars] .mx_RoomView_body > .mx_TgImport {
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    margin: 0.25rem 0.75rem 0.25rem;
+    margin: 0.75rem 0.75rem 0.25rem;
     min-height: 2.5rem;
     padding: 0.375rem 0.875rem;
     border-radius: 1.25rem;
@@ -745,44 +752,25 @@ html[data-floating-bars] .mx_RoomView_body > .mx_TgImport {
     color: var(--tg-primary-color);
     cursor: pointer;
 
-    &:hover {
-        background: var(--cpd-color-bg-subtle-primary);
-    }
-
     &:focus-visible {
         outline: 2px solid var(--cpd-color-border-focused);
     }
 }
 
+/* Only where there is a pointer to hover with: on touch a hover state sticks after the tap. */
+@media (hover: hover) {
+    .mx_TgHistoryChip:hover {
+        background: var(--cpd-color-bg-subtle-primary);
+    }
+}
+
 /*
- * What the chip shrinks to once the bridges are done: a tick in the search row, beside Explore.
- * Sized like the buttons it sits with rather than like the chip it came from.
+ * The list's header is 60px with its buttons against the bottom, which leaves 20px of nothing over
+ * them: right for the top of a column, a hole under the chip. 48px leaves 8px (48 - 12 padding - 28
+ * of button). The header has no class of ours to hang this on - it is the shared component's.
  */
-.mx_TgHistoryChip_mini {
-    all: unset;
-    box-sizing: border-box;
-    flex: 0 0 auto;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 2rem;
-    height: 2rem;
-    border-radius: 50%;
-    color: var(--cpd-color-icon-success-primary, var(--cpd-color-icon-secondary));
-    cursor: pointer;
-
-    svg {
-        width: 20px;
-        height: 20px;
-    }
-
-    &:hover {
-        background: var(--cpd-color-bg-subtle-secondary);
-    }
-
-    &:focus-visible {
-        outline: 2px solid var(--cpd-color-border-focused);
-    }
+.mx_TgHistoryChip ~ .mx_LeftPanel_outerWrapper [data-testid="room-list-header"] {
+    min-height: 48px;
 }
 
 .mx_TgHistoryChip--problem {
@@ -790,14 +778,34 @@ html[data-floating-bars] .mx_RoomView_body > .mx_TgImport {
     background: color-mix(in srgb, var(--cpd-color-text-critical-primary) 10%, transparent);
 }
 
+.mx_TgHistoryChip--done {
+    color: var(--cpd-color-text-success-primary);
+}
+
+/*
+ * Takes the width that is left, so the share sits at the chip's far edge with the same 14px beside it
+ * as the mark at the near one. Shrunk to its words, it left the share adrift in the middle of the chip
+ * and the chip's contents looking pushed to one side.
+ */
 .mx_TgHistoryChip_text {
+    flex: 1 1 auto;
     min-width: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.mx_TgHistoryChip_line {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
 
-/* The share is the part worth keeping when the chip is narrow, so the counts give way to it first. */
+/* Under what needs you: where the import is up to, as the lesser of the two things said. */
+.mx_TgHistoryChip_line--second {
+    font: var(--cpd-font-body-xs-regular);
+    color: var(--cpd-color-text-secondary);
+}
+
 .mx_TgHistoryChip_percent {
     flex: 0 0 auto;
     font-variant-numeric: tabular-nums;
@@ -815,6 +823,23 @@ html[data-floating-bars] .mx_RoomView_body > .mx_TgImport {
     height: 0.5rem;
     border-radius: 50%;
     background: currentcolor;
+}
+
+.mx_TgHistoryChip_check {
+    flex: 0 0 auto;
+    width: 1rem;
+    height: 1rem;
+}
+
+/*
+ * The 80px avatars-only column: the mark over the share, centred. The chip is 56px wide there, and
+ * side by side at its full padding the two (14 + 8 + about 32, in 28) ran 12px out of its far side.
+ */
+[data-collapsed] .mx_TgHistoryChip {
+    flex-direction: column;
+    justify-content: center;
+    gap: 0.125rem;
+    padding-inline: 0.25rem;
 }
 
 [data-collapsed] .mx_TgHistoryChip_text {

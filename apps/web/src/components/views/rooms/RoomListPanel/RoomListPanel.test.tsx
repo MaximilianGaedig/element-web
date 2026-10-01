@@ -9,7 +9,7 @@
 
 import { vi, describe, it, expect, beforeEach, afterEach } from "vitest";
 import React from "react";
-import { render, screen } from "test-utils-rtl";
+import { render, screen, within } from "test-utils-rtl";
 import { clientAndSDKContextRenderOptions, createTestClient, TestSDKContext } from "test-utils";
 import userEvent from "@testing-library/user-event";
 
@@ -20,6 +20,8 @@ import { RoomListPanel } from "./RoomListPanel";
 import { shouldShowComponent } from "../../../../customisations/helpers/UIComponents";
 import { LandmarkNavigation } from "../../../../accessibility/LandmarkNavigation";
 import { ReleaseAnnouncementStore } from "../../../../stores/ReleaseAnnouncementStore";
+import { collectImports } from "../../../../utils/importOverview";
+import { HistoryStatusChip, setHistoryStatusOpen } from "../../telegram/TgHistoryChip";
 
 vi.mock("../../../../customisations/helpers/UIComponents", () => ({
     shouldShowComponent: vi.fn(),
@@ -33,6 +35,12 @@ vi.mock("../../../../accessibility/LandmarkNavigation", () => ({
         ROOM_SEARCH: "something",
     },
 }));
+
+// The bridges' imports are whatever a test says they are; left alone, the real count of the client's rooms.
+vi.mock("../../../../utils/importOverview", async (importOriginal) => {
+    const actual = await importOriginal<typeof import("../../../../utils/importOverview")>();
+    return { ...actual, collectImports: vi.fn(actual.collectImports) };
+});
 
 // mock out release announcements as they interfere with what's focused
 // (this can be removed once the new room list announcement is gone)
@@ -89,6 +97,55 @@ describe("<RoomListPanel />", () => {
         renderComponent();
         expect(screen.queryByRole("button", { name: "Search Ctrl K" })).toBeNull();
         expect(screen.queryByRole("button", { name: "Explore rooms" })).toBeNull();
+    });
+
+    describe("the bridges' status, once every import is done", () => {
+        /** One network, every one of its chats in, and nobody's login reported as down. */
+        const allImported = (): void => {
+            vi.mocked(collectImports).mockReturnValue({
+                chats: 10,
+                networks: [{ network: "telegram", chats: 10, byPhase: { importing: 0, queued: 0, paused: 0 } }],
+                countedImported: 10,
+                countedTotal: 10,
+            } as unknown as ReturnType<typeof collectImports>);
+        };
+
+        /** The chip above the column and the panel under it, as the logged-in view has them. */
+        const renderWithChip = () =>
+            render(
+                <>
+                    <HistoryStatusChip />
+                    <RoomListPanel />
+                </>,
+                clientAndSDKContextRenderOptions(client, sdkContext),
+            );
+
+        beforeEach(() => setHistoryStatusOpen(false));
+        afterEach(() => vi.mocked(collectImports).mockReset());
+
+        it("is a tick among the header's buttons, with the chip above the list gone", () => {
+            allImported();
+            const { container } = renderWithChip();
+            const header = screen.getByTestId("room-list-header");
+            expect(within(header).getByRole("button", { name: "All 10 chats imported" })).toBeInTheDocument();
+            // Beside the button that looks through the chats, which is where the search row's Explore was.
+            expect(within(header).getByRole("button", { name: "What's in my chats" })).toBeInTheDocument();
+            expect(container.querySelector(".mx_TgHistoryChip")).toBeNull();
+        });
+
+        it("opens the chip from the tick", async () => {
+            allImported();
+            const { container } = renderWithChip();
+            await userEvent.click(screen.getByRole("button", { name: "All 10 chats imported" }));
+            expect(container.querySelector(".mx_TgHistoryChip")).toHaveTextContent("All 10 chats imported");
+        });
+
+        it("has no tick where nothing is bridged", () => {
+            renderWithChip();
+            expect(
+                within(screen.getByTestId("room-list-header")).queryByRole("button", { name: /imported/ }),
+            ).toBeNull();
+        });
     });
 
     it("should move to the next landmark when the shortcut key is pressed", async () => {
