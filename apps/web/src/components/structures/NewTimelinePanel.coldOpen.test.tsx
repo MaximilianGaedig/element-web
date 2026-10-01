@@ -34,6 +34,7 @@ import { createTestClient, mkMessage, TestSDKContext } from "test-utils";
 import { NewTimelinePanel } from "./NewTimelinePanel";
 import MatrixClientContext from "../../contexts/MatrixClientContext";
 import { SDKContext } from "../../contexts/SDKContext";
+import { warmUpRoom } from "../../utils/room/roomWarmup";
 
 const ROOM_ID = "!room:example.org";
 const USER_ID = "@alice:example.org";
@@ -296,6 +297,24 @@ describe("<NewTimelinePanel /> opening a room", () => {
 
         expect(stateWasIn).toEqual([true]);
         expect(rows(container)).toBe(28);
+    });
+
+    it("opens a room the pointer rested on with nothing left to wait for", async () => {
+        olderHistory({ stored: 25, onServer: 60 });
+        inMemory(messages(3));
+        // What resting on the room in the room list does, finished before the click.
+        openedAt = Date.now();
+        const warmedUp = warmUpRoom(client, room, () => true);
+        await vi.advanceTimersByTimeAsync(STORE_MS + NETWORK_MS);
+        await warmedUp;
+        const before = requests.length;
+
+        const container = mount();
+        const elapsed = await timeToFirstMessage(container);
+
+        expect({ elapsed, rows: rows(container) }).toEqual({ elapsed: 0, rows: 88 });
+        await settle();
+        expect(requests).toHaveLength(before);
     });
 
     it("waits for the server only when there is nothing at all to draw", async () => {

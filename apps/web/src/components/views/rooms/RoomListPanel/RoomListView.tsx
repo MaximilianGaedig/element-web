@@ -21,6 +21,7 @@ import { Landmark, LandmarkNavigation } from "../../../../accessibility/Landmark
 import { RoomListViewModel } from "../../../../viewmodels/room-list/RoomListViewModel";
 import { SDKContext } from "../../../../contexts/SDKContext.ts";
 import { RoomPath } from "../RoomPath";
+import { WarmupOnRest } from "./WarmupOnRest";
 
 /**
  * RoomListView component using shared components with proper MVVM pattern.
@@ -39,13 +40,20 @@ export function RoomListView(): JSX.Element {
     );
 
     // Render avatar for each room - memoized to prevent re-renders
-    const renderAvatar = useCallback((room: SharedRoom): ReactNode => {
-        return (
-            <BridgedRoomAvatar room={room as Room}>
-                <DecoratedRoomAvatarView room={room as Room} />
-            </BridgedRoomAvatar>
-        );
-    }, []);
+    const client = sdkContext.client!;
+    const renderAvatar = useCallback(
+        (room: SharedRoom): ReactNode => {
+            return (
+                <>
+                    <BridgedRoomAvatar room={room as Room}>
+                        <DecoratedRoomAvatarView room={room as Room} />
+                    </BridgedRoomAvatar>
+                    <WarmupOnRest client={client} room={room as Room} />
+                </>
+            );
+        },
+        [client],
+    );
 
     // Render room path breadcrumbs for each room (show full path, no pruning)
     const renderRoomPath = useCallback((room: SharedRoom): ReactNode => {
