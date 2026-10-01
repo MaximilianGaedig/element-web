@@ -41,9 +41,12 @@ export class UrlPreviewFetcher {
         private readonly previewModuleApi: ModuleUrlPreviewApi,
     ) {}
 
+    /** Set by {@link dispose}: nothing made after it would ever be revoked, so nothing is made. */
+    private disposed = false;
+
     public clearCache(): void {
         this.cache.clear();
-        this.dispose();
+        this.revokeObjectUrls();
     }
 
     public revokeObjectUrls(): void {
@@ -51,7 +54,9 @@ export class UrlPreviewFetcher {
         this.decryptedObjectUrls.clear();
     }
 
+    /** For when the fetcher's owner goes away. The fetcher is not to be used afterwards. */
     public dispose(): void {
+        this.disposed = true;
         this.revokeObjectUrls();
     }
 
@@ -353,6 +358,8 @@ export class UrlPreviewFetcher {
 
         try {
             const blob = await decryptFile(encryptedFile);
+            // Disposed while it was decrypting: an object URL made now is one nobody will revoke.
+            if (this.disposed) return null;
             const objectUrl = URL.createObjectURL(blob);
             this.decryptedObjectUrls.set(encryptedFile.url, objectUrl);
             return objectUrl;

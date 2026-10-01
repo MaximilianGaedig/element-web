@@ -103,6 +103,20 @@ function getViewModel({
 }
 
 describe("UrlPreviewGroupViewModel", () => {
+    // The fetcher holds the object URLs of the preview images it decrypted, and each of those keeps a
+    // decrypted image in memory. There is a view model per message with a link, so one that goes away
+    // without disposing its fetcher leaves its images behind for the rest of the session.
+    it("should dispose its fetcher when it is disposed", () => {
+        const dispose = vi.spyOn(UrlPreviewFetcher.prototype, "dispose");
+        try {
+            for (let i = 0; i < 200; i++) getViewModel().vm.dispose();
+
+            expect(dispose).toHaveBeenCalledTimes(200);
+        } finally {
+            dispose.mockRestore();
+        }
+    });
+
     it("should return no previews by default", () => {
         expect(getViewModel().vm.getSnapshot()).toMatchSnapshot();
     });
