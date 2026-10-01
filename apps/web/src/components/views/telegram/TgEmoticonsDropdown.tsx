@@ -20,6 +20,7 @@ import { TgStickersPanel } from "./TgStickersPanel";
 import { useMatrixClientContext } from "../../../contexts/MatrixClientContext";
 import { type PackImage } from "../../../utils/bridge/imagePacks";
 import UIStore from "../../../stores/UIStore";
+import { getOverlayHost } from "../../../utils/telegram/tgLayout/overlayHost";
 
 type Tab = "emoji" | "stickers";
 
@@ -174,7 +175,7 @@ export function TgEmoticonsDropdown({ room, threadId, addEmoji, hasText }: Props
                             ))}
                         </div>
                     </div>,
-                    document.body,
+                    getOverlayHost(),
                 )}
         </>
     );
