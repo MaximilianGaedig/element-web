@@ -87,6 +87,16 @@ vi.spyOn(MediaDeviceHandler, "getDevices").mockResolvedValue({
     [MediaDeviceKindEnum.AudioOutput]: [],
 });
 
+/*
+ * The timeline's spinner shows once placing the rows has taken a while, and here rows are never placed
+ * (nothing is laid out), so whether a snapshot holds it is how long the test happened to run. It is not
+ * what these snapshots are of.
+ */
+function withoutSpinner(fragment: DocumentFragment): DocumentFragment {
+    fragment.querySelectorAll('[class*="_cover_"] svg').forEach((spinner) => spinner.remove());
+    return fragment;
+}
+
 describe("RoomView", () => {
     let cli: MockedObject<MatrixClient>;
     let room: Room;
@@ -271,7 +281,7 @@ describe("RoomView", () => {
         const { asFragment } = await mountRoomView(undefined, { hideComposer: true });
 
         expect(screen.queryByRole("textbox", { name: "Send an unencrypted message…" })).not.toBeInTheDocument();
-        expect(asFragment()).toMatchSnapshot();
+        expect(withoutSpinner(asFragment())).toMatchSnapshot();
     });
 
     it("should hide the header when hideHeader=true", async () => {
@@ -281,7 +291,7 @@ describe("RoomView", () => {
 
         // Check that the room name button in the header is not rendered
         expect(screen.queryByRole("button", { name: room.name })).not.toBeInTheDocument();
-        expect(asFragment()).toMatchSnapshot();
+        expect(withoutSpinner(asFragment())).toMatchSnapshot();
     });
 
     it("should hide the right panel when hideRightPanel=true", async () => {
@@ -307,7 +317,7 @@ describe("RoomView", () => {
          * happened - which would pass only on a build without the animation.
          */
         await waitFor(() => expect(screen.queryByTestId("right-panel")).not.toBeInTheDocument());
-        expect(asFragment()).toMatchSnapshot();
+        expect(withoutSpinner(asFragment())).toMatchSnapshot();
     });
 
     it("should hide the pinned message banner when hidePinnedMessageBanner=true", async () => {
@@ -336,7 +346,7 @@ describe("RoomView", () => {
         rerender(<RoomView threepidInvite={undefined} forceTimeline={false} hidePinnedMessageBanner={true} />);
         // Check that the pinned message banner is not rendered
         await expect(screen.findByTestId("pinned-message-banner")).rejects.toThrow();
-        expect(asFragment()).toMatchSnapshot();
+        expect(withoutSpinner(asFragment())).toMatchSnapshot();
     });
 
     describe("enableReadReceiptsAndMarkersOnActivity", () => {
@@ -402,7 +412,7 @@ describe("RoomView", () => {
 
         it("renders an invite room", async () => {
             const { asFragment } = await mountRoomView();
-            expect(asFragment()).toMatchSnapshot();
+            expect(withoutSpinner(asFragment())).toMatchSnapshot();
         });
 
         it("handles accepting an invite", async () => {
@@ -569,11 +579,11 @@ describe("RoomView", () => {
 
         const { asFragment, container } = await mountRoomView();
         expect(container.querySelector(".mx_RoomView_messagePanel")).toBeNull();
-        expect(asFragment()).toMatchSnapshot();
+        expect(withoutSpinner(asFragment())).toMatchSnapshot();
 
         deferred.resolve(true);
         await waitFor(() => expect(container.querySelector(".mx_RoomView_messagePanel")).not.toBeNull());
-        expect(asFragment()).toMatchSnapshot();
+        expect(withoutSpinner(asFragment())).toMatchSnapshot();
     });
 
     it("updates live timeline when a timeline reset happens", async () => {
@@ -643,7 +653,7 @@ describe("RoomView", () => {
         it("should render joined video room view", async () => {
             vi.spyOn(room, "getMyMembership").mockReturnValue(KnownMembership.Join);
             const { asFragment } = await mountRoomView();
-            expect(asFragment()).toMatchSnapshot();
+            expect(withoutSpinner(asFragment())).toMatchSnapshot();
         });
 
         it("should open timeline card when navigating to permalink", async () => {
@@ -874,7 +884,7 @@ describe("RoomView", () => {
         await emitPromise(stores.roomViewStore, UPDATE_EVENT);
 
         await findByText("Are you sure you're at the right place?");
-        expect(asFragment()).toMatchSnapshot();
+        expect(withoutSpinner(asFragment())).toMatchSnapshot();
     });
 
     describe("rooms the client does not know about", () => {
