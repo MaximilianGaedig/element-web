@@ -38,6 +38,7 @@ import { type InitialCryptoSetupStore } from "../stores/InitialCryptoSetupStore"
 import { type ModuleApiType } from "../modules/Api.ts";
 import type { RoomListStoreV3Class } from "../stores/room-list-v3/RoomListStoreV3.ts";
 import { type SDKContextClass } from "../contexts/SDKContextClass.ts";
+import type { BootTimingsSummary } from "../utils/bootTimings.ts";
 
 type ElectronChannel =
     | "app_onAction"
@@ -97,6 +98,8 @@ declare global {
         mxEventIndexPeg: EventIndexPeg;
         mxPerformanceMonitor: PerformanceMonitor;
         mxPerformanceEntryNames: any;
+        /** The startup breakdown: every `mx_boot:` mark so far, in order. See utils/bootTimings.ts. */
+        mxBootTimings: () => BootTimingsSummary;
         mxUIStore: UIStore;
         mxSetupEncryptionStore?: SetupEncryptionStore;
         mxInitialCryptoStore?: InitialCryptoSetupStore;

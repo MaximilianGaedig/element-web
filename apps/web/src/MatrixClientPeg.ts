@@ -36,6 +36,7 @@ import SdkConfig from "./SdkConfig";
 import { setDeviceIsolationMode } from "./settings/controllers/DeviceIsolationModeController.ts";
 import { initialiseDehydrationIfEnabled } from "./utils/device/dehydration";
 import { historyIndexer } from "./utils/history/indexer";
+import { bootMark, savedSyncSize } from "./utils/bootTimings";
 
 export interface MatrixClientPegAssignOpts {
     /**
@@ -249,6 +250,16 @@ class MatrixClientPegClass implements IMatrixClientPeg {
             throw new Error("createClient must be called first");
         }
 
+        // The two stores are separate databases and neither needs the other, so they open side by side:
+        // the saved sync is read (in the store's worker) while the crypto WASM loads and its store opens.
+        // Both are needed before the client starts - the saved sync holds events to decrypt - so the
+        // start still waits for whichever takes longer, rather than for one after the other.
+        const cryptoReady = SettingsStore.getValue("lowBandwidth")
+            ? Promise.resolve()
+            : this.initClientCrypto(assignOpts);
+        // Awaited below; until then a failure must not count as unhandled while the sync store opens.
+        cryptoReady.catch(() => {});
+
         for (const dbType of ["indexeddb", "memory"]) {
             try {
                 const promise = this.matrixClient.store.startup();
@@ -267,12 +278,12 @@ class MatrixClientPegClass implements IMatrixClientPeg {
                 }
             }
         }
+        bootMark("store_opened");
         this.matrixClient.store.on?.("closed", this.onUnexpectedStoreClose);
 
         // try to initialise e2e on the new client
-        if (!SettingsStore.getValue("lowBandwidth")) {
-            await this.initClientCrypto(assignOpts);
-        }
+        await cryptoReady;
+        bootMark("crypto_opened");
 
         const opts = utils.deepCopy(this.opts);
         // the react sdk doesn't work without this, so don't allow
@@ -365,13 +376,34 @@ class MatrixClientPegClass implements IMatrixClientPeg {
     public async start(assignOpts?: MatrixClientPegAssignOpts): Promise<void> {
         const opts = await this.assign(assignOpts);
 
+        markSavedSyncLoaded(this.matrixClient!);
         logger.log(`MatrixClientPeg: really starting MatrixClient`);
         await this.matrixClient!.startClient(opts);
         logger.log(`MatrixClientPeg: MatrixClient started`);
+        bootMark("client_started");
         // Keep what we have seen (utils/history), so the shared-media tabs don't scan the room again
         // on the next visit.
         historyIndexer.start(this.matrixClient!);
     }
+}
+
+/**
+ * Startup timing (utils/bootTimings.ts): note when the saved sync reaches the main thread, and how much of
+ * it there is to replay. The sync loop asks the store for it exactly once, when the client starts; the
+ * store gets its own method back as soon as that call returns.
+ */
+function markSavedSyncLoaded(client: MatrixClient): void {
+    const store = client.store;
+    // Called with the store as `this` below, and put back as it was.
+    // eslint-disable-next-line @typescript-eslint/unbound-method
+    const getSavedSync = store?.getSavedSync;
+    if (typeof getSavedSync !== "function") return;
+    store.getSavedSync = async (...args: Parameters<typeof getSavedSync>) => {
+        store.getSavedSync = getSavedSync;
+        const saved = await getSavedSync.apply(store, args);
+        bootMark("saved_sync_loaded", savedSyncSize(saved));
+        return saved;
+    };
 }
 
 /**

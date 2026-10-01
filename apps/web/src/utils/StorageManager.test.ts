@@ -12,7 +12,7 @@ import "fake-indexeddb/auto";
 
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { IDBFactory } from "fake-indexeddb";
-import { IndexedDBCryptoStore } from "matrix-js-sdk/src/matrix";
+import { IndexedDBCryptoStore, IndexedDBStore } from "matrix-js-sdk/src/matrix";
 import { logger } from "matrix-js-sdk/src/logger";
 
 import * as StorageManager from "./StorageManager";
@@ -206,6 +206,41 @@ describe("StorageManager", () => {
 
             await expect(StorageManager.tryPersistStorage()).resolves.toBe(false);
             expect(logger.error).toHaveBeenCalled();
+        });
+    });
+    describe("checkConsistency on the startup path", () => {
+        afterEach(() => {
+            vi.restoreAllMocks();
+        });
+
+        it("looks at the sync store and the crypto store at the same time", async () => {
+            vi.spyOn(logger, "log").mockImplementation(() => {});
+            const syncStore = Promise.withResolvers<boolean>();
+            const cryptoStore = Promise.withResolvers<boolean>();
+            const syncExists = vi.spyOn(IndexedDBStore, "exists").mockReturnValue(syncStore.promise);
+            const cryptoExists = vi.spyOn(IndexedDBCryptoStore, "exists").mockReturnValue(cryptoStore.promise);
+
+            const checked = StorageManager.checkConsistency();
+            await new Promise((resolve) => setTimeout(resolve, 0));
+
+            // Neither database has answered, and both have been asked.
+            expect(syncExists).toHaveBeenCalledTimes(1);
+            expect(cryptoExists).toHaveBeenCalledTimes(1);
+
+            syncStore.resolve(true);
+            cryptoStore.resolve(true);
+            await expect(checked).resolves.toEqual(expect.objectContaining({ healthy: true, dataInCryptoStore: true }));
+        });
+
+        it("is unhealthy when either store cannot be read, whichever fails first", async () => {
+            vi.spyOn(logger, "log").mockImplementation(() => {});
+            vi.spyOn(logger, "error").mockImplementation(() => {});
+            vi.spyOn(IndexedDBStore, "exists").mockRejectedValue(new Error("sync store unreadable"));
+            vi.spyOn(IndexedDBCryptoStore, "exists").mockResolvedValue(true);
+
+            await expect(StorageManager.checkConsistency()).resolves.toEqual(
+                expect.objectContaining({ healthy: false, dataInCryptoStore: true }),
+            );
         });
     });
 });

@@ -80,6 +80,7 @@ import UserSettingsDialog from "../../components/views/dialogs/UserSettingsDialo
 import { SDKContextClass } from "../../contexts/SDKContextClass";
 import { type QrLoginCredentials } from "../../components/views/auth/LoginWithQR.tsx";
 import { storeAuthContext } from "../../utils/oauth/persistOAuthSettings.ts";
+import { resetBootTimings } from "../../utils/bootTimings.ts";
 
 // Stub out ThemeWatcher as the necessary bits for themes are done in element-web's index.html and thus are lacking here,
 // plus JSDOM's implementation of CSSStyleDeclaration has a bunch of differences to real browsers which cause issues.
@@ -796,6 +797,29 @@ describe("<MatrixChat />", () => {
 
             return renderResult;
         };
+
+        it("shows the logged-in view from the replayed saved sync, before any live sync, and times it", async () => {
+            resetBootTimings();
+            const mark = vi.spyOn(performance, "mark");
+            const marked = (): string[] => mark.mock.calls.map(([name]) => name);
+            // The saved sync is replayed, and the homeserver never answers: no live sync state follows.
+            mockClient.startClient = vi.fn(async () => {
+                await sleep(1);
+                mockClient.getSyncState.mockReturnValue(SyncState.Prepared);
+                mockClient.emit(ClientEvent.Sync, SyncState.Prepared, null, { fromCache: true });
+            });
+
+            getComponent();
+
+            await expect(screen.findByLabelText("User menu")).resolves.toBeVisible();
+            await waitFor(() => expect(marked()).toContain("mx_boot:logged_in_view"));
+            expect(marked()).toContain("mx_boot:saved_sync_replayed");
+            expect(marked()).not.toContain("mx_boot:live_sync_prepared");
+            expect(marked().indexOf("mx_boot:saved_sync_replayed")).toBeLessThan(
+                marked().indexOf("mx_boot:logged_in_view"),
+            );
+            resetBootTimings();
+        });
 
         it("should render welcome page after login", async () => {
             getComponent();

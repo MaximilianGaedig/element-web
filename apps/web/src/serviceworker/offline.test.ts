@@ -5,7 +5,7 @@ SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only OR LicenseRef-Element-Com
 Please see LICENSE files in the repository root for full details.
 */
 
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { isContentNamed, respondApp, syncAppCache } from "./offline";
 
@@ -120,5 +120,123 @@ describe("a new build", () => {
         expect(await (await cache.match("widgets/element-call/config.json"))?.text()).toBe("h264");
         expect(fetched).toContain("widgets/element-call/config.json");
         expect(fetched).not.toContain("widgets/element-call/assets/index-Bz16m3ir.js");
+    });
+});
+
+/*
+ * The app asks for `config.<domain>.json` before it reads `config.json`, on every load. Most deployments
+ * have no such file, and "there is none" was never kept: each start waited for the server to say 404
+ * again - the only request of a warm start that left the machine - before using the config it already had.
+ */
+describe("the domain's own config", () => {
+    const scope = "https://chat.example.org/";
+    const held = new Map<string, Response>();
+    const key = (k: string | Request): string => new URL(typeof k === "string" ? k : k.url, scope).href;
+    const cache = {
+        match: async (k: string | Request) => held.get(key(k))?.clone(),
+        put: async (k: string | Request, r: Response) => void held.set(key(k), r),
+    };
+    const NETWORK = "waited for the network";
+
+    /** What the page gets while the server has not answered yet. */
+    async function answerWithoutNetwork(path: string): Promise<number | string> {
+        const refreshes: Promise<unknown>[] = [];
+        const request = new Request(`${scope}${path}?cachebuster=${Date.now()}`);
+        const response = respondApp({ request, waitUntil: (p) => void refreshes.push(p) }, "revalidate");
+        return Promise.race([
+            response.then((res) => res.status),
+            new Promise<string>((resolve) => setTimeout(() => resolve(NETWORK), 20)),
+        ]);
+    }
+
+    /** Let one load go through with the server answering. */
+    async function load(path: string): Promise<number> {
+        const refreshes: Promise<unknown>[] = [];
+        const request = new Request(`${scope}${path}?cachebuster=${Date.now()}`);
+        const res = await respondApp({ request, waitUntil: (p) => void refreshes.push(p) }, "revalidate");
+        await Promise.all(refreshes);
+        return res.status;
+    }
+
+    function serve(status: number, body = "{}"): void {
+        vi.stubGlobal(
+            "fetch",
+            vi.fn(async () => new Response(body, { status })),
+        );
+    }
+
+    function serverNeverAnswers(): void {
+        vi.stubGlobal(
+            "fetch",
+            vi.fn(() => new Promise<Response>(() => {})),
+        );
+    }
+
+    beforeEach(() => {
+        vi.stubEnv("NODE_ENV", "production");
+        vi.stubGlobal("self", { registration: { scope } });
+        vi.stubGlobal("caches", { open: async () => cache });
+        held.clear();
+        held.set(key("__index__"), new Response("<html></html>")); // a build is cached
+    });
+
+    afterEach(() => {
+        vi.unstubAllEnvs();
+        vi.unstubAllGlobals();
+    });
+
+    it("remembers that there is none, so the next start does not wait to be told again", async () => {
+        serve(404, "not found");
+        expect(await load("config.chat.example.org.json")).toBe(404);
+
+        serverNeverAnswers();
+        expect(await answerWithoutNetwork("config.chat.example.org.json")).toBe(404);
+    });
+
+    it("picks the file up on the load after it appears", async () => {
+        serve(404, "not found");
+        await load("config.chat.example.org.json");
+
+        serve(200, `{"brand":"Ours"}`);
+        // This load still answers from what it knew, and learns better in the background...
+        expect(await load("config.chat.example.org.json")).toBe(404);
+        // ...so the next one has it.
+        serverNeverAnswers();
+        expect(await answerWithoutNetwork("config.chat.example.org.json")).toBe(200);
+    });
+
+    it("keeps the domain config it holds when the server answers 404 for it", async () => {
+        serve(200, `{"brand":"Ours"}`);
+        await load("config.chat.example.org.json");
+
+        serve(404, "not found");
+        await load("config.chat.example.org.json");
+
+        serverNeverAnswers();
+        expect(await answerWithoutNetwork("config.chat.example.org.json")).toBe(200);
+    });
+
+    it("does not remember a missing config.json: that one is an error, not an answer", async () => {
+        serve(404, "not found");
+        expect(await load("config.json")).toBe(404);
+
+        serverNeverAnswers();
+        expect(await answerWithoutNetwork("config.json")).toBe(NETWORK);
+    });
+
+    it("does not remember a server error as an absent config", async () => {
+        serve(503, "unavailable");
+        expect(await load("config.chat.example.org.json")).toBe(503);
+
+        serverNeverAnswers();
+        expect(await answerWithoutNetwork("config.chat.example.org.json")).toBe(NETWORK);
+    });
+
+    it("does not remember a missing translation: only the config is asked for knowing it may not exist", async () => {
+        serve(404, "not found");
+        expect(await load("i18n/xx.json")).toBe(404);
+
+        serverNeverAnswers();
+        expect(await answerWithoutNetwork("i18n/xx.json")).toBe(NETWORK);
     });
 });

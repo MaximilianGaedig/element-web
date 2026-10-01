@@ -142,6 +142,7 @@ import { type IScreen } from "../../vector/routing.ts";
 import { type URLParams } from "../../vector/url_utils.ts";
 import { type QrLoginCredentials } from "../views/auth/LoginWithQR.tsx";
 import { configureFromCompletedOAuthLogin } from "../../Lifecycle";
+import { bootMark, reportBootTimings, watchFirstEvent } from "../../utils/bootTimings";
 
 const AUTH_SCREENS = ["register", "mobile_register", "login", "forgot_password", "start_sso", "start_cas", "welcome"];
 
@@ -238,6 +239,8 @@ export default class MatrixChat extends React.PureComponent<IProps, IState> {
     private loadSessionAbortController = new AbortController();
 
     private sessionLoadStarted = false;
+    /** Whether the startup timing has seen the first room view; see {@link componentDidUpdate}. */
+    private bootRoomViewSeen = false;
 
     public constructor(props: IProps) {
         super(props);
@@ -504,6 +507,22 @@ export default class MatrixChat extends React.PureComponent<IProps, IState> {
             const durationMs = this.stopPageChangeTimer();
             if (durationMs != null) {
                 PosthogTrackers.instance.trackPageChange(this.state.view, this.state.page_type, durationMs);
+            }
+        }
+        if (this.state.view === Views.LOGGED_IN && this.state.ready && this.state.page_type) {
+            // Startup timing (utils/bootTimings.ts). Children mount before their parent updates, so by now
+            // the logged-in view - and the room view inside it, if that is the page - is in the DOM.
+            // Only the first pass does anything.
+            bootMark("logged_in_view");
+            if (this.state.page_type === PageType.RoomView) {
+                if (!this.bootRoomViewSeen) {
+                    this.bootRoomViewSeen = true;
+                    bootMark("room_view_mounted");
+                    watchFirstEvent();
+                }
+            } else {
+                // The app opened on something other than a room: there is no first message to wait for.
+                reportBootTimings();
             }
         }
         if (this.focusNext === "composer") {
@@ -1633,6 +1652,8 @@ export default class MatrixChat extends React.PureComponent<IProps, IState> {
             if (state !== SyncState.Prepared) {
                 return;
             }
+
+            bootMark(data?.fromCache ? "saved_sync_replayed" : "live_sync_prepared");
 
             // Re-apply theme now that account data (including custom_themes) is loaded, otherwise we might end up with the wrong theme applied if the user has custom themes enabled
             void setTheme();
