@@ -87,6 +87,22 @@ vi.spyOn(MediaDeviceHandler, "getDevices").mockResolvedValue({
     [MediaDeviceKindEnum.AudioOutput]: [],
 });
 
+// The timeline itself is the real one; only what the room hands it is noted, for the tests about that.
+const { timelineProps } = vi.hoisted(() => ({
+    timelineProps: { current: undefined as Record<string, unknown> | undefined },
+}));
+vi.mock("./NewTimelinePanel", async (importOriginal) => {
+    const actual = await importOriginal<typeof import("./NewTimelinePanel")>();
+    const { createElement } = await import("react");
+    return {
+        ...actual,
+        NewTimelinePanel: (props: Parameters<typeof actual.NewTimelinePanel>[0]) => {
+            timelineProps.current = props;
+            return createElement(actual.NewTimelinePanel, props);
+        },
+    };
+});
+
 /*
  * The timeline's spinner shows once placing the rows has taken a while, and here rows are never placed
  * (nothing is laid out), so whether a snapshot holds it is how long the test happened to run. It is not
@@ -571,19 +587,25 @@ describe("RoomView", () => {
         await waitFor(() => expect(roomViewInstance.state.showUrlPreview).toBe(false));
     });
 
-    it("should not display the timeline when the room encryption is loading", async () => {
+    it("shows the timeline while the room's encryption is still being looked up, with URL previews held back", async () => {
         vi.spyOn(room, "getMyMembership").mockReturnValue(KnownMembership.Join);
         vi.spyOn(cli, "getCrypto").mockReturnValue(crypto);
         const deferred = Promise.withResolvers<boolean>();
         vi.spyOn(cli.getCrypto()!, "isEncryptionEnabledInRoom").mockImplementation(() => deferred.promise);
 
-        const { asFragment, container } = await mountRoomView();
-        expect(container.querySelector(".mx_RoomView_messagePanel")).toBeNull();
-        expect(withoutSpinner(asFragment())).toMatchSnapshot();
+        const ref = createRef<RoomView>();
+        const { container } = await mountRoomView(ref);
+        const panel = container.querySelector(".mx_RoomView_messagePanel");
+        expect(panel).not.toBeNull();
+        // Whatever the setting says: until the room is known not to be encrypted, no URL in it may
+        // be sent to the server for a preview.
+        act(() => ref.current!.setState({ showTimelineUrlPreview: true }));
+        expect(timelineProps.current?.showUrlPreview).toBe(false);
 
-        deferred.resolve(true);
-        await waitFor(() => expect(container.querySelector(".mx_RoomView_messagePanel")).not.toBeNull());
-        expect(withoutSpinner(asFragment())).toMatchSnapshot();
+        deferred.resolve(false);
+        await waitFor(() => expect(timelineProps.current?.showUrlPreview).toBe(true));
+        // The answer arriving updates the timeline that is there rather than building another.
+        expect(container.querySelector(".mx_RoomView_messagePanel")).toBe(panel);
     });
 
     it("updates live timeline when a timeline reset happens", async () => {
