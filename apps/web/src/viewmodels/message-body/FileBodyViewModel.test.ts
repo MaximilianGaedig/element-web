@@ -203,6 +203,44 @@ describe("FileBodyViewModel", () => {
         expect(click).toHaveBeenCalled();
     });
 
+    it("revokes the object URL of every download once the browser has had time to start it", async () => {
+        // An object URL keeps its blob - here the whole file - alive until it is revoked or the page is
+        // closed, so each download that is never revoked is that file held for the rest of the session.
+        vi.useFakeTimers();
+        try {
+            const outstanding = new Set<string>();
+            let made = 0;
+            vi.spyOn(URL, "createObjectURL").mockImplementation(() => {
+                const url = `blob:test/${made++}`;
+                outstanding.add(url);
+                return url;
+            });
+            vi.spyOn(URL, "revokeObjectURL").mockImplementation((url) => void outstanding.delete(url));
+            vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
+            const vm = createVm({
+                mediaEventHelper: mkMediaEventHelper({
+                    encrypted: false,
+                    blob: new Blob(["direct-download"], { type: "text/plain" }),
+                    fileName: "direct.txt",
+                }),
+                mxEvent: mkMediaEvent({ msgtype: "m.file", url: "https://server/direct.txt" }),
+            });
+            const event = { preventDefault: vi.fn(), stopPropagation: vi.fn() } as any;
+
+            for (let i = 0; i < 50; i++) vm.onDownloadLinkClick(event);
+            await vi.advanceTimersByTimeAsync(0);
+            // Still there for the browser to read from...
+            expect(outstanding.size).toBe(50);
+
+            await vi.advanceTimersByTimeAsync(60_000);
+            // ...and gone afterwards.
+            expect(outstanding.size).toBe(0);
+            expect(vi.getTimerCount()).toBe(0);
+        } finally {
+            vi.useRealTimers();
+        }
+    });
+
     it("shows decrypt error dialog when decrypt fails", async () => {
         const vm = createVm({
             mediaEventHelper: {
