@@ -174,7 +174,10 @@ describe("<NewTimelinePanel /> opening a room", () => {
         requests = [];
         nextId = 1;
         client = createTestClient();
-        room = new Room(ROOM_ID, client, USER_ID, { pendingEventOrdering: PendingEventOrdering.Detached });
+        room = new Room(ROOM_ID, client, USER_ID, {
+            pendingEventOrdering: PendingEventOrdering.Detached,
+            timelineSupport: true,
+        });
         vi.spyOn(client, "getRoom").mockReturnValue(room);
     });
 
@@ -238,6 +241,32 @@ describe("<NewTimelinePanel /> opening a room", () => {
 
         await settle();
         expect(requests.map((r) => r.what)).toEqual(["store: stored timeline"]);
+    });
+
+    it("has the room's stored state in before its stored history is read", async () => {
+        olderHistory({ stored: 25 });
+        inMemory(messages(3));
+        // The members a trimmed replay left in the store: history added to the timeline before them
+        // would take its senders' names from a room that does not know them yet.
+        let stateIsIn = false;
+        Object.assign(client, {
+            loadStoredRoomState: vi.fn(async () => {
+                await sleep(STORE_MS);
+                stateIsIn = true;
+            }),
+        });
+        const readHistory = vi.mocked(client.paginateEventTimeline).getMockImplementation()!;
+        const stateWasIn: boolean[] = [];
+        vi.mocked(client.paginateEventTimeline).mockImplementation((...args) => {
+            stateWasIn.push(stateIsIn);
+            return readHistory(...args);
+        });
+
+        const container = mount();
+        await timeToFirstMessage(container);
+
+        expect(stateWasIn).toEqual([true]);
+        expect(rows(container)).toBe(28);
     });
 
     it("waits for the server only when there is nothing at all to draw", async () => {

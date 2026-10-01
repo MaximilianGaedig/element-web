@@ -649,6 +649,8 @@ export class RoomTimelineViewModel
         const sdkLoadTarget = target.kind !== "live" ? target.eventId : undefined;
 
         try {
+            await this.bringInStoredRoom();
+            if (this.isDisposed) return;
             await this.timelineWindow.load(sdkLoadTarget, INITIAL_SIZE);
             if (this.isDisposed) return;
             this.fillAfterPlacing = false;
@@ -746,6 +748,20 @@ export class RoomTimelineViewModel
             this.forwardSpinnerVisible = false;
             this.republish(`load(${target.kind})-error`);
         }
+    }
+
+    /**
+     * After a restart a room is in memory only as far as the room list needs it: its last few
+     * events and a handful of state. The rest of what was synced is in the browser's store, and
+     * this brings in the parts of it the timeline is about to use.
+     *
+     * The state comes first, and is waited for: an event takes its sender's name and avatar from
+     * the room's state at the moment it is added to the timeline, so history read back before the
+     * members were would be drawn under bare user IDs for good.
+     */
+    private async bringInStoredRoom(): Promise<void> {
+        const { client, room } = this.opts;
+        await client.loadStoredRoomState?.(room.roomId);
     }
 
     /**
