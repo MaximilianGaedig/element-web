@@ -771,6 +771,26 @@ Please see LICENSE files in the repository root for full details.
     padding-bottom: var(--mx-room-list-toast-bottom, var(--cpd-space-8x));
 }
 
+/*
+ * In the right panel the card is one thing among others in a panel that scrolls already.
+ *
+ * There it is as tall as what it holds, so its own scroller has nothing to scroll - and still kept every
+ * wheel turn and swipe that started over it, because a scroll container contains its overscroll whether
+ * or not it overflows. The panel could then only be scrolled from the strip beside the card. The card
+ * gives the scrolling back to the panel.
+ */
+.mx_UserInfo_contact {
+    .mx_ContactCard {
+        overflow: visible;
+    }
+
+    .mx_ContactCard_scroll {
+        overflow-y: visible;
+        overscroll-behavior: auto;
+        padding-bottom: 0;
+    }
+}
+
 .mx_ContactCard_edit {
     margin-inline-start: auto;
 }
