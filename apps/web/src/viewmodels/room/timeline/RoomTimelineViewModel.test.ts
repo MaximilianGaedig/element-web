@@ -184,6 +184,99 @@ describe("RoomTimelineViewModel", () => {
             expect(snapshot.highlightedEventId).toBe("$b");
             expect(snapshot.pendingAnchor).toEqual({ targetKey: "$b", align: "center" });
         });
+
+        describe("with more history on the server", () => {
+            /** Answers the request for older history: there turned out to be none. */
+            let answer: () => void;
+
+            beforeEach(() => {
+                // A request for older history that stays out until the test answers it.
+                const live = room.getLiveTimeline();
+                live.setPaginationToken("t-older", Direction.Backward);
+                vi.mocked(client.paginateEventTimeline).mockImplementation(
+                    () =>
+                        new Promise<boolean>((resolve) => {
+                            answer = (): void => {
+                                live.setPaginationToken(null, Direction.Backward);
+                                resolve(false);
+                            };
+                        }),
+                );
+            });
+
+            it("shows the messages the room already holds without waiting for it", async () => {
+                seedTimeline([makeMessage("$a"), makeMessage("$b"), makeMessage("$c")]);
+
+                const vm = await createStartedViewModel();
+
+                expect(eventKeys(vm.getSnapshot().items)).toEqual(["$a", "$b", "$c"]);
+                // Not even asked for yet: rows arriving above would move the message being scrolled to.
+                expect(client.paginateEventTimeline).not.toHaveBeenCalled();
+            });
+
+            it("fetches it once the view has placed what it was given", async () => {
+                seedTimeline([makeMessage("$a"), makeMessage("$b"), makeMessage("$c")]);
+                const vm = await createStartedViewModel();
+
+                vm.onAnchorReached();
+
+                await vi.waitFor(() => expect(client.paginateEventTimeline).toHaveBeenCalledTimes(1));
+                expect(kinds(vm.getSnapshot().items)[0]).toBe("loading");
+                answer();
+                await vi.waitFor(() => expect(kinds(vm.getSnapshot().items)).not.toContain("loading"));
+            });
+
+            /** A request for older history that is answered straight away with this many messages. */
+            const answerWith = (count: number): void => {
+                const live = room.getLiveTimeline();
+                let batch = 0;
+                vi.mocked(client.paginateEventTimeline).mockImplementation(async () => {
+                    batch++;
+                    const older = Array.from({ length: count }, (_, i) => makeMessage(`$older${batch}_${i}`));
+                    room.getUnfilteredTimelineSet().addEventsToTimeline(older, true, false, live, "t-even-older");
+                    return true;
+                });
+            };
+
+            it("fetches once for a list the view also reports the top of", async () => {
+                answerWith(60);
+                seedTimeline([makeMessage("$a"), makeMessage("$b"), makeMessage("$c")]);
+                const vm = await createStartedViewModel();
+
+                vm.onAnchorReached();
+                // Three rows do not fill the window, so the view reports its first row on screen.
+                vm.onStartReached();
+
+                await vi.waitFor(() => expect(eventKeys(vm.getSnapshot().items)).toHaveLength(63));
+                await vi.waitFor(() => expect(kinds(vm.getSnapshot().items)).not.toContain("loading"));
+                expect(client.paginateEventTimeline).toHaveBeenCalledTimes(1);
+            });
+
+            it("keeps fetching for the view's report while the list is still short", async () => {
+                answerWith(1);
+                seedTimeline([makeMessage("$a"), makeMessage("$b"), makeMessage("$c")]);
+                const vm = await createStartedViewModel();
+
+                vm.onAnchorReached();
+                vm.onStartReached();
+
+                await vi.waitFor(() => expect(client.paginateEventTimeline).toHaveBeenCalledTimes(2));
+            });
+
+            it("still gathers both sides of a permalink before showing it", async () => {
+                seedTimeline([makeMessage("$a"), makeMessage("$b"), makeMessage("$c")]);
+                const vm = new RoomTimelineViewModel({ client, room, initialEventId: "$b" });
+                vms.push(vm);
+
+                vm.start();
+                await vi.waitFor(() => expect(client.paginateEventTimeline).toHaveBeenCalledTimes(1));
+
+                // The target would shift as each side landed, so nothing is shown until they have.
+                expect(vm.getSnapshot().items).toEqual([]);
+                answer();
+                await vi.waitFor(() => expect(eventKeys(vm.getSnapshot().items)).toEqual(["$a", "$b", "$c"]));
+            });
+        });
     });
 
     describe("item projection", () => {
