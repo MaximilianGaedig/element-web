@@ -243,6 +243,35 @@ describe("<NewTimelinePanel /> opening a room", () => {
         expect(requests.map((r) => r.what)).toEqual(["store: stored timeline"]);
     });
 
+    it("returns to where the reader left off from the store, without asking the server where that is", async () => {
+        olderHistory({ stored: 47, onServer: 60 });
+        inMemory(messages(3));
+        // Left scrolled up, at a message the replay did not keep in memory but the store has.
+        localStorage.setItem(`timeline_scroll_${ROOM_ID}`, "$m100");
+        vi.mocked(client.getEventTimeline).mockImplementation(async (timelineSet, eventId) => {
+            const record: RequestRecord = {
+                what: "GET /rooms/{roomId}/context/{eventId}",
+                startedAt: Date.now() - openedAt,
+            };
+            requests.push(record);
+            await sleep(NETWORK_MS);
+            record.answeredAt = Date.now() - openedAt;
+            const around = timelineSet.addTimeline();
+            const event = mkMessage({ room: ROOM_ID, user: USER_ID, msg: "there", event: true, id: eventId });
+            timelineSet.addEventsToTimeline([event], false, false, around, null);
+            return around;
+        });
+
+        const container = mount();
+        const elapsed = await timeToFirstMessage(container);
+
+        expect({ elapsed, answered: answered(), rows: rows(container) }).toEqual({
+            elapsed: STORE_MS,
+            answered: ["store: stored timeline"],
+            rows: 50,
+        });
+    });
+
     it("has the room's stored state in before its stored history is read", async () => {
         olderHistory({ stored: 25 });
         inMemory(messages(3));

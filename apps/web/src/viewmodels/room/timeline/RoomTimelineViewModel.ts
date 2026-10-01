@@ -649,7 +649,7 @@ export class RoomTimelineViewModel
         const sdkLoadTarget = target.kind !== "live" ? target.eventId : undefined;
 
         try {
-            await this.bringInStoredRoom();
+            await this.bringInStoredRoom(sdkLoadTarget);
             if (this.isDisposed) return;
             await this.timelineWindow.load(sdkLoadTarget, INITIAL_SIZE);
             if (this.isDisposed) return;
@@ -758,10 +758,25 @@ export class RoomTimelineViewModel
      * The state comes first, and is waited for: an event takes its sender's name and avatar from
      * the room's state at the moment it is added to the timeline, so history read back before the
      * members were would be drawn under bare user IDs for good.
+     *
+     * Then, when the timeline is to open on a particular message (`eventId`) that is not in
+     * memory, the stored history is read back before the server is asked for that message's
+     * surroundings — it is most often there, a little above where the replay cut the room off, and
+     * finding it locally saves the round trip the first paint would otherwise wait for.
      */
-    private async bringInStoredRoom(): Promise<void> {
+    private async bringInStoredRoom(eventId: string | undefined): Promise<void> {
         const { client, room } = this.opts;
         await client.loadStoredRoomState?.(room.roomId);
+        if (!eventId || this.isDisposed) return;
+
+        const timelineSet = room.getUnfilteredTimelineSet();
+        const live = timelineSet.getLiveTimeline();
+        if (
+            !timelineSet.getTimelineForEvent(eventId) &&
+            live.getPaginationToken(Direction.Backward)?.startsWith(LOCAL_PAGINATION_PREFIX)
+        ) {
+            await client.paginateEventTimeline(live, { backwards: true, limit: PAGINATE_SIZE });
+        }
     }
 
     /**
