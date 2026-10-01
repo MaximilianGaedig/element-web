@@ -22,6 +22,7 @@ Please see LICENSE files in the repository root for full details.
 import { logger } from "matrix-js-sdk/src/logger";
 
 import type { createWorker as CreateWorker, Page } from "tesseract.js";
+import { LruCache } from "../LruCache";
 
 /**
  * Whether to say out loud what every reading does (`?ocr` in the address).
@@ -223,10 +224,21 @@ function wordsOf(page: Page, { width, height }: ImageSize): OcrWord[] {
  * What has already been read, by event.
  *
  * Reading a picture costs real work, and the same pictures come back every time a chat is opened; a
- * result is the same every time, so it is kept for the session. Promises are cached rather than
- * results, so two things asking at once wait for one read.
+ * result is the same every time, so it is kept. Promises are cached rather than results, so two things
+ * asking at once wait for one read.
+ *
+ * Kept for the pictures seen lately rather than for all of them: a screenshot full of text is a few
+ * hundred words, each with its place, which is tens of kilobytes - and a day of reading chats is
+ * thousands of pictures. 300 is more pictures than the chats kept open hold between them, so going
+ * back to one reads nothing twice; a picture from further back than that is simply read again.
  */
-const cache = new Map<string, Promise<OcrResult | undefined>>();
+export const RESULTS_KEPT = 300;
+const cache = new LruCache<string, Promise<OcrResult | undefined>>(RESULTS_KEPT);
+
+/** How many pictures' readings are held, for the memory report. */
+export function ocrResultsKept(): number {
+    return cache.size;
+}
 
 /** Reads a picture, or returns what an earlier read of the same event already found. */
 export function readImageForEvent(

@@ -90,4 +90,24 @@ describe("reading the text in pictures", () => {
             expect(createWorker).toHaveBeenCalledTimes(2);
         });
     });
+
+    describe("what was read", () => {
+        it("is read once per event", async () => {
+            const first = await ocr.readImageForEvent("$one", async () => picture(), SIZE);
+            const again = await ocr.readImageForEvent("$one", async () => picture(), SIZE);
+
+            expect(again).toBe(first);
+            expect(recognize).toHaveBeenCalledTimes(1);
+        });
+
+        it("is kept for the pictures seen lately, not for every picture of the session", async () => {
+            const seen = ocr.RESULTS_KEPT * 4;
+            for (let i = 0; i < seen; i++) await ocr.readImageForEvent(`$event${i}`, async () => picture(), SIZE);
+
+            expect(ocr.ocrResultsKept()).toBe(ocr.RESULTS_KEPT);
+            // The latest are the ones still held.
+            await ocr.readImageForEvent(`$event${seen - 1}`, async () => picture(), SIZE);
+            expect(recognize).toHaveBeenCalledTimes(seen);
+        });
+    });
 });
