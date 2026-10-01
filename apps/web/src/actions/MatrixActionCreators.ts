@@ -305,6 +305,20 @@ function createEventDecryptedAction(matrixClient: MatrixClient, event: MatrixEve
     return { action: "MatrixActions.Event.decrypted", event };
 }
 
+/**
+ * Whether the client is still taking in its first sync - at startup, the replay of the saved one - and
+ * has reached no sync state yet.
+ *
+ * Until it has, no store holds the client (ReadyWatchingStore hands it over on PREPARED, and builds from
+ * the client's rooms then), so an action about a room's contents is delivered to every listener and acted
+ * on by none. There are thousands of them in a replay - one per timeline event and per state event - and
+ * each is a dispatch of its own, queued ahead of the PREPARED action the room list waits for and of the
+ * action that opens the first room: the first screen waited for all of them to be handed round.
+ */
+function isBeforeFirstSync(matrixClient: MatrixClient): boolean {
+    return typeof matrixClient.getSyncState === "function" && matrixClient.getSyncState() === null;
+}
+
 type Listener = () => void;
 type ActionCreator = (matrixClient: MatrixClient, ...args: any) => ActionPayload;
 
@@ -319,13 +333,17 @@ let matrixClientListenersStop: Listener[] = [];
  * @param {function} actionCreator a function that should return an action to dispatch
  *                                 when given the MatrixClient as an argument as well as
  *                                 arguments emitted in the MatrixClient event.
+ * @param {boolean} aboutRoomContents whether the action reports something inside a room, which nothing
+ *                                 listens for until the client is ready: see {@link isBeforeFirstSync}.
  */
 function addMatrixClientListener(
     matrixClient: MatrixClient,
     eventName: Parameters<MatrixClient["emit"]>[0],
     actionCreator: ActionCreator,
+    aboutRoomContents = false,
 ): void {
     const listener: Listener = (...args) => {
+        if (aboutRoomContents && isBeforeFirstSync(matrixClient)) return;
         const payload = actionCreator(matrixClient, ...args);
         if (payload) {
             // Consumers shouldn't have to worry about calling js-sdk methods mid-dispatch, so make this dispatch async
@@ -349,16 +367,19 @@ export default {
      * @param {MatrixClient} matrixClient the MatrixClient to listen to events from
      */
     start(matrixClient: MatrixClient) {
+        // Always dispatched: the sync state is what makes the stores ready, and MatrixChat reads the
+        // identity server out of the account data whenever it arrives.
         addMatrixClientListener(matrixClient, ClientEvent.Sync, createSyncAction);
         addMatrixClientListener(matrixClient, ClientEvent.AccountData, createAccountDataAction);
-        addMatrixClientListener(matrixClient, RoomEvent.AccountData, createRoomAccountDataAction);
-        addMatrixClientListener(matrixClient, ClientEvent.Room, createRoomAction);
-        addMatrixClientListener(matrixClient, RoomEvent.Tags, createRoomTagsAction);
-        addMatrixClientListener(matrixClient, RoomEvent.Receipt, createRoomReceiptAction);
-        addMatrixClientListener(matrixClient, RoomEvent.Timeline, createRoomTimelineAction);
-        addMatrixClientListener(matrixClient, RoomEvent.MyMembership, createSelfMembershipAction);
-        addMatrixClientListener(matrixClient, MatrixEventEvent.Decrypted, createEventDecryptedAction);
-        addMatrixClientListener(matrixClient, RoomStateEvent.Events, createRoomStateEventsAction);
+        // About a room's contents: not dispatched while the first sync is being taken in.
+        addMatrixClientListener(matrixClient, RoomEvent.AccountData, createRoomAccountDataAction, true);
+        addMatrixClientListener(matrixClient, ClientEvent.Room, createRoomAction, true);
+        addMatrixClientListener(matrixClient, RoomEvent.Tags, createRoomTagsAction, true);
+        addMatrixClientListener(matrixClient, RoomEvent.Receipt, createRoomReceiptAction, true);
+        addMatrixClientListener(matrixClient, RoomEvent.Timeline, createRoomTimelineAction, true);
+        addMatrixClientListener(matrixClient, RoomEvent.MyMembership, createSelfMembershipAction, true);
+        addMatrixClientListener(matrixClient, MatrixEventEvent.Decrypted, createEventDecryptedAction, true);
+        addMatrixClientListener(matrixClient, RoomStateEvent.Events, createRoomStateEventsAction, true);
     },
 
     /**
