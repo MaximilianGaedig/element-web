@@ -30,6 +30,7 @@ import IdentityAuthClient from "../IdentityAuthClient";
 import { _t } from "../languageHandler";
 import { formatList } from "./FormattingUtils";
 import { persistTokens } from "./tokens/tokens.ts";
+import { createSendScheduler } from "./room/sendRetry.ts";
 
 const localStorage = window.localStorage;
 
@@ -200,6 +201,8 @@ export function createMatrixClient(opts: ICreateClientOpts): MatrixClient {
     }
 
     return createClient({
+        // Sends that got no answer are tried again rather than left unsent (utils/room/sendRetry.ts).
+        scheduler: createSendScheduler(),
         ...storeOpts,
         ...opts,
     });
