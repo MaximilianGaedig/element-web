@@ -14,6 +14,7 @@ Please see LICENSE files in the repository root for full details.
 import { type MatrixClient, type Room } from "matrix-js-sdk/src/matrix";
 
 import { getBridgeBots, getBridgeInfo } from "./bridge/bridgeInfo";
+import { joinedRooms } from "./bridge/joinedRooms";
 
 export const BRIDGE_LOGIN_EVENT_TYPE = "im.mxg.bridge_login";
 
@@ -58,7 +59,7 @@ export function loginHealth(state: string): LoginHealth {
 
 export function bridgeLoginsIn(client: MatrixClient): BridgeLogin[] {
     const logins: BridgeLogin[] = [];
-    for (const room of client.getRooms()) {
+    for (const room of joinedRooms(client)) {
         const events = room.currentState.getStateEvents(BRIDGE_LOGIN_EVENT_TYPE);
         for (const event of events ?? []) {
             const content = event.getContent();
@@ -105,7 +106,7 @@ export function bridgeHealthOf(client: MatrixClient, room: Room): LoginHealth | 
 export function bridgesWithoutLoginState(client: MatrixClient, known: BridgeLogin[]): BridgeLogin[] {
     const reporting = new Set(known.map((login) => login.botId));
     const networks = new Map<string, { network: string; chats: number }>();
-    for (const room of client.getRooms()) {
+    for (const room of joinedRooms(client)) {
         const info = getBridgeInfo(room);
         if (!info) continue;
         for (const bot of getBridgeBots(room)) {
@@ -119,15 +120,13 @@ export function bridgesWithoutLoginState(client: MatrixClient, known: BridgeLogi
     const out: BridgeLogin[] = [];
     for (const [bot, { network }] of networks) {
         // Your chat with the bot: a room with just the two of you that is not itself a bridged chat.
-        const management = client
-            .getRooms()
-            .find(
-                (room) =>
-                    !getBridgeInfo(room) &&
-                    room.getInvitedAndJoinedMemberCount() === 2 &&
-                    room.getMember(bot)?.membership === "join" &&
-                    room.getMember(me)?.membership === "join",
-            );
+        const management = joinedRooms(client).find(
+            (room) =>
+                !getBridgeInfo(room) &&
+                room.getInvitedAndJoinedMemberCount() === 2 &&
+                room.getMember(bot)?.membership === "join" &&
+                room.getMember(me)?.membership === "join",
+        );
         if (!management) continue;
         out.push({
             room: management,

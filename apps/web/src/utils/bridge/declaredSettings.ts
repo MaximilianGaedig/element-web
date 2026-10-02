@@ -19,6 +19,8 @@ Please see LICENSE files in the repository root for full details.
 
 import { type MatrixClient } from "matrix-js-sdk/src/matrix";
 
+import { joinedRooms } from "./joinedRooms";
+
 export const BRIDGE_SETTINGS_EVENT_TYPE = "im.mxg.settings";
 export const BRIDGE_SETTINGS_SET_MSGTYPE = "im.mxg.settings.set";
 
@@ -76,7 +78,7 @@ export function isRenderable(control: DeclaredControl): boolean {
  */
 export function declaredSettings(client: MatrixClient): DeclaredSettings[] {
     const found: DeclaredSettings[] = [];
-    for (const room of client.getRooms()) {
+    for (const room of joinedRooms(client)) {
         for (const event of room.currentState.getStateEvents(BRIDGE_SETTINGS_EVENT_TYPE) ?? []) {
             const content = event.getContent();
             const settings = Array.isArray(content.settings) ? (content.settings as DeclaredControl[]) : [];

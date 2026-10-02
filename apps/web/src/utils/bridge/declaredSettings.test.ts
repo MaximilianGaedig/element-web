@@ -26,9 +26,10 @@ const control = (over: Partial<DeclaredControl> = {}): DeclaredControl => ({
 });
 
 /** A client holding one room whose state carries a settings declaration. */
-function clientWith(content: object, stateKey = "acct"): MatrixClient {
+function clientWith(content: object, stateKey = "acct", membership = "join"): MatrixClient {
     const room = {
         roomId: "!mgmt:x",
+        getMyMembership: () => membership,
         currentState: {
             getStateEvents: (type: string) =>
                 type === BRIDGE_SETTINGS_EVENT_TYPE ? [{ getContent: () => content, getStateKey: () => stateKey }] : [],
@@ -64,6 +65,12 @@ describe("isRenderable", () => {
 });
 
 describe("declaredSettings", () => {
+    it("reads nothing out of a room we have left: its bridge is not ours to set up any more", () => {
+        const client = clientWith({ settings: [control()] }, "acct", "leave");
+
+        expect(declaredSettings(client)).toEqual([]);
+    });
+
     it("reads a declaration out of room state, with where to send a request", () => {
         const client = clientWith({
             source: { id: "telegram", name: "Telegram" },
