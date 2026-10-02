@@ -1609,6 +1609,10 @@ export default class MatrixChat extends React.PureComponent<IProps, IState> {
         // rather than waiting for an event that will never come.
         // This is mostly an issue under test.
         if (cli.getSyncState() === SyncState.Prepared) {
+            // It also means the listener below was attached too late to hear of it - this runs after a
+            // render, and a saved sync is replayed within milliseconds of the client starting - so the
+            // step it would have timed is recorded here, or the boot's timings are missing its middle.
+            bootMark(cli.getSyncStateData()?.fromCache ? "saved_sync_replayed" : "live_sync_prepared");
             this.firstSyncComplete = true;
             this.firstSyncPromise.resolve();
         }
