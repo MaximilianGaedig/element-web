@@ -182,6 +182,8 @@ describe("AppTile", () => {
 
         await expect(renderResult.findByText("Example 1")).resolves.toBeInTheDocument();
         expect(ActiveWidgetStore.instance.isLive("1", "r1")).toBe(true);
+        // The title is there before the widget is: wait for it to finish loading
+        await waitFor(() => expect(renderResult.queryByRole("progressbar")).not.toBeInTheDocument());
 
         const { asFragment } = renderResult;
         expect(asFragment()).toMatchSnapshot();
