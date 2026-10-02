@@ -56,6 +56,15 @@ vi.mock("../../../settings/SettingsStore", () => ({
     },
 }));
 
+// One tab that can be made to fail, to see what that does to the rest of the settings.
+const { keyboardTab } = vi.hoisted(() => ({ keyboardTab: { fails: false } }));
+vi.mock("../settings/tabs/user/KeyboardUserSettingsTab", () => ({
+    default: () => {
+        if (keyboardTab.fails) throw new Error("keyboard tab broke");
+        return <div>Keyboard shortcuts</div>;
+    },
+}));
+
 describe("<UserSettingsDialog />", () => {
     const userId = "@alice:server.org";
     const mockSettingsStore = vi.mocked(SettingsStore);
@@ -92,6 +101,26 @@ describe("<UserSettingsDialog />", () => {
 
     const getActiveTabLabel = (container: Element) =>
         container.querySelector(".mx_TabbedView_tabLabel_active")?.textContent;
+
+    it("keeps the settings open, and the other tabs reachable, when one tab fails", async () => {
+        keyboardTab.fails = true;
+        vi.spyOn(console, "error").mockImplementation(() => {});
+        try {
+            const { container } = render(getComponent({ initialTabId: UserTab.Keyboard }));
+
+            // The failed tab says so in its place; the dialog and its list of tabs are still there
+            expect(screen.getByText("Something went wrong!")).toBeInTheDocument();
+            expect(getActiveTabLabel(container)).toEqual("Keyboard");
+            expect(defaultProps.onFinished).not.toHaveBeenCalled();
+
+            // ...and another tab opens as usual, not as the failure of the one before
+            screen.getByRole("tab", { name: "Account" }).click();
+            await waitFor(() => expect(getActiveTabLabel(container)).toEqual("Account"));
+            expect(screen.queryByText("Something went wrong!")).toBeNull();
+        } finally {
+            keyboardTab.fails = false;
+        }
+    });
 
     it("should render general settings tab when no initialTabId", () => {
         const { container } = render(getComponent());

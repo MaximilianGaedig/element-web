@@ -26,6 +26,7 @@ import HelpIcon from "@vector-im/compound-design-tokens/assets/web/icons/help";
 import { ToastContext, useActiveToast } from "@element-hq/web-shared-components";
 
 import TabbedView, { Tab, useActiveTabWithDefault } from "../../structures/TabbedView";
+import ErrorBoundary from "../elements/ErrorBoundary";
 import { _t, _td } from "../../../languageHandler";
 import AccountUserSettingsTab from "../settings/tabs/user/AccountUserSettingsTab";
 import SettingsStore from "../../../settings/SettingsStore";
@@ -275,7 +276,20 @@ export default function UserSettingsDialog(props: IProps): JSX.Element {
             ),
         );
 
-        return tabs as NonEmptyArray<Tab<UserTab>>;
+        // A tab that fails is replaced by the error, in its place: the rest of the settings stay open
+        // and reachable. Unguarded, it took the whole dialog with it. Keyed, as the tabs share a place
+        // on screen and a failed one would otherwise stay failed when another is opened.
+        return tabs.map(
+            (tab) =>
+                new Tab(
+                    tab.id,
+                    tab.label,
+                    tab.icon,
+                    <ErrorBoundary key={tab.id}>{tab.body}</ErrorBoundary>,
+                    tab.screenName,
+                    tab.labelClassName,
+                ),
+        ) as NonEmptyArray<Tab<UserTab>>;
     };
 
     const [activeTabId, _setActiveTabId] = useActiveTabWithDefault(getTabs(), UserTab.Account, props.initialTabId);
