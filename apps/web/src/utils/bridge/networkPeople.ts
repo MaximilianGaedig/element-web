@@ -32,6 +32,7 @@ import { type MatrixClient } from "matrix-js-sdk/src/matrix";
 import { logger } from "matrix-js-sdk/src/logger";
 
 import { DirectoryMember } from "../direct-messages";
+import { joinedRooms } from "./joinedRooms";
 
 /** Where a bridge says its provisioning API is, and what this login of it can do. */
 const BRIDGE_LOGIN_EVENT_TYPE = "im.mxg.bridge_login";
@@ -85,7 +86,7 @@ export const contextOf = (member: object): string | undefined =>
  */
 function searchableLogins(client: MatrixClient): Searchable[] {
     const found: Searchable[] = [];
-    for (const room of client.getRooms()) {
+    for (const room of joinedRooms(client)) {
         for (const event of room.currentState.getStateEvents(BRIDGE_LOGIN_EVENT_TYPE) ?? []) {
             const content = event.getContent();
             const url = content.provisioning_url;

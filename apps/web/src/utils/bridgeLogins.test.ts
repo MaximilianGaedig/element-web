@@ -8,11 +8,15 @@ Please see LICENSE files in the repository root for full details.
 import { describe, expect, it } from "vitest";
 import { type MatrixClient, type Room } from "matrix-js-sdk/src/matrix";
 
-import { BRIDGE_LOGIN_EVENT_TYPE, bridgeHealthOf, loginHealth } from "./bridgeLogins";
+import { BRIDGE_LOGIN_EVENT_TYPE, bridgeHealthOf, bridgeLoginsIn, loginHealth } from "./bridgeLogins";
 
 /** A room holding whatever state events the test needs, which is all these functions read. */
-function room(state: Record<string, { stateKey: string; sender?: string; content: object }[]>): Room {
+function room(
+    state: Record<string, { stateKey: string; sender?: string; content: object }[]>,
+    membership = "join",
+): Room {
     return {
+        getMyMembership: () => membership,
         currentState: {
             getStateEvents: (type: string) =>
                 (state[type] ?? []).map((ev) => ({
@@ -47,6 +51,25 @@ describe("loginHealth", () => {
         expect(loginHealth("BAD_CREDENTIALS")).toBe("disconnected");
         // Anything a future bridge invents is worth a look rather than silently fine.
         expect(loginHealth("SOMETHING_NEW")).toBe("problem");
+    });
+});
+
+// The client keeps a room it has left, with the state it last saw there.
+describe("a bridge whose chat we have left", () => {
+    const left = (): Room => room({ [BRIDGE_LOGIN_EVENT_TYPE]: [login("@oldbot:x", "CONNECTED")] }, "leave");
+    const current = (): Room => room({ [BRIDGE_LOGIN_EVENT_TYPE]: [login("@newbot:x", "CONNECTED")] });
+
+    it("is not listed, nor its chat offered to open", () => {
+        const logins = bridgeLoginsIn(clientWith(left(), current()));
+
+        expect(logins.map((found) => found.botId)).toEqual(["@newbot:x"]);
+    });
+
+    it("no longer speaks for the chats it used to carry", () => {
+        const chat = room(bridged("@oldbot:x"));
+        const gone = room({ [BRIDGE_LOGIN_EVENT_TYPE]: [login("@oldbot:x", "LOGGED_OUT")] }, "leave");
+
+        expect(bridgeHealthOf(clientWith(chat, gone), chat)).toBeUndefined();
     });
 });
 
