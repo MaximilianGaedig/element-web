@@ -190,6 +190,24 @@ export default class VoiceRecordComposerTile extends React.PureComponent<IProps,
         await this.disposeRecording();
     };
 
+    /** Throws the recording away, as the delete button does. */
+    public cancel = (): Promise<void> => this.onCancel();
+
+    /*
+     * Asked of the store rather than of this component's state: the caller asks straight after starting
+     * a recording, before the state that follows from it has been set.
+     */
+    /** Whether a recording is running. */
+    public get isRecording(): boolean {
+        return !!VoiceRecordingStore.instance.getActiveRecording(this.voiceRecordingId)?.isRecording;
+    }
+
+    /** How much has been recorded so far, in milliseconds. */
+    public get recordedMs(): number {
+        const recording = VoiceRecordingStore.instance.getActiveRecording(this.voiceRecordingId);
+        return Math.round((recording?.durationSeconds ?? 0) * 1000);
+    }
+
     public onRecordStartEndClick = async (): Promise<void> => {
         if (this.state.recorder) {
             await this.state.recorder.stop();

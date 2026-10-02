@@ -20,7 +20,12 @@ import {
 } from "matrix-js-sdk/src/matrix";
 import { Tooltip } from "@vector-im/compound-web";
 import { logger } from "matrix-js-sdk/src/logger";
-import { LockOffIcon, MicOnSolidIcon, SendSolidIcon } from "@vector-im/compound-design-tokens/assets/web/icons";
+import {
+    ChevronLeftIcon,
+    LockOffIcon,
+    MicOnSolidIcon,
+    SendSolidIcon,
+} from "@vector-im/compound-design-tokens/assets/web/icons";
 import { useCreateAutoDisposedViewModel } from "@element-hq/web-shared-components";
 
 import { _t } from "../../../languageHandler";
@@ -37,6 +42,7 @@ import { UserIdentityWarning } from "./UserIdentityWarning";
 import BridgeReplyKeyboard from "./BridgeReplyKeyboard";
 import { UPDATE_EVENT } from "../../../stores/AsyncStore";
 import VoiceRecordComposerTile from "./VoiceRecordComposerTile";
+import { TgVoiceHoldButton, type VoiceHold } from "../telegram/TgVoiceHoldButton";
 import { VoiceRecordingStore } from "../../../stores/VoiceRecordingStore";
 import { RecordingState } from "../../../audio/VoiceRecording";
 import type ResizeNotifier from "../../../utils/ResizeNotifier";
@@ -135,6 +141,8 @@ interface IState {
     composerContent: string;
     isComposerEmpty: boolean;
     haveRecording: boolean;
+    /** The microphone being held to record, or the recording locked on after sliding up. */
+    voiceHold?: VoiceHold | null;
     recordingTimeLeftSeconds?: number;
     me?: RoomMember;
     isMenuOpen: boolean;
@@ -591,6 +599,24 @@ export class MessageComposer extends React.Component<IProps, IState> {
         }
     }
 
+    /** Starts the recording the held microphone asked for, and says whether one is now running. */
+    private beginHeldRecording = async (): Promise<boolean> => {
+        const tile = this.voiceRecordingButton.current;
+        if (!tile || tile.isRecording) return !!tile?.isRecording;
+        await tile.onRecordStartEndClick();
+        return tile.isRecording;
+    };
+
+    private cancelRecording = (): void => {
+        void this.voiceRecordingButton.current?.cancel();
+    };
+
+    private recordedMs = (): number => this.voiceRecordingButton.current?.recordedMs ?? 0;
+
+    private onVoiceHoldChange = (voiceHold: VoiceHold | null): void => {
+        this.setState({ voiceHold });
+    };
+
     private onRecordStartEndClick = (): void => {
         void this.voiceRecordingButton.current?.onRecordStartEndClick();
 
@@ -750,6 +776,8 @@ export class MessageComposer extends React.Component<IProps, IState> {
             "mx_MessageComposer_e2eStatus": leftIcon,
             "mx_MessageComposer_wysiwyg": this.state.isWysiwygLabEnabled,
             "mx_MessageComposer_tg": telegram,
+            // The microphone is being held: the row shows what sliding does, not the recording's buttons.
+            "mx_MessageComposer_tgHolding": this.state.voiceHold === "holding",
         });
 
         const composerButtonsProps = {
@@ -805,7 +833,13 @@ export class MessageComposer extends React.Component<IProps, IState> {
                                     hasText={!this.state.isComposerEmpty}
                                 />
                             )}
-                            {telegram && showSendButton && (
+                            {this.state.voiceHold === "holding" && (
+                                <span className="mx_TgVoiceHold_slide" aria-hidden="true">
+                                    <ChevronLeftIcon />
+                                    {_t("tg_layout|voice_slide_to_cancel")}
+                                </span>
+                            )}
+                            {telegram && showSendButton && this.state.voiceHold !== "holding" && (
                                 <TelegramSendButton
                                     mode="send"
                                     onSend={this.sendMessage}
@@ -829,14 +863,18 @@ export class MessageComposer extends React.Component<IProps, IState> {
                     // while there is text (the send button then sits in the input).
                     <div
                         className={classNames("mx_TgComposerIsland mx_TgComposerIsland_mic", {
-                            mx_TgComposerIsland_hidden: showSendButton,
+                            // It stays under the finger for as long as it is held, recording or not.
+                            mx_TgComposerIsland_hidden: showSendButton && this.state.voiceHold !== "holding",
                         })}
-                        aria-hidden={showSendButton}
+                        aria-hidden={showSendButton && this.state.voiceHold !== "holding"}
                     >
-                        <TelegramSendButton
-                            mode="record"
+                        <TgVoiceHoldButton
+                            onBegin={this.beginHeldRecording}
                             onSend={this.sendMessage}
-                            onRecord={this.onRecordStartEndClick}
+                            onCancel={this.cancelRecording}
+                            onHoldChange={this.onVoiceHoldChange}
+                            recordedMs={this.recordedMs}
+                            onToggle={this.onRecordStartEndClick}
                         />
                     </div>
                 )}

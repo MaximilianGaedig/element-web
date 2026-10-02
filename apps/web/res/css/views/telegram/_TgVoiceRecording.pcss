@@ -178,3 +178,128 @@ html[data-floating-bars] .mx_MessageComposer_tg {
         opacity: 0.2;
     }
 }
+
+/*
+ * Holding the microphone to record, as on Telegram iOS (TgVoiceHoldButton; the rules and their numbers
+ * are in utils/telegram/voiceHold.ts). The button writes how far the finger has gone onto the composer
+ * as --tg-voice-dx / -dy (pixels, never positive), --tg-voice-lockness and --tg-voice-cancelness (0 to 1)
+ * and --tg-voice-scale; everything here is drawn from those, so nothing re-renders as the finger moves.
+ */
+html[data-floating-bars] .mx_MessageComposer.mx_MessageComposer_tg {
+    .mx_TgComposerIsland_mic {
+        position: relative;
+        /* The held button, the lock above it and the hint all reach outside the island. */
+        overflow: visible;
+    }
+
+    /*
+     * A touch that starts on the microphone is the microphone's: the browser must not scroll with it,
+     * select text under it, or put up its own menu for a finger that stays down.
+     */
+    .mx_TgSendButton_record {
+        touch-action: none;
+        user-select: none;
+        -webkit-touch-callout: none;
+    }
+
+    /* Held: the accent circle under the finger, which follows it and shrinks towards cancelling. */
+    .mx_TgSendButton_holding {
+        position: relative;
+        z-index: 4;
+        color: #fff;
+        background-color: var(--cpd-color-bg-accent-rest);
+        transform: translate(max(var(--tg-voice-dx, 0px), -150px), max(var(--tg-voice-dy, 0px), -110px))
+            scale(calc(1.75 * var(--tg-voice-scale, 1)));
+
+        &:hover {
+            background-color: var(--cpd-color-bg-accent-rest);
+        }
+    }
+
+    /*
+     * The lock the finger slides up to: a pill above the microphone that closes as the finger nears it
+     * (Telegram iOS: 72pt tall down to 40, the arrow gone by five eighths of the way).
+     */
+    .mx_TgVoiceHold_lock {
+        position: absolute;
+        bottom: calc(100% + 56px);
+        left: 50%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        box-sizing: border-box;
+        width: 36px;
+        height: calc(72px - 32px * var(--tg-voice-lockness, 0));
+        padding-block: 8px;
+        border-radius: 18px;
+        color: var(--cpd-color-icon-secondary);
+        background-color: var(--tg-glass-background);
+        backdrop-filter: var(--tg-glass-backdrop);
+        box-shadow: var(--tg-chat-input-box-shadow);
+        transform: translateX(-50%);
+        pointer-events: none;
+
+        svg {
+            flex: none;
+            width: 20px;
+            height: 20px;
+        }
+    }
+
+    .mx_TgVoiceHold_lockArrow {
+        opacity: calc(1 - 1.6 * var(--tg-voice-lockness, 0));
+    }
+
+    /* A tap records nothing: it is told what does. */
+    .mx_TgVoiceHold_hint {
+        position: absolute;
+        inset-inline-end: 0;
+        bottom: calc(100% + 10px);
+        padding: 6px 10px;
+        border-radius: 10px;
+        color: var(--cpd-color-text-on-solid-primary);
+        background-color: var(--cpd-color-bg-action-primary-rest);
+        font: var(--cpd-font-body-sm-regular);
+        white-space: nowrap;
+        pointer-events: none;
+        animation: mx_TgFade_in 150ms ease;
+    }
+
+    /* "Slide to cancel", which goes with the finger and fades as it gets there. */
+    .mx_TgVoiceHold_slide {
+        order: 2;
+        display: flex;
+        flex: 1 1 auto;
+        align-items: center;
+        justify-content: center;
+        gap: 2px;
+        min-width: 0;
+        color: var(--cpd-color-text-secondary);
+        font: var(--cpd-font-body-md-regular);
+        white-space: nowrap;
+        opacity: calc(1 - var(--tg-voice-cancelness, 0));
+        transform: translateX(var(--tg-voice-dx, 0px));
+
+        svg {
+            width: 20px;
+            height: 20px;
+        }
+    }
+
+    /*
+     * While it is held there is nothing to press: no stop, no delete, and the waveform makes room for
+     * the label. The dot and the timer stay, as on Telegram.
+     */
+    &.mx_MessageComposer_tgHolding {
+        .mx_VoiceRecordComposerTile_delete,
+        .mx_VoiceRecordComposerTile_stop,
+        .mx_Waveform {
+            display: none;
+        }
+
+        .mx_VoiceMessagePrimaryContainer {
+            flex: 0 0 auto;
+            background: none;
+        }
+    }
+}

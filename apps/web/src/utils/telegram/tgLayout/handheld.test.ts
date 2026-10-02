@@ -39,6 +39,14 @@ describe("swipe back (tweb handleHorizontalSwipe / handleTabSwipe / isSwipingBac
         boundary.remove();
     });
 
+    // Sliding the held microphone left cancels a recording; it must not also start a swipe of the chat.
+    it("leaves a touch that starts on a control that owns its touches to that control", () => {
+        const boundary = document.createElement("div");
+        boundary.innerHTML = `<div data-tg-holds-touch=""><span id="mic"></span></div><p id="text"></p>`;
+        expect(swipeBlockedAt(boundary.querySelector("#mic"), boundary)).toBe(true);
+        expect(swipeBlockedAt(boundary.querySelector("#text"), boundary)).toBe(false);
+    });
+
     it("cancels when the finger travels more than 20px vertically before turning horizontal", () => {
         let s = beginSwipeBack(5, 300);
         s = moveSwipeBack(s, 8, 315);
@@ -230,6 +238,21 @@ describe("long press (tweb attachContextMenuListener)", () => {
         const end = touchEvent("touchend", 50, 60, 0);
         child.dispatchEvent(end);
         expect(end.defaultPrevented).toBe(true);
+        stop();
+    });
+
+    // Holding the microphone records a voice message: it is not a long press asking for a menu.
+    it("leaves a touch on a control that owns its touches alone", () => {
+        const el = document.createElement("div");
+        el.innerHTML = `<div data-tg-holds-touch=""><span id="mic"></span></div>`;
+        const onMenu = vi.fn();
+        el.addEventListener("contextmenu", onMenu);
+        const stop = attachLongPressContextMenu(el);
+
+        el.querySelector("#mic")!.dispatchEvent(touchEvent("touchstart", 50, 60));
+        vi.advanceTimersByTime(1000);
+
+        expect(onMenu).not.toHaveBeenCalled();
         stop();
     });
 

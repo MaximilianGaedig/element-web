@@ -16,6 +16,7 @@ Please see LICENSE files in the repository root for full details.
 
 import { LONG_PRESS_MS } from "./constants";
 import { haptic } from "../../haptics";
+import { HOLDS_TOUCH } from "./swipeBack";
 
 let cancelOpening = false;
 let cancelOpeningTimeout: number | undefined;
@@ -64,6 +65,8 @@ export function attachLongPressContextMenu(element: HTMLElement): () => void {
         }
         const touch = e.touches[0];
         const target = e.target as Element | null;
+        // Holding the microphone records; it does not ask for a menu.
+        if (target?.closest(HOLDS_TOUCH)) return;
 
         element.addEventListener("touchmove", onCancel, options);
         element.addEventListener("touchend", onCancel, options);

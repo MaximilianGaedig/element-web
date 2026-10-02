@@ -32,10 +32,18 @@ export function beginSwipeBack(x: number, y: number): SwipeBackState {
 }
 
 /**
+ * What a control is marked with when a touch that starts on it is its own for as long as it lasts: the
+ * chat's gestures - swiping back, the long press that opens a menu - do not begin there.
+ */
+export const HOLDS_TOUCH = "[data-tg-holds-touch]";
+
+/**
  * Whether a touch starting at `target` must keep its horizontal drag: text fields (selecting text),
  * sliders, and anything scrolled sideways (sticker strips, tab bars, code blocks) up to `boundary`.
  */
 export function swipeBlockedAt(target: Element | null, boundary: Element): boolean {
+    // A control that owns the touches that start on it (the microphone, held and slid to record).
+    if (target?.closest(HOLDS_TOUCH)) return true;
     if (target?.closest("input, textarea, select, [contenteditable=''], [contenteditable='true']")) return true;
     for (let el = target; el && el !== boundary; el = el.parentElement) {
         if (el.scrollWidth > el.clientWidth + 1) {

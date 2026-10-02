@@ -3874,7 +3874,9 @@
         "storage_on_demand": "%(size)s fetched when opened",
         "storage_title": "%(size)s on the server",
         "tab_members": "Members",
-        "username": "Username"
+        "username": "Username",
+        "voice_hold_hint": "Hold to record a voice message",
+        "voice_slide_to_cancel": "Slide to cancel"
     },
     "theme": {
         "light_high_contrast": "Light high contrast",
