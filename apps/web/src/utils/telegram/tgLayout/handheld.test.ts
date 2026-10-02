@@ -111,6 +111,65 @@ describe("viewport height (tweb src/index.ts setVH)", () => {
     });
 });
 
+describe("the installed app fills the screen", () => {
+    const viewportOf = (): VisualViewport =>
+        ({ height: 768, addEventListener: vi.fn(), removeEventListener: vi.fn() }) as unknown as VisualViewport;
+    const windowWith = (standalone: boolean, touchPoints: number): Window =>
+        ({
+            visualViewport: viewportOf(),
+            document,
+            innerHeight: 768,
+            navigator: { maxTouchPoints: touchPoints },
+            matchMedia: (query: string) => ({ matches: standalone && query === "(display-mode: standalone)" }),
+        }) as unknown as Window;
+
+    afterEach(() => {
+        vi.restoreAllMocks();
+        document.documentElement.style.removeProperty("height");
+    });
+
+    // What is asked of the element is checked rather than read back: this DOM does not know the unit.
+    it("makes the page as tall as the screen, on the root element itself, and puts back what was there", () => {
+        const root = document.documentElement;
+        root.style.setProperty("height", "100%");
+        const set = vi.spyOn(root.style, "setProperty");
+
+        const stop = installViewportHeight(windowWith(true, 5));
+        expect(set).toHaveBeenCalledWith("height", "100lvh", "important");
+
+        stop();
+        expect(set).toHaveBeenLastCalledWith("height", "100%", "");
+        expect(root.style.getPropertyValue("height")).toBe("100%");
+    });
+
+    it("goes by iOS's own flag too, for a version that does not answer the media query", () => {
+        const set = vi.spyOn(document.documentElement.style, "setProperty");
+        const win = windowWith(false, 5);
+        (win.navigator as Navigator & { standalone?: boolean }).standalone = true;
+
+        const stop = installViewportHeight(win);
+
+        expect(set).toHaveBeenCalledWith("height", "100lvh", "important");
+        stop();
+    });
+
+    // There the large viewport is the screen with the browser's toolbars away, which the page does not have.
+    it("leaves a browser tab, and a desktop window, alone", () => {
+        const root = document.documentElement;
+        root.style.setProperty("height", "100%");
+
+        const set = vi.spyOn(root.style, "setProperty");
+
+        const stopTab = installViewportHeight(windowWith(false, 5));
+        stopTab();
+        const stopDesktop = installViewportHeight(windowWith(true, 0));
+        stopDesktop();
+
+        expect(set).not.toHaveBeenCalledWith("height", expect.anything(), expect.anything());
+        expect(root.style.getPropertyValue("height")).toBe("100%");
+    });
+});
+
 describe("the app follows a panned visual viewport while the keyboard is up", () => {
     it("writes where iOS panned the viewport, only while the keyboard is up", () => {
         const listeners: Record<string, () => void> = {};

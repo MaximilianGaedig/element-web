@@ -31,6 +31,34 @@ export function keyboardClosed(lastVh: number | undefined, vh: number, isTouch: 
     return isTouch && lastVh !== undefined && lastVh < vh && vh - lastVh > 1;
 }
 
+/** Whether the app is running installed to the home screen, with the whole screen and no browser toolbars. */
+function isInstalled(win: Window): boolean {
+    return (
+        !!win.matchMedia?.("(display-mode: standalone)").matches ||
+        (win.navigator as Navigator & { standalone?: boolean })?.standalone === true
+    );
+}
+
+/**
+ * Makes the page as tall as the screen in the installed app, and returns what undoes it.
+ *
+ * Installed on an iPhone, iOS reports the viewport a status bar short (768 of 812 on an iPhone 11 Pro)
+ * while drawing the page from under the status bar, so a page as tall as the viewport stops that far
+ * above the bottom of the screen. Once the page itself is taller, iOS reports the viewport at the full
+ * height too. Measured on the device: that only happens when the height is on the root element itself -
+ * the same height from a stylesheet leaves iOS on the short viewport - which is why this is done here
+ * and not in the styles. In a browser tab the large viewport is the screen with the toolbars away,
+ * which is not what the page has, so a tab is left alone.
+ */
+function fillInstalledScreen(win: Window): () => void {
+    const root = win.document.documentElement;
+    if (!isInstalled(win) || !isTouchDevice(win)) return () => {};
+    const height = root.style.getPropertyValue("height");
+    const priority = root.style.getPropertyPriority("height");
+    root.style.setProperty("height", "100lvh", "important");
+    return () => root.style.setProperty("height", height, priority);
+}
+
 function isTouchDevice(win: Window): boolean {
     return "ontouchstart" in win || (win.navigator?.maxTouchPoints ?? 0) > 0;
 }
@@ -64,6 +92,7 @@ export function installViewportHeight(win: Window = window): () => void {
         root.style.setProperty(VH_PROPERTY, `${vh}px`);
     };
 
+    const unfill = fillInstalledScreen(win);
     viewport.addEventListener("resize", setVh);
     // The pan changes without the size changing.
     if (win.visualViewport) win.visualViewport.addEventListener("scroll", setVh);
@@ -71,6 +100,7 @@ export function installViewportHeight(win: Window = window): () => void {
     return () => {
         viewport.removeEventListener("resize", setVh);
         win.visualViewport?.removeEventListener("scroll", setVh);
+        unfill();
         root.style.removeProperty(VH_PROPERTY);
         root.style.removeProperty(VIEWPORT_TOP_PROPERTY);
         root.removeAttribute(KEYBOARD_ATTRIBUTE);

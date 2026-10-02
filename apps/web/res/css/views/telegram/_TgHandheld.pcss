@@ -25,6 +25,22 @@ html[data-tg-screen="mobile"] {
         padding-bottom: var(--tg-safe-bottom);
     }
 
+    /*
+     * ...except that the chat list runs to the bottom of the screen, under the home indicator, as the
+     * messages of a chat do. Held above it, the list was cut off along a line 34px up with a blank band
+     * beneath. What sits at its bottom already keeps clear by itself: the floating bar and the list's
+     * own end both count the inset in (--mx-room-list-toast-bottom, .mx_RoomListPill_bar), and the rail
+     * of spaces is given it here.
+     */
+    .mx_TgColumns_left {
+        padding-bottom: 0;
+    }
+
+    .mx_TgColumns_left .mx_SpacePanel {
+        box-sizing: border-box;
+        padding-bottom: var(--tg-safe-bottom);
+    }
+
     /* Compact chat header: back, avatar, title; everything else lives in the chat info sheet. */
     .mx_RoomHeader {
         gap: var(--cpd-space-2x);
