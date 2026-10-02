@@ -282,6 +282,64 @@ describe("TgColumns", () => {
             expect(container.querySelector<HTMLElement>(".mx_TgColumns_chat")!.dataset.pushed).toBe("true");
         });
 
+        /*
+         * The pane was keyed by the chat, which rebuilt everything inside it on every switch - the rooms
+         * LoggedInView keeps mounted so that switching does not rebuild them.
+         */
+        it("keeps what is inside the pane mounted from one chat to the next", () => {
+            const mounts = vi.fn();
+            function Kept(): React.JSX.Element {
+                React.useEffect(() => {
+                    mounts("mount");
+                    return () => mounts("unmount");
+                }, []);
+                return <div>kept</div>;
+            }
+            const pane = (chatKey: string): React.JSX.Element => (
+                <TgColumns
+                    spacePanel={null}
+                    leftPanel={null}
+                    resizeNotifier={new ResizeNotifier()}
+                    chatOpen
+                    chatKey={chatKey}
+                >
+                    <Kept />
+                </TgColumns>
+            );
+            const { rerender } = render(pane("!a:x"));
+            mounts.mockClear();
+            rerender(pane("!b:x"));
+            rerender(pane("!c:x"));
+            expect(mounts).not.toHaveBeenCalled();
+        });
+
+        it("runs the push again for a second chat pushed in a row, on the same pane", () => {
+            const pane = (chatKey: string): React.JSX.Element => (
+                <TgColumns
+                    spacePanel={null}
+                    leftPanel={null}
+                    resizeNotifier={new ResizeNotifier()}
+                    chatOpen
+                    chatKey={chatKey}
+                >
+                    <div>{chatKey}</div>
+                </TgColumns>
+            );
+            const { container, rerender } = render(pane("!a:x"));
+            const chat = (): HTMLElement => container.querySelector<HTMLElement>(".mx_TgColumns_chat")!;
+            const same = chat();
+
+            act(() => dis.dispatch({ action: Action.ViewRoom, room_id: "!b:x", metricsTrigger: "Timeline" }, true));
+            rerender(pane("!b:x"));
+            expect(chat().dataset.pushed).toBe("true");
+
+            act(() => dis.dispatch({ action: Action.ViewRoom, room_id: "!c:x", metricsTrigger: "Timeline" }, true));
+            rerender(pane("!c:x"));
+            // A different value, so the animation's name changes and it starts over - on the same element.
+            expect(chat().dataset.pushed).toBe("again");
+            expect(chat()).toBe(same);
+        });
+
         it("does not treat a jump inside the open chat as a switch", () => {
             const { container } = renderChat("!a:x");
             act(() => dis.dispatch({ action: Action.ViewRoom, room_id: "!a:x", metricsTrigger: "Timeline" }, true));

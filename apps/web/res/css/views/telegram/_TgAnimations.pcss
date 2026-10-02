@@ -22,9 +22,30 @@ Please see LICENSE files in the repository root for full details.
     &[data-pushed] {
         animation: mx_TgChat_push var(--tg-tabs-transition);
     }
+
+    /*
+     * The pane stays the same element from one chat to the next (the rooms inside it are kept mounted),
+     * and an animation only starts again when its name changes: the second of two chats pushed in a row
+     * runs the same keyframes under this name.
+     */
+    &[data-pushed="again"] {
+        animation-name: mx_TgChat_pushAgain;
+    }
 }
 
 @keyframes mx_TgChat_push {
+    from {
+        transform: translate3d(200px, 0, 0);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateZ(0);
+        opacity: 1;
+    }
+}
+
+@keyframes mx_TgChat_pushAgain {
     from {
         transform: translate3d(200px, 0, 0);
         opacity: 0;

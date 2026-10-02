@@ -295,13 +295,17 @@ export function TgColumns({
 
     // Chats opened from inside another chat are pushed (slide in from 200px) rather than swapped.
     const [pushedRoomId, setPushedRoomId] = useState<string | undefined>();
+    /* How many chats have been pushed: every other one is animated under a second name (see the pane below). */
+    const [pushes, setPushes] = useState(0);
     const chatKeyRef = useRef(chatKey);
     chatKeyRef.current = chatKey;
     useEffect(() => {
         const ref = dis.register((payload: ActionPayload) => {
             // Jumps inside the open chat (permalinks to it, pinned messages) are not chat switches.
             if (payload.action !== Action.ViewRoom || payload.room_id === chatKeyRef.current) return;
-            setPushedRoomId(PUSH_TRIGGERS.has(payload.metricsTrigger) ? payload.room_id : undefined);
+            const pushed = PUSH_TRIGGERS.has(payload.metricsTrigger);
+            setPushedRoomId(pushed ? payload.room_id : undefined);
+            if (pushed) setPushes((n) => n + 1);
         });
         return () => dis.unregister(ref);
     }, []);
@@ -383,10 +387,22 @@ export function TgColumns({
                     ref={centerRef}
                     aria-hidden={(handheld && !chatShown) || undefined}
                 >
+                    {/*
+                     * Not keyed by the chat. It was, so that the push animation ran again for each chat
+                     * pushed - and a key that changes with the chat rebuilds everything inside the pane on
+                     * every switch, which is every room LoggedInView keeps mounted precisely so that
+                     * switching does not rebuild them. The animation is restarted by its name changing
+                     * instead: one push in two runs the same keyframes under a second name.
+                     */}
                     <div
                         className="mx_TgColumns_chat"
-                        key={chatKey ?? "none"}
-                        data-pushed={(!handheld && !!chatKey && pushedRoomId === chatKey) || undefined}
+                        data-pushed={
+                            !handheld && !!chatKey && pushedRoomId === chatKey
+                                ? pushes % 2
+                                    ? "true"
+                                    : "again"
+                                : undefined
+                        }
                     >
                         {children}
                     </div>
