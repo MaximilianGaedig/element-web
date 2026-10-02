@@ -154,8 +154,8 @@ html[data-tg-screen="mobile"][data-tg-message-padding="element"]
 
 /*
  * The chat's header and composer float over the timeline, which scrolls behind them (tweb's .bubbles
- * spans the whole chat, padded by --chat-padding-top/-bottom). Towards the top the messages fade
- * out into the chat background (see .mx_TgFadeEdge below).
+ * spans the whole chat, padded by --chat-padding-top/-bottom). Nothing is drawn over the messages
+ * towards the edges (see .mx_TgFadeEdge below).
  * TgChatChrome keeps --tg-header-block / --tg-composer-block (the space the floating parts take).
  */
 html[data-floating-bars] .mx_RoomView_body {
@@ -272,42 +272,13 @@ html[data-floating-bars] .mx_RoomView_body {
     }
 
     /*
-     * Towards the top the messages fade into the chat background instead of being blurred: a gradient of
-     * the background colour, which composites on the GPU like any other paint, while a backdrop filter
-     * re-reads and re-blurs everything behind it on every scrolled frame.
-     *
-     * It thins evenly from the top of the screen to the bottom of the header and is nowhere solid. It used
-     * to be solid for its upper half and gone a few pixels further down, which read as a bar that the
-     * messages vanished behind; now they dim as they pass under the header and the clock stays readable.
+     * No fade at either edge: the messages are seen all the way to the top and the bottom of the screen,
+     * behind the header and the composer and in the strips beyond them, as on Telegram. A fade of the chat
+     * background - however thin - read as a solid bar the messages vanished behind, and at the bottom left
+     * a blank band under the composer. The header and the composer are glass with their own blur, which
+     * is what keeps them readable over the messages.
      */
     .mx_TgFadeEdge {
-        position: absolute;
-        left: 0;
-        right: 0;
-        z-index: 2;
-        pointer-events: none;
-    }
-
-    .mx_TgFadeEdge_top {
-        top: 0;
-        height: var(--tg-header-block, 0px);
-        background-image: linear-gradient(
-            to bottom,
-            color-mix(in srgb, var(--tg-surface-color) 90%, transparent) 0%,
-            color-mix(in srgb, var(--tg-surface-color) 78%, transparent) 30%,
-            color-mix(in srgb, var(--tg-surface-color) 50%, transparent) 55%,
-            color-mix(in srgb, var(--tg-surface-color) 20%, transparent) 80%,
-            transparent 100%
-        );
-    }
-
-    /*
-     * No fade at the bottom: the messages are seen all the way to the bottom of the screen, behind the
-     * composer and in the strip beneath it, as on Telegram. The fade was the chat background from the
-     * composer's middle down, so the messages stopped at the composer and a blank band lay under it.
-     * The composer is glass with its own blur, which is what keeps it readable over them.
-     */
-    .mx_TgFadeEdge_bottom {
         display: none;
     }
 }
