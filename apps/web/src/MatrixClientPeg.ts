@@ -17,6 +17,7 @@ import {
     type MatrixClient,
     MemoryStore,
     PendingEventOrdering,
+    UNSTABLE_ELEMENT_FUNCTIONAL_USERS,
 } from "matrix-js-sdk/src/matrix";
 import * as utils from "matrix-js-sdk/src/utils";
 import { logger } from "matrix-js-sdk/src/logger";
@@ -411,7 +412,8 @@ function markSavedSyncLoaded(client: MatrixClient): void {
  * Everything else (members beyond the ones shown, topics, sticker packs, bridge features, …) is read from
  * the store when the room is opened: MatrixClient.loadStoredRoomState.
  */
-const ROOM_LIST_STATE_TYPES: string[] = [
+/** @knipignore exported for the test */
+export const ROOM_LIST_STATE_TYPES: string[] = [
     EventType.RoomCreate,
     EventType.RoomName,
     EventType.RoomAvatar,
@@ -430,6 +432,11 @@ const ROOM_LIST_STATE_TYPES: string[] = [
     // Bridge info: the room list's network badges and bridged-DM detection
     "m.bridge",
     "uk.half-shot.bridge",
+    // Who in the room is not a person (the bridge bot, your own ghost). A trimmed room keeps the member
+    // events of whoever sent its last events, and a bridge bot sends delivery statuses after each of
+    // your messages: without this the chat counts as three people, and gets no name or picture from
+    // the one you are talking to.
+    UNSTABLE_ELEMENT_FUNCTIONAL_USERS.name,
     // Bridge status: history import per chat, and whether each bridge is connected. These are written
     // once and not repeated, so a sync that omits them would leave the chat list and dashboard blind.
     BACKFILL_EVENT_TYPE,
