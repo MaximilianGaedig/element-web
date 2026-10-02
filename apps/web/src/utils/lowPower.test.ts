@@ -87,6 +87,108 @@ describe("low-power mode", () => {
         expect(told).toHaveBeenCalledTimes(2);
     });
 
+    describe("listening to the device", () => {
+        afterEach(() => {
+            vi.useRealTimers();
+            vi.unstubAllGlobals();
+        });
+
+        /** A battery or a connection: something with a state that says when it changes. */
+        function device<T extends object>(state: T): T & EventTarget {
+            return Object.assign(new EventTarget(), state);
+        }
+
+        it("follows the battery as it drains and is plugged in", async () => {
+            const battery = device({ level: 0.5, charging: false });
+            vi.stubGlobal("navigator", { getBattery: async () => battery });
+
+            lowPower.start();
+            await Promise.resolve();
+            await Promise.resolve();
+            expect(lowPower.isOn()).toBe(false);
+
+            battery.level = 0.15;
+            battery.dispatchEvent(new Event("levelchange"));
+            expect(lowPower.isOn()).toBe(true);
+
+            battery.charging = true;
+            battery.dispatchEvent(new Event("chargingchange"));
+            expect(lowPower.isOn()).toBe(false);
+        });
+
+        it("starts the same on a browser that will not say anything about its battery", async () => {
+            vi.stubGlobal("navigator", { getBattery: async () => Promise.reject(new Error("not allowed")) });
+            lowPower.start();
+            await Promise.resolve();
+            await Promise.resolve();
+            expect(lowPower.isOn()).toBe(false);
+        });
+
+        it("follows save-data as the reader turns it on and off", () => {
+            const connection = device({ saveData: true });
+            vi.stubGlobal("navigator", { connection });
+
+            lowPower.start();
+            expect(lowPower.isOn()).toBe(true);
+
+            connection.saveData = false;
+            connection.dispatchEvent(new Event("change"));
+            expect(lowPower.isOn()).toBe(false);
+        });
+
+        /** Animation frames that arrive `gap` ms apart, as fast as they are asked for. */
+        function frames(gap: () => number): void {
+            let at = 0;
+            vi.stubGlobal("requestAnimationFrame", (callback: (at: number) => void) => {
+                at += gap();
+                queueMicrotask(() => callback(at));
+                return 0;
+            });
+        }
+
+        it("takes a frame rate held at thirty a second, seen twice running, as the device saving power", async () => {
+            vi.useFakeTimers();
+            vi.stubGlobal("navigator", {});
+            vi.stubGlobal("document", { visibilityState: "visible" });
+            let gap = 33.3;
+            frames(() => gap);
+
+            lowPower.start();
+            // The first look: capped, but once could be a slow moment that happened to be even.
+            await vi.advanceTimersByTimeAsync(15_000);
+            expect(lowPower.isOn()).toBe(false);
+            // The second, two minutes on: still capped.
+            await vi.advanceTimersByTimeAsync(120_000);
+            expect(lowPower.isOn()).toBe(true);
+
+            // Energy saver off again: sixty a second at the next look.
+            gap = 16.7;
+            await vi.advanceTimersByTimeAsync(120_000);
+            expect(lowPower.isOn()).toBe(false);
+        });
+
+        it("learns nothing from a page that is not on screen", async () => {
+            vi.useFakeTimers();
+            vi.stubGlobal("navigator", {});
+            vi.stubGlobal("document", { visibilityState: "hidden" });
+            const asked = vi.fn();
+            vi.stubGlobal("requestAnimationFrame", asked);
+
+            lowPower.start();
+            await vi.advanceTimersByTimeAsync(15_000 + 120_000);
+            expect(asked).not.toHaveBeenCalled();
+            expect(lowPower.isOn()).toBe(false);
+        });
+
+        it("listens once, however often it is started", () => {
+            const getBattery = vi.fn(async () => device({ level: 1, charging: true }));
+            vi.stubGlobal("navigator", { getBattery });
+            lowPower.start();
+            lowPower.start();
+            expect(getBattery).toHaveBeenCalledTimes(1);
+        });
+    });
+
     it("keeps one sign when another is heard", () => {
         lowPower.report({ saveData: true });
         lowPower.report({ battery: { level: 0.9, charging: true } });
