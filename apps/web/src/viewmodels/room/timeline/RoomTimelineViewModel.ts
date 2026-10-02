@@ -1650,6 +1650,16 @@ export class RoomTimelineViewModel
             prevEvent = this.frozenMarkerEventId === eventId ? null : event;
         }
 
+        /*
+         * "New" marks where the messages the reader has not seen begin. With nothing drawn after it,
+         * it marks nothing: a room whose only events since the reader's last message are ones that get
+         * no row (a bridge writing its state, a member's profile changing) ended in a "New" pill over an
+         * empty space. Only at the live end, though - further back, what follows it is not loaded yet.
+         */
+        if (items[items.length - 1]?.kind === "read-marker" && this.windowAtLiveEnd()) {
+            items.pop();
+        }
+
         // Separators close sender runs as well as sender changes. Keep individual
         // message keys stable; the closing corner and avatar don't change row height.
         for (let i = 0; i < items.length; i++) {

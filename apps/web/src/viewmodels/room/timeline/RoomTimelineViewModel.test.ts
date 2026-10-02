@@ -341,6 +341,28 @@ describe("RoomTimelineViewModel", () => {
             expect(items[markerIndex + 1]).toMatchObject({ continuation: false });
         });
 
+        /* A bridge wrote its state after the reader's last message: "New" stood over an empty space. */
+        it("draws no read marker when nothing drawn comes after it", async () => {
+            const hidden = new MatrixEvent({
+                type: "im.mxg.settings",
+                state_key: "",
+                event_id: "$state",
+                sender: "@bridge:example.org",
+                room_id: ROOM_ID,
+                origin_server_ts: 3,
+                content: { settings: [] },
+            });
+            seedTimeline([makeMessage("$a"), makeMessage("$b"), hidden]);
+            room.addAccountData([
+                new MatrixEvent({ type: EventType.FullyRead, room_id: ROOM_ID, content: { event_id: "$b" } }),
+            ]);
+
+            const vm = await createStartedViewModel();
+
+            expect(eventKeys(vm.getSnapshot().items)).toEqual(["$a", "$b"]);
+            expect(kinds(vm.getSnapshot().items)).not.toContain("read-marker");
+        });
+
         it("starts a new sender run when a bridge relay changes remote author", async () => {
             const first = makeMessage("$a");
             const second = makeMessage("$b");
