@@ -8,8 +8,7 @@ Please see LICENSE files in the repository root for full details.
 // @vitest-environment happy-dom
 
 import { describe, it, expect } from "vitest";
-import { EventType, MatrixEvent, Room, type ISyncResponse } from "matrix-js-sdk/src/matrix";
-import { SyncAccumulator } from "matrix-js-sdk/src/sync-accumulator";
+import { EventType, MatrixEvent, Room, SyncAccumulator, type ISyncResponse } from "matrix-js-sdk/src/matrix";
 import { stubClient } from "test-utils";
 
 import { ROOM_LIST_STATE_TYPES } from "./MatrixClientPeg";
