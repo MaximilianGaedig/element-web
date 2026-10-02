@@ -20,6 +20,8 @@ export const VIEWPORT_TOP_PROPERTY = "--tg-vv-top";
 export const KEYBOARD_ATTRIBUTE = "data-tg-keyboard";
 /** How much shorter than the layout viewport the visual one must be to count as the keyboard. */
 const KEYBOARD_MIN_PX = 120;
+/** The most the installed app's heights are ever reported short by: a status bar, with room to spare. */
+const SHORTFALL_MAX_PX = 64;
 
 /** tweb setVH: 1% of `height`, to 2 decimals. */
 export function computeVh(height: number): number {
@@ -69,10 +71,34 @@ export function installViewportHeight(win: Window = window): () => void {
     const root = win.document.documentElement;
     const isTouch = isTouchDevice(win);
     let lastVh: number | undefined;
+    const installed = isTouch && isInstalled(win);
+    let restingShortfall = 0;
+
+    /*
+     * How far short of the screen a height iOS reports is, in the installed app. The page there is as tall
+     * as the screen (fillInstalledScreen), so the root element is the screen's height whatever iOS says
+     * the viewport is. Only a status bar's worth counts: more than that is something else being measured.
+     */
+    const shortOfScreen = (reported: number): number => {
+        const shortfall = root.getBoundingClientRect().height - reported;
+        return shortfall > 0 && shortfall <= SHORTFALL_MAX_PX ? shortfall : 0;
+    };
 
     const setVh = (): void => {
-        const height = win.visualViewport?.height ?? win.innerHeight;
-        const keyboard = isTouch && win.innerHeight - height > KEYBOARD_MIN_PX;
+        const visual = win.visualViewport?.height ?? win.innerHeight;
+        const keyboard = isTouch && win.innerHeight - visual > KEYBOARD_MIN_PX;
+        /*
+         * Installed on an iPhone, iOS draws the page from under the status bar and can still report its
+         * heights a status bar short (see fillInstalledScreen). With the keyboard down that does not matter,
+         * the app being sized by the screen; with it up the app is as tall as the visual viewport, and one
+         * reported short leaves the composer that far above the keyboard. So what the heights are short by
+         * is given back: as seen with the keyboard down, or in the layout viewport now.
+         */
+        let height = visual;
+        if (installed) {
+            if (keyboard) height += Math.max(restingShortfall, shortOfScreen(win.innerHeight));
+            else restingShortfall = shortOfScreen(visual);
+        }
         root.toggleAttribute(KEYBOARD_ATTRIBUTE, keyboard);
         // iOS pans the visual viewport up to keep the focused input in view (the page itself doesn't resize),
         // so the app, which is as tall as the visual viewport, has to follow it or it ends up below the

@@ -178,6 +178,114 @@ describe("the installed app fills the screen", () => {
     });
 });
 
+describe("the installed app's composer sits on the keyboard", () => {
+    const KEYBOARD = 336;
+    /** An installed app on a phone whose screen is 812 tall, with iOS reporting what the test says. */
+    const phone = (
+        installed = true,
+    ): { win: Window; report: (innerHeight: number, visualHeight: number) => void; vh: () => string } => {
+        const listeners: Record<string, () => void> = {};
+        const visualViewport = {
+            height: 812,
+            offsetTop: 0,
+            addEventListener: (type: string, cb: () => void) => (listeners[type] = cb),
+            removeEventListener: vi.fn(),
+        };
+        const win = {
+            visualViewport,
+            document,
+            innerHeight: 812,
+            scrollY: 0,
+            scrollTo: vi.fn(),
+            navigator: { maxTouchPoints: 5 },
+            matchMedia: (query: string) => ({ matches: installed && query === "(display-mode: standalone)" }),
+        } as unknown as Window;
+        return {
+            win,
+            report: (innerHeight, visualHeight) => {
+                (win as { innerHeight: number }).innerHeight = innerHeight;
+                visualViewport.height = visualHeight;
+                listeners.resize();
+            },
+            vh: () => document.documentElement.style.getPropertyValue(VH_PROPERTY),
+        };
+    };
+
+    beforeEach(() => {
+        // The page is as tall as the screen there, whatever the viewport is said to be
+        vi.spyOn(document.documentElement, "getBoundingClientRect").mockReturnValue({ height: 812 } as DOMRect);
+    });
+
+    afterEach(() => {
+        vi.restoreAllMocks();
+        document.documentElement.style.removeProperty("height");
+    });
+
+    it("is as tall as the visible part when iOS reports it truly", () => {
+        const { win, report, vh } = phone();
+        const stop = installViewportHeight(win);
+
+        report(812, 812 - KEYBOARD);
+
+        expect(vh()).toBe("4.76px");
+        stop();
+    });
+
+    it("gives back the status bar iOS left out of both viewports once the keyboard is up", () => {
+        const { win, report, vh } = phone();
+        const stop = installViewportHeight(win);
+
+        report(768, 768 - KEYBOARD);
+
+        expect(document.documentElement.hasAttribute("data-tg-keyboard")).toBe(true);
+        expect(vh()).toBe("4.76px");
+        stop();
+    });
+
+    it("gives back what the visual viewport was short by before the keyboard came up", () => {
+        const { win, report, vh } = phone();
+        const stop = installViewportHeight(win);
+
+        report(812, 768);
+        report(812, 768 - KEYBOARD);
+
+        expect(vh()).toBe("4.76px");
+        stop();
+    });
+
+    it("forgets a shortfall that has gone by the time the keyboard comes up", () => {
+        const { win, report, vh } = phone();
+        const stop = installViewportHeight(win);
+
+        report(812, 768);
+        report(812, 812);
+        report(812, 812 - KEYBOARD);
+
+        expect(vh()).toBe("4.76px");
+        stop();
+    });
+
+    it("does not take a larger gap for a status bar", () => {
+        const { win, report, vh } = phone();
+        const stop = installViewportHeight(win);
+
+        report(700, 700 - KEYBOARD);
+
+        expect(vh()).toBe("3.64px");
+        stop();
+    });
+
+    it("leaves a browser tab's heights as they are reported", () => {
+        const { win, report, vh } = phone(false);
+        const stop = installViewportHeight(win);
+
+        report(768, 768 - KEYBOARD);
+
+        expect(vh()).toBe("4.32px");
+        stop();
+    });
+});
+
 describe("the app follows a panned visual viewport while the keyboard is up", () => {
     it("writes where iOS panned the viewport, only while the keyboard is up", () => {
         const listeners: Record<string, () => void> = {};
