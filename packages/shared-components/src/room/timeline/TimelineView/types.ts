@@ -158,7 +158,12 @@ export interface TimelineViewActions {
      * Called on every visible-range change; the VM tracks the bottommost visible event
      * for scroll-position persistence. Indices are 0-based into the items array.
      */
-    onVisibleRangeChanged(startIndex: number, endIndex: number): void;
+    /**
+     * `readableEndIndex` is the last row whose bottom edge is on screen and clear of whatever
+     * floats over the end of the list: the last one the reader can have read to the end, where
+     * `endIndex` is merely the last one with any part showing. -1 when there is none.
+     */
+    onVisibleRangeChanged(startIndex: number, endIndex: number, readableEndIndex?: number): void;
 
     /** Called when the at-bottom state changes; VM uses this to decide whether to clear the saved scroll position on dispose. */
     onAtBottomStateChange(atBottom: boolean): void;
@@ -224,6 +229,12 @@ export interface TimelineViewProps {
      * wants it).
      */
     alwaysShowStickyDate?: boolean;
+
+    /**
+     * Drawn over the list while its first rows are taking long to place, in place of a spinner:
+     * for an embedder that has something more like the timeline to show there.
+     */
+    renderPlaceholder?: () => ReactNode;
 
     /**
      * Bring a new message in the way Telegram Web does, rather than jumping to it: the row is

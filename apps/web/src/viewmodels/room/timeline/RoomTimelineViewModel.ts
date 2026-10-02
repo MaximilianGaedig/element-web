@@ -33,6 +33,8 @@ import type {
 import { haveRendererForEvent, pickFactory } from "../../../events/EventTileFactory";
 import shouldHideEvent from "../../../shouldHideEvent";
 import SettingsStore from "../../../settings/SettingsStore";
+import UserActivity from "../../../UserActivity";
+import Timer from "../../../utils/Timer";
 import { clearRoomNotification } from "../../../utils/notifications";
 import { pendingEventsToShow } from "../../../utils/room/pendingEvents";
 import { hasThreadSummary } from "../../../utils/EventUtils";
@@ -45,8 +47,11 @@ const debug = (message: string): void => {
     if (DEBUG_TIMELINE) logger.debug(message);
 };
 
-/** How long after the last scroll event to wait before sending a read receipt (ms). */
-const READ_RECEIPT_DEBOUNCE_MS = 500;
+/**
+ * How long a message has to stay on screen, with the list at rest, before it counts as read (ms):
+ * a message scrolled past is not one that was read.
+ */
+const READ_RECEIPT_DEBOUNCE_MS = 200;
 
 const PAGINATE_SIZE = 100;
 const INITIAL_SIZE = 100;
@@ -242,6 +247,16 @@ export class RoomTimelineViewModel
 
     /** Debounce timer for auto read receipt sends triggered by scroll. */
     private readReceiptDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+
+    /**
+     * The last event the reader can have read to its end: its bottom edge is on screen (see
+     * `readableEndIndex` on {@link onVisibleRangeChanged}). This, not the last event with a line
+     * showing, is what a read receipt is sent for.
+     */
+    private readableEventId: string | null = null;
+
+    /** Waits for the reader to be back before a receipt is sent (see {@link sendAutoReadReceipt}). */
+    private presenceTimer: Timer | null = null;
 
     /**
      * Debouncer for items rebuilds after a burst of Decrypted events.
@@ -975,7 +990,7 @@ export class RoomTimelineViewModel
      * Walks backwards from `endIndex` to find the bottommost rendered event,
      * then stores its ID for scroll-position persistence on dispose.
      */
-    public onVisibleRangeChanged = (startIndex: number, endIndex: number): void => {
+    public onVisibleRangeChanged = (startIndex: number, endIndex: number, readableEndIndex = endIndex): void => {
         // Don't record position while an anchor is pending — the range reflects
         // auto-placement, not the user's reading position. The View clears the
         // anchor (via onAnchorReached) once placement settles, after which normal
@@ -996,6 +1011,14 @@ export class RoomTimelineViewModel
             // neither a read receipt nor the place to reopen the room at.
             if (item?.kind === "event" && !isLocalEchoId(item.key)) {
                 this.lastBottomEventId = item.key;
+                break;
+            }
+        }
+
+        for (let i = readableEndIndex; i >= startIndex; i--) {
+            const item = items[i];
+            if (item?.kind === "event" && !isLocalEchoId(item.key)) {
+                this.readableEventId = item.key;
                 break;
             }
         }
@@ -1031,8 +1054,15 @@ export class RoomTimelineViewModel
     private sendAutoReadReceipt(): void {
         // Behind the room on screen, nothing in it is being read.
         if (this.isDisposed || !this.active) return;
-        const eventId = this.lastBottomEventId;
+        const eventId = this.readableEventId;
         if (!eventId || eventId === this.lastSentReceiptEventId) return;
+        // Nor is anything read by someone who is not there: a message that arrives while the window
+        // is in the background or the reader has walked away is on screen, and unread. It is sent
+        // when they are back (the old timeline waits the same way).
+        if (!UserActivity.sharedInstance().userActiveRecently()) {
+            this.sendReceiptOnceBack();
+            return;
+        }
 
         const event = this.timelineWindow.getEvents().find((e) => e.getId() === eventId);
         if (!event) return;
@@ -1055,6 +1085,32 @@ export class RoomTimelineViewModel
             this.lastSentReceiptEventId = null; // allow retry
             logger.warn(`[TimelineVM] sendAutoReadReceipt — sendReadReceipt failed`, err);
         });
+    }
+
+    private sendReceiptOnceBack(): void {
+        if (this.presenceTimer) return;
+        const timer = new Timer(READ_RECEIPT_DEBOUNCE_MS);
+        this.presenceTimer = timer;
+        // Started when the reader is active again, and aborted if they leave before it is through.
+        UserActivity.sharedInstance().timeWhileActiveRecently(timer);
+        timer.finished().then(
+            () => {
+                if (this.presenceTimer !== timer) return;
+                this.presenceTimer = null;
+                this.sendAutoReadReceipt();
+            },
+            () => {
+                if (this.presenceTimer !== timer) return;
+                this.presenceTimer = null;
+                if (!this.isDisposed && this.active) this.sendReceiptOnceBack();
+            },
+        );
+    }
+
+    private stopWaitingForReader(): void {
+        const timer = this.presenceTimer;
+        this.presenceTimer = null;
+        timer?.abort();
     }
 
     // ── Overlay button actions ───────────────────────────────────────
@@ -1214,6 +1270,7 @@ export class RoomTimelineViewModel
             clearTimeout(this.readReceiptDebounceTimer);
             this.readReceiptDebounceTimer = null;
         }
+        this.stopWaitingForReader();
         if (!this.lastBottomEventId) {
             debug(`[TimelineVM] leave() — no visible range recorded, preserving saved position`);
             return;
@@ -1227,11 +1284,13 @@ export class RoomTimelineViewModel
             RoomTimelineViewModel.saveScrollTarget(this.opts.room.roomId, this.lastBottomEventId);
         }
 
-        // Advance the FullyRead marker to the last bottommost event we saw.
+        // Advance the FullyRead marker to the last event the reader got to the end of: the same one
+        // read receipts go by, so the "New" line is not put after a message that only showed a line.
         // Skip if it already matches what we last advanced to (avoids redundant network calls).
-        if (this.lastBottomEventId !== this.readMarkerEventId) {
-            debug(`[TimelineVM] leave() — advancing FullyRead marker to ${this.lastBottomEventId}`);
-            this.opts.client.setRoomReadMarkers(this.opts.room.roomId, this.lastBottomEventId).catch((err) => {
+        const readTo = this.readableEventId;
+        if (readTo && readTo !== this.readMarkerEventId) {
+            debug(`[TimelineVM] leave() — advancing FullyRead marker to ${readTo}`);
+            this.opts.client.setRoomReadMarkers(this.opts.room.roomId, readTo).catch((err) => {
                 logger.warn(`[TimelineVM] leave() — setRoomReadMarkers failed`, err);
             });
         }

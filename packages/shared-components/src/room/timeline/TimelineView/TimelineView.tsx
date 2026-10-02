@@ -132,6 +132,7 @@ export function TimelineView({
     paddingStart = 0,
     paddingEnd = 0,
     animateNewMessages = false,
+    renderPlaceholder,
 }: TimelineViewProps): JSX.Element {
     const snapshot = useViewModel(vm);
 
@@ -227,7 +228,11 @@ export function TimelineView({
     const holdAtBottomRef = useRef(false);
     // We only want to tell the view model about things that have actually changed, so these
     // hold the last values we sent and repeats are skipped.
-    const lastVisibleRangeRef = useRef<{ start: number; end: number } | null>(null);
+    const lastVisibleRangeRef = useRef<{ start: number; end: number; readableEnd: number } | null>(null);
+    const paddingStartRef = useRef(paddingStart);
+    paddingStartRef.current = paddingStart;
+    const paddingEndRef = useRef(paddingEnd);
+    paddingEndRef.current = paddingEnd;
     const lastAtBottomRef = useRef<boolean | null>(null);
     // For the "reached the top/bottom" reports we remember a short description of the
     // situation we last reported, in the form "<number of rows>:<row index>", and clear it
@@ -252,14 +257,27 @@ export function TimelineView({
             const itemCount = itemsRef.current.length;
             const visibleRange = v.range;
 
-            // Which rows are on screen, given as positions in the items array.
-            if (
-                visibleRange &&
-                (lastVisibleRangeRef.current?.start !== visibleRange.startIndex ||
-                    lastVisibleRangeRef.current?.end !== visibleRange.endIndex)
-            ) {
-                lastVisibleRangeRef.current = { start: visibleRange.startIndex, end: visibleRange.endIndex };
-                vm.onVisibleRangeChanged(visibleRange.startIndex, visibleRange.endIndex);
+            // Which rows are on screen, given as positions in the items array; and the last of them
+            // whose end is in view, above anything floating over the end of the list.
+            if (visibleRange) {
+                const top = (v.scrollOffset ?? 0) + paddingStartRef.current;
+                const bottom = (v.scrollOffset ?? 0) + (v.scrollRect?.height ?? 0) - paddingEndRef.current;
+                let readableEnd = -1;
+                for (const row of v.getVirtualItems()) {
+                    if (row.end > top && row.end <= bottom + 1 && row.index > readableEnd) readableEnd = row.index;
+                }
+                if (
+                    lastVisibleRangeRef.current?.start !== visibleRange.startIndex ||
+                    lastVisibleRangeRef.current?.end !== visibleRange.endIndex ||
+                    lastVisibleRangeRef.current?.readableEnd !== readableEnd
+                ) {
+                    lastVisibleRangeRef.current = {
+                        start: visibleRange.startIndex,
+                        end: visibleRange.endIndex,
+                        readableEnd,
+                    };
+                    vm.onVisibleRangeChanged(visibleRange.startIndex, visibleRange.endIndex, readableEnd);
+                }
             }
 
             // Are we scrolled to the bottom? Worked out from figures TanStack already holds
@@ -686,7 +704,11 @@ export function TimelineView({
                     })}
                 </ol>
             </div>
-            {!revealed && <div className={styles.cover}>{slowToPlace && <InlineSpinner size={32} />}</div>}
+            {!revealed && (
+                <div className={styles.cover}>
+                    {slowToPlace && (renderPlaceholder ? renderPlaceholder() : <InlineSpinner size={32} />)}
+                </div>
+            )}
             {renderStickyDate && <StickyDate ref={stickyDateRef} render={renderStickyDate} />}
             {revealed && <TimelineOverlayButtons snapshot={snapshot} vm={vm} scrollNow={scrollNow} />}
         </div>

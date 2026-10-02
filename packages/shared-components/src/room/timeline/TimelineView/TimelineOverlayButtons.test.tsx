@@ -10,6 +10,7 @@ import { render, screen } from "@test-utils";
 import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi } from "vitest";
 
+import styles from "./TimelineOverlayButtons.module.css";
 import { TimelineOverlayButtons } from "./TimelineOverlayButtons";
 import type { TimelineViewActions, TimelineViewSnapshot } from "./types";
 
@@ -49,6 +50,31 @@ const JUMP_READ_MARKER = "Jump to first unread message.";
 const MARK_ALL_READ = "Mark all as read";
 
 describe("<TimelineOverlayButtons />", () => {
+    // It shrinks away rather than vanishing, so it is still in the page while it is not offered.
+    it("keeps the jump-to-bottom button in the page but out of reach while it is not offered", () => {
+        const { container, rerender } = render(
+            <TimelineOverlayButtons snapshot={baseSnapshot} vm={makeActions()} scrollNow={vi.fn()} />,
+        );
+        const button = container.querySelector(".mx_JumpToBottomButton")!;
+
+        expect(button).toHaveAttribute("inert");
+        expect(button).toHaveClass(styles.away);
+        expect(button).not.toBeVisible();
+
+        rerender(
+            <TimelineOverlayButtons
+                snapshot={{ ...baseSnapshot, isAtBottom: false }}
+                vm={makeActions()}
+                scrollNow={vi.fn()}
+            />,
+        );
+
+        expect(container.querySelector(".mx_JumpToBottomButton")).toBe(button);
+        expect(button).not.toHaveAttribute("inert");
+        expect(button).not.toHaveClass(styles.away);
+        expect(queryButton(JUMP_TO_BOTTOM)).toBeVisible();
+    });
+
     it("renders no buttons at the live bottom with no read marker", () => {
         const actions = makeActions();
         render(<TimelineOverlayButtons snapshot={baseSnapshot} vm={actions} scrollNow={vi.fn()} />);

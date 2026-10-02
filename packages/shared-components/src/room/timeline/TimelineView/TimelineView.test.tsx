@@ -198,6 +198,43 @@ describe("<TimelineView />", () => {
         expect(actions.onJumpToLive.mock.calls[0][0]).toBeTypeOf("function");
     });
 
+    it("says which message the reader has reached the end of, short of anything floating over the list", async () => {
+        const { vm, actions } = makeFakeVm({ items: eventItems(30) });
+        // 100px at the end of the list is behind something, as a composer would be
+        render(
+            <div style={{ height: VIEWPORT_HEIGHT, width: 320 }}>
+                <TimelineView vm={vm} renderItem={renderItem} paddingEnd={100} />
+            </div>,
+        );
+        const scroller = screen.getByTestId("timeline-scroller");
+        await waitFor(() => expect(actions.onAnchorReached).toHaveBeenCalled(), { timeout: 5000 });
+        // At the end, the last row sits just above that: it is the one read to its end
+        await waitFor(() => expect(actions.onVisibleRangeChanged.mock.calls.at(-1)?.[2]).toBe(29));
+
+        // Half a row up, the last row's end is behind it: the one before is
+        act(() => {
+            scroller.scrollTop -= ROW_HEIGHT / 2;
+        });
+        await waitFor(() => expect(actions.onVisibleRangeChanged.mock.calls.at(-1)?.[2]).toBe(28));
+    });
+
+    it("shows the embedder's placeholder, not a spinner, when placing the first rows is slow", async () => {
+        // No rows: nothing to place, so the cover stays up and turns slow
+        const { vm } = makeFakeVm({ items: [] });
+        const { container } = render(
+            <div style={{ height: VIEWPORT_HEIGHT, width: 320 }}>
+                <TimelineView
+                    vm={vm}
+                    renderItem={renderItem}
+                    renderPlaceholder={() => <div data-testid="placeholder" />}
+                />
+            </div>,
+        );
+
+        expect(await screen.findByTestId("placeholder", undefined, { timeout: 3000 })).toBeInTheDocument();
+        expect(container.querySelector(`.${styles.cover}`)?.children).toHaveLength(1);
+    });
+
     describe("a new message at the live end", () => {
         const endOf = (scroller: HTMLElement): number => scroller.scrollHeight - scroller.clientHeight;
         const rowOf = (key: string): HTMLElement => screen.getByTestId(`row-${key}`).closest("li")!;

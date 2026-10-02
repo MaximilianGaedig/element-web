@@ -554,3 +554,63 @@ Please see LICENSE files in the repository root for full details.
         box-shadow: var(--tg-topbar-box-shadow, none);
     }
 }
+
+/*
+ * Bubbles with nothing in them, where messages are on their way (TgMessagesSkeleton): over a chat that
+ * is slow to open, and in the row where more history is being fetched. Laid out as the chat is - in
+ * its column, from the bottom up, a run from one side closer together - so what arrives replaces
+ * something of its own shape.
+ */
+.mx_TgMessagesSkeleton {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    box-sizing: border-box;
+    width: 100%;
+    max-width: calc(var(--TelegramLayout-chat-width, 100%) + 2 * var(--RoomView_MessageList-padding, 0px));
+    margin-inline: auto;
+    padding-inline: var(--RoomView_MessageList-padding, 16px);
+    overflow: hidden;
+}
+
+/* Over the whole timeline while it opens: TimelineView's cover centres what it is given. */
+.mx_TgMessagesSkeleton_opening {
+    position: absolute;
+    inset: 0;
+}
+
+.mx_TgMessagesSkeleton_bubble {
+    flex: none;
+    align-self: flex-start;
+    /* One line of text and the bubble's own padding, as a message has. */
+    height: calc(var(--lines, 1) * 1.3125rem + 0.75rem);
+    margin-top: 0.5rem;
+    border-radius: 12px;
+    background: var(--cpd-color-bg-subtle-secondary);
+    animation: mx_TgMessagesSkeleton_pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.mx_TgMessagesSkeleton_own {
+    align-self: flex-end;
+    background: var(--cpd-color-bg-subtle-primary);
+}
+
+.mx_TgMessagesSkeleton_continuation {
+    margin-top: 0.125rem;
+}
+
+.mx_NewTimelinePanel_loadingMessages {
+    padding-block: 0.25rem;
+}
+
+@keyframes mx_TgMessagesSkeleton_pulse {
+    50% {
+        opacity: 0.5;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .mx_TgMessagesSkeleton_bubble {
+        animation: none;
+    }
+}

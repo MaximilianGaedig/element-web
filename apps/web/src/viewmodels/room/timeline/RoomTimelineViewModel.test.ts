@@ -24,6 +24,8 @@ import { type TimelineItem } from "@element-hq/web-shared-components";
 import { createTestClient, mkMessage } from "test-utils";
 
 import SettingsStore from "../../../settings/SettingsStore";
+import UserActivity from "../../../UserActivity";
+import type Timer from "../../../utils/Timer";
 import { RoomTimelineViewModel } from "./RoomTimelineViewModel";
 
 vi.mock("../../../settings/SettingsStore");
@@ -97,6 +99,8 @@ describe("RoomTimelineViewModel", () => {
         client = createTestClient();
         room = new Room(ROOM_ID, client, USER_ID, { pendingEventOrdering: PendingEventOrdering.Detached });
         vi.spyOn(client, "getRoom").mockReturnValue(room);
+        // Someone is there, reading. A test about the reader being away overrides this.
+        vi.spyOn(UserActivity.sharedInstance(), "userActiveRecently").mockReturnValue(true);
 
         // The only two settings the view model reads, at their real-world defaults. A test that
         // cares about either one overrides this.
@@ -841,6 +845,55 @@ describe("RoomTimelineViewModel", () => {
             const [receiptedEvent, receiptType] = vi.mocked(client.sendReadReceipt).mock.calls[0];
             expect(receiptedEvent?.getId()).toBe("$b");
             expect(receiptType).toBe(ReceiptType.Read);
+        });
+
+        // A message with only its first line showing above the composer has not been read.
+        it("sends the receipt for the last message whose end is on screen, not the last one showing", async () => {
+            seedTimeline([makeMessage("$a"), makeMessage("$b"), makeMessage("$c")]);
+            const vm = await createStartedViewModel();
+            vm.onAnchorReached();
+            const items = vm.getSnapshot().items;
+
+            vm.onVisibleRangeChanged(0, indexOfKey(items, "$c"), indexOfKey(items, "$b"));
+
+            await flushReceiptDebounce();
+            expect(vi.mocked(client.sendReadReceipt).mock.calls[0][0]?.getId()).toBe("$b");
+        });
+
+        it("sends nothing while no message's end is on screen", async () => {
+            seedTimeline([makeMessage("$a"), makeMessage("$b")]);
+            const vm = await createStartedViewModel();
+            vm.onAnchorReached();
+
+            vm.onVisibleRangeChanged(0, vm.getSnapshot().items.length - 1, -1);
+            await new Promise((r) => setTimeout(r, 400));
+
+            expect(client.sendReadReceipt).not.toHaveBeenCalled();
+        });
+
+        // A message that arrives while the window is in the background is on screen, and unread.
+        it("sends nothing while the reader is away, and the receipt once they are back", async () => {
+            const activity = UserActivity.sharedInstance();
+            const present = vi.mocked(activity.userActiveRecently).mockReturnValue(false);
+            let waiting: Timer | undefined;
+            vi.spyOn(activity, "timeWhileActiveRecently").mockImplementation((timer) => {
+                waiting = timer;
+            });
+            seedTimeline([makeMessage("$a"), makeMessage("$b")]);
+            const vm = await createStartedViewModel();
+            vm.onAnchorReached();
+
+            vm.onVisibleRangeChanged(0, vm.getSnapshot().items.length - 1);
+            await vi.waitFor(() => expect(waiting).toBeDefined(), { timeout: 2000 });
+            await new Promise((r) => setTimeout(r, 300));
+            expect(client.sendReadReceipt).not.toHaveBeenCalled();
+
+            // Back: UserActivity starts the timers that were waiting for that
+            present.mockReturnValue(true);
+            waiting!.start();
+
+            await flushReceiptDebounce();
+            expect(vi.mocked(client.sendReadReceipt).mock.calls[0][0]?.getId()).toBe("$b");
         });
 
         it("sends a private receipt when the user has read receipts turned off", async () => {

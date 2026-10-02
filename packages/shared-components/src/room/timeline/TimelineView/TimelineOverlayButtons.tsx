@@ -97,13 +97,17 @@ export function TimelineOverlayButtons({ snapshot, vm, scrollNow }: TimelineOver
                 </div>
             )}
 
-            {/* Jump-to-bottom button — matches legacy JumpToBottomButton */}
-            {showJumpToBottom && (
+            {/* Jump-to-bottom button — matches legacy JumpToBottomButton. It stays in the page when
+                it is not offered, so it can shrink away as it grew in; `inert` and hidden from
+                everything but the transition while it is away. */}
+            {
                 <div
                     className={classNames(styles.jumpToBottom, "mx_JumpToBottomButton", {
+                        [styles.away]: !showJumpToBottom,
                         [styles.highlight]: snapshot.hasHighlights,
                         mx_JumpToBottomButton_highlight: snapshot.hasHighlights,
                     })}
+                    inert={!showJumpToBottom}
                 >
                     <Tooltip description={_t("room|jump_to_bottom_button")} placement="left">
                         <button
@@ -121,7 +125,7 @@ export function TimelineOverlayButtons({ snapshot, vm, scrollNow }: TimelineOver
                         </div>
                     )}
                 </div>
-            )}
+            }
         </div>
     );
 }

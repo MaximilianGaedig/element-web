@@ -37,13 +37,24 @@ vi.mock("@element-hq/web-shared-components", async () => {
         TimelineView: ({
             vm,
             renderItem,
+            renderPlaceholder,
+            animateNewMessages,
         }: {
             vm: { getSnapshot: () => { items: TimelineItem[] } };
             renderItem: (item: TimelineItem) => React.ReactNode;
+            renderPlaceholder?: () => React.ReactNode;
+            animateNewMessages?: boolean;
         }) => {
             const items = vm.getSnapshot().items;
             rowsRendered.current = items;
-            return <div data-testid="timeline-stub">{items.map((item) => renderItem(item))}</div>;
+            return (
+                <>
+                    <div data-testid="timeline-stub" data-animates={String(!!animateNewMessages)}>
+                        {items.map((item) => renderItem(item))}
+                    </div>
+                    <div data-testid="placeholder">{renderPlaceholder?.()}</div>
+                </>
+            );
         },
     };
 });
@@ -183,6 +194,36 @@ describe("<NewTimelinePanel />", () => {
         renderPanel();
 
         expect(screen.getByRole("progressbar")).toBeInTheDocument();
+    });
+
+    it("draws empty bubbles for the loading row in the Telegram layout, still announced as loading", () => {
+        withItems([{ key: "loading", kind: "loading" } as TimelineItem]);
+
+        renderPanel({ layout: Layout.Bubble });
+
+        const row = screen.getByRole("progressbar");
+        expect(row).toHaveClass("mx_NewTimelinePanel_loadingMessages");
+        expect(row.querySelectorAll(".mx_TgMessagesSkeleton_bubble")).toHaveLength(4);
+    });
+
+    it("gives the Telegram layout a conversation of empty bubbles to open on, and new messages that animate", () => {
+        withItems([]);
+
+        renderPanel({ layout: Layout.Bubble });
+
+        const placeholder = screen.getByTestId("placeholder");
+        expect(placeholder.querySelector(".mx_TgMessagesSkeleton_opening")).not.toBeNull();
+        expect(placeholder.querySelectorAll(".mx_TgMessagesSkeleton_bubble")).toHaveLength(20);
+        expect(screen.getByTestId("timeline-stub")).toHaveAttribute("data-animates", "true");
+    });
+
+    it("leaves the other layouts their spinner and their jump to a new message", () => {
+        withItems([]);
+
+        renderPanel();
+
+        expect(screen.getByTestId("placeholder")).toBeEmptyDOMElement();
+        expect(screen.getByTestId("timeline-stub")).toHaveAttribute("data-animates", "false");
     });
 
     it("labels a date separator the way the old timeline does", () => {

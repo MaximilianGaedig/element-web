@@ -40,6 +40,7 @@ import { _t } from "../../languageHandler";
 import type { RoomPermalinkCreator } from "../../utils/permalinks/Permalinks";
 import type EditorStateTransfer from "../../utils/EditorStateTransfer";
 import { DateSeparatorWrapper } from "./DateSeparatorWrapper";
+import { TgMessagesSkeleton } from "../views/telegram/TgMessagesSkeleton";
 
 interface NewTimelinePanelProps {
     room: Room;
@@ -98,6 +99,10 @@ interface RenderItemContext {
 
 const NO_RECEIPTS: ReadonlyMap<string, IReadReceiptProps[]> = new Map();
 
+/** Bubbles drawn where more history is being fetched, and over a chat that is slow to open. */
+const LOADING_ROW_BUBBLES = 4;
+const OPENING_BUBBLES = 20;
+
 /** Draws one timeline row. Kept outside the component so it isn't redefined per render. */
 function renderTimelineItem(item: TimelineItem, ctx: RenderItemContext): ReactNode {
     switch (item.kind) {
@@ -126,6 +131,19 @@ function renderTimelineItem(item: TimelineItem, ctx: RenderItemContext): ReactNo
                 />
             );
         case "loading":
+            // In the Telegram layout, the shape of the messages being fetched rather than a spinner.
+            if (ctx.telegramBubbles) {
+                return (
+                    <div
+                        key={item.key}
+                        className="mx_NewTimelinePanel_loadingMessages"
+                        aria-label={_t("common|loading")}
+                        role="progressbar"
+                    >
+                        <TgMessagesSkeleton count={LOADING_ROW_BUBBLES} />
+                    </div>
+                );
+            }
             return (
                 <div key={item.key} className="mx_NewTimelinePanel_loading">
                     <InlineSpinner size={32} aria-label={_t("common|loading")} role="progressbar" />
@@ -342,6 +360,17 @@ export function NewTimelinePanel({
     // The date of the day being read, shown at the top of the timeline while scrolling.
     // The timeline's own separator, so the label reads exactly as the one in the list does;
     // TimelineView decides when it is shown.
+    // Over a chat that is slow to open: the shape of a conversation, clear of what floats over the list.
+    const renderPlaceholder = useCallback(
+        (): ReactNode => (
+            <TgMessagesSkeleton
+                count={OPENING_BUBBLES}
+                className="mx_TgMessagesSkeleton_opening"
+                style={{ paddingTop: clearance.start, paddingBottom: clearance.end }}
+            />
+        ),
+        [clearance.start, clearance.end],
+    );
     const renderStickyDate = useCallback(
         (ts: number): ReactNode => (
             // Keyed by the day: the separator builds its view model once, from the timestamp it
@@ -420,6 +449,7 @@ export function NewTimelinePanel({
                 alwaysShowStickyDate={telegramBubbles}
                 // ...and brings a new message up from behind the composer instead of jumping to it.
                 animateNewMessages={telegramBubbles}
+                renderPlaceholder={telegramBubbles ? renderPlaceholder : undefined}
                 paddingStart={clearance.start}
                 paddingEnd={clearance.end}
             />
