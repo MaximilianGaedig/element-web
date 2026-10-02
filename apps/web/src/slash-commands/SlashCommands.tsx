@@ -532,6 +532,30 @@ export const Commands = [
         category: CommandCategories.advanced,
     }),
     new Command({
+        command: "remotedebug",
+        args: "<on | off>",
+        description: _td("slash_command|remotedebug"),
+        runFn: function (cli, roomId, threadId, args) {
+            const want = args?.trim().toLowerCase();
+            if (want !== "on" && want !== "off") return reject(this.getUsage());
+            return success(
+                // Loaded on demand: nothing of it is in the app until someone asks for it.
+                import(/* webpackChunkName: "remote-debug" */ "../utils/remoteDebug").then((remoteDebug) => {
+                    if (want === "off") {
+                        remoteDebug.disableRemoteDebug();
+                        return;
+                    }
+                    const code = remoteDebug.enableRemoteDebug();
+                    Modal.createDialog(InfoDialog, {
+                        title: _t("slash_command|remotedebug_on_title"),
+                        description: _t("slash_command|remotedebug_on_description", { code }),
+                    });
+                }),
+            );
+        },
+        category: CommandCategories.advanced,
+    }),
+    new Command({
         command: "addwidget",
         args: "<url | embed code | Jitsi url>",
         description: _td("slash_command|addwidget"),

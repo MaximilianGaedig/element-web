@@ -223,6 +223,20 @@ async function start(): Promise<void> {
         // Finally, load the app. All of the other react-sdk imports are in this file which causes the skinner to
         // run on the components.
         await loadApp(parsedUrl.params);
+
+        // Remote inspection (utils/remoteDebug.ts) that was left switched on for this device. Loaded only
+        // then, and after the app, so that it costs nothing otherwise and cannot get in the way of startup.
+        let remoteDebug = false;
+        try {
+            remoteDebug = Boolean(window.localStorage.getItem("mx_remote_debug"));
+        } catch {
+            // No storage, no switch.
+        }
+        if (remoteDebug) {
+            import(/* webpackChunkName: "remote-debug" */ "../utils/remoteDebug")
+                .then((m) => m.startRemoteDebug())
+                .catch((e) => logger.warn("Remote debug failed to start", e));
+        }
     } catch (err) {
         logger.error(err);
         // Like the compatibility page, AWOOOOOGA at the user

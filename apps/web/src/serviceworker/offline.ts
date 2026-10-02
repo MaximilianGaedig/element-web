@@ -89,6 +89,8 @@ export function classifyAppRequest(request: Request, scope: string): AppRequestK
     if (request.mode === "navigate" && (path === "" || path === "index.html")) return "shell";
     // A homeserver on the same origin: its API and media are not ours to cache here.
     if (path.startsWith("_matrix/") || path.startsWith(".well-known/")) return undefined;
+    // The remote inspection relay (utils/remoteDebug.ts): what it serves is made per request.
+    if (path.startsWith("_rdbg/")) return undefined;
     // Webpack dev server: unhashed bundles and hot updates must always come from the network.
     if (path.includes("/_dev_/") || path.includes("hot-update") || path.startsWith("ws")) return undefined;
     if (path === "version") return "network-first";
