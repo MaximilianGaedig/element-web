@@ -76,6 +76,7 @@ import { CallStatusListener } from "./CallStatusListener.ts";
 import { CallStore } from "./stores/CallStore.ts";
 import { ModuleApi } from "./modules/Api.ts";
 import { bootMark } from "./utils/bootTimings.ts";
+import { clearLastScreen } from "./utils/startup/lastScreen";
 
 const HOMESERVER_URL_KEY = "mx_hs_url";
 const ID_SERVER_URL_KEY = "mx_is_url";
@@ -1169,6 +1170,8 @@ export async function clearStorage(opts?: { deleteEverything?: boolean }): Promi
         } catch (e) {
             logger.error("idbClear failed for account", e);
         }
+        // The picture of the last screen is this account's too (utils/startup/lastScreen.ts).
+        await clearLastScreen().catch((e) => logger.error("Failed to forget the last screen", e));
 
         // now restore those invites, registration time and previously set device language
         if (!opts?.deleteEverything) {

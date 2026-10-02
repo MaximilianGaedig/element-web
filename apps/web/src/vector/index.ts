@@ -18,6 +18,7 @@ import { parseAppUrl } from "./url_utils";
 import "./modernizr.cjs";
 import { polyfillTouchEvent } from "../@types/polyfill";
 import { bootMark } from "../utils/bootTimings";
+import { showLastScreenAtBoot } from "../utils/startup/lastScreen";
 
 import "../../res/css/_index.pcss";
 // Require common CSS here; this will make webpack process it into bundle.css.
@@ -29,6 +30,10 @@ require("./localstorage-fix");
 // Startup timing (utils/bootTimings.ts): the entry script is running. Its time since the navigation started
 // is the page load itself; `sw` says whether the service worker served it.
 bootMark("script_start", { sw: Boolean(navigator.serviceWorker?.controller) });
+
+// What was on screen last time, over the page until the app has something of its own to show
+// (utils/startup/lastScreen.ts). Started here because here is the earliest there is; not waited for.
+void showLastScreenAtBoot();
 
 // Patch a fake window.TouchEvent for re-resizable's unguarded `instanceof TouchEvent`.
 polyfillTouchEvent();

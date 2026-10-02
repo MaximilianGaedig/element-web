@@ -32,6 +32,7 @@ import { type IMatrixClientCreds } from "../../utils/createMatrixClient";
 import SettingsStore from "../../settings/SettingsStore";
 import { ROOMS_AHEAD, mayPrepareRooms, roomsAhead } from "../../utils/room/roomsAhead";
 import { type SwitchKind, switchAsked, switchShown, switchTimings } from "../../utils/room/switchTimings";
+import { keepLastScreen } from "../../utils/startup/keepLastScreen";
 import { KnownMembership } from "matrix-js-sdk/src/types";
 import { SettingLevel } from "../../settings/SettingLevel";
 import PlatformPeg from "../../PlatformPeg";
@@ -141,6 +142,7 @@ class LoggedInView extends React.Component<IProps, IState> {
     /** Which of those were only mounted ahead of being opened. */
     private mountedAhead: ReadonlySet<string> = new Set();
     private switchDispatcherRef?: string;
+    private stopKeepingScreen?: () => void;
     private stopWatchingAhead?: () => void;
     private idleAhead?: ReturnType<typeof setTimeout>;
     protected layoutWatcherRef?: string;
@@ -193,6 +195,14 @@ class LoggedInView extends React.Component<IProps, IState> {
             }
         });
         window.mxSwitchTimings = switchTimings;
+        // What is on screen, kept for the next start to show while the app comes up under it.
+        this.stopKeepingScreen = keepLastScreen({
+            userId: this._matrixClient.getSafeUserId(),
+            openRoomEncrypted: () => {
+                const roomId = this.props.currentRoomId;
+                return !!roomId && !!this._matrixClient.getRoom(roomId)?.hasEncryptionStateEvent();
+            },
+        });
         this.noteMounted();
         document.addEventListener("keydown", this.onNativeKeyDown, false);
         this.context.legacyCallHandler.addListener(LegacyCallHandlerEvent.CallState, this.onCallState);
@@ -278,6 +288,7 @@ class LoggedInView extends React.Component<IProps, IState> {
         this.stopWatchingAhead?.();
         clearTimeout(this.idleAhead);
         if (this.switchDispatcherRef) dis.unregister(this.switchDispatcherRef);
+        this.stopKeepingScreen?.();
         roomsAhead.clear();
         document.removeEventListener("keydown", this.onNativeKeyDown, false);
         this.context.legacyCallHandler.removeListener(LegacyCallHandlerEvent.CallState, this.onCallState);

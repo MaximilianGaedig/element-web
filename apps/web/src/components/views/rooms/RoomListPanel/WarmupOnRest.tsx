@@ -8,6 +8,7 @@
 import React, { useEffect, useRef, type JSX } from "react";
 
 import type { MatrixClient, Room } from "matrix-js-sdk/src/matrix";
+import { ENCRYPTED_ROW_ATTRIBUTE } from "../../../../utils/startup/lastScreen";
 import { RoomWarmup } from "../../../../utils/room/roomWarmup";
 
 /** The room list's row, which the shared view draws and this sits inside. */
@@ -66,5 +67,8 @@ export function WarmupOnRest({ client, room }: Props): JSX.Element {
         };
     }, [client, room]);
 
-    return <span ref={marker} style={{ display: "none" }} />;
+    // Says, too, whether the room is encrypted: the picture kept of the screen for the next start leaves
+    // such a room's last message out, and the row itself is not ours to mark (utils/startup/lastScreen).
+    const encrypted = room.hasEncryptionStateEvent() ? { [ENCRYPTED_ROW_ATTRIBUTE]: "" } : undefined;
+    return <span ref={marker} style={{ display: "none" }} {...encrypted} />;
 }

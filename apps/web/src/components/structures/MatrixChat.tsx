@@ -143,6 +143,7 @@ import { type URLParams } from "../../vector/url_utils.ts";
 import { type QrLoginCredentials } from "../views/auth/LoginWithQR.tsx";
 import { configureFromCompletedOAuthLogin } from "../../Lifecycle";
 import { bootMark, reportBootTimings, watchFirstEvent } from "../../utils/bootTimings";
+import { hideLastScreen, hideLastScreenAfterFirstEvent } from "../../utils/startup/lastScreen";
 
 const AUTH_SCREENS = ["register", "mobile_register", "login", "forgot_password", "start_sso", "start_cas", "welcome"];
 
@@ -509,6 +510,12 @@ export default class MatrixChat extends React.PureComponent<IProps, IState> {
                 PosthogTrackers.instance.trackPageChange(this.state.view, this.state.page_type, durationMs);
             }
         }
+        /*
+         * The picture of the last screen (utils/startup/lastScreen.ts) is for a start that ends in the
+         * logged-in app. Anything else the start turns into - a login page, a stolen session lock, a
+         * security step to complete - has to be seen, so the picture goes at once.
+         */
+        if (this.state.view !== Views.LOADING && this.state.view !== Views.LOGGED_IN) hideLastScreen();
         if (this.state.view === Views.LOGGED_IN && this.state.ready && this.state.page_type) {
             // Startup timing (utils/bootTimings.ts). Children mount before their parent updates, so by now
             // the logged-in view - and the room view inside it, if that is the page - is in the DOM.
@@ -519,10 +526,13 @@ export default class MatrixChat extends React.PureComponent<IProps, IState> {
                     this.bootRoomViewSeen = true;
                     bootMark("room_view_mounted");
                     watchFirstEvent();
+                    // The picture stays until the room has a message to show in its place.
+                    hideLastScreenAfterFirstEvent();
                 }
             } else {
                 // The app opened on something other than a room: there is no first message to wait for.
                 reportBootTimings();
+                hideLastScreen();
             }
         }
         if (this.focusNext === "composer") {
