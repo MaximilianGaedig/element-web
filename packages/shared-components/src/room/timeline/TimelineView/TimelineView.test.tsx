@@ -123,6 +123,21 @@ function renderTimeline(vm: TimelineViewModel, alwaysShowStickyDate = false, ani
     );
 }
 
+/**
+ * Scrolls the list as a reader would, and waits until the list has been told: a scroll event is
+ * delivered with the next frame, and what the view does afterwards depends on having had it.
+ */
+async function scrollTo(scroller: HTMLElement, top: number): Promise<void> {
+    const delivered = new Promise<void>((resolve) =>
+        scroller.addEventListener("scroll", () => resolve(), { once: true }),
+    );
+    act(() => {
+        scroller.scrollTop = top;
+    });
+    await delivered;
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+}
+
 describe("<TimelineView />", () => {
     it("renders each item via the renderItem callback", async () => {
         const { vm } = makeFakeVm({ items: eventItems(5) });
@@ -267,9 +282,7 @@ describe("<TimelineView />", () => {
             const { rerender } = render(<Timeline vm={vm} height={VIEWPORT_HEIGHT} />);
             const scroller = screen.getByTestId("timeline-scroller");
             await waitFor(() => expect(actions.onAnchorReached).toHaveBeenCalled(), { timeout: 5000 });
-            act(() => {
-                scroller.scrollTop = 100;
-            });
+            await scrollTo(scroller, 100);
             await waitFor(() => expect(actions.onAtBottomStateChange).toHaveBeenLastCalledWith(false));
 
             rerender(<Timeline vm={vm} height={VIEWPORT_HEIGHT - 120} />);
@@ -312,9 +325,7 @@ describe("<TimelineView />", () => {
             const { rerender } = render(<Timeline vm={vm} paddingEnd={60} />);
             const scroller = screen.getByTestId("timeline-scroller");
             await waitFor(() => expect(actions.onAnchorReached).toHaveBeenCalled(), { timeout: 5000 });
-            act(() => {
-                scroller.scrollTop = 100;
-            });
+            await scrollTo(scroller, 100);
             await waitFor(() => expect(actions.onAtBottomStateChange).toHaveBeenLastCalledWith(false));
 
             rerender(<Timeline vm={vm} paddingEnd={108} />);
@@ -396,9 +407,7 @@ describe("<TimelineView />", () => {
 
         it("leaves a reader who has scrolled up where they are", async () => {
             const { scroller, update, actions } = await atTheEnd(true);
-            act(() => {
-                scroller.scrollTop = 100;
-            });
+            await scrollTo(scroller, 100);
             await waitFor(() => expect(actions.onAtBottomStateChange).toHaveBeenLastCalledWith(false));
 
             update({ items: eventItems(31) });
