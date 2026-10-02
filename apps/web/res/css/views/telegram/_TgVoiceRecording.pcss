@@ -270,15 +270,22 @@ html[data-floating-bars] .mx_MessageComposer.mx_MessageComposer_tg {
         order: 2;
         display: flex;
         flex: 1 1 auto;
+        /* The row sets its children on its bottom edge; this is a line of text, centred in it. */
+        align-self: center;
         align-items: center;
         justify-content: center;
         gap: 2px;
+        box-sizing: border-box;
         min-width: 0;
+        /* The held button is drawn larger than its place, over the end of the row. */
+        padding-inline-end: 28px;
         color: var(--cpd-color-text-secondary);
         font: var(--cpd-font-body-md-regular);
         white-space: nowrap;
         opacity: calc(1 - var(--tg-voice-cancelness, 0));
         transform: translateX(var(--tg-voice-dx, 0px));
+        /* It goes under the timer, not over it: cut off where its own place in the row begins. */
+        clip-path: inset(0 0 0 calc(-1 * var(--tg-voice-dx, 0px)));
 
         svg {
             width: 20px;
