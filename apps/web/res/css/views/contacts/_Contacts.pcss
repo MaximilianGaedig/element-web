@@ -882,6 +882,62 @@ Please see LICENSE files in the repository root for full details.
     }
 }
 
+/* Looking into one account: the same target as the controls beside it, and no warning colour. */
+.mx_ContactCard_accountInspect {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    min-width: var(--mx-contacts-row-height);
+    border: none;
+    background: none;
+    color: var(--cpd-color-icon-secondary);
+    cursor: pointer;
+
+    &[aria-expanded="true"] {
+        color: var(--cpd-color-icon-primary);
+    }
+
+    &:focus-visible {
+        color: var(--cpd-color-icon-primary);
+        background: var(--cpd-color-bg-subtle-primary);
+    }
+
+    @media (hover: hover) {
+        &:hover {
+            color: var(--cpd-color-icon-primary);
+            background: var(--cpd-color-bg-subtle-primary);
+        }
+    }
+}
+
+/*
+ * What is known about the account, under its row and visibly part of it: set in from the row's edge and on
+ * the subtle background, so it reads as the row opened up rather than as more rows of the list.
+ */
+.mx_ContactCard_accountDetails {
+    background: var(--cpd-color-bg-subtle-secondary);
+    border-top: 1px solid var(--mx-contacts-hairline);
+
+    .mx_ContactCard_factValue {
+        /* IDs are long and have nowhere to break; they wrap rather than push the card sideways. */
+        overflow-wrap: anywhere;
+        user-select: text;
+    }
+
+    /* The row after an opened account still needs its line: it no longer follows a row directly. */
+    & + .mx_ContactCard_accountRow {
+        border-top: 1px solid var(--mx-contacts-hairline);
+    }
+}
+
+.mx_ContactCard_accountFace {
+    display: flex;
+    align-items: center;
+    gap: var(--cpd-space-3x);
+    padding: var(--mx-contacts-row-padding-block) var(--mx-contacts-gutter);
+}
+
 /* Taking one account back out of a merged person, beside the row it belongs to. */
 .mx_ContactCard_accountUnlink {
     display: flex;

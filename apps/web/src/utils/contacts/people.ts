@@ -350,6 +350,8 @@ interface Decisions {
     dismissed?: unknown;
     /** Names the reader gave people, against one of their Matrix IDs. */
     names?: unknown;
+    /** Accounts the reader took out of a person the client had put together by itself. */
+    apart?: unknown;
 }
 
 const decisions = (client: MatrixClient): Decisions =>
@@ -373,6 +375,19 @@ export function dismissedSuggestions(client: MatrixClient): string[][] {
 }
 
 /**
+ * Accounts the reader said are not who the client grouped them with.
+ *
+ * A manual link is undone by removing it. A grouping the client made itself - two accounts publishing the
+ * same number - has nothing to remove, so the account is remembered here instead and what it publishes is
+ * no longer taken as proof of who it is. A shared number is strong evidence and still not proof: a number
+ * changes hands, and a family shares one.
+ */
+export function keptApart(client: MatrixClient): string[] {
+    const raw = decisions(client).apart;
+    return Array.isArray(raw) ? raw.filter((one): one is string => typeof one === "string") : [];
+}
+
+/**
  * Writes the reader's decisions back, keeping whichever half is not being changed.
  *
  * Both halves go through their readers on the way out rather than the stored content being spread
@@ -380,12 +395,13 @@ export function dismissedSuggestions(client: MatrixClient): string[][] {
  */
 async function decide(
     client: MatrixClient,
-    next: { links?: string[][]; dismissed?: string[][]; names?: Record<string, string> },
+    next: { links?: string[][]; dismissed?: string[][]; names?: Record<string, string>; apart?: string[] },
 ): Promise<void> {
     await client.setAccountData(LINKS_EVENT_TYPE, {
         links: next.links ?? manualLinks(client),
         dismissed: next.dismissed ?? dismissedSuggestions(client),
         names: next.names ?? chosenNames(client),
+        apart: next.apart ?? keptApart(client),
     });
 }
 
@@ -436,7 +452,9 @@ export async function linkAccounts(client: MatrixClient, mxids: string[]): Promi
     const touched = existing.filter((group) => group.some((one) => mxids.includes(one)));
     const untouched = existing.filter((group) => !touched.includes(group));
     const merged = [...new Set([...mxids, ...touched.flat()])];
-    await decide(client, { links: [...untouched, merged] });
+    // Saying they are one person is the later word on an account that had been taken out of one.
+    const apart = keptApart(client).filter((one) => !merged.includes(one));
+    await decide(client, { links: [...untouched, merged], apart });
 }
 
 /**
@@ -451,6 +469,19 @@ export async function unlinkAccounts(client: MatrixClient, mxids: string[]): Pro
         .map((group) => group.filter((one) => !mxids.includes(one)))
         .filter((group) => group.length > 1);
     await decide(client, { links });
+}
+
+/**
+ * Takes one account out of the person it is shown under, however it got there.
+ *
+ * Out of any link the reader made, and kept apart from whoever the client would group it with by what it
+ * publishes - the reader does not know which of the two put it there, and should not have to.
+ */
+export async function takeOutAccount(client: MatrixClient, id: string): Promise<void> {
+    const links = manualLinks(client)
+        .map((group) => group.filter((one) => one !== id))
+        .filter((group) => group.length > 1);
+    await decide(client, { links, apart: [...new Set([...keptApart(client), id])] });
 }
 
 /** Records that these accounts are not the same person, so the suggestion is not made again. */
@@ -524,7 +555,7 @@ function pool<T>(a: T[] | undefined, b: T[] | undefined, key: (item: T) => strin
     return [...new Map([...(a ?? []), ...(b ?? [])].map((item) => [key(item), item])).values()];
 }
 
-export function groupAccounts(described: Account[], links: string[][] = []): Person[] {
+export function groupAccounts(described: Account[], links: string[][] = [], apart: string[] = []): Person[] {
     const accounts = mergeSameAccounts(described);
     const parent = new Map<number, number>();
     const find = (at: number): number => {
@@ -547,7 +578,8 @@ export function groupAccounts(described: Account[], links: string[][] = []): Per
         else union(seen, at);
     };
     accounts.forEach((account, at) => {
-        for (const key of account.keys) join(`key:${key}`, at);
+        // An account the reader took out of a person is not put back by a number it shares with them.
+        if (!apart.includes(accountId(account))) for (const key of account.keys) join(`key:${key}`, at);
         if (account.mxid) join(`mxid:${account.mxid}`, at);
         for (const group of links) {
             if (group.includes(accountId(account))) join(`link:${group[0]}`, at);
@@ -693,6 +725,7 @@ export async function allPeople(
         groupAccounts(
             [...fromBridges, ...fromChats, ...others, ...contactsFromCards(client)].filter(notMine),
             manualLinks(client),
+            keptApart(client),
         ),
     );
 }

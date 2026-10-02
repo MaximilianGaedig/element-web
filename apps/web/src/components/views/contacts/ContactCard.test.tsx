@@ -33,6 +33,62 @@ const person = (over: Partial<Person> = {}): Person => ({
 });
 
 describe("ContactCard", () => {
+    /*
+     * The way out of a wrong merge was offered only on accounts the reader had merged by hand, so an
+     * account the client grouped by a shared number could not be removed at all.
+     */
+    it("offers to take out any account of a person who has more than one", async () => {
+        const onUnlinkAccount = vi.fn();
+        render(
+            <ContactCard person={person()} onBack={() => {}} onMessage={() => {}} onUnlinkAccount={onUnlinkAccount} />,
+        );
+        // Neither account is in linkedIds: both were grouped by their number.
+        expect(screen.getByRole("button", { name: "Not the same person on Signal" })).toBeInTheDocument();
+        await userEvent.click(screen.getByRole("button", { name: "Not the same person on WhatsApp" }));
+        expect(onUnlinkAccount).toHaveBeenCalledWith("@wa_ada:e");
+    });
+
+    it("offers nothing to take out of a person with one account", () => {
+        const one = person();
+        render(
+            <ContactCard
+                person={{ ...one, accounts: one.accounts.slice(0, 1) }}
+                onBack={() => {}}
+                onMessage={() => {}}
+                onUnlinkAccount={() => {}}
+            />,
+        );
+        expect(screen.queryByRole("button", { name: /Not the same person/ })).toBeNull();
+    });
+
+    /* Two accounts on a card read as a network and a name each: not enough to know which one is wrong. */
+    it("opens an account to show what it is and what tied it to this person", async () => {
+        render(
+            <ContactCard person={person()} onBack={() => {}} onMessage={() => {}} linkedIds={new Set(["@wa_ada:e"])} />,
+        );
+        expect(screen.queryByTestId("account-details")).toBeNull();
+
+        const inspect = screen.getByRole("button", { name: "About this WhatsApp account" });
+        await userEvent.click(inspect);
+
+        const details = screen.getByTestId("account-details");
+        expect(inspect).toHaveAttribute("aria-expanded", "true");
+        expect(details).toHaveTextContent("ID on WhatsApp");
+        expect(details).toHaveTextContent("49170");
+        expect(details).toHaveTextContent("@wa_ada:e");
+        expect(details).toHaveTextContent("it has the same +49170 as the Signal account");
+        expect(details).toHaveTextContent("you merged it");
+        expect(details).toHaveTextContent("No chat yet");
+
+        // One at a time: opening the other closes this one.
+        await userEvent.click(screen.getByRole("button", { name: "About this Signal account" }));
+        expect(screen.getAllByTestId("account-details")).toHaveLength(1);
+        expect(screen.getByTestId("account-details")).toHaveTextContent("You have a chat with this account");
+
+        await userEvent.click(screen.getByRole("button", { name: "About this Signal account" }));
+        expect(screen.queryByTestId("account-details")).toBeNull();
+    });
+
     it("shows every kind of detail a network published, not only what could be matched", () => {
         render(
             <ContactCard
@@ -122,7 +178,8 @@ describe("ContactCard", () => {
     it("opens the chat on the network whose row was used", async () => {
         const onMessage = vi.fn();
         render(<ContactCard person={person()} onBack={() => {}} onMessage={onMessage} />);
-        await userEvent.click(screen.getByRole("button", { name: /WhatsApp/ }));
+        // The row itself, which starts with the network's name - not the controls beside it that mention it.
+        await userEvent.click(screen.getByRole("button", { name: /^WhatsApp/ }));
         expect(onMessage).toHaveBeenCalledWith(expect.objectContaining({ name: "Ada Klein" }), "@wa_ada:e");
     });
 

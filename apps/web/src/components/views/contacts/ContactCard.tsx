@@ -30,11 +30,12 @@ import FavouriteSolidIcon from "@vector-im/compound-design-tokens/assets/web/ico
 import ExternalIcon from "@vector-im/compound-design-tokens/assets/web/icons/link";
 import EmailIcon from "@vector-im/compound-design-tokens/assets/web/icons/email";
 import UnlinkIcon from "@vector-im/compound-design-tokens/assets/web/icons/close";
+import InspectIcon from "@vector-im/compound-design-tokens/assets/web/icons/info";
 import VerifiedIcon from "@vector-im/compound-design-tokens/assets/web/icons/verified";
 import UnverifiedIcon from "@vector-im/compound-design-tokens/assets/web/icons/error";
 
 import { _t, _td } from "../../../languageHandler";
-import { type Person } from "../../../utils/contacts/people";
+import { type Account, type Person } from "../../../utils/contacts/people";
 import { readKey } from "../../../utils/contacts/identity";
 import { accountId } from "../../../utils/contacts/people";
 import { accountLink } from "../../../utils/contacts/deepLinks";
@@ -85,10 +86,12 @@ interface Props {
      * Take one account back out of this person, leaving the rest merged.
      *
      * Per account rather than per person: a contact merged from four accounts with one of them wrong was
-     * only fixable by pulling all four apart and redoing the other three.
+     * only fixable by pulling all four apart and redoing the other three. Offered on every account of a
+     * person who has more than one, whoever put it there: an account the client grouped by a shared number
+     * can be the wrong one just as well as an account the reader merged.
      */
     onUnlinkAccount?: (mxid: string) => void;
-    /** Which of their accounts the reader merged by hand, since those are the only ones to undo. */
+    /** Which of their accounts the reader merged by hand, to say so where an account is looked into. */
     linkedIds?: ReadonlySet<string>;
     /** The colour the reader gave them, and how to change it. */
     colour?: AvatarColour;
@@ -154,6 +157,76 @@ function Fact({ label, value }: { label: string; value: string }): JSX.Element {
         <div className="mx_ContactCard_fact">
             <span className="mx_ContactCard_factLabel">{label}</span>
             <span className="mx_ContactCard_factValue">{value}</span>
+        </div>
+    );
+}
+
+/**
+ * Why an account is shown under this person: what it publishes that another of their accounts publishes
+ * too, and whether the reader put it here. Empty for the account everything else was grouped around by
+ * nothing but itself.
+ */
+export function reasonsFor(person: Person, account: Account, linkedIds?: ReadonlySet<string>): string[] {
+    const reasons: string[] = [];
+    for (const other of person.accounts) {
+        if (other === account) continue;
+        const shared = account.keys.find((key) => other.keys.includes(key));
+        if (shared) {
+            reasons.push(_t("contacts|account_why_shared", { value: readKey(shared), network: other.network }));
+        }
+    }
+    if (linkedIds?.has(accountId(account))) reasons.push(_t("contacts|account_why_linked"));
+    return reasons;
+}
+
+/**
+ * Everything known about one account, under its row.
+ *
+ * A merged contact lists a network and a name per account, which is not enough to tell which of four is
+ * the one that does not belong: two accounts on one network read the same. What each account is - its
+ * face, its ids, what it published, and what tied it to this person - is what the reader needs before
+ * taking one out.
+ */
+function AccountDetails({
+    person,
+    account,
+    linkedIds,
+}: {
+    person: Person;
+    account: Account;
+    linkedIds?: ReadonlySet<string>;
+}): JSX.Element {
+    const face = account.avatarUrl ? mediaFromMxc(account.avatarUrl).getSquareThumbnailHttp(40) : null;
+    const reasons = reasonsFor(person, account, linkedIds);
+    const name = account.name || readKey(account.remoteId);
+    return (
+        <div className="mx_ContactCard_accountDetails" data-testid="account-details">
+            <div className="mx_ContactCard_accountFace">
+                <BaseAvatar name={name} idName={accountId(account)} url={face ?? undefined} size="40px" />
+                <span className="mx_ContactCard_factValue">{name}</span>
+            </div>
+            <Fact label={_t("contacts|account_remote_id", { network: account.network })} value={account.remoteId} />
+            {account.mxid && <Fact label={_t("contacts|account_matrix_id")} value={account.mxid} />}
+            {(account.details ?? []).map((detail) => (
+                <Fact
+                    key={`${detail.kind}:${detail.value}`}
+                    label={_t(DETAIL_LABEL[detail.kind])}
+                    value={detail.value}
+                />
+            ))}
+            <Fact
+                label={_t("contacts|account_address_book")}
+                value={
+                    account.saved
+                        ? _t("contacts|account_saved", { network: account.network })
+                        : _t("contacts|account_not_saved")
+                }
+            />
+            <Fact
+                label={_t("contacts|account_chat")}
+                value={account.roomId ? _t("contacts|account_chat_exists") : _t("contacts|account_chat_none")}
+            />
+            {!!reasons.length && <Fact label={_t("contacts|account_why")} value={reasons.join(" · ")} />}
         </div>
     );
 }
@@ -250,6 +323,8 @@ export function ContactCard({
     const photoRef = useRef<HTMLInputElement>(null);
     const toneRefs = { ring: useRef<HTMLInputElement>(null), text: useRef<HTMLInputElement>(null) };
     const [calling, setCalling] = useState(false);
+    /* Which account is being looked into; one at a time, so the list stays a list. */
+    const [inspected, setInspected] = useState<string>();
     const [draft, setDraft] = useState(nickname ?? person.name);
     /* The reader's own picture first: they chose it, and a bridge changing its avatar must not undo that. */
     const pictured = card?.photoUrl ?? person.avatarUrl;
@@ -580,51 +655,65 @@ export function ContactCard({
                              * everything a bridge cannot carry.
                              */
                             const link = accountLink(account.network, account.remoteId, account.identifiers);
+                            const id = accountId(account);
+                            const looking = inspected === id;
                             return (
-                                <div
-                                    className="mx_ContactCard_accountRow"
-                                    key={`${account.network}:${account.remoteId}`}
-                                >
-                                    <button
-                                        type="button"
-                                        className="mx_ContactCard_account"
-                                        onClick={() => onMessage(person, account.mxid)}
-                                        disabled={!account.mxid}
-                                    >
-                                        <span className="mx_ContactCard_factLabel">{account.network}</span>
-                                        <span className="mx_ContactCard_factValue">
-                                            {account.name || readKey(account.remoteId)}
-                                        </span>
-                                        {/* What the network shows to tell people of the same name apart. */}
-                                        {account.context && (
-                                            <span className="mx_ContactCard_factNote">{account.context}</span>
-                                        )}
-                                    </button>
-                                    {/* Only where the reader is the one who put it here: see onUnlinkAccount. */}
-                                    {onUnlinkAccount && linkedIds?.has(accountId(account)) && (
+                                <React.Fragment key={`${account.network}:${account.remoteId}`}>
+                                    <div className="mx_ContactCard_accountRow">
                                         <button
                                             type="button"
-                                            className="mx_ContactCard_accountUnlink"
-                                            aria-label={_t("contacts|unlink_account", { network: account.network })}
-                                            title={_t("contacts|unlink_account", { network: account.network })}
-                                            onClick={() => onUnlinkAccount(accountId(account))}
+                                            className="mx_ContactCard_account"
+                                            onClick={() => onMessage(person, account.mxid)}
+                                            disabled={!account.mxid}
                                         >
-                                            <UnlinkIcon width="20" height="20" aria-hidden />
+                                            <span className="mx_ContactCard_factLabel">{account.network}</span>
+                                            <span className="mx_ContactCard_factValue">
+                                                {account.name || readKey(account.remoteId)}
+                                            </span>
+                                            {/* What the network shows to tell people of the same name apart. */}
+                                            {account.context && (
+                                                <span className="mx_ContactCard_factNote">{account.context}</span>
+                                            )}
                                         </button>
-                                    )}
-                                    {link && (
-                                        <a
-                                            className="mx_ContactCard_accountLink"
-                                            href={link.url}
-                                            target="_blank"
-                                            rel="noreferrer noopener"
-                                            aria-label={_t("contacts|open_on", { network: account.network })}
-                                            title={_t("contacts|open_on", { network: account.network })}
+                                        <button
+                                            type="button"
+                                            className="mx_ContactCard_accountInspect"
+                                            aria-label={_t("contacts|inspect_account", { network: account.network })}
+                                            title={_t("contacts|inspect_account", { network: account.network })}
+                                            aria-expanded={looking}
+                                            onClick={() => setInspected(looking ? undefined : id)}
                                         >
-                                            <ExternalIcon width="20" height="20" />
-                                        </a>
+                                            <InspectIcon width="20" height="20" aria-hidden />
+                                        </button>
+                                        {/* Only where there is something to take it out of: see onUnlinkAccount. */}
+                                        {onUnlinkAccount && person.accounts.length > 1 && (
+                                            <button
+                                                type="button"
+                                                className="mx_ContactCard_accountUnlink"
+                                                aria-label={_t("contacts|unlink_account", { network: account.network })}
+                                                title={_t("contacts|unlink_account", { network: account.network })}
+                                                onClick={() => onUnlinkAccount(accountId(account))}
+                                            >
+                                                <UnlinkIcon width="20" height="20" aria-hidden />
+                                            </button>
+                                        )}
+                                        {link && (
+                                            <a
+                                                className="mx_ContactCard_accountLink"
+                                                href={link.url}
+                                                target="_blank"
+                                                rel="noreferrer noopener"
+                                                aria-label={_t("contacts|open_on", { network: account.network })}
+                                                title={_t("contacts|open_on", { network: account.network })}
+                                            >
+                                                <ExternalIcon width="20" height="20" />
+                                            </a>
+                                        )}
+                                    </div>
+                                    {looking && (
+                                        <AccountDetails person={person} account={account} linkedIds={linkedIds} />
                                     )}
-                                </div>
+                                </React.Fragment>
                             );
                         })}
                     </section>

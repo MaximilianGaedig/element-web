@@ -9,6 +9,7 @@ import React, { type JSX, type ReactNode, useEffect, useState } from "react";
 import { type MatrixClient } from "matrix-js-sdk/src/matrix";
 
 import { ContactCard } from "./ContactCard";
+import { PersonCardMenu } from "./PersonCardMenu";
 import { type Person } from "../../../utils/contacts/people";
 import { type Call, callHistory, indexedCallHistory } from "../../../utils/contacts/calls";
 import { usePersonPresence } from "../../../utils/contacts/presence";
@@ -16,7 +17,7 @@ import { type Week, personWeek } from "../../../utils/contacts/activity";
 import { type SharedRoom, askSharedRooms, callsWith, sharedRooms } from "../../../utils/contacts/shared";
 import { type Verification, realAccounts, verificationOf, verify } from "../../../utils/contacts/verification";
 import { callInRoom, messagePerson, openRoom } from "../../../utils/contacts/actions";
-import { allPeople, chosenName, namePerson } from "../../../utils/contacts/people";
+import { allPeople, chosenName, manualLinks, namePerson, takeOutAccount } from "../../../utils/contacts/people";
 import { isFavourite, setFavourite } from "../../../utils/contacts/favourites";
 import { splitName } from "../../../utils/contacts/names";
 import { publishedCardOf } from "../../../utils/contacts/publish";
@@ -35,10 +36,11 @@ interface Props {
     onChanged: () => void;
     /** Every call there is, when the caller already has them; the card reads them itself otherwise. */
     calls?: Call[];
-    /** The actions menu, where the card is shown with one. */
+    /** The actions menu, where whoever shows the card has one of its own; the card brings one otherwise. */
     menu?: ReactNode;
-    /** The accounts the reader merged by hand, which are the only ones that can be separated again. */
+    /** The accounts the reader merged by hand; read here when the caller does not already hold them. */
     linkedIds?: ReadonlySet<string>;
+    /** Takes one account out of them; done here when the caller has no way of its own. */
     onUnlinkAccount?: (mxid: string) => void;
 }
 
@@ -150,7 +152,12 @@ export function PersonCard({
             onFavourite={
                 person.rooms.length ? (who, on) => void setFavourite(client, who.rooms, on).then(onChanged) : undefined
             }
-            menu={menu}
+            /*
+             * Its own menu and its own way of taking an account out, where the caller brought neither: the
+             * card opened from a chat had the facts and none of the actions, so fixing a wrong merge meant
+             * going to the contacts list to find the same person again.
+             */
+            menu={menu ?? <PersonCardMenu client={client} person={person} onChanged={onChanged} />}
             presence={presence}
             calls={callsWith(calls ?? history, person)}
             week={week}
@@ -161,8 +168,8 @@ export function PersonCard({
                 if (mxid) void verify(client, mxid);
             }}
             onOpenRoom={openRoom}
-            onUnlinkAccount={onUnlinkAccount}
-            linkedIds={linkedIds}
+            onUnlinkAccount={onUnlinkAccount ?? ((id) => void takeOutAccount(client, id).then(onChanged))}
+            linkedIds={linkedIds ?? new Set(manualLinks(client).flat())}
             colour={chosenColour(client, person)}
             onColour={(next) => void setColour(client, person, next).then(onChanged)}
             /*

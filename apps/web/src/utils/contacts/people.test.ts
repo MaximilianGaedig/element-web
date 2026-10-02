@@ -21,9 +21,11 @@ import {
     dismissSuggestion,
     dismissedSuggestions,
     groupAccounts,
+    keptApart,
     linkAccounts,
     manualLinks,
     sameNameSuggestions,
+    takeOutAccount,
     unlinkAccounts,
 } from "./people";
 import DMRoomMap from "../DMRoomMap";
@@ -211,6 +213,83 @@ describe("what the reader decides about people nothing ties together", () => {
         expect(dismissedSuggestions(client)).toEqual([]);
         await dismissSuggestion(client, ["@a:example.org", "@b:example.org"]);
         expect(read(client).links).toEqual([]);
+    });
+});
+
+/*
+ * A person the client put together by itself - two accounts publishing one number - had no way out: the
+ * only undo was for links the reader had made, so the wrong account stayed for good.
+ */
+describe("taking one account out of a person", () => {
+    const signal = account("Signal", "@signal_ada:example.org", "Ada", ["tel:+49170"]);
+    const whatsapp = account("WhatsApp", "@whatsapp_ada:example.org", "Ada", ["tel:+49170"]);
+    const telegram = account("Telegram", "@telegram_ada:example.org", "Ada K");
+    const grouped = (client: MatrixClient): Person[] =>
+        groupAccounts([signal, whatsapp, telegram], manualLinks(client), keptApart(client));
+
+    it("takes out an account that only a shared number put there, and leaves the rest together", async () => {
+        const client = clientWith();
+        await linkAccounts(client, ["@signal_ada:example.org", "@telegram_ada:example.org"]);
+        expect(grouped(client)).toHaveLength(1);
+
+        await takeOutAccount(client, "@whatsapp_ada:example.org");
+
+        const people = grouped(client);
+        expect(people).toHaveLength(2);
+        expect(people.map((one) => accountsOf([one]).sort())).toContainEqual([
+            "@signal_ada:example.org",
+            "@telegram_ada:example.org",
+        ]);
+        expect(people.map((one) => accountsOf([one]))).toContainEqual(["@whatsapp_ada:example.org"]);
+        // The link the reader made between the other two is untouched.
+        expect(read(client).links).toEqual([["@signal_ada:example.org", "@telegram_ada:example.org"]]);
+    });
+
+    it("takes out an account the reader merged, too, without the reader saying which kind it was", async () => {
+        const client = clientWith();
+        await linkAccounts(client, ["@signal_ada:example.org", "@telegram_ada:example.org"]);
+        await takeOutAccount(client, "@telegram_ada:example.org");
+        expect(read(client).links).toEqual([]);
+        // Signal and WhatsApp still share their number; Telegram is on its own again.
+        expect(
+            grouped(client)
+                .map((one) => one.accounts.length)
+                .sort(),
+        ).toEqual([1, 2]);
+    });
+
+    it("puts it back when the reader merges it again", async () => {
+        const client = clientWith();
+        await takeOutAccount(client, "@whatsapp_ada:example.org");
+        expect(keptApart(client)).toEqual(["@whatsapp_ada:example.org"]);
+        await linkAccounts(client, ["@whatsapp_ada:example.org", "@signal_ada:example.org"]);
+        expect(keptApart(client)).toEqual([]);
+        expect(
+            grouped(client)
+                .map((one) => one.accounts.length)
+                .sort(),
+        ).toEqual([1, 2]);
+    });
+
+    it("keeps the record through the reader's other decisions", async () => {
+        const client = clientWith();
+        await takeOutAccount(client, "@whatsapp_ada:example.org");
+        await dismissSuggestion(client, ["@a:example.org", "@b:example.org"]);
+        await namePerson(client, grouped(client)[0], "Ada");
+        expect(keptApart(client)).toEqual(["@whatsapp_ada:example.org"]);
+    });
+
+    it("is still one account when two sources describe it", () => {
+        // Kept apart from other accounts, not from itself: the chat and the address book both name it.
+        const fromBook = { ...whatsapp, saved: true };
+        const people = groupAccounts([signal, whatsapp, fromBook], [], ["@whatsapp_ada:example.org"]);
+        expect(people).toHaveLength(2);
+        expect(people.flatMap((one) => one.accounts)).toHaveLength(2);
+    });
+
+    it("ignores stored junk", () => {
+        expect(keptApart(clientWith({ apart: "nonsense" }))).toEqual([]);
+        expect(keptApart(clientWith({ apart: ["@a:example.org", 7, null] }))).toEqual(["@a:example.org"]);
     });
 });
 

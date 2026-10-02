@@ -60,6 +60,7 @@ import {
     linkAccounts,
     manualLinks,
     sameNameSuggestions,
+    takeOutAccount,
     unlinkAccounts,
 } from "../../../utils/contacts/people";
 import { readKey } from "../../../utils/contacts/identity";
@@ -968,7 +969,7 @@ export function ContactsView({ tab, onFinished }: Props): JSX.Element {
     /** One account out of a merged person, leaving the others as they were. */
     const unlinkOne = useCallback(
         (mxid: string): void => {
-            void unlinkAccounts(client, [mxid]).then(again);
+            void takeOutAccount(client, mxid).then(again);
         },
         [client, again],
     );
