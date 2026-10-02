@@ -235,6 +235,50 @@ describe("<TimelineView />", () => {
         expect(container.querySelector(`.${styles.cover}`)?.children).toHaveLength(1);
     });
 
+    describe("the list changing height, as a phone's keyboard coming up does", () => {
+        const endOf = (scroller: HTMLElement): number => scroller.scrollHeight - scroller.clientHeight;
+        const Timeline = ({ vm, height }: { vm: TimelineViewModel; height: number }): React.ReactNode => (
+            <div style={{ height, width: 320 }}>
+                <TimelineView vm={vm} renderItem={renderItem} />
+            </div>
+        );
+
+        it("keeps a reader at the end at the end", async () => {
+            const { vm, actions } = makeFakeVm({ items: eventItems(30) });
+            const { rerender } = render(<Timeline vm={vm} height={VIEWPORT_HEIGHT} />);
+            const scroller = screen.getByTestId("timeline-scroller");
+            await waitFor(() => expect(actions.onAnchorReached).toHaveBeenCalled(), { timeout: 5000 });
+            await waitFor(() => expect(scroller.scrollTop).toBeCloseTo(endOf(scroller), 0));
+            const before = scroller.scrollTop;
+
+            // The keyboard takes 120px off the bottom
+            rerender(<Timeline vm={vm} height={VIEWPORT_HEIGHT - 120} />);
+
+            await waitFor(() => expect(scroller.scrollTop).toBeCloseTo(before + 120, 0));
+            expect(scroller.scrollTop).toBeCloseTo(endOf(scroller), 0);
+
+            // ...and gives it back
+            rerender(<Timeline vm={vm} height={VIEWPORT_HEIGHT} />);
+            await waitFor(() => expect(scroller.scrollTop).toBeCloseTo(before, 0));
+        });
+
+        it("leaves a reader who has scrolled up where they are", async () => {
+            const { vm, actions } = makeFakeVm({ items: eventItems(30) });
+            const { rerender } = render(<Timeline vm={vm} height={VIEWPORT_HEIGHT} />);
+            const scroller = screen.getByTestId("timeline-scroller");
+            await waitFor(() => expect(actions.onAnchorReached).toHaveBeenCalled(), { timeout: 5000 });
+            act(() => {
+                scroller.scrollTop = 100;
+            });
+            await waitFor(() => expect(actions.onAtBottomStateChange).toHaveBeenLastCalledWith(false));
+
+            rerender(<Timeline vm={vm} height={VIEWPORT_HEIGHT - 120} />);
+            await new Promise((resolve) => setTimeout(resolve, 100));
+
+            expect(scroller.scrollTop).toBe(100);
+        });
+    });
+
     describe("the space kept clear at the end changing, as a composer growing does", () => {
         const endOf = (scroller: HTMLElement): number => scroller.scrollHeight - scroller.clientHeight;
         const Timeline = ({ vm, paddingEnd }: { vm: TimelineViewModel; paddingEnd: number }): React.ReactNode => (

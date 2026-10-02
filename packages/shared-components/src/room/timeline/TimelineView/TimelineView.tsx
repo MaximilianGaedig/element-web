@@ -219,6 +219,8 @@ export function TimelineView({
 
     // ─── State used by the scroll reporting below ──────────────────────────────
     const phaseRef = useRef<Phase>("init");
+    /** Whether the last scroll left the reader at the end of the list. */
+    const atEndRef = useRef(false);
     /** The animation frame of a reveal in progress (see `revealNewMessages`). */
     const revealFrameRef = useRef<number | undefined>(undefined);
     /**
@@ -491,6 +493,27 @@ export function TimelineView({
         };
     }, [stopReveal]);
 
+    // ...and when the list itself changes height, which on a phone is the keyboard coming up: the list
+    // gets shorter from the bottom, and with nothing moving it the last messages are behind the keyboard.
+    // Whether the reader was at the end is what the last scroll left it as, since by the time the size
+    // has changed the end is somewhere else. Observers run before the frame is painted, so the list is
+    // never seen out of place.
+    useEffect(() => {
+        const scroller = scrollerRef.current;
+        if (!scroller || typeof ResizeObserver === "undefined") return;
+        let height = scroller.clientHeight;
+        const observer = new ResizeObserver(() => {
+            const next = scroller.clientHeight;
+            if (next === height) return;
+            height = next;
+            if (phaseRef.current !== "live" || !atEndRef.current || revealFrameRef.current !== undefined) return;
+            if (snapshotRef.current.pendingAnchor !== null || !snapshotRef.current.atLiveEnd) return;
+            scroller.scrollTop = scroller.scrollHeight - scroller.clientHeight;
+        });
+        observer.observe(scroller);
+        return () => observer.disconnect();
+    }, []);
+
     // A reader at the end stays at the end when the space kept clear there changes. Nothing else holds
     // them: it is no row changing size, so the virtualizer has no reason to move, and the last message
     // went behind a composer that grew - after which the reader was no longer "at the end" for new
@@ -632,6 +655,8 @@ export function TimelineView({
         if (!scroller) return;
         let idleTimeout: number | undefined;
         const onScroll = (): void => {
+            atEndRef.current =
+                scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight <= AT_BOTTOM_THRESHOLD_PX;
             // Only once the reader is the one scrolling. Placing the timeline scrolls it repeatedly as
             // rows are measured, and reading that as scrolling puts the floating date on screen for the
             // first moment of every room opened - which is the one time nothing has moved.
