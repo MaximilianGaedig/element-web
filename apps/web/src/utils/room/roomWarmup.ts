@@ -8,6 +8,8 @@ Please see LICENSE files in the repository root for full details.
 import { Direction, LOCAL_PAGINATION_PREFIX, type MatrixClient, type Room } from "matrix-js-sdk/src/matrix";
 import { logger } from "matrix-js-sdk/src/logger";
 
+import { roomsAhead } from "./roomsAhead";
+
 /*
  * Getting a room ready before it is opened.
  *
@@ -153,6 +155,10 @@ export class RoomWarmup {
 
     private start(room: Room): void {
         const { roomId } = room;
+        // Its view as well as its events: mounted behind the room on screen, so the click only brings it
+        // forward (see roomsAhead). Asked for before the events are in - the view fills in as they come,
+        // exactly as it does when it is opened, and is the longer of the two to get ready.
+        roomsAhead.prepare(roomId);
         const now = Date.now();
         const history = { inFlight: this.inFlight, warmed: this.warmed, serverRequests: this.serverRequests };
         const allowance = warmupAllowance(history, roomId, now);

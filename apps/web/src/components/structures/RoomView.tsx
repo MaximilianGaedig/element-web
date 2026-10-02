@@ -199,6 +199,16 @@ interface IRoomProps extends RoomViewProps {
      * to true.
      */
     active?: boolean;
+    /**
+     * The room this view is for, where it is one of several kept mounted (see LoggedInView).
+     *
+     * A view normally learns its room from the room view store, which names the room on screen. One
+     * mounted ahead of being opened (utils/room/roomsAhead) is for a room the store does not name yet,
+     * so it is told here and takes nothing else from the store until the store comes round to its room:
+     * no reply being written, no event to scroll to, no call being viewed - those are all facts about
+     * the room on screen, which is another one.
+     */
+    keptRoomId?: string;
 
     /*
      * If true, hide the header
@@ -652,7 +662,7 @@ export class RoomView extends React.Component<IRoomProps, IRoomState> {
     };
 
     private getMainSplitContentType = (room: Room): MainSplitContentType => {
-        if (this.roomViewStore.isViewingCall() || isVideoRoom(room)) {
+        if ((this.isStoresRoom() && this.roomViewStore.isViewingCall()) || isVideoRoom(room)) {
             return MainSplitContentType.Call;
         }
         if (this.context.widgetLayoutStore.hasMaximisedWidget(room)) {
@@ -661,12 +671,28 @@ export class RoomView extends React.Component<IRoomProps, IRoomState> {
         return MainSplitContentType.Timeline;
     };
 
+    /**
+     * Whether the room view store is talking about this view's room: always, for a view that is the only
+     * one, and for one of several kept mounted only while its room is the one on screen.
+     */
+    private isStoresRoom(): boolean {
+        return !this.props.keptRoomId || this.roomViewStore.getRoomId() === this.props.keptRoomId;
+    }
+
     private onRoomViewStoreUpdate = async (initial?: boolean): Promise<void> => {
         if (this.unmounted) {
             return;
         }
 
-        const roomLoadError = this.roomViewStore.getRoomLoadError() ?? undefined;
+        /*
+         * Mounted ahead of being opened: the store names another room, and nothing it says is about this
+         * one. The view starts as a room just opened with nothing asked of it would, and picks the store
+         * up from the first update that names its room - which is the reader opening it.
+         */
+        const ahead = !this.isStoresRoom();
+        if (ahead && !initial) return;
+
+        const roomLoadError = (ahead ? undefined : this.roomViewStore.getRoomLoadError()) ?? undefined;
         if (!initial && !roomLoadError && this.state.roomId !== this.roomViewStore.getRoomId()) {
             // RoomView explicitly does not support changing what room
             // is being viewed: instead it should just be re-mounted when
@@ -682,16 +708,16 @@ export class RoomView extends React.Component<IRoomProps, IRoomState> {
             return;
         }
         const roomViewStore = this.roomViewStore;
-        const roomId = roomViewStore.getRoomId() ?? null;
+        const roomId = (ahead ? this.props.keptRoomId : roomViewStore.getRoomId()) ?? null;
         // Rooms other than the one opened at startup keep only room-list state in memory: bring the rest in.
         if (roomId) void this.context.client?.loadStoredRoomState?.(roomId);
-        const roomAlias = roomViewStore.getRoomAlias() ?? undefined;
-        const roomLoading = roomViewStore.isRoomLoading();
-        const joining = roomViewStore.isJoining();
-        const replyToEvent = roomViewStore.getQuotingEvent() ?? undefined;
-        const shouldPeek = this.state.matrixClientIsReady && roomViewStore.shouldPeek();
-        const wasContextSwitch = roomViewStore.getWasContextSwitch();
-        const promptAskToJoin = roomViewStore.promptAskToJoin();
+        const roomAlias = (ahead ? undefined : roomViewStore.getRoomAlias()) ?? undefined;
+        const roomLoading = !ahead && roomViewStore.isRoomLoading();
+        const joining = !ahead && roomViewStore.isJoining();
+        const replyToEvent = (ahead ? undefined : roomViewStore.getQuotingEvent()) ?? undefined;
+        const shouldPeek = !ahead && this.state.matrixClientIsReady && roomViewStore.shouldPeek();
+        const wasContextSwitch = !ahead && roomViewStore.getWasContextSwitch();
+        const promptAskToJoin = !ahead && roomViewStore.promptAskToJoin();
         const room = this.context.client?.getRoom(roomId ?? undefined) ?? undefined;
 
         const newState: Partial<IRoomState> = {
@@ -716,6 +742,8 @@ export class RoomView extends React.Component<IRoomProps, IRoomState> {
         };
 
         if (
+            // The right panel on screen belongs to the room on screen.
+            !ahead &&
             newState.mainSplitContentType === MainSplitContentType.Timeline &&
             this.context.rightPanelStore.isOpen &&
             this.context.rightPanelStore.currentCard.phase === RightPanelPhases.Timeline &&
@@ -727,7 +755,8 @@ export class RoomView extends React.Component<IRoomProps, IRoomState> {
             newState.showRightPanel = false;
         }
 
-        const initialEventId = this.roomViewStore.getInitialEventId() ?? this.state.initialEventId;
+        const initialEventId =
+            (ahead ? undefined : this.roomViewStore.getInitialEventId()) ?? this.state.initialEventId;
         if (initialEventId) {
             let initialEvent = room?.findEventById(initialEventId);
             // The event does not exist in the current sync data
@@ -839,6 +868,7 @@ export class RoomView extends React.Component<IRoomProps, IRoomState> {
         }
 
         if (
+            !ahead &&
             room &&
             this.getMainSplitContentType(room) !== MainSplitContentType.Timeline &&
             newState.initialEventId !== this.state.initialEventId

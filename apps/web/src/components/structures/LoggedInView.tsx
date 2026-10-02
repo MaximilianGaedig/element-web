@@ -6,7 +6,7 @@ SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only OR LicenseRef-Element-Com
 Please see LICENSE files in the repository root for full details.
 */
 
-import React, { type ClipboardEvent } from "react";
+import React, { type ClipboardEvent, startTransition } from "react";
 import {
     ClientEvent,
     type MatrixClient,
@@ -30,6 +30,8 @@ import MediaDeviceHandler from "../../MediaDeviceHandler";
 import dis from "../../dispatcher/dispatcher";
 import { type IMatrixClientCreds } from "../../utils/createMatrixClient";
 import SettingsStore from "../../settings/SettingsStore";
+import { ROOMS_AHEAD, mayPrepareRooms, roomsAhead } from "../../utils/room/roomsAhead";
+import { type SwitchKind, switchAsked, switchShown, switchTimings } from "../../utils/room/switchTimings";
 import { KnownMembership } from "matrix-js-sdk/src/types";
 import { SettingLevel } from "../../settings/SettingLevel";
 import PlatformPeg from "../../PlatformPeg";
@@ -77,6 +79,8 @@ import { TgMetricsPanel } from "../views/telegram/TgMetricsPanel";
 const MAX_PINNED_NOTICES_PER_ROOM = 2;
 /** How many rooms stay mounted for instant switching back, the one on screen included. */
 const KEPT_ROOMS = 5;
+/** How long the app has been up before the rooms at the top of the list are got ready: startup comes first. */
+const IDLE_AHEAD_MS = 8000;
 
 // Used to find the closest inputable thing. Because of how our composer works,
 // your caret might be within a paragraph/font/div/whatever within the
@@ -112,6 +116,8 @@ interface IState {
     chatColumns: boolean;
     activeCalls: Array<MatrixCall>;
     backgroundImage?: string;
+    /** Rooms mounted ahead of being opened, newest first (utils/room/roomsAhead). */
+    ahead: readonly string[];
 }
 
 /**
@@ -130,6 +136,13 @@ class LoggedInView extends React.Component<IProps, IState> {
     protected readonly _roomView: React.RefObject<RoomView | null>;
     /** The rooms kept mounted, most recently shown first (see keptRooms). */
     private kept: string[] = [];
+    /** Every room that was mounted by the last render, to tell how the next one switched to was found. */
+    private mounted: readonly string[] = [];
+    /** Which of those were only mounted ahead of being opened. */
+    private mountedAhead: ReadonlySet<string> = new Set();
+    private switchDispatcherRef?: string;
+    private stopWatchingAhead?: () => void;
+    private idleAhead?: ReturnType<typeof setTimeout>;
     protected layoutWatcherRef?: string;
     protected compactLayoutWatcherRef?: string;
     protected backgroundImageWatcherRef?: string;
@@ -151,6 +164,7 @@ class LoggedInView extends React.Component<IProps, IState> {
             chatColumns: !!SettingsStore.getValue("chatColumns"),
             usageLimitDismissed: false,
             activeCalls: context.legacyCallHandler.getAllActiveCalls(),
+            ahead: roomsAhead.list(),
         };
 
         // stash the MatrixClient in case we log out before we are unmounted
@@ -162,6 +176,24 @@ class LoggedInView extends React.Component<IProps, IState> {
     }
 
     public componentDidMount(): void {
+        /*
+         * A room got ready ahead of the click is mounted as a transition: building its view is real
+         * work, and done at the ordinary priority it would hold up the pointer that is still moving
+         * over the room list. As a transition it gives way to anything the reader does - including the
+         * click it was started for, which then finds the work part done rather than not begun.
+         */
+        this.stopWatchingAhead = roomsAhead.subscribe(() =>
+            startTransition(() => this.setState({ ahead: roomsAhead.list() })),
+        );
+        this.idleAhead = setTimeout(() => void this.prepareTopRooms(), IDLE_AHEAD_MS);
+        // The clock on a switch starts when the room is asked for, wherever that is asked from.
+        this.switchDispatcherRef = dis.register((payload) => {
+            if (payload.action === Action.ViewRoom && typeof payload.room_id === "string") {
+                switchAsked(payload.room_id);
+            }
+        });
+        window.mxSwitchTimings = switchTimings;
+        this.noteMounted();
         document.addEventListener("keydown", this.onNativeKeyDown, false);
         this.context.legacyCallHandler.addListener(LegacyCallHandlerEvent.CallState, this.onCallState);
 
@@ -243,6 +275,10 @@ class LoggedInView extends React.Component<IProps, IState> {
     };
 
     public componentWillUnmount(): void {
+        this.stopWatchingAhead?.();
+        clearTimeout(this.idleAhead);
+        if (this.switchDispatcherRef) dis.unregister(this.switchDispatcherRef);
+        roomsAhead.clear();
         document.removeEventListener("keydown", this.onNativeKeyDown, false);
         this.context.legacyCallHandler.removeListener(LegacyCallHandlerEvent.CallState, this.onCallState);
         this._matrixClient.removeListener(ClientEvent.AccountData, this.onAccountData);
@@ -660,6 +696,64 @@ class LoggedInView extends React.Component<IProps, IState> {
         return this.kept;
     }
 
+    /** What is mounted now that a render has been committed: what the next switch will be told from. */
+    private noteMounted(): void {
+        const ahead = this.aheadRooms(this.kept);
+        this.mounted = [...this.kept, ...ahead];
+        this.mountedAhead = new Set(ahead);
+    }
+
+    public componentDidUpdate(prevProps: IProps): void {
+        const current = this.props.currentRoomId;
+        if (current && current !== prevProps.currentRoomId && this.props.page_type === PageTypes.RoomView) {
+            // How the room now in front was found: still mounted from before, mounted ahead, or built just now.
+            const kind: SwitchKind = !this.mounted.includes(current)
+                ? "cold"
+                : this.mountedAhead.has(current)
+                  ? "ahead"
+                  : "kept";
+            switchShown(current, kind);
+            // Opened, so it is kept in its own right from here on.
+            roomsAhead.forget(current);
+        }
+        this.noteMounted();
+    }
+
+    /**
+     * The rooms to mount ahead of being opened: the ones somebody said the reader is about to open, that
+     * are not mounted in their own right and are rooms the reader is in. As with the kept rooms, only
+     * with the new timeline.
+     */
+    private aheadRooms(kept: readonly string[]): string[] {
+        if (!SettingsStore.getValue("feature_new_timeline")) return [];
+        const client = this._matrixClient;
+        return this.state.ahead.filter(
+            (roomId) => !kept.includes(roomId) && client.getRoom(roomId)?.getMyMembership() === KnownMembership.Join,
+        );
+    }
+
+    /**
+     * The rooms at the top of the list, got ready once the app has been up a while and has nothing else
+     * to do: where the reader is most likely to go next, and the only head start there is on a phone,
+     * which has no pointer to rest on a room before it is tapped.
+     */
+    private async prepareTopRooms(): Promise<void> {
+        if (!mayPrepareRooms() || !SettingsStore.getValue("feature_new_timeline")) return;
+        await new Promise<void>((resolve) =>
+            typeof requestIdleCallback === "undefined" ? resolve() : requestIdleCallback(() => resolve()),
+        );
+        // Loaded here rather than at the top: the room list store is not something the shell should pull in.
+        const { default: RoomListStoreV3 } = await import("../../stores/room-list-v3/RoomListStoreV3");
+        const top = RoomListStoreV3.instance
+            .getSortedRoomsInActiveSpace()
+            .sections.flatMap((section) => section.rooms)
+            .map((room) => room.roomId)
+            .filter((roomId) => roomId !== this.props.currentRoomId && !this.kept.includes(roomId))
+            .slice(0, ROOMS_AHEAD);
+        // The first in the list last, so it is the newest and the last to make way.
+        for (const roomId of top.reverse()) roomsAhead.prepare(roomId);
+    }
+
     public render(): React.ReactNode {
         let pageElement;
 
@@ -671,21 +765,26 @@ class LoggedInView extends React.Component<IProps, IState> {
             case PageTypes.RoomView: {
                 const current = this.props.currentRoomId;
                 const kept = this.keptRooms(current);
+                const mounted = [...kept, ...this.aheadRooms(kept)];
                 /*
                  * The last few rooms stay mounted, the one on screen over the others, so switching back to
                  * one is instant - its timeline, scroll and composer as they were, no spinner in between -
                  * as Telegram keeps the chats it has shown. Each room is still its own RoomView (it does not
                  * support changing room); the ones behind are told so and keep out of the reader's way.
+                 *
+                 * The rooms the reader is about to open are mounted behind it in the same way (aheadRooms),
+                 * so opening one of those for the first time is the same switch.
                  */
                 pageElement = (
                     <>
-                        {kept.map((roomId) => {
+                        {mounted.map((roomId) => {
                             const active = roomId === current;
                             return (
                                 <div key={roomId} className="mx_RoomView_kept" data-active={active}>
                                     <RoomView
                                         ref={active ? this._roomView : undefined}
                                         active={active}
+                                        keptRoomId={roomId}
                                         onRegistered={this.props.onRegistered}
                                         threepidInvite={active ? this.props.threepidInvite : undefined}
                                         oobData={active ? this.props.roomOobData : undefined}

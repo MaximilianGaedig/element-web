@@ -1237,6 +1237,77 @@ describe("RoomView", () => {
         expect(onRoomViewUpdateMock).toHaveBeenCalledWith(true);
     });
 
+    /*
+     * A view learned its room from the store, which names the room on screen - so a room could only be
+     * built once it was the one on screen, which is after the click.
+     */
+    describe("a room mounted ahead of being opened", () => {
+        let other: Room;
+        beforeEach(() => {
+            other = new Room("!ahead:example.org", cli, "@alice:example.org");
+            rooms.set(other.roomId, other);
+        });
+
+        it("is the room it was mounted for, not the one the store names", async () => {
+            const ref = createRef<RoomView>();
+            // The store is on `room`; this view is for another.
+            await mountRoomView(ref, { active: false, keptRoomId: other.roomId });
+
+            expect(stores.roomViewStore.getRoomId()).toBe(room.roomId);
+            expect(ref.current!.state.roomId).toBe(other.roomId);
+            expect(ref.current!.state.room).toBe(other);
+            expect(ref.current!.state.roomLoading).toBe(false);
+        });
+
+        it("takes nothing from the store that is about the room on screen", async () => {
+            const ref = createRef<RoomView>();
+            await mountRoomView(ref, { active: false, keptRoomId: other.roomId });
+
+            // A jump to a message in the room on screen: an update of the store, about another room.
+            await act(async () => {
+                defaultDispatcher.dispatch<ViewRoomPayload>(
+                    {
+                        action: Action.ViewRoom,
+                        room_id: room.roomId,
+                        event_id: "$somewhere",
+                        highlighted: true,
+                        metricsTrigger: undefined,
+                    },
+                    true,
+                );
+                await flushPromises();
+            });
+
+            expect(stores.roomViewStore.getInitialEventId()).toBe("$somewhere");
+            expect(ref.current!.state.roomId).toBe(other.roomId);
+            expect(ref.current!.state.initialEventId).toBeUndefined();
+        });
+
+        it("picks the store up once the store comes round to its room", async () => {
+            const ref = createRef<RoomView>();
+            await mountRoomView(ref, { active: false, keptRoomId: other.roomId });
+
+            await act(async () => {
+                defaultDispatcher.dispatch<ViewRoomPayload>(
+                    {
+                        action: Action.ViewRoom,
+                        room_id: other.roomId,
+                        event_id: "$target",
+                        highlighted: true,
+                        metricsTrigger: undefined,
+                    },
+                    true,
+                );
+                await flushPromises();
+            });
+
+            expect(stores.roomViewStore.getRoomId()).toBe(other.roomId);
+            expect(ref.current!.state.roomId).toBe(other.roomId);
+            // The reader opened it with somewhere to go: that is the store's to say, and now it is said.
+            expect(ref.current!.state.initialEventId).toBe("$target");
+        });
+    });
+
     describe("handles Action.ComposerInsert", () => {
         it("redispatches an empty composerType with the current state", async () => {
             await mountRoomView();
