@@ -16,6 +16,7 @@ import {
     LOCAL_PAGINATION_PREFIX,
     type IRoomTimelineData,
     type MatrixClient,
+    type EventTimelineSet,
     type MatrixEvent,
     type Room,
 } from "matrix-js-sdk/src/matrix";
@@ -251,6 +252,23 @@ export class RoomTimelineViewModel
 
     /** True when the view reports the list is scrolled to the bottom. */
     private isAtBottom = false;
+    /**
+     * Whether the reader has scrolled up from the newest messages, as last seen while the room was on
+     * screen. Not the opposite of isAtBottom: a room behind another one, or one built before it was
+     * ever shown, is not "at the bottom" of anything and is not being read further back either.
+     */
+    private readingHistory = false;
+    /**
+     * Set when the room's live timeline was replaced while the reader was further back, and the window
+     * was left on the old one (see onTimelineReset). The old timeline has no newer end to page towards,
+     * so by itself the window would say it is at the live end; it is not, until it is loaded again.
+     */
+    private leftOnOldTimeline = false;
+
+    /** Whether the window reaches the room's newest messages. */
+    private windowAtLiveEnd(): boolean {
+        return !this.leftOnOldTimeline && !this.timelineWindow.canPaginate(Direction.Forward);
+    }
 
     /**
      * The event ID of the bottommost visible item as last reported by
@@ -423,7 +441,40 @@ export class RoomTimelineViewModel
         // Sending, failing and being replaced by the remote echo all arrive here rather than
         // through RoomEvent.Timeline, which never sees a pending event.
         this.disposables.trackListener(this.opts.room, RoomEvent.LocalEchoUpdated, this.onLocalEchoUpdated);
+        // The room's live timeline can be replaced under an open room (see onTimelineReset).
+        this.disposables.trackListener(
+            this.opts.room,
+            RoomEvent.TimelineReset,
+            this.onTimelineReset as (...args: unknown[]) => void,
+        );
     }
+
+    /**
+     * The room's live timeline was replaced: a sync came back with a gap in it, so the SDK dropped the
+     * timeline it had and started a new one from the events that came with the gap.
+     *
+     * The window is a view onto a timeline, and it went on being a view onto the one that was dropped:
+     * everything arriving afterwards went into the new one, and none of it was drawn - the room showed
+     * its last message from before the gap however many came after, with the room list beside it
+     * counting them. Leaving the room and coming back used to cure it, because that rebuilt the room;
+     * a room kept mounted for switching back to is not rebuilt, so it has to follow the timeline itself.
+     *
+     * Following live, the window moves to the new timeline's end, which is where the reader is. Reading
+     * further back, they are left where they are - what is on screen is still what they were reading -
+     * and the window is marked as no longer at the live end, so that going to the newest messages
+     * loads them rather than scrolling to the end of what is here.
+     */
+    private onTimelineReset = (_room: Room | undefined, timelineSet: EventTimelineSet | undefined): void => {
+        if (this.isDisposed) return;
+        if (timelineSet !== this.opts.room.getUnfilteredTimelineSet()) return;
+        debug(`[TimelineVM] live timeline reset — readingHistory=${this.readingHistory}`);
+        if (this.readingHistory) {
+            this.leftOnOldTimeline = true;
+            this.mergeSnapshot({ atLiveEnd: false }, "timeline-reset");
+        } else {
+            void this.load({ kind: "live" });
+        }
+    };
 
     /**
      * A message of ours was queued, sent, failed or replaced by its remote echo. None of that
@@ -462,7 +513,7 @@ export class RoomTimelineViewModel
                 if (this.isDisposed) return;
                 const items = this.buildItems();
 
-                const atLiveEnd = !this.timelineWindow.canPaginate(Direction.Forward);
+                const atLiveEnd = this.windowAtLiveEnd();
                 // Accumulate unread count only for messages from other users.
                 if (!this.isAtBottom && event.getSender() !== this.opts.client.getSafeUserId()) {
                     this.unreadMessageCount++;
@@ -653,6 +704,8 @@ export class RoomTimelineViewModel
             if (this.isDisposed) return;
             await this.timelineWindow.load(sdkLoadTarget, INITIAL_SIZE);
             if (this.isDisposed) return;
+            // Loaded afresh, the window is on whatever the room's timelines are now.
+            this.leftOnOldTimeline = false;
             this.fillAfterPlacing = false;
             if (target.kind === "permalink") {
                 // Gather enough messages on both sides of the target before we show anything.
@@ -719,7 +772,7 @@ export class RoomTimelineViewModel
                 }
             }
 
-            if (!pendingAnchor && items.length > 0 && !this.timelineWindow.canPaginate(Direction.Forward)) {
+            if (!pendingAnchor && items.length > 0 && this.windowAtLiveEnd()) {
                 // Live-end: anchor to the last item so the view lands at the bottom.
                 pendingAnchor = { targetKey: items[items.length - 1].key, align: "end" };
                 debug(`[TimelineVM] load() — live-end anchor key=${pendingAnchor.targetKey}`);
@@ -729,7 +782,7 @@ export class RoomTimelineViewModel
             this.backwardSpinnerVisible = false;
             this.forwardSpinnerVisible = false;
             this.republish(`load(${target.kind})-done`, {
-                atLiveEnd: !this.timelineWindow.canPaginate(Direction.Forward),
+                atLiveEnd: this.windowAtLiveEnd(),
                 pendingAnchor,
                 highlightedEventId: target.kind === "permalink" ? target.eventId : null,
                 canJumpToReadMarker: this.computeCanJumpToReadMarker(items),
@@ -904,6 +957,7 @@ export class RoomTimelineViewModel
 
     public onAtBottomStateChange = (atBottom: boolean): void => {
         this.isAtBottom = atBottom;
+        if (this.active) this.readingHistory = !atBottom;
         if (atBottom && this.snapshot.current.atLiveEnd) {
             this.unreadMessageCount = 0;
         }
@@ -1255,7 +1309,7 @@ export class RoomTimelineViewModel
                 `atLiveEnd=${this.snapshot.current.atLiveEnd}, items=${this.snapshot.current.items.length}`,
         );
 
-        if (!this.timelineWindow.canPaginate(Direction.Forward)) {
+        if (this.windowAtLiveEnd()) {
             debug(`[TimelineVM] paginate(forward) skipped — canPaginate=false`);
             if (!this.snapshot.current.atLiveEnd) {
                 debug(`[TimelineVM] paginate(forward) — setting atLiveEnd=true`);
@@ -1370,7 +1424,7 @@ export class RoomTimelineViewModel
                 `(window→${this.timelineWindow.getEvents().length}), newlyShown=${newlyShown}`,
         );
         this.republish(`paginate(${dirLabel})-trim`, {
-            atLiveEnd: !this.timelineWindow.canPaginate(Direction.Forward),
+            atLiveEnd: this.windowAtLiveEnd(),
             canJumpToReadMarker: this.computeCanJumpToReadMarker(this.baseItems),
         });
 
@@ -1460,7 +1514,7 @@ export class RoomTimelineViewModel
                     this.republish("paginate(backward)-batch", {
                         // Backward pagination can trim the newest messages away once the window is
                         // full, so re-check whether we are still at the live end.
-                        atLiveEnd: !this.timelineWindow.canPaginate(Direction.Forward),
+                        atLiveEnd: this.windowAtLiveEnd(),
                         canJumpToReadMarker: this.computeCanJumpToReadMarker(rebuilt),
                     });
                 } else {
@@ -1476,12 +1530,12 @@ export class RoomTimelineViewModel
             if (isBackward) {
                 this.backwardSpinnerVisible = false;
                 this.republish("paginate(backward)-end", {
-                    atLiveEnd: !this.timelineWindow.canPaginate(Direction.Forward),
+                    atLiveEnd: this.windowAtLiveEnd(),
                 });
             } else {
                 this.forwardSpinnerVisible = false;
                 this.republish("paginate(forward)-end", {
-                    atLiveEnd: !this.timelineWindow.canPaginate(Direction.Forward),
+                    atLiveEnd: this.windowAtLiveEnd(),
                 });
             }
         } catch (e) {
@@ -1512,13 +1566,12 @@ export class RoomTimelineViewModel
          * messages nowhere on screen.
          */
         const windowIds = new Set(this.timelineWindow.getEvents().map((e) => e.getId()));
-        const pending = pendingEventsToShow(
-            this.opts.room.getPendingEvents(),
-            !this.timelineWindow.canPaginate(Direction.Forward),
-        ).filter((event) => {
-            const id = event.getId();
-            return !!id && !windowIds.has(id);
-        });
+        const pending = pendingEventsToShow(this.opts.room.getPendingEvents(), this.windowAtLiveEnd()).filter(
+            (event) => {
+                const id = event.getId();
+                return !!id && !windowIds.has(id);
+            },
+        );
         const events: MatrixEvent[] = [...this.timelineWindow.getEvents(), ...pending];
         const items: TimelineItem[] = [];
         let lastDate: string | null = null;

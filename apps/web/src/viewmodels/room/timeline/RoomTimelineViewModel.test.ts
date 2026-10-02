@@ -356,6 +356,75 @@ describe("RoomTimelineViewModel", () => {
         });
     });
 
+    /*
+     * A sync with a gap in it makes the SDK drop the room's live timeline and start another. The window
+     * stayed on the dropped one: messages went on arriving, and none of them was drawn.
+     */
+    describe("when the room's live timeline is replaced", () => {
+        /** What a gappy sync does to the room, and then the messages that came with it. */
+        const resetWith = (events: MatrixEvent[]): void => {
+            room.resetLiveTimeline(null, null);
+            seedTimeline(events);
+        };
+
+        it("goes on to the new timeline, and draws what arrives in it", async () => {
+            seedTimeline([makeMessage("$a"), makeMessage("$b")]);
+            const vm = await createStartedViewModel();
+            expect(eventKeys(vm.getSnapshot().items)).toEqual(["$a", "$b"]);
+
+            resetWith([makeMessage("$c")]);
+            await vi.waitFor(() => expect(eventKeys(vm.getSnapshot().items)).toContain("$c"));
+
+            // And it is following that one now: the next message is drawn as any live message is.
+            const next = makeMessage("$d");
+            room.getUnfilteredTimelineSet().addLiveEvent(next, { addToState: false });
+            room.emit(RoomEvent.Timeline, next, room, false, false, {
+                timeline: room.getLiveTimeline(),
+                liveEvent: true,
+            } as any);
+            await vi.waitFor(() => expect(eventKeys(vm.getSnapshot().items)).toContain("$d"));
+            expect(vm.getSnapshot().atLiveEnd).toBe(true);
+        });
+
+        it("does the same for a room behind the one on screen", async () => {
+            seedTimeline([makeMessage("$a")]);
+            const vm = await createStartedViewModel();
+            vm.setActive(false);
+
+            resetWith([makeMessage("$c")]);
+
+            await vi.waitFor(() => expect(eventKeys(vm.getSnapshot().items)).toContain("$c"));
+        });
+
+        it("leaves a reader who has scrolled up where they are, and loads the newest when asked", async () => {
+            seedTimeline([makeMessage("$a"), makeMessage("$b")]);
+            const vm = await createStartedViewModel();
+            vm.onAnchorReached();
+            vm.onAtBottomStateChange(false);
+
+            resetWith([makeMessage("$c")]);
+            await new Promise((resolve) => setTimeout(resolve, 20));
+
+            // What they were reading is still what is on screen ...
+            expect(eventKeys(vm.getSnapshot().items)).toEqual(["$a", "$b"]);
+            // ... and the newest messages are known not to be: going to them loads them.
+            expect(vm.getSnapshot().atLiveEnd).toBe(false);
+            vm.onJumpToLive(vi.fn());
+            await vi.waitFor(() => expect(eventKeys(vm.getSnapshot().items)).toContain("$c"));
+        });
+
+        it("takes no notice of another timeline of the room being replaced", async () => {
+            seedTimeline([makeMessage("$a")]);
+            const vm = await createStartedViewModel();
+            const loaded = vm.getSnapshot().items;
+
+            room.emit(RoomEvent.TimelineReset, room, {} as any, false);
+            await new Promise((resolve) => setTimeout(resolve, 20));
+
+            expect(vm.getSnapshot().items).toBe(loaded);
+        });
+    });
+
     describe("live messages", () => {
         it("adds a message that arrives while the timeline is open", async () => {
             seedTimeline([makeMessage("$a")]);
