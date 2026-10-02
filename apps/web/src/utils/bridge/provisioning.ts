@@ -96,21 +96,54 @@ export async function askBridge<T>(
     body?: object,
     signal?: AbortSignal,
 ): Promise<T> {
+    return requestBridge<T>(client, login.provisioningUrl, path, { body, signal, query: { login_id: login.loginId } });
+}
+
+/** What a bridge said when it refused a request: its own words, which are written for the person asking. */
+export class BridgeRequestError extends Error {
+    public constructor(
+        public readonly status: number,
+        message: string,
+        public readonly errcode?: string,
+    ) {
+        super(message);
+    }
+}
+
+/**
+ * One request to a bridge's provisioning API, as yourself, whether or not you have a login on it yet.
+ *
+ * A body makes it a POST. Throws a {@link BridgeRequestError} carrying the bridge's own message on anything
+ * other than success.
+ */
+export async function requestBridge<T>(
+    client: MatrixClient,
+    provisioningUrl: string,
+    path: string,
+    opts: { body?: object; query?: Record<string, string>; signal?: AbortSignal } = {},
+): Promise<T> {
     const token = client.getAccessToken();
     if (!token) throw new Error("No access token to ask a bridge with");
-    const url = new URL(`${login.provisioningUrl}/${path}`);
-    url.searchParams.set("login_id", login.loginId);
+    const url = new URL(`${provisioningUrl}/${path}`);
+    for (const [key, value] of Object.entries(opts.query ?? {})) url.searchParams.set(key, value);
     url.searchParams.set("user_id", client.getSafeUserId());
     const response = await fetch(url.toString(), {
-        method: body ? "POST" : "GET",
+        method: opts.body ? "POST" : "GET",
         headers: {
             Authorization: `Bearer ${token}`,
-            ...(body ? { "Content-Type": "application/json" } : {}),
+            ...(opts.body ? { "Content-Type": "application/json" } : {}),
         },
-        body: body ? JSON.stringify(body) : undefined,
-        signal,
+        body: opts.body ? JSON.stringify(opts.body) : undefined,
+        signal: opts.signal,
     });
-    if (!response.ok) throw new Error(`${response.status} from the bridge`);
+    if (!response.ok) {
+        const said = (await response.json().catch(() => null)) as { error?: string; errcode?: string } | null;
+        throw new BridgeRequestError(
+            response.status,
+            said?.error || `${response.status} from the bridge`,
+            said?.errcode,
+        );
+    }
     return (await response.json()) as T;
 }
 

@@ -34,6 +34,8 @@ export interface BridgeLogin {
     network: string;
     commandPrefix: string;
     updatedTs: number;
+    /** Where the bridge's own API is, when a client can use it as the user: signing in happens there. */
+    provisioningUrl?: string;
 }
 
 /** What a bridge state means for the user: fine, working on it, needs a look, or needs a new login. */
@@ -76,6 +78,7 @@ export function bridgeLoginsIn(client: MatrixClient): BridgeLogin[] {
                 network: content.network ?? "",
                 commandPrefix: content.command_prefix ?? "",
                 updatedTs: Number(content.updated_ts) || 0,
+                provisioningUrl: typeof content.provisioning_url === "string" ? content.provisioning_url : undefined,
             });
         }
     }

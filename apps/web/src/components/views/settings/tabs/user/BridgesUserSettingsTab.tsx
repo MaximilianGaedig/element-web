@@ -31,6 +31,8 @@ import {
 } from "../../../../../utils/importOverview";
 import { Bar, eta, NetworkImportDetail, number as num } from "./importDetail";
 import { DeclaredSettingsControls } from "./DeclaredSettingsControls";
+import Modal from "../../../../../Modal";
+import BridgeLoginDialog from "../../../dialogs/BridgeLoginDialog";
 import { type DeclaredSettings, declaredSettings } from "../../../../../utils/bridge/declaredSettings";
 
 const number = (n: number): string => n.toLocaleString();
@@ -125,6 +127,23 @@ function openLogin(login: BridgeLogin): void {
             timelineRenderingType: TimelineRenderingType.Room,
         });
     }, 500);
+}
+
+/**
+ * Signs in to the login's network: here, by asking its bridge, where the bridge can be asked; else in its
+ * chat. With `again`, that login is signed back in to; without, an account is added next to it.
+ */
+function signIn(login: BridgeLogin, again?: string): void {
+    if (!login.provisioningUrl) {
+        openLogin(login);
+        return;
+    }
+    Modal.createDialog(BridgeLoginDialog, {
+        network: login.network,
+        provisioningUrl: login.provisioningUrl,
+        again,
+        onOpenChat: () => openLogin(login),
+    });
 }
 
 /** The bridge's own picture: its bot's avatar, from what the client already knows, else from the bot's profile. */
@@ -264,12 +283,21 @@ function BridgeCard({
                                 : _t("tg_layout|bridge_problem_title", { network: login.network })}
                         </div>
                         {login.message && <p>{login.message}</p>}
-                        <ol className="mx_BridgeCard_steps">
-                            <li>{_t("tg_layout|bridge_step_open")}</li>
-                            <li>{_t("tg_layout|bridge_step_login", { command: `${login.commandPrefix} login` })}</li>
-                            <li>{_t("tg_layout|bridge_step_follow")}</li>
-                        </ol>
-                        <button type="button" className="mx_BridgeCard_primary" onClick={(): void => openLogin(login)}>
+                        {/* Typing to the bot is only the way in where the bridge cannot be asked directly. */}
+                        {!login.provisioningUrl && (
+                            <ol className="mx_BridgeCard_steps">
+                                <li>{_t("tg_layout|bridge_step_open")}</li>
+                                <li>
+                                    {_t("tg_layout|bridge_step_login", { command: `${login.commandPrefix} login` })}
+                                </li>
+                                <li>{_t("tg_layout|bridge_step_follow")}</li>
+                            </ol>
+                        )}
+                        <button
+                            type="button"
+                            className="mx_BridgeCard_primary"
+                            onClick={(): void => signIn(login, login.accountId)}
+                        >
                             {_t("tg_layout|bridge_login_again")}
                         </button>
                     </div>
@@ -320,6 +348,11 @@ function BridgeCard({
                     >
                         {_t("tg_layout|bridge_open_chat")}
                     </button>
+                    {login.provisioningUrl && (
+                        <button type="button" className="mx_BridgeCard_secondary" onClick={(): void => signIn(login)}>
+                            {_t("tg_layout|bridge_add_account")}
+                        </button>
+                    )}
                 </div>
             </div>
         </details>
