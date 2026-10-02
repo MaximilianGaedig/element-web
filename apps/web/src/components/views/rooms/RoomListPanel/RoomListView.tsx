@@ -11,10 +11,12 @@ import {
     useCreateAutoDisposedViewModel,
     type Room as SharedRoom,
 } from "@element-hq/web-shared-components";
-import { type Room } from "matrix-js-sdk/src/matrix";
+import { Room } from "matrix-js-sdk/src/matrix";
 
 import { DecoratedRoomAvatarView } from "../../avatars/DecoratedRoomAvatarView";
 import { BridgedRoomAvatar } from "../../bridge/BridgeNetworkIcon";
+import RoomAvatar from "../../avatars/RoomAvatar";
+import { PreviewRoomAvatarData } from "../../../../viewmodels/room-list/PreviewRoomAvatarData";
 import { getKeyBindingsManager } from "../../../../KeyBindingsManager";
 import { KeyBindingAction } from "../../../../accessibility/KeyboardShortcuts";
 import { Landmark, LandmarkNavigation } from "../../../../accessibility/LandmarkNavigation";
@@ -43,21 +45,28 @@ export function RoomListView(): JSX.Element {
     const client = sdkContext.client!;
     const renderAvatar = useCallback(
         (room: SharedRoom): ReactNode => {
-            return (
-                <>
-                    <BridgedRoomAvatar room={room as Room}>
-                        <DecoratedRoomAvatarView room={room as Room} />
-                    </BridgedRoomAvatar>
-                    <WarmupOnRest client={client} room={room as Room} />
-                </>
-            );
+            if (room instanceof Room) {
+                return (
+                    <>
+                        <BridgedRoomAvatar room={room}>
+                            <DecoratedRoomAvatarView room={room} />
+                        </BridgedRoomAvatar>
+                        <WarmupOnRest client={client} room={room} />
+                    </>
+                );
+            }
+            // A preview item has no `Room`, only the data needed for its avatar
+            if (room instanceof PreviewRoomAvatarData) return <RoomAvatar size="32px" oobData={room} />;
+            return null;
         },
         [client],
     );
 
     // Render room path breadcrumbs for each room (show full path, no pruning)
     const renderRoomPath = useCallback((room: SharedRoom): ReactNode => {
-        return <RoomPath room={room as Room} fullPath />;
+        // A preview item is not in any space yet, so it has no path
+        if (!(room instanceof Room)) return null;
+        return <RoomPath room={room} fullPath />;
     }, []);
 
     // Handle keyboard navigation for landmarks

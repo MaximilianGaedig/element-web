@@ -282,7 +282,7 @@ catalogs:
 
 overrides:
   livekit-client: ^2.22.2
-  pretty-format@30>react-is: 19.2.8
+  pretty-format@30>react-is: 19.3.0
   '@types/react': ^19.2.10
   '@types/react-dom': ^19.2.3
   caniuse-lite: 1.0.30001810
@@ -320,7 +320,7 @@ packageExtensionsChecksum: sha256-kCJccFy7l6HmjcpzmxV958fHndI9zZq246f1ttgkURI=
 
 patchedDependencies:
   '@arcmantle/vite-plugin-import-css-sheet': 8019aa9feca17db6bab3483612b4150c911d70b58fddc52bf2d7258a1484a747
-  '@tanstack/virtual-core@3': 8326005fc8dbe141d728bc736007fb32054cd093ed7a7209fba336c0902b23ff
+  '@tanstack/virtual-core@3': 71da5da1ddec893afd6cfd513e81996f92820a7a2aa1004d2e19dfc1c984d7d7
   '@types/auto-launch': b60dc9846a11a1684ce52c55493f29ea398d3dc44b88f66ab44e9843d6c01538
   '@vector-im/compound-web@10.1.0': 5e9200be98e67d658f47f58201aed9d6900451eaf8745ddd65c4e08032a35099
   '@vector-im/matrix-wysiwyg': 7bdf6150f2905bc2f055a6bcaa7b9d78fa7ffde82e800bcc454ac7b0096bd65e
@@ -534,8 +534,8 @@ importers:
         specifier: ^7.12.5
         version: 7.29.7
       '@element-hq/element-call-component':
-        specifier: github:element-hq/element-call#toger5/component-api-entry&path:/component
-        version: https://codeload.github.com/element-hq/element-call/tar.gz/5c497cc6a86325dd5199fe875293d7e881a7f476#path:/component(livekit-client@2.22.3)(matrix-js-sdk@42.3.0)(react-dom@19.2.8)(react@19.2.8)
+        specifier: github:element-hq/element-call#main&path:/component
+        version: https://codeload.github.com/element-hq/element-call/tar.gz/7c53a6be5ae9f4f38fa1aa469d60c32448364642#path:/component(@vector-im/compound-design-tokens@10.2.1)(@vector-im/compound-web@10.1.0)(livekit-client@2.22.3)(matrix-js-sdk@42.3.0)(react-dom@19.2.8)(react@19.2.8)
       '@element-hq/element-web-module-api':
         specifier: workspace:*
         version: link:../../packages/module-api
@@ -1420,8 +1420,8 @@ importers:
         specifier: ^1.7.0
         version: 1.16.0
       '@tanstack/react-virtual':
-        specifier: 3.14.11
-        version: 3.14.11(react-dom@19.2.8)(react@19.2.8)
+        specifier: 3.14.13
+        version: 3.14.13(react-dom@19.2.8)(react@19.2.8)
       '@vector-im/compound-design-tokens':
         specifier: 'catalog:'
         version: 10.2.1(@types/react@19.2.18)(react@19.2.8)
@@ -1468,8 +1468,8 @@ importers:
         specifier: ^3.0.2
         version: 3.0.2(react@19.2.8)
       react-resizable-panels:
-        specifier: 4.12.4
-        version: 4.12.4(react-dom@19.2.8)(react@19.2.8)
+        specifier: 4.14.1
+        version: 4.14.1(react-dom@19.2.8)(react@19.2.8)
       react-virtuoso:
         specifier: ^4.14.0
         version: 4.18.13(react-dom@19.2.8)(react@19.2.8)
@@ -2840,10 +2840,12 @@ packages:
     engines: {node: '>=14.14'}
     hasBin: true
 
-  '@element-hq/element-call-component@https://codeload.github.com/element-hq/element-call/tar.gz/5c497cc6a86325dd5199fe875293d7e881a7f476#path:/component':
-    resolution: {gitHosted: true, integrity: sha512-gI3N/kzCLsewizyLTYdGhIoPXOmitBgjIxpi7Q71PMBuDzAztt718cFcq5fTazibE4SsrOPnRVWtZc5XX+eOTg==, path: /component, tarball: https://codeload.github.com/element-hq/element-call/tar.gz/5c497cc6a86325dd5199fe875293d7e881a7f476}
+  '@element-hq/element-call-component@https://codeload.github.com/element-hq/element-call/tar.gz/7c53a6be5ae9f4f38fa1aa469d60c32448364642#path:/component':
+    resolution: {gitHosted: true, integrity: sha512-jv4HNIalHtk155lretVlz4/yNjuhpixz7smikIbg4VVcndpC103G9G335WphROIdr9DZwYoDS5g0GDtTm753zg==, path: /component, tarball: https://codeload.github.com/element-hq/element-call/tar.gz/7c53a6be5ae9f4f38fa1aa469d60c32448364642}
     version: 0.0.0
     peerDependencies:
+      '@vector-im/compound-design-tokens': ^11.0.0
+      '@vector-im/compound-web': ^10.0.0
       livekit-client: ^2.22.2
       matrix-js-sdk: '*'
       react: ^19
@@ -5975,14 +5977,14 @@ packages:
     resolution: {integrity: sha512-4BAffykYOgO+5nzBWYwE3W90sBgLJoUPRWWcL8wlyiM8IB8ipJz3UMJ9KXQd1RKQXpKp8Tutn80HZtWsu2u76w==}
     engines: {node: '>=10'}
 
-  '@tanstack/react-virtual@3.14.11':
-    resolution: {integrity: sha512-SStWf8bYdTgAquYqG4Pi2+d1XimQKoCIJ94H3jsm0D6UA0yqffvWuvUzrrQ4idewFWq8BSPpahnmLVosJIAs6g==}
+  '@tanstack/react-virtual@3.14.13':
+    resolution: {integrity: sha512-JbDTAwtzZ99aOeCrAfW5EsE5KSq5RWh6Af2dtFwyLIIk48Ja7vm6n4axu/43T3vfjFnEGJalxJ1wyYjSQD6bSg==}
     peerDependencies:
       react: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
       react-dom: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
 
-  '@tanstack/virtual-core@3.17.9':
-    resolution: {integrity: sha512-M8Bzy7CCMvUjRiuoHVH9mRjyUVczRs8v8RcUEphLFGc445ZP4KQ15Y1sLqhQqJi/HgGJrxfCHnEnIX0x9mVrBg==}
+  '@tanstack/virtual-core@3.17.11':
+    resolution: {integrity: sha512-+ILjvtHup6Y2hzQ6YzwMgX1Q+oQpxEGOXCEsCNaPoIP0VxMbizIBTmYTDtkerkIQS8/CbP1BRuyt8V/8BCsy1g==}
 
   '@tesseract.js-data/eng@1.0.0':
     resolution: {integrity: sha512-mbTumm6KQPUHyzTPQaF3ObXYnx0SqqfV2nabqFVQBwD6Kl7PhGSLSzOlfFTWy0P3BjghaSKA2W9GB19Jk+ZcTg==}
@@ -11517,8 +11519,8 @@ packages:
       '@types/react':
         optional: true
 
-  react-resizable-panels@4.12.4:
-    resolution: {integrity: sha512-SOsSj4e9U7vxL15MbgTfl35IO4vxSW4Xb0b1gtJVbRPWv7FOezcgOA00Mi0jP8XqC3y7jOQxpsGs/9zLKHPitA==}
+  react-resizable-panels@4.14.1:
+    resolution: {integrity: sha512-OB1bXDNTLcGgTTbaX6Dn5efZhlMboSnkfr1w4xpsJTHPEbRJpACBhXpgRCXozgPO1ztgFeZRUe5J3mFNCVKm5g==}
     peerDependencies:
       react: ^18.0.0 || ^19.0.0
       react-dom: ^18.0.0 || ^19.0.0
@@ -15344,8 +15346,10 @@ snapshots:
       - supports-color
     optional: true
 
-  '@element-hq/element-call-component@https://codeload.github.com/element-hq/element-call/tar.gz/5c497cc6a86325dd5199fe875293d7e881a7f476#path:/component(livekit-client@2.22.3)(matrix-js-sdk@42.3.0)(react-dom@19.2.8)(react@19.2.8)':
+  '@element-hq/element-call-component@https://codeload.github.com/element-hq/element-call/tar.gz/7c53a6be5ae9f4f38fa1aa469d60c32448364642#path:/component(@vector-im/compound-design-tokens@10.2.1)(@vector-im/compound-web@10.1.0)(livekit-client@2.22.3)(matrix-js-sdk@42.3.0)(react-dom@19.2.8)(react@19.2.8)':
     dependencies:
+      '@vector-im/compound-design-tokens': 10.2.1(@types/react@19.2.18)(react@19.2.8)
+      '@vector-im/compound-web': 10.1.0(patch_hash=5e9200be98e67d658f47f58201aed9d6900451eaf8745ddd65c4e08032a35099)(@fontsource/inconsolata@5.2.8)(@fontsource/inter@5.3.0)(@types/react-dom@19.2.3)(@types/react@19.2.18)(@vector-im/compound-design-tokens@10.2.1)(react-dom@19.2.8)(react@19.2.8)
       livekit-client: 2.22.3(@types/dom-mediacapture-record@1.0.22)
       matrix-js-sdk: https://codeload.github.com/MaximilianGaedig/matrix-js-sdk/tar.gz/69325e651aa44f928da0926f32aa7c9633643d71
       react: 19.2.8
@@ -18094,13 +18098,13 @@ snapshots:
     dependencies:
       defer-to-connect: 2.0.1
 
-  '@tanstack/react-virtual@3.14.11(react-dom@19.2.8)(react@19.2.8)':
+  '@tanstack/react-virtual@3.14.13(react-dom@19.2.8)(react@19.2.8)':
     dependencies:
-      '@tanstack/virtual-core': 3.17.9(patch_hash=8326005fc8dbe141d728bc736007fb32054cd093ed7a7209fba336c0902b23ff)
+      '@tanstack/virtual-core': 3.17.11(patch_hash=71da5da1ddec893afd6cfd513e81996f92820a7a2aa1004d2e19dfc1c984d7d7)
       react: 19.2.8
       react-dom: 19.2.8(react@19.2.8)
 
-  '@tanstack/virtual-core@3.17.9(patch_hash=8326005fc8dbe141d728bc736007fb32054cd093ed7a7209fba336c0902b23ff)': {}
+  '@tanstack/virtual-core@3.17.11(patch_hash=71da5da1ddec893afd6cfd513e81996f92820a7a2aa1004d2e19dfc1c984d7d7)': {}
 
   '@tesseract.js-data/eng@1.0.0': {}
 
@@ -24413,7 +24417,7 @@ snapshots:
     optionalDependencies:
       '@types/react': 19.2.18
 
-  react-resizable-panels@4.12.4(react-dom@19.2.8)(react@19.2.8):
+  react-resizable-panels@4.14.1(react-dom@19.2.8)(react@19.2.8):
     dependencies:
       react: 19.2.8
       react-dom: 19.2.8(react@19.2.8)

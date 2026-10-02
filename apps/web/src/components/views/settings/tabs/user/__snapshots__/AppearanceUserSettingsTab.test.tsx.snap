@@ -32,19 +32,19 @@ exports[`AppearanceUserSettingsTab > should render 1`] = `
               class="mx_SettingsSubsection_content mx_SettingsSubsection_content_newUi"
             >
               <form
-                class="_root_1o4d9_17 mx_ThemeChoicePanel_ThemeSelectors"
+                class="_root mx_ThemeChoicePanel_ThemeSelectors"
               >
                 <div
-                  class="_inline-field_1o4d9_33 mx_ThemeChoicePanel_themeSelector mx_ThemeChoicePanel_themeSelector_disabled cpd-theme-light"
+                  class="_inline-field mx_ThemeChoicePanel_themeSelector mx_ThemeChoicePanel_themeSelector_disabled cpd-theme-light"
                 >
                   <div
-                    class="_inline-field-control_1o4d9_45"
+                    class="_inline-field-control"
                   >
                     <div
-                      class="_container_1ug7n_10"
+                      class="_container"
                     >
                       <input
-                        class="_input_1ug7n_18"
+                        class="_input"
                         disabled=""
                         id="radix-react-use-id-1"
                         name="themeSelector"
@@ -53,15 +53,15 @@ exports[`AppearanceUserSettingsTab > should render 1`] = `
                         value="light"
                       />
                       <div
-                        class="_ui_1ug7n_19"
+                        class="_ui"
                       />
                     </div>
                   </div>
                   <div
-                    class="_inline-field-body_1o4d9_39"
+                    class="_inline-field-body"
                   >
                     <label
-                      class="_label_1o4d9_60 mx_ThemeChoicePanel_themeSelector_Label"
+                      class="_label mx_ThemeChoicePanel_themeSelector_Label"
                       for="radix-react-use-id-1"
                     >
                       Light
@@ -69,16 +69,16 @@ exports[`AppearanceUserSettingsTab > should render 1`] = `
                   </div>
                 </div>
                 <div
-                  class="_inline-field_1o4d9_33 mx_ThemeChoicePanel_themeSelector mx_ThemeChoicePanel_themeSelector_disabled cpd-theme-dark"
+                  class="_inline-field mx_ThemeChoicePanel_themeSelector mx_ThemeChoicePanel_themeSelector_disabled cpd-theme-dark"
                 >
                   <div
-                    class="_inline-field-control_1o4d9_45"
+                    class="_inline-field-control"
                   >
                     <div
-                      class="_container_1ug7n_10"
+                      class="_container"
                     >
                       <input
-                        class="_input_1ug7n_18"
+                        class="_input"
                         disabled=""
                         id="radix-react-use-id-2"
                         name="themeSelector"
@@ -87,15 +87,15 @@ exports[`AppearanceUserSettingsTab > should render 1`] = `
                         value="dark"
                       />
                       <div
-                        class="_ui_1ug7n_19"
+                        class="_ui"
                       />
                     </div>
                   </div>
                   <div
-                    class="_inline-field-body_1o4d9_39"
+                    class="_inline-field-body"
                   >
                     <label
-                      class="_label_1o4d9_60 mx_ThemeChoicePanel_themeSelector_Label"
+                      class="_label mx_ThemeChoicePanel_themeSelector_Label"
                       for="radix-react-use-id-2"
                     >
                       Dark
@@ -103,16 +103,16 @@ exports[`AppearanceUserSettingsTab > should render 1`] = `
                   </div>
                 </div>
                 <div
-                  class="_inline-field_1o4d9_33 mx_ThemeChoicePanel_themeSelector mx_ThemeChoicePanel_themeSelector_disabled cpd-theme-light"
+                  class="_inline-field mx_ThemeChoicePanel_themeSelector mx_ThemeChoicePanel_themeSelector_disabled cpd-theme-light"
                 >
                   <div
-                    class="_inline-field-control_1o4d9_45"
+                    class="_inline-field-control"
                   >
                     <div
-                      class="_container_1ug7n_10"
+                      class="_container"
                     >
                       <input
-                        class="_input_1ug7n_18"
+                        class="_input"
                         disabled=""
                         id="radix-react-use-id-3"
                         name="themeSelector"
@@ -121,15 +121,15 @@ exports[`AppearanceUserSettingsTab > should render 1`] = `
                         value="light-high-contrast"
                       />
                       <div
-                        class="_ui_1ug7n_19"
+                        class="_ui"
                       />
                     </div>
                   </div>
                   <div
-                    class="_inline-field-body_1o4d9_39"
+                    class="_inline-field-body"
                   >
                     <label
-                      class="_label_1o4d9_60 mx_ThemeChoicePanel_themeSelector_Label"
+                      class="_label mx_ThemeChoicePanel_themeSelector_Label"
                       for="radix-react-use-id-3"
                     >
                       High contrast
@@ -139,7 +139,7 @@ exports[`AppearanceUserSettingsTab > should render 1`] = `
               </form>
             </div>
             <div
-              class="_separator_13qwf_8"
+              class="_separator"
               data-kind="primary"
               data-orientation="horizontal"
               role="separator"
@@ -162,25 +162,25 @@ exports[`AppearanceUserSettingsTab > should render 1`] = `
               class="mx_SettingsSubsection_content mx_SettingsSubsection_content_newUi"
             >
               <form
-                class="_root_1o4d9_17 mx_LayoutSwitcher_LayoutSelector"
+                class="_root mx_LayoutSwitcher_LayoutSelector"
               >
                 <div
-                  class="_field_1o4d9_27 mxLayoutSwitcher_LayoutSelector_LayoutRadio"
+                  class="_field mxLayoutSwitcher_LayoutSelector_LayoutRadio"
                 >
                   <label
                     aria-label="Modern"
-                    class="_label_1o4d9_60"
+                    class="_label"
                     for="radix-react-use-id-4"
                   >
                     <div
                       class="mxLayoutSwitcher_LayoutSelector_LayoutRadio_inline"
                     >
                       <div
-                        class="_container_1ug7n_10"
+                        class="_container"
                       >
                         <input
                           checked=""
-                          class="_input_1ug7n_18"
+                          class="_input"
                           id="radix-react-use-id-4"
                           name="layout"
                           title=""
@@ -188,7 +188,7 @@ exports[`AppearanceUserSettingsTab > should render 1`] = `
                           value="group"
                         />
                         <div
-                          class="_ui_1ug7n_19"
+                          class="_ui"
                         />
                       </div>
                       <span>
@@ -205,25 +205,25 @@ exports[`AppearanceUserSettingsTab > should render 1`] = `
                       <div
                         aria-atomic="true"
                         aria-live="off"
-                        class="_root_zcguq_9 mx_EventTile _stateOwnEvent_zcguq_908 _layoutGroup_zcguq_196"
+                        class="_root mx_EventTile _stateOwnEvent _layoutGroup"
                         data-event-id="$9999999999999999999999999999999999999999999"
                         data-scroll-tokens="$9999999999999999999999999999999999999999999"
                         data-testid="event-tile"
                         tabindex="-1"
                       >
                         <div
-                          class="_slotSender_zcguq_106"
+                          class="_slotSender"
                           data-testid="event-tile-slot-sender"
                         >
                           <div
-                            class="mx_DisambiguatedProfile _disambiguatedProfile_1q5ax_8"
+                            class="mx_DisambiguatedProfile _disambiguatedProfile"
                             data-event-density="default"
                             data-event-layout="group"
                             role="button"
                             tabindex="0"
                           >
                             <span
-                              class="mx_Username_color2 _disambiguatedProfile_displayName_1q5ax_18 mx_DisambiguatedProfile_displayName"
+                              class="mx_Username_color2 _disambiguatedProfile_displayName mx_DisambiguatedProfile_displayName"
                               dir="auto"
                             >
                               @userId:matrix.org
@@ -231,11 +231,11 @@ exports[`AppearanceUserSettingsTab > should render 1`] = `
                           </div>
                         </div>
                         <div
-                          class="_slotAvatar_zcguq_97"
+                          class="_slotAvatar"
                           data-testid="event-tile-slot-avatar"
                         >
                           <span
-                            class="_avatar_va14e_8 mx_BaseAvatar _avatar-imageless_va14e_55"
+                            class="_avatar mx_BaseAvatar _avatar-imageless"
                             data-color="2"
                             data-testid="avatar-img"
                             data-type="round"
@@ -247,16 +247,16 @@ exports[`AppearanceUserSettingsTab > should render 1`] = `
                           </span>
                         </div>
                         <div
-                          class="_line_zcguq_73 mx_EventTile_line"
+                          class="_line mx_EventTile_line"
                           data-testid="event-tile-line"
                           id="1"
                         >
                           <div
-                            class="_slotBody_zcguq_98"
+                            class="_slotBody"
                             data-testid="event-tile-slot-body"
                           >
                             <div
-                              class="mx_MTextBody mx_EventTile_content _root_ihs22_8 _text_ihs22_25"
+                              class="mx_MTextBody mx_EventTile_content _root _text"
                               data-event-density="default"
                               data-event-layout="group"
                             >
@@ -274,21 +274,21 @@ exports[`AppearanceUserSettingsTab > should render 1`] = `
                   </label>
                 </div>
                 <div
-                  class="_field_1o4d9_27 mxLayoutSwitcher_LayoutSelector_LayoutRadio"
+                  class="_field mxLayoutSwitcher_LayoutSelector_LayoutRadio"
                 >
                   <label
                     aria-label="Message bubbles"
-                    class="_label_1o4d9_60"
+                    class="_label"
                     for="radix-react-use-id-5"
                   >
                     <div
                       class="mxLayoutSwitcher_LayoutSelector_LayoutRadio_inline"
                     >
                       <div
-                        class="_container_1ug7n_10"
+                        class="_container"
                       >
                         <input
-                          class="_input_1ug7n_18"
+                          class="_input"
                           id="radix-react-use-id-5"
                           name="layout"
                           title=""
@@ -296,7 +296,7 @@ exports[`AppearanceUserSettingsTab > should render 1`] = `
                           value="bubble"
                         />
                         <div
-                          class="_ui_1ug7n_19"
+                          class="_ui"
                         />
                       </div>
                       <span>
@@ -313,25 +313,25 @@ exports[`AppearanceUserSettingsTab > should render 1`] = `
                       <div
                         aria-atomic="true"
                         aria-live="off"
-                        class="_root_zcguq_9 mx_EventTile _stateOwnEvent_zcguq_908 _layoutBubble_zcguq_707"
+                        class="_root mx_EventTile _stateOwnEvent _layoutBubble"
                         data-event-id="$9999999999999999999999999999999999999999999"
                         data-scroll-tokens="$9999999999999999999999999999999999999999999"
                         data-testid="event-tile"
                         tabindex="-1"
                       >
                         <div
-                          class="_slotSender_zcguq_106"
+                          class="_slotSender"
                           data-testid="event-tile-slot-sender"
                         >
                           <div
-                            class="mx_DisambiguatedProfile _disambiguatedProfile_1q5ax_8"
+                            class="mx_DisambiguatedProfile _disambiguatedProfile"
                             data-event-density="default"
                             data-event-layout="bubble"
                             role="button"
                             tabindex="0"
                           >
                             <span
-                              class="mx_Username_color2 _disambiguatedProfile_displayName_1q5ax_18 mx_DisambiguatedProfile_displayName"
+                              class="mx_Username_color2 _disambiguatedProfile_displayName mx_DisambiguatedProfile_displayName"
                               dir="auto"
                             >
                               @userId:matrix.org
@@ -339,11 +339,11 @@ exports[`AppearanceUserSettingsTab > should render 1`] = `
                           </div>
                         </div>
                         <div
-                          class="_slotAvatar_zcguq_97"
+                          class="_slotAvatar"
                           data-testid="event-tile-slot-avatar"
                         >
                           <span
-                            class="_avatar_va14e_8 mx_BaseAvatar _avatar-imageless_va14e_55"
+                            class="_avatar mx_BaseAvatar _avatar-imageless"
                             data-color="2"
                             data-testid="avatar-img"
                             data-type="round"
@@ -355,16 +355,16 @@ exports[`AppearanceUserSettingsTab > should render 1`] = `
                           </span>
                         </div>
                         <div
-                          class="_line_zcguq_73 mx_EventTile_line"
+                          class="_line mx_EventTile_line"
                           data-testid="event-tile-line"
                           id="2"
                         >
                           <div
-                            class="_slotBody_zcguq_98"
+                            class="_slotBody"
                             data-testid="event-tile-slot-body"
                           >
                             <div
-                              class="mx_MTextBody mx_EventTile_content _root_ihs22_8 _text_ihs22_25"
+                              class="mx_MTextBody mx_EventTile_content _root _text"
                               data-event-density="default"
                               data-event-layout="bubble"
                             >
@@ -382,21 +382,21 @@ exports[`AppearanceUserSettingsTab > should render 1`] = `
                   </label>
                 </div>
                 <div
-                  class="_field_1o4d9_27 mxLayoutSwitcher_LayoutSelector_LayoutRadio"
+                  class="_field mxLayoutSwitcher_LayoutSelector_LayoutRadio"
                 >
                   <label
                     aria-label="IRC (experimental)"
-                    class="_label_1o4d9_60"
+                    class="_label"
                     for="radix-react-use-id-6"
                   >
                     <div
                       class="mxLayoutSwitcher_LayoutSelector_LayoutRadio_inline"
                     >
                       <div
-                        class="_container_1ug7n_10"
+                        class="_container"
                       >
                         <input
-                          class="_input_1ug7n_18"
+                          class="_input"
                           id="radix-react-use-id-6"
                           name="layout"
                           title=""
@@ -404,7 +404,7 @@ exports[`AppearanceUserSettingsTab > should render 1`] = `
                           value="irc"
                         />
                         <div
-                          class="_ui_1ug7n_19"
+                          class="_ui"
                         />
                       </div>
                       <span>
@@ -421,14 +421,14 @@ exports[`AppearanceUserSettingsTab > should render 1`] = `
                       <div
                         aria-atomic="true"
                         aria-live="off"
-                        class="_root_zcguq_9 mx_EventTile _stateOwnEvent_zcguq_908 _layoutIrc_zcguq_473"
+                        class="_root mx_EventTile _stateOwnEvent _layoutIrc"
                         data-event-id="$9999999999999999999999999999999999999999999"
                         data-scroll-tokens="$9999999999999999999999999999999999999999999"
                         data-testid="event-tile"
                         tabindex="-1"
                       >
                         <div
-                          class="_slotTimestamp_zcguq_108"
+                          class="_slotTimestamp"
                           data-testid="event-tile-slot-timestamp"
                         >
                           <span
@@ -436,11 +436,11 @@ exports[`AppearanceUserSettingsTab > should render 1`] = `
                           />
                         </div>
                         <div
-                          class="_slotAvatar_zcguq_97"
+                          class="_slotAvatar"
                           data-testid="event-tile-slot-avatar"
                         >
                           <span
-                            class="_avatar_va14e_8 mx_BaseAvatar _avatar-imageless_va14e_55"
+                            class="_avatar mx_BaseAvatar _avatar-imageless"
                             data-color="2"
                             data-testid="avatar-img"
                             data-type="round"
@@ -452,18 +452,18 @@ exports[`AppearanceUserSettingsTab > should render 1`] = `
                           </span>
                         </div>
                         <div
-                          class="_slotSender_zcguq_106"
+                          class="_slotSender"
                           data-testid="event-tile-slot-sender"
                         >
                           <div
-                            class="mx_DisambiguatedProfile _disambiguatedProfile_1q5ax_8"
+                            class="mx_DisambiguatedProfile _disambiguatedProfile"
                             data-event-density="default"
                             data-event-layout="irc"
                             role="button"
                             tabindex="0"
                           >
                             <span
-                              class="mx_Username_color2 _disambiguatedProfile_displayName_1q5ax_18 mx_DisambiguatedProfile_displayName"
+                              class="mx_Username_color2 _disambiguatedProfile_displayName mx_DisambiguatedProfile_displayName"
                               dir="auto"
                             >
                               @userId:matrix.org
@@ -471,16 +471,16 @@ exports[`AppearanceUserSettingsTab > should render 1`] = `
                           </div>
                         </div>
                         <div
-                          class="_line_zcguq_73 mx_EventTile_line"
+                          class="_line mx_EventTile_line"
                           data-testid="event-tile-line"
                           id="3"
                         >
                           <div
-                            class="_slotBody_zcguq_98"
+                            class="_slotBody"
                             data-testid="event-tile-slot-body"
                           >
                             <div
-                              class="mx_MTextBody mx_EventTile_content _root_ihs22_8 _text_ihs22_25"
+                              class="mx_MTextBody mx_EventTile_content _root _text"
                               data-event-density="default"
                               data-event-layout="irc"
                             >
@@ -499,20 +499,20 @@ exports[`AppearanceUserSettingsTab > should render 1`] = `
                 </div>
               </form>
               <form
-                class="_root_1o4d9_17"
+                class="_root"
               >
                 <div
-                  class="_inline-field_1o4d9_33"
+                  class="_inline-field"
                 >
                   <div
-                    class="_inline-field-control_1o4d9_45"
+                    class="_inline-field-control"
                   >
                     <div
-                      class="_container_udcm8_10"
+                      class="_container"
                     >
                       <input
                         aria-describedby="radix-react-use-id-7"
-                        class="_input_udcm8_24"
+                        class="_input"
                         id="radix-react-use-id-8"
                         name="compactLayout"
                         role="switch"
@@ -520,21 +520,21 @@ exports[`AppearanceUserSettingsTab > should render 1`] = `
                         type="checkbox"
                       />
                       <div
-                        class="_ui_udcm8_34"
+                        class="_ui"
                       />
                     </div>
                   </div>
                   <div
-                    class="_inline-field-body_1o4d9_39"
+                    class="_inline-field-body"
                   >
                     <label
-                      class="_label_1o4d9_60"
+                      class="_label"
                       for="radix-react-use-id-8"
                     >
                       Show compact text and messages
                     </label>
                     <span
-                      class="_message_1o4d9_86 _help-message_1o4d9_92"
+                      class="_message _help-message"
                       id="radix-react-use-id-7"
                     >
                       Modern layout must be selected to use this feature.
@@ -544,7 +544,7 @@ exports[`AppearanceUserSettingsTab > should render 1`] = `
               </form>
             </div>
             <div
-              class="_separator_13qwf_8"
+              class="_separator"
               data-kind="primary"
               data-orientation="horizontal"
               role="separator"
@@ -557,40 +557,40 @@ exports[`AppearanceUserSettingsTab > should render 1`] = `
               class="mx_SettingsSubsection_content mx_SettingsSubsection_noHeading"
             >
               <form
-                class="_root_1o4d9_17"
+                class="_root"
               >
                 <div
-                  class="_inline-field_1o4d9_33"
+                  class="_inline-field"
                 >
                   <div
-                    class="_inline-field-control_1o4d9_45"
+                    class="_inline-field-control"
                   >
                     <div
-                      class="_container_udcm8_10"
+                      class="_container"
                     >
                       <input
                         checked=""
-                        class="_input_udcm8_24"
+                        class="_input"
                         id="mx_SettingsFlag_vY7Q4uEh9K38"
                         role="switch"
                         type="checkbox"
                       />
                       <div
-                        class="_ui_udcm8_34"
+                        class="_ui"
                       />
                     </div>
                   </div>
                   <div
-                    class="_inline-field-body_1o4d9_39"
+                    class="_inline-field-body"
                   >
                     <label
-                      class="_label_1o4d9_60"
+                      class="_label"
                       for="mx_SettingsFlag_vY7Q4uEh9K38"
                     >
                       Floating bars
                     </label>
                     <span
-                      class="_message_1o4d9_86 _help-message_1o4d9_92"
+                      class="_message _help-message"
                       id="radix-react-use-id-9"
                     >
                       The room header, the composer and the scroll-down button float over the timeline instead of sitting in fixed strips.
@@ -598,37 +598,37 @@ exports[`AppearanceUserSettingsTab > should render 1`] = `
                   </div>
                 </div>
                 <div
-                  class="_inline-field_1o4d9_33"
+                  class="_inline-field"
                 >
                   <div
-                    class="_inline-field-control_1o4d9_45"
+                    class="_inline-field-control"
                   >
                     <div
-                      class="_container_udcm8_10"
+                      class="_container"
                     >
                       <input
                         checked=""
-                        class="_input_udcm8_24"
+                        class="_input"
                         id="mx_SettingsFlag_QgU2PomxwKpa"
                         role="switch"
                         type="checkbox"
                       />
                       <div
-                        class="_ui_udcm8_34"
+                        class="_ui"
                       />
                     </div>
                   </div>
                   <div
-                    class="_inline-field-body_1o4d9_39"
+                    class="_inline-field-body"
                   >
                     <label
-                      class="_label_1o4d9_60"
+                      class="_label"
                       for="mx_SettingsFlag_QgU2PomxwKpa"
                     >
                       Narrow, centred timeline
                     </label>
                     <span
-                      class="_message_1o4d9_86 _help-message_1o4d9_92"
+                      class="_message _help-message"
                       id="radix-react-use-id-10"
                     >
                       Hold the messages to a readable width in the middle of the window, with a chat list you can drag narrower or collapse. On a phone, one pane at a time.
@@ -636,37 +636,37 @@ exports[`AppearanceUserSettingsTab > should render 1`] = `
                   </div>
                 </div>
                 <div
-                  class="_inline-field_1o4d9_33"
+                  class="_inline-field"
                 >
                   <div
-                    class="_inline-field-control_1o4d9_45"
+                    class="_inline-field-control"
                   >
                     <div
-                      class="_container_udcm8_10"
+                      class="_container"
                     >
                       <input
                         checked=""
-                        class="_input_udcm8_24"
+                        class="_input"
                         id="mx_SettingsFlag_6hpi3YEetmBG"
                         role="switch"
                         type="checkbox"
                       />
                       <div
-                        class="_ui_udcm8_34"
+                        class="_ui"
                       />
                     </div>
                   </div>
                   <div
-                    class="_inline-field-body_1o4d9_39"
+                    class="_inline-field-body"
                   >
                     <label
-                      class="_label_1o4d9_60"
+                      class="_label"
                       for="mx_SettingsFlag_6hpi3YEetmBG"
                     >
                       Message bubbles
                     </label>
                     <span
-                      class="_message_1o4d9_86 _help-message_1o4d9_92"
+                      class="_message _help-message"
                       id="radix-react-use-id-11"
                     >
                       Messages in bubbles, with the time and delivery ticks inside them and quoted replies drawn as Telegram does.
@@ -674,37 +674,37 @@ exports[`AppearanceUserSettingsTab > should render 1`] = `
                   </div>
                 </div>
                 <div
-                  class="_inline-field_1o4d9_33"
+                  class="_inline-field"
                 >
                   <div
-                    class="_inline-field-control_1o4d9_45"
+                    class="_inline-field-control"
                   >
                     <div
-                      class="_container_udcm8_10"
+                      class="_container"
                     >
                       <input
                         checked=""
-                        class="_input_udcm8_24"
+                        class="_input"
                         id="mx_SettingsFlag_4yVCeEefiPqp"
                         role="switch"
                         type="checkbox"
                       />
                       <div
-                        class="_ui_udcm8_34"
+                        class="_ui"
                       />
                     </div>
                   </div>
                   <div
-                    class="_inline-field-body_1o4d9_39"
+                    class="_inline-field-body"
                   >
                     <label
-                      class="_label_1o4d9_60"
+                      class="_label"
                       for="mx_SettingsFlag_4yVCeEefiPqp"
                     >
                       Messenger-sized media
                     </label>
                     <span
-                      class="_message_1o4d9_86 _help-message_1o4d9_92"
+                      class="_message _help-message"
                       id="radix-react-use-id-12"
                     >
                       Size pictures, videos and stickers as the messengers do, rather than to Element's own image setting.
@@ -712,37 +712,37 @@ exports[`AppearanceUserSettingsTab > should render 1`] = `
                   </div>
                 </div>
                 <div
-                  class="_inline-field_1o4d9_33"
+                  class="_inline-field"
                 >
                   <div
-                    class="_inline-field-control_1o4d9_45"
+                    class="_inline-field-control"
                   >
                     <div
-                      class="_container_udcm8_10"
+                      class="_container"
                     >
                       <input
                         checked=""
-                        class="_input_udcm8_24"
+                        class="_input"
                         id="mx_SettingsFlag_MRMwbPDmfGtm"
                         role="switch"
                         type="checkbox"
                       />
                       <div
-                        class="_ui_udcm8_34"
+                        class="_ui"
                       />
                     </div>
                   </div>
                   <div
-                    class="_inline-field-body_1o4d9_39"
+                    class="_inline-field-body"
                   >
                     <label
-                      class="_label_1o4d9_60"
+                      class="_label"
                       for="mx_SettingsFlag_MRMwbPDmfGtm"
                     >
                       Sheets on a phone
                     </label>
                     <span
-                      class="_message_1o4d9_86 _help-message_1o4d9_92"
+                      class="_message _help-message"
                       id="radix-react-use-id-13"
                     >
                       On a handheld, dialogs slide up from the bottom and menus become action sheets.
@@ -750,37 +750,37 @@ exports[`AppearanceUserSettingsTab > should render 1`] = `
                   </div>
                 </div>
                 <div
-                  class="_inline-field_1o4d9_33"
+                  class="_inline-field"
                 >
                   <div
-                    class="_inline-field-control_1o4d9_45"
+                    class="_inline-field-control"
                   >
                     <div
-                      class="_container_udcm8_10"
+                      class="_container"
                     >
                       <input
                         checked=""
-                        class="_input_udcm8_24"
+                        class="_input"
                         id="mx_SettingsFlag_GQvdMWe954DV"
                         role="switch"
                         type="checkbox"
                       />
                       <div
-                        class="_ui_udcm8_34"
+                        class="_ui"
                       />
                     </div>
                   </div>
                   <div
-                    class="_inline-field-body_1o4d9_39"
+                    class="_inline-field-body"
                   >
                     <label
-                      class="_label_1o4d9_60"
+                      class="_label"
                       for="mx_SettingsFlag_GQvdMWe954DV"
                     >
                       Chat info as a profile
                     </label>
                     <span
-                      class="_message_1o4d9_86 _help-message_1o4d9_92"
+                      class="_message _help-message"
                       id="radix-react-use-id-14"
                     >
                       Show a chat's information as a profile page — avatar, details and shared media in one — instead of Element's summary card.
@@ -837,36 +837,36 @@ exports[`AppearanceUserSettingsTab > should render 1`] = `
                   </div>
                 </div>
                 <div
-                  class="_inline-field_1o4d9_33"
+                  class="_inline-field"
                 >
                   <div
-                    class="_inline-field-control_1o4d9_45"
+                    class="_inline-field-control"
                   >
                     <div
-                      class="_container_udcm8_10"
+                      class="_container"
                     >
                       <input
-                        class="_input_udcm8_24"
+                        class="_input"
                         id="mx_SettingsFlag_IAu5CsiHRD7n"
                         role="switch"
                         type="checkbox"
                       />
                       <div
-                        class="_ui_udcm8_34"
+                        class="_ui"
                       />
                     </div>
                   </div>
                   <div
-                    class="_inline-field-body_1o4d9_39"
+                    class="_inline-field-body"
                   >
                     <label
-                      class="_label_1o4d9_60"
+                      class="_label"
                       for="mx_SettingsFlag_IAu5CsiHRD7n"
                     >
                       Frosted glass panels
                     </label>
                     <span
-                      class="_message_1o4d9_86 _help-message_1o4d9_92"
+                      class="_message _help-message"
                       id="radix-react-use-id-16"
                     >
                       Blurs what is behind the header, the composer and menus. It costs a lot of graphics work while scrolling, so it is off by default and the panels are drawn plain instead.
@@ -1121,7 +1121,7 @@ exports[`AppearanceUserSettingsTab > should render 1`] = `
                 >
                   <svg
                     aria-label="Loading…"
-                    class="_icon_1855a_18"
+                    class="_icon"
                     data-testid="spinner"
                     fill="currentColor"
                     height="1em"

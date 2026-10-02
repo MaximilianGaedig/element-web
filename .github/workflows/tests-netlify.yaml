@@ -20,7 +20,7 @@ jobs:
         # Fork: the Netlify site and token are upstream's; without them this deploys nothing.
         if: github.repository == 'element-hq/element-web' && github.event.workflow_run.conclusion == 'failure'
         name: Upload Report
-        runs-on: ubuntu-24.04
+        runs-on: ubuntu-26.04
         environment: Netlify
         permissions:
             actions: read
