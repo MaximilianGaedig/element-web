@@ -643,6 +643,7 @@ exports[`RoomView > for a local room > in state NEW > should match the snapshot 
             aria-label="Voice Message"
             class="mx_AccessibleButton mx_TgSendButton mx_TgSendButton_record"
             data-testid="tgrecordbtn"
+            data-tg-holds-touch=""
             role="button"
             tabindex="0"
           >
@@ -1054,6 +1055,7 @@ exports[`RoomView > for a local room > in state NEW > that is encrypted > should
             aria-label="Voice Message"
             class="mx_AccessibleButton mx_TgSendButton mx_TgSendButton_record"
             data-testid="tgrecordbtn"
+            data-tg-holds-touch=""
             role="button"
             tabindex="0"
           >
@@ -1720,6 +1722,7 @@ exports[`RoomView > should hide the header when hideHeader=true 1`] = `
               aria-label="Voice Message"
               class="mx_AccessibleButton mx_TgSendButton mx_TgSendButton_record"
               data-testid="tgrecordbtn"
+              data-tg-holds-touch=""
               role="button"
               tabindex="0"
             >
@@ -2234,6 +2237,7 @@ exports[`RoomView > should hide the pinned message banner when hidePinnedMessage
               aria-label="Voice Message"
               class="mx_AccessibleButton mx_TgSendButton mx_TgSendButton_record"
               data-testid="tgrecordbtn"
+              data-tg-holds-touch=""
               role="button"
               tabindex="0"
             >
@@ -2748,6 +2752,7 @@ exports[`RoomView > should hide the right panel when hideRightPanel=true 1`] = `
               aria-label="Voice Message"
               class="mx_AccessibleButton mx_TgSendButton mx_TgSendButton_record"
               data-testid="tgrecordbtn"
+              data-tg-holds-touch=""
               role="button"
               tabindex="0"
             >
@@ -3345,6 +3350,7 @@ exports[`RoomView > video rooms > should render joined video room view 1`] = `
                   aria-label="Voice Message"
                   class="mx_AccessibleButton mx_TgSendButton mx_TgSendButton_record"
                   data-testid="tgrecordbtn"
+                  data-tg-holds-touch=""
                   role="button"
                   tabindex="0"
                 >

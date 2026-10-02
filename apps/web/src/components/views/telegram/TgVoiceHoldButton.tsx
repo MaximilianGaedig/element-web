@@ -47,6 +47,19 @@ interface Props {
     onToggle: () => void;
 }
 
+/** One touch, from the finger going down to what it ended in. */
+interface HeldTouch {
+    pointerId: number;
+    start: { x: number; y: number };
+    samples: { x: number; y: number; t: number }[];
+    drag: Drag;
+    holdTimer?: number;
+    interruptedTimer?: number;
+    /** The recording being started, once the hold was long enough to be one. */
+    began?: Promise<boolean>;
+    told: { cancel: boolean; lock: boolean };
+}
+
 const NO_DRAG: Drag = { dx: 0, dy: 0 };
 /** What the hold writes onto the composer for its styles to draw from. */
 const DRAWN = ["--tg-voice-dx", "--tg-voice-dy", "--tg-voice-lockness", "--tg-voice-scale", "--tg-voice-cancelness"];
@@ -70,18 +83,7 @@ export function TgVoiceHoldButton({
     const [holding, setHolding] = useState(false);
     const [hint, setHint] = useState(false);
 
-    /** One touch, from the finger going down to what it ended in. */
-    const touch = useRef<{
-        pointerId: number;
-        start: { x: number; y: number };
-        samples: { x: number; y: number; t: number }[];
-        drag: Drag;
-        holdTimer?: number;
-        interruptedTimer?: number;
-        /** The recording being started, once the hold was long enough to be one. */
-        began?: Promise<boolean>;
-        told: { cancel: boolean; lock: boolean };
-    } | null>(null);
+    const touch = useRef<HeldTouch | null>(null);
     const lastTouchAt = useRef(0);
     const lastPointerType = useRef("");
     const hintTimer = useRef<number | undefined>(undefined);
@@ -152,7 +154,7 @@ export function TgVoiceHoldButton({
         setHint(false);
         ev.currentTarget.setPointerCapture?.(ev.pointerId);
         const start = { x: ev.clientX, y: ev.clientY };
-        const current: NonNullable<typeof touch.current> = {
+        const current: HeldTouch = {
             pointerId: ev.pointerId,
             start,
             samples: [{ ...start, t: performance.now() }],
