@@ -17,8 +17,15 @@
      * Lifted clear of it rather than the pill moved: the pill is the persistent control and belongs at
      * the bottom, with a banner above it, which is the order iOS uses.
      */
+    /*
+     * How far the floating bar sits from the bottom of the column. Over a home indicator it rests just
+     * above the indicator itself rather than a full margin above the whole of the space kept for it:
+     * that space is 34px with the indicator in the lowest 13 of it, and a margin on top of all 34 left
+     * the bar hanging 50px up the screen.
+     */
+    --mx-room-list-bar-bottom: max(var(--cpd-space-4x), calc(var(--tg-safe-bottom, 0px) - var(--cpd-space-2x)));
     --mx-room-list-toast-bottom: calc(
-        var(--tg-safe-bottom, 0px) + var(--cpd-space-4x) + var(--mx-room-list-pill-height) + var(--cpd-space-2x)
+        var(--mx-room-list-bar-bottom) + var(--mx-room-list-pill-height) + var(--cpd-space-2x)
     );
 
     /* The containing block for the pill floating over the list. */
@@ -63,7 +70,7 @@
     --mx-room-list-island: 44px;
 
     position: absolute;
-    bottom: calc(var(--tg-safe-bottom, 0px) + var(--cpd-space-4x));
+    bottom: var(--mx-room-list-bar-bottom, var(--cpd-space-4x));
     inset-inline: var(--cpd-space-4x);
     /*
      * Above the sticky section headers, as the toast is, and above the screens contacts opens over the

@@ -299,11 +299,13 @@ html[data-floating-bars] .mx_RoomView_body {
         height: var(--tg-header-block, 0px);
     }
 
+    /*
+     * No fade at the bottom: the messages are seen all the way to the bottom of the screen, behind the
+     * composer and in the strip beneath it, as on Telegram. The fade was the chat background from the
+     * composer's middle down, so the messages stopped at the composer and a blank band lay under it.
+     * The composer is glass with its own blur, which is what keeps it readable over them.
+     */
     .mx_TgFadeEdge_bottom {
-        /* Transparent above the composer, opaque at its bottom edge. */
-        --tg-fade-to: top;
-
-        bottom: 0;
-        height: var(--tg-composer-block, 0px);
+        display: none;
     }
 }
