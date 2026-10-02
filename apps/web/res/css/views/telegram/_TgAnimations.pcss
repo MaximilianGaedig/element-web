@@ -33,6 +33,11 @@ Please see LICENSE files in the repository root for full details.
     }
 }
 
+/* Saving power: a pushed chat is simply there. */
+html[data-low-power] .mx_TgColumns_chat[data-pushed] {
+    animation: none;
+}
+
 @keyframes mx_TgChat_push {
     from {
         transform: translate3d(200px, 0, 0);
