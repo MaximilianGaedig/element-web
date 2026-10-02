@@ -154,7 +154,7 @@ html[data-tg-screen="mobile"][data-tg-message-padding="element"]
 
 /*
  * The chat's header and composer float over the timeline, which scrolls behind them (tweb's .bubbles
- * spans the whole chat, padded by --chat-padding-top/-bottom). Towards both edges the messages fade
+ * spans the whole chat, padded by --chat-padding-top/-bottom). Towards the top the messages fade
  * out into the chat background (see .mx_TgFadeEdge below).
  * TgChatChrome keeps --tg-header-block / --tg-composer-block (the space the floating parts take).
  */
@@ -272,10 +272,13 @@ html[data-floating-bars] .mx_RoomView_body {
     }
 
     /*
-     * Towards both edges the messages fade out into the chat background instead of being blurred: one
-     * gradient of the background colour per edge, transparent where the messages are fully visible and
-     * opaque where the floating bar starts. A gradient composites on the GPU like any other paint, while a
-     * backdrop filter re-reads and re-blurs everything behind it on every scrolled frame.
+     * Towards the top the messages fade into the chat background instead of being blurred: a gradient of
+     * the background colour, which composites on the GPU like any other paint, while a backdrop filter
+     * re-reads and re-blurs everything behind it on every scrolled frame.
+     *
+     * It thins evenly from the top of the screen to the bottom of the header and is nowhere solid. It used
+     * to be solid for its upper half and gone a few pixels further down, which read as a bar that the
+     * messages vanished behind; now they dim as they pass under the header and the clock stays readable.
      */
     .mx_TgFadeEdge {
         position: absolute;
@@ -283,20 +286,19 @@ html[data-floating-bars] .mx_RoomView_body {
         right: 0;
         z-index: 2;
         pointer-events: none;
-        background-image: linear-gradient(
-            to var(--tg-fade-to),
-            var(--tg-surface-color) 45%,
-            color-mix(in srgb, var(--tg-surface-color) 55%, transparent) 70%,
-            transparent 100%
-        );
     }
 
     .mx_TgFadeEdge_top {
-        /* Opaque at the header, transparent where messages begin. */
-        --tg-fade-to: bottom;
-
         top: 0;
         height: var(--tg-header-block, 0px);
+        background-image: linear-gradient(
+            to bottom,
+            color-mix(in srgb, var(--tg-surface-color) 90%, transparent) 0%,
+            color-mix(in srgb, var(--tg-surface-color) 78%, transparent) 30%,
+            color-mix(in srgb, var(--tg-surface-color) 50%, transparent) 55%,
+            color-mix(in srgb, var(--tg-surface-color) 20%, transparent) 80%,
+            transparent 100%
+        );
     }
 
     /*
