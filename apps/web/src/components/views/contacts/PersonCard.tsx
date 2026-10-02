@@ -13,7 +13,7 @@ import { PersonCardMenu } from "./PersonCardMenu";
 import { type Person } from "../../../utils/contacts/people";
 import { type Call, callHistory, indexedCallHistory } from "../../../utils/contacts/calls";
 import { usePersonPresence } from "../../../utils/contacts/presence";
-import { type Week, personWeek } from "../../../utils/contacts/activity";
+import { type Week, type WeekSource, canNarrowWeek, personWeek } from "../../../utils/contacts/activity";
 import { type SharedRoom, askSharedRooms, callsWith, sharedRooms } from "../../../utils/contacts/shared";
 import { type Verification, realAccounts, verificationOf, verify } from "../../../utils/contacts/verification";
 import { callInRoom, messagePerson, openRoom } from "../../../utils/contacts/actions";
@@ -128,10 +128,28 @@ export function PersonCard({
     const [groups, setGroups] = useState<SharedRoom[]>([]);
     const [verification, setVerification] = useState<Verification>();
     const [week, setWeek] = useState<Week>();
+    /* Which of the log's two ages the week is read from, where the homeserver can tell them apart. */
+    const [weekSource, setWeekSource] = useState<WeekSource>("all");
+    const [narrows, setNarrows] = useState(false);
     useEffect(() => {
         let alive = true;
-        setWeek(undefined);
-        void personWeek(client, person).then((found) => alive && setWeek(found));
+        void canNarrowWeek(client).then((can) => alive && setNarrows(can));
+        return () => {
+            alive = false;
+        };
+    }, [client]);
+    // Somebody else's week is not theirs for a moment: cleared when the person changes ...
+    useEffect(() => setWeek(undefined), [client, person]);
+    // ... and kept while only the source does, so the switch does not blink out with the grid under it.
+    useEffect(() => {
+        let alive = true;
+        void personWeek(client, person, undefined, weekSource).then((found) => alive && setWeek(found));
+        return () => {
+            alive = false;
+        };
+    }, [client, person, weekSource]);
+    useEffect(() => {
+        let alive = true;
         setGroups(sharedRooms(client, person));
         void askSharedRooms(client, person).then((found) => alive && setGroups(found));
         void verificationOf(client, person).then((said) => alive && setVerification(said));
@@ -161,6 +179,8 @@ export function PersonCard({
             presence={presence}
             calls={callsWith(calls ?? history, person)}
             week={week}
+            weekSource={weekSource}
+            onWeekSource={narrows ? setWeekSource : undefined}
             groups={groups}
             verification={verification}
             onVerify={() => {

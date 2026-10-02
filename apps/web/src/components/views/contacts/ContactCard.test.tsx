@@ -32,7 +32,60 @@ const person = (over: Partial<Person> = {}): Person => ({
     ...over,
 });
 
+const someWeek = {
+    seen: Array.from({ length: 7 }, () => Array.from({ length: 24 }, () => 1)),
+    onlineMs: Array.from({ length: 7 }, () => Array.from({ length: 24 }, () => 0)),
+    days: Array.from({ length: 7 }, () => 4),
+    entries: 40,
+};
+
 describe("ContactCard", () => {
+    /* One grid of years of messages and days of presence; the reader picks which it is read from. */
+    it("lets the reader choose what the week is read from, where that can be chosen", async () => {
+        const onWeekSource = vi.fn();
+        const { rerender } = render(
+            <ContactCard person={person()} onBack={() => {}} onMessage={() => {}} week={someWeek} />,
+        );
+        // Nothing to choose with where the server cannot narrow it.
+        expect(screen.queryByRole("radiogroup")).toBeNull();
+
+        rerender(
+            <ContactCard
+                person={person()}
+                onBack={() => {}}
+                onMessage={() => {}}
+                week={someWeek}
+                weekSource="all"
+                onWeekSource={onWeekSource}
+            />,
+        );
+        expect(screen.getByRole("radio", { name: "Everything" })).toHaveAttribute("aria-checked", "true");
+        await userEvent.click(screen.getByRole("radio", { name: "Presence" }));
+        expect(onWeekSource).toHaveBeenCalledWith("presence");
+    });
+
+    it("keeps the choice on screen when the chosen week holds too little", () => {
+        render(
+            <ContactCard
+                person={person()}
+                onBack={() => {}}
+                onMessage={() => {}}
+                week={undefined}
+                weekSource="presence"
+                onWeekSource={() => {}}
+            />,
+        );
+        // The way back to everything, and why there is no grid.
+        expect(screen.getByRole("radio", { name: "Presence" })).toHaveAttribute("aria-checked", "true");
+        expect(screen.getByRole("radio", { name: "Everything" })).toBeInTheDocument();
+        expect(screen.getByText("Not enough recorded yet to say.")).toBeInTheDocument();
+    });
+
+    it("shows no week section for somebody nothing is recorded about", () => {
+        render(<ContactCard person={person()} onBack={() => {}} onMessage={() => {}} onWeekSource={() => {}} />);
+        expect(screen.queryByText("Usually around")).toBeNull();
+    });
+
     /*
      * The way out of a wrong merge was offered only on accounts the reader had merged by hand, so an
      * account the client grouped by a shared number could not be removed at all.

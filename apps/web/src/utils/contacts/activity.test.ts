@@ -9,7 +9,7 @@ Please see LICENSE files in the repository root for full details.
 
 import { describe, it, expect } from "vitest";
 
-import { type Week, mergeWeeks, personWeek, saysSomething, usualness } from "./activity";
+import { type Week, canNarrowWeek, mergeWeeks, personWeek, saysSomething, usualness } from "./activity";
 import { type Person } from "./people";
 import { stubClient } from "test-utils";
 
@@ -78,6 +78,45 @@ describe("a person's week", () => {
             week: "true",
             utc_offset_minutes: String(-new Date().getTimezoneOffset()),
         });
+    });
+
+    /*
+     * Years of messages and a few days of presence in one grid said "usually around" of hours they had
+     * only ever written in. Each can be asked for by itself.
+     */
+    it("asks for presence or for messages alone, and for everything by naming neither", async () => {
+        const client = stubClient();
+        const asked: Record<string, string>[] = [];
+        (client as any).doesServerSupportUnstableFeature = async () => true;
+        (client as any).http = {
+            authedRequest: async (_m: string, _path: string, query: Record<string, string>) => {
+                asked.push(query);
+                return wire(week([[2, 20, 4]]));
+            },
+        };
+
+        await personWeek(client, person("@a:x"), 1_000_000_000_000, "presence");
+        await personWeek(client, person("@a:x"), 1_000_000_000_000, "messages");
+        await personWeek(client, person("@a:x"), 1_000_000_000_000);
+
+        // A network's own "last seen" is them being there, so it counts as presence.
+        expect(asked[0].kinds).toBe("online,unavailable,offline,seen");
+        expect(asked[1].kinds).toBe("sent,reaction");
+        expect(asked[2]).not.toHaveProperty("kinds");
+    });
+
+    it("offers the choice only where the server can make it", async () => {
+        const client = stubClient();
+        (client as any).doesServerSupportUnstableFeature = async (feature: string) =>
+            feature === "im.mxg.activity.kinds";
+        expect(await canNarrowWeek(client)).toBe(true);
+        // An older server would ignore the request and answer with everything under the wrong label.
+        (client as any).doesServerSupportUnstableFeature = async () => false;
+        expect(await canNarrowWeek(client)).toBe(false);
+        (client as any).doesServerSupportUnstableFeature = async () => {
+            throw new Error("offline");
+        };
+        expect(await canNarrowWeek(client)).toBe(false);
     });
 
     it("has nothing to show where the server keeps no log", async () => {

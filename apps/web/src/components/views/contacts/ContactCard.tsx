@@ -19,7 +19,7 @@ Please see LICENSE files in the repository root for full details.
  */
 
 import React, { type JSX, useRef, useState } from "react";
-import { Button, IconButton, Form, Menu, MenuItem } from "@vector-im/compound-web";
+import { Button, ChatFilter, IconButton, Form, Menu, MenuItem } from "@vector-im/compound-web";
 import BackIcon from "@vector-im/compound-design-tokens/assets/web/icons/chevron-left";
 import ChatIcon from "@vector-im/compound-design-tokens/assets/web/icons/chat";
 import VoiceCallIcon from "@vector-im/compound-design-tokens/assets/web/icons/voice-call";
@@ -55,7 +55,7 @@ import { MatrixClientPeg } from "../../../MatrixClientPeg";
 import { LinkedText } from "@element-hq/web-shared-components";
 import { type SharedRoom } from "../../../utils/contacts/shared";
 import { type Call } from "../../../utils/contacts/calls";
-import { type Week } from "../../../utils/contacts/activity";
+import { type Week, type WeekSource } from "../../../utils/contacts/activity";
 import { ActivityWeek } from "./ActivityWeek";
 import { CallMark, readDuration, timeOfDay } from "./CallMark";
 import BaseAvatar from "../avatars/BaseAvatar";
@@ -78,6 +78,12 @@ interface Props {
     calls?: Call[];
     /** The hours of their week they are usually around in, where the homeserver keeps a log of it. */
     week?: Week;
+    /**
+     * Which activity the week is read from, and how to change it where the homeserver can narrow it:
+     * everything, only when they were there, or only when they wrote.
+     */
+    weekSource?: WeekSource;
+    onWeekSource?: (source: WeekSource) => void;
     /** The groups you are both in. */
     groups?: SharedRoom[];
     /** Somewhere to go from either of those. */
@@ -160,6 +166,13 @@ function Fact({ label, value }: { label: string; value: string }): JSX.Element {
         </div>
     );
 }
+
+const WEEK_SOURCES: readonly WeekSource[] = ["all", "presence", "messages"];
+const WEEK_SOURCE_LABEL = {
+    all: _td("contacts|around_all"),
+    presence: _td("contacts|around_presence"),
+    messages: _td("contacts|around_messages"),
+} as const;
 
 /**
  * Why an account is shown under this person: what it publishes that another of their accounts publishes
@@ -307,6 +320,8 @@ export function ContactCard({
     presence,
     calls,
     week,
+    weekSource = "all",
+    onWeekSource,
     groups,
     onOpenRoom,
     person,
@@ -740,10 +755,37 @@ export function ContactCard({
                      * When they are usually around: presence says where they are now, and this says when it
                      * is worth writing to them.
                      */}
-                    {week && (
+                    {/*
+                     * Still shown when a narrowed week holds nothing: the switch is the way back, and it
+                     * going away with the grid would strand the reader on the empty choice.
+                     */}
+                    {(week || weekSource !== "all") && (
                         <section className="mx_ContactCard_section" aria-label={_t("contacts|usually_around")}>
                             <h3 className="mx_ContactCard_sectionTitle">{_t("contacts|usually_around")}</h3>
-                            <ActivityWeek week={week} />
+                            {onWeekSource && (
+                                <div
+                                    className="mx_ContactCard_weekSource"
+                                    role="radiogroup"
+                                    aria-label={_t("contacts|around_from")}
+                                >
+                                    {WEEK_SOURCES.map((source) => (
+                                        <ChatFilter
+                                            key={source}
+                                            role="radio"
+                                            aria-checked={weekSource === source}
+                                            selected={weekSource === source}
+                                            onClick={() => onWeekSource(source)}
+                                        >
+                                            {_t(WEEK_SOURCE_LABEL[source])}
+                                        </ChatFilter>
+                                    ))}
+                                </div>
+                            )}
+                            {week ? (
+                                <ActivityWeek week={week} />
+                            ) : (
+                                <p className="mx_ContactCard_weekEmpty">{_t("contacts|around_too_little")}</p>
+                            )}
                         </section>
                     )}
 

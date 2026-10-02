@@ -1980,6 +1980,21 @@ Please see LICENSE files in the repository root for full details.
  * The cells are squares that share the card's width, so the grid is as wide as the card and never
  * scrolls sideways on a phone; the day names sit in a column of their own so the hours line up.
  */
+/* What the week is read from: a row of choices above the grid, in line with it. */
+.mx_ContactCard_weekSource {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--cpd-space-2x);
+    padding: var(--mx-contacts-row-padding-block) var(--mx-contacts-gutter) 0;
+}
+
+.mx_ContactCard_weekEmpty {
+    margin: 0;
+    padding: var(--mx-contacts-row-padding-block) var(--mx-contacts-gutter);
+    color: var(--cpd-color-text-secondary);
+    font: var(--cpd-font-body-sm-regular);
+}
+
 .mx_ActivityWeek {
     display: flex;
     flex-direction: column;

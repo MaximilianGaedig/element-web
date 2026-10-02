@@ -22,11 +22,37 @@ import { type MatrixClient, Method } from "matrix-js-sdk/src/matrix";
 import { type Person } from "./people";
 
 const ACTIVITY_FEATURE = "im.mxg.activity";
+const ACTIVITY_KINDS_FEATURE = "im.mxg.activity.kinds";
 const ACTIVITY_PREFIX = "/_matrix/client/unstable/im.mxg.activity";
 
 /** How far back "usually" looks: habits change, and a year-old one says little about this week. */
 const WEEKS = 12;
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+
+/**
+ * What the week is read from.
+ *
+ * The log holds two things of very different age. What somebody sent is in it for as long as the rooms
+ * go back; their presence only since the server started keeping it. Laid over each other they say
+ * "usually around" of hours the person has only ever written in, so each can be asked for by itself:
+ * when they are there, or when they write.
+ */
+export type WeekSource = "all" | "presence" | "messages";
+
+/** The log's kinds behind each source. A network's "last seen" is presence: it is them being there. */
+const KINDS: Record<Exclude<WeekSource, "all">, string> = {
+    presence: "online,unavailable,offline,seen",
+    messages: "sent,reaction",
+};
+
+/** Whether the homeserver can narrow a week to some kinds of activity; an older one ignores the request. */
+export async function canNarrowWeek(client: MatrixClient): Promise<boolean> {
+    try {
+        return await client.doesServerSupportUnstableFeature(ACTIVITY_KINDS_FEATURE);
+    } catch {
+        return false;
+    }
+}
 
 /** The hours of a week: rows are weekdays from Monday, columns the hours of the day. */
 export interface Week {
@@ -78,7 +104,12 @@ export function saysSomething(week: Week | undefined): week is Week {
     return !!week && week.entries >= 10 && week.seen.some((day) => day.some((count) => count > 0));
 }
 
-async function weekOf(client: MatrixClient, mxid: string, fromTs: number): Promise<Week | undefined> {
+async function weekOf(
+    client: MatrixClient,
+    mxid: string,
+    fromTs: number,
+    source: WeekSource,
+): Promise<Week | undefined> {
     const res = await client.http.authedRequest<{ week?: WireWeek }>(
         Method.Get,
         `/users/${encodeURIComponent(mxid)}`,
@@ -87,6 +118,7 @@ async function weekOf(client: MatrixClient, mxid: string, fromTs: number): Promi
             from_ts: String(fromTs),
             // The reader's hours, not UTC's: "evenings" has to mean their evenings.
             utc_offset_minutes: String(-new Date().getTimezoneOffset()),
+            ...(source === "all" ? {} : { kinds: KINDS[source] }),
         },
         undefined,
         { prefix: ACTIVITY_PREFIX },
@@ -100,13 +132,18 @@ async function weekOf(client: MatrixClient, mxid: string, fromTs: number): Promi
  * The person's week over the last few months, or undefined where the homeserver keeps no log or holds
  * too little about them to say.
  */
-export async function personWeek(client: MatrixClient, person: Person, now = Date.now()): Promise<Week | undefined> {
+export async function personWeek(
+    client: MatrixClient,
+    person: Person,
+    now = Date.now(),
+    source: WeekSource = "all",
+): Promise<Week | undefined> {
     try {
         if (!(await client.doesServerSupportUnstableFeature(ACTIVITY_FEATURE))) return undefined;
         const mxids = person.accounts.map((account) => account.mxid).filter((mxid): mxid is string => !!mxid);
         const weeks = await Promise.all(
             // One account that cannot be read (no room shared with it any more) does not hide the others.
-            mxids.map((mxid) => weekOf(client, mxid, now - WEEKS * WEEK_MS).catch(() => undefined)),
+            mxids.map((mxid) => weekOf(client, mxid, now - WEEKS * WEEK_MS, source).catch(() => undefined)),
         );
         const merged = mergeWeeks(weeks.filter((week): week is Week => !!week));
         return saysSomething(merged) ? merged : undefined;
