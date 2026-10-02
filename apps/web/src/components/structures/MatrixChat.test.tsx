@@ -806,6 +806,7 @@ describe("<MatrixChat />", () => {
             mockClient.startClient = vi.fn(async () => {
                 await sleep(1);
                 mockClient.getSyncState.mockReturnValue(SyncState.Prepared);
+                mockClient.getSyncStateData.mockReturnValue({ fromCache: true });
                 mockClient.emit(ClientEvent.Sync, SyncState.Prepared, null, { fromCache: true });
             });
 
@@ -818,6 +819,28 @@ describe("<MatrixChat />", () => {
             expect(marked().indexOf("mx_boot:saved_sync_replayed")).toBeLessThan(
                 marked().indexOf("mx_boot:logged_in_view"),
             );
+            resetBootTimings();
+        });
+
+        // The listener for the sync is attached after a render; a replay can be over before that.
+        it("times the replayed saved sync even when it is over before the app is listening for it", async () => {
+            resetBootTimings();
+            const mark = vi.spyOn(performance, "mark");
+            const marked = (): string[] => mark.mock.calls.map(([name]) => name);
+            // Prepared by the time the client is started, and nothing emitted for the app to hear
+            mockClient.startClient = vi.fn(async () => {
+                mockClient.getSyncState.mockReturnValue(SyncState.Prepared);
+                mockClient.getSyncStateData.mockReturnValue({ fromCache: true });
+            });
+            mockClient.getSyncState.mockReturnValue(SyncState.Prepared);
+            mockClient.getSyncStateData.mockReturnValue({ fromCache: true });
+
+            getComponent();
+
+            await expect(screen.findByLabelText("User menu")).resolves.toBeVisible();
+            await waitFor(() => expect(marked()).toContain("mx_boot:logged_in_view"));
+            expect(marked()).toContain("mx_boot:saved_sync_replayed");
+            expect(marked()).not.toContain("mx_boot:live_sync_prepared");
             resetBootTimings();
         });
 
