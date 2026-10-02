@@ -697,15 +697,43 @@ export class RoomTimelineViewModel
             this.frozenMarkerEventId = null;
             return;
         }
-        const liveEvents = this.opts.room.getLiveTimeline().getEvents();
-        const lastLiveEventId = liveEvents[liveEvents.length - 1]?.getId();
-        if (lastLiveEventId && lastLiveEventId === this.readMarkerEventId) {
-            // Fully read on entry — no line, ever, this session.
-            this.frozenMarkerEventId = null;
-        } else {
-            this.frozenMarkerEventId = this.readMarkerEventId;
-        }
+        // Fully read on entry — no line, ever, this session.
+        this.frozenMarkerEventId = this.hasUnseenAfter(this.readMarkerEventId) ? this.readMarkerEventId : null;
         debug(`[TimelineVM] freezeReadMarkerForSession — frozen=${this.frozenMarkerEventId}`);
+    }
+
+    /**
+     * Whether a line belongs after an event: something the reader has not seen follows it - a message
+     * from somebody else that gets a row, or will once it has decrypted - and more than that one.
+     *
+     * Not "any event at all", which is what this used to ask. Events that are never drawn follow almost
+     * every message of ours in a bridged chat (the bridge reporting that it was sent, then delivered),
+     * so the marker was never on the room's last event and the line was armed in a chat with nothing
+     * unread in it. It stayed out of sight while nothing was drawn after it, and came up over the
+     * reader's own next message. Their own messages are not news to them either.
+     */
+    private hasUnseenAfter(eventId: string): boolean {
+        const liveEvents = this.opts.room.getLiveTimeline().getEvents();
+        const at = liveEvents.findIndex((event) => event.getId() === eventId);
+        // Further back than what is loaded: what follows it is not known here, so the line stands.
+        if (at < 0) return true;
+        const showHiddenEvents = SettingsStore.getValue("showHiddenEventsInTimeline");
+        const me = this.opts.client.getUserId();
+        const drawn = liveEvents.slice(at + 1).filter((event) => {
+            const stillDecrypting =
+                event.getWireType() === EventType.RoomMessageEncrypted &&
+                !event.isDecryptionFailure() &&
+                event.getClearContent() === null;
+            return stillDecrypting || this.shouldIncludeEvent(event, showHiddenEvents);
+        });
+        const firstUnseen = drawn.findIndex((event) => event.getSender() !== me);
+        /*
+         * And not for one new message that is the chat's last: there the line says nothing the message
+         * does not say by being last. Telegram Web's rule (tweb `setUnreadDelimiter` in
+         * components/chat/bubbles.ts: the first unread bubble is marked unless it is the history's
+         * newest message).
+         */
+        return firstUnseen >= 0 && firstUnseen < drawn.length - 1;
     }
 
     private async load(target: LoadTarget): Promise<void> {
@@ -1257,6 +1285,17 @@ export class RoomTimelineViewModel
         this.active = active;
         if (active) {
             debug(`[TimelineVM] setActive(true) — back on screen`);
+            // Coming back is a new visit: the line goes to where the reader got to on the last one,
+            // or goes away. Left where the first visit put it, it kept standing over messages read
+            // long since, the reader's own among them.
+            if (this.started && this.snapshot.current.items.length > 0) {
+                this.freezeReadMarkerForSession();
+                const items = this.buildItems();
+                this.mergeSnapshot(
+                    { items, canJumpToReadMarker: this.computeCanJumpToReadMarker(items) },
+                    "back-on-screen",
+                );
+            }
             this.sendAutoReadReceipt();
         } else {
             debug(`[TimelineVM] setActive(false) — off screen`);
@@ -1290,7 +1329,11 @@ export class RoomTimelineViewModel
         const readTo = this.readableEventId;
         if (readTo && readTo !== this.readMarkerEventId) {
             debug(`[TimelineVM] leave() — advancing FullyRead marker to ${readTo}`);
+            // Known here at once, not when the server has said it back: the reader may return first.
+            const previous = this.readMarkerEventId;
+            this.readMarkerEventId = readTo;
             this.opts.client.setRoomReadMarkers(this.opts.room.roomId, readTo).catch((err) => {
+                if (this.readMarkerEventId === readTo) this.readMarkerEventId = previous;
                 logger.warn(`[TimelineVM] leave() — setRoomReadMarkers failed`, err);
             });
         }

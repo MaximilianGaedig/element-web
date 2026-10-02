@@ -326,7 +326,7 @@ describe("RoomTimelineViewModel", () => {
         });
 
         it("places a read marker after the last message the user has read", async () => {
-            seedTimeline([makeMessage("$a"), makeMessage("$b"), makeMessage("$c")]);
+            seedTimeline([makeMessage("$a"), makeMessage("$b"), makeMessage("$c"), makeMessage("$d")]);
             room.addAccountData([
                 new MatrixEvent({
                     type: EventType.FullyRead,
@@ -365,6 +365,115 @@ describe("RoomTimelineViewModel", () => {
 
             expect(eventKeys(vm.getSnapshot().items)).toEqual(["$a", "$b"]);
             expect(kinds(vm.getSnapshot().items)).not.toContain("read-marker");
+        });
+
+        describe('"New" is for what somebody else said', () => {
+            const fullyRead = (eventId: string): MatrixEvent =>
+                new MatrixEvent({ type: EventType.FullyRead, room_id: ROOM_ID, content: { event_id: eventId } });
+            /** What a bridge writes after each message of ours: an event that gets no row. */
+            const sendStatus = (id: string): MatrixEvent =>
+                new MatrixEvent({
+                    type: "com.beeper.message_send_status",
+                    event_id: id,
+                    sender: "@bridge:example.org",
+                    room_id: ROOM_ID,
+                    origin_server_ts: 5,
+                    content: { status: "SUCCESS" },
+                });
+            const arrives = (event: MatrixEvent): void => {
+                room.getUnfilteredTimelineSet().addLiveEvent(event, { addToState: false });
+                room.emit(RoomEvent.Timeline, event, room, false, false, {
+                    liveEvent: true,
+                    timeline: room.getLiveTimeline(),
+                } as any);
+            };
+            let me: string;
+            beforeEach(() => {
+                me = client.getUserId()!;
+            });
+
+            // The reported case: read up to our own last message, the bridge's status after it, and
+            // then "New" over the next thing we said.
+            it("does not come up over our own next message in a chat with nothing unread", async () => {
+                seedTimeline([
+                    makeMessage("$theirs", { user: "@bob:example.org" }),
+                    makeMessage("$mine", { user: me }),
+                ]);
+                seedTimeline([sendStatus("$sent"), sendStatus("$delivered")]);
+                room.addAccountData([fullyRead("$mine")]);
+                const vm = await createStartedViewModel();
+                expect(kinds(vm.getSnapshot().items)).not.toContain("read-marker");
+
+                arrives(makeMessage("$mine2", { user: me }));
+
+                await vi.waitFor(() => expect(eventKeys(vm.getSnapshot().items)).toContain("$mine2"));
+                expect(kinds(vm.getSnapshot().items)).not.toContain("read-marker");
+            });
+
+            it("is not drawn for our own messages sent from elsewhere since the last visit", async () => {
+                seedTimeline([
+                    makeMessage("$theirs", { user: "@bob:example.org" }),
+                    makeMessage("$mine", { user: me }),
+                    makeMessage("$mine2", { user: me }),
+                ]);
+                room.addAccountData([fullyRead("$theirs")]);
+
+                const vm = await createStartedViewModel();
+
+                expect(kinds(vm.getSnapshot().items)).not.toContain("read-marker");
+            });
+
+            it("is not drawn for a single new message that is the chat's last", async () => {
+                seedTimeline([
+                    makeMessage("$mine", { user: me }),
+                    sendStatus("$sent"),
+                    makeMessage("$theirs", { user: "@bob:example.org" }),
+                ]);
+                room.addAccountData([fullyRead("$mine")]);
+
+                const vm = await createStartedViewModel();
+
+                expect(kinds(vm.getSnapshot().items)).not.toContain("read-marker");
+            });
+
+            it("is drawn over the first thing somebody else said since the last visit", async () => {
+                seedTimeline([
+                    makeMessage("$mine", { user: me }),
+                    sendStatus("$sent"),
+                    makeMessage("$theirs", { user: "@bob:example.org" }),
+                    makeMessage("$theirs2", { user: "@bob:example.org" }),
+                ]);
+                room.addAccountData([fullyRead("$mine")]);
+
+                const vm = await createStartedViewModel();
+
+                const items = vm.getSnapshot().items;
+                const marker = items.findIndex((item) => item.kind === "read-marker");
+                expect(items[marker - 1]?.key).toBe("$mine");
+                expect(items[marker + 1]?.key).toBe("$theirs");
+            });
+
+            // A chat switched away from stays mounted; coming back to it is a new visit.
+            it("is gone on coming back to a chat that was read to the end on the last visit", async () => {
+                seedTimeline([
+                    makeMessage("$mine", { user: me }),
+                    makeMessage("$theirs0", { user: "@bob:example.org" }),
+                    makeMessage("$theirs", { user: "@bob:example.org" }),
+                ]);
+                room.addAccountData([fullyRead("$mine")]);
+                const vm = await createStartedViewModel();
+                vm.onAnchorReached();
+                expect(kinds(vm.getSnapshot().items)).toContain("read-marker");
+
+                // Read to the end, then off to another chat and back
+                vm.onVisibleRangeChanged(0, vm.getSnapshot().items.length - 1);
+                vm.setActive(false);
+                expect(client.setRoomReadMarkers).toHaveBeenCalledWith(ROOM_ID, "$theirs");
+                vm.setActive(true);
+
+                expect(kinds(vm.getSnapshot().items)).not.toContain("read-marker");
+                expect(vm.getSnapshot().canJumpToReadMarker).toBe(false);
+            });
         });
 
         it("starts a new sender run when a bridge relay changes remote author", async () => {
@@ -714,7 +823,7 @@ describe("RoomTimelineViewModel", () => {
         });
 
         it("scrolls straight to the marker when it is already loaded", async () => {
-            seedTimeline([makeMessage("$a"), makeMessage("$b"), makeMessage("$c")]);
+            seedTimeline([makeMessage("$a"), makeMessage("$b"), makeMessage("$c"), makeMessage("$d")]);
             room.addAccountData([
                 new MatrixEvent({
                     type: EventType.FullyRead,
@@ -766,7 +875,7 @@ describe("RoomTimelineViewModel", () => {
         });
 
         it("removes the marker when everything is marked as read", async () => {
-            seedTimeline([makeMessage("$a"), makeMessage("$b")]);
+            seedTimeline([makeMessage("$a"), makeMessage("$b"), makeMessage("$c")]);
             room.addAccountData([
                 new MatrixEvent({
                     type: EventType.FullyRead,
