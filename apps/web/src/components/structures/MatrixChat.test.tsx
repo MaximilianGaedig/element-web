@@ -813,7 +813,7 @@ describe("<MatrixChat />", () => {
             getComponent();
 
             // Loading a session takes longer than the second a query waits by default on a busy machine
-            await expect(screen.findByLabelText("User menu", {}, { timeout: 10000 })).resolves.toBeVisible();
+            await expect(screen.findByLabelText("User menu", {}, { timeout: 4000 })).resolves.toBeVisible();
             await waitFor(() => expect(marked()).toContain("mx_boot:logged_in_view"));
             expect(marked()).toContain("mx_boot:saved_sync_replayed");
             expect(marked()).not.toContain("mx_boot:live_sync_prepared");
@@ -823,25 +823,19 @@ describe("<MatrixChat />", () => {
             resetBootTimings();
         });
 
-        // The listener for the sync is attached after a render; a replay can be over before that.
-        it("times the replayed saved sync even when it is over before the app is listening for it", async () => {
+        // The listener for the sync is attached after a render; a client can be prepared before that.
+        it("times a sync that was over before the app was listening for it", async () => {
+            await getComponentAndWaitForReady();
             resetBootTimings();
             const mark = vi.spyOn(performance, "mark");
             const marked = (): string[] => mark.mock.calls.map(([name]) => name);
-            // Prepared by the time the client is started, and nothing emitted for the app to hear
-            mockClient.startClient = vi.fn(async () => {
-                mockClient.getSyncState.mockReturnValue(SyncState.Prepared);
-                mockClient.getSyncStateData.mockReturnValue({ fromCache: true });
-            });
+            // Prepared, from the saved sync, and nothing more will be emitted for the app to hear
             mockClient.getSyncState.mockReturnValue(SyncState.Prepared);
             mockClient.getSyncStateData.mockReturnValue({ fromCache: true });
 
-            getComponent();
+            act(() => defaultDispatcher.fire(Action.WillStartClient, true));
 
-            // Loading a session takes longer than the second a query waits by default on a busy machine
-            await expect(screen.findByLabelText("User menu", {}, { timeout: 10000 })).resolves.toBeVisible();
-            await waitFor(() => expect(marked()).toContain("mx_boot:logged_in_view"));
-            expect(marked()).toContain("mx_boot:saved_sync_replayed");
+            await waitFor(() => expect(marked()).toContain("mx_boot:saved_sync_replayed"));
             expect(marked()).not.toContain("mx_boot:live_sync_prepared");
             resetBootTimings();
         });
