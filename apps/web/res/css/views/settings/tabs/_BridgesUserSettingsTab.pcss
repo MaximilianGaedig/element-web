@@ -281,3 +281,75 @@ Please see LICENSE files in the repository root for full details.
     font: var(--cpd-font-body-sm-regular);
     color: var(--cpd-color-text-critical-primary);
 }
+
+/*
+ * Signing in to a network through its bridge (BridgeLoginDialog): what the bridge asks for, one step at
+ * a time.
+ */
+.mx_BridgeLoginDialog_field {
+    margin-block: var(--cpd-space-4x);
+}
+
+.mx_BridgeLoginDialog_hint {
+    margin: var(--cpd-space-1x) 0 0;
+    font: var(--cpd-font-body-sm-regular);
+    color: var(--cpd-color-text-secondary);
+}
+
+.mx_BridgeLoginDialog_show {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--cpd-space-4x);
+    text-align: center;
+}
+
+/* A QR code is read by a camera: on white, whatever the theme. */
+.mx_BridgeLoginDialog_qr {
+    padding: var(--cpd-space-3x);
+    border-radius: 12px;
+    background: #fff;
+}
+
+.mx_BridgeLoginDialog_code {
+    font: var(--cpd-font-heading-lg-semibold);
+    letter-spacing: 0.15em;
+    user-select: all;
+}
+
+.mx_BridgeLoginDialog_code--emoji {
+    font-size: 3rem;
+    letter-spacing: 0;
+}
+
+.mx_BridgeLoginDialog_flows {
+    display: flex;
+    flex-direction: column;
+    gap: var(--cpd-space-2x);
+}
+
+.mx_BridgeLoginDialog_flow {
+    display: flex;
+    flex-direction: column;
+    gap: var(--cpd-space-1x);
+    padding: var(--cpd-space-3x) var(--cpd-space-4x);
+    border: 1px solid var(--cpd-color-border-interactive-secondary);
+    border-radius: 12px;
+    background: none;
+    color: inherit;
+    font: inherit;
+    text-align: start;
+    cursor: pointer;
+
+    &:hover {
+        background: var(--cpd-color-bg-subtle-secondary);
+    }
+}
+
+.mx_BridgeLoginDialog_flowName {
+    font: var(--cpd-font-body-md-semibold);
+}
+
+.mx_BridgeLoginDialog_error {
+    color: var(--cpd-color-text-critical-primary);
+}
