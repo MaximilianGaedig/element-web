@@ -155,6 +155,8 @@ describe("<Users />", () => {
 
         await waitFor(() => expect(screen.getByText(/Verification status:/)).toHaveTextContent(/Verified/));
         await waitFor(() => expect(screen.getByRole("button", { name: "VERIFIED" })).toBeInTheDocument());
+        // Each device's icon arrives on its own, after the button: one for the user, one per device
+        await waitFor(() => expect(screen.getAllByTestId("e2e-icon")).toHaveLength(4));
 
         expect(asFragment()).toMatchSnapshot();
     });
