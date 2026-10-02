@@ -18,6 +18,8 @@ interface SkeletonBubble {
     lines: number;
     /** Whether it follows a bubble from the same side, and so sits closer to it. */
     continuation: boolean;
+    /** Whether it is the last of its side's run: the one a real run hangs its tail on. */
+    last: boolean;
 }
 
 /** A small seeded generator (mulberry32): the same conversation every time, so nothing jumps between draws. */
@@ -44,7 +46,9 @@ export function skeletonBubbles(count: number, seed = 20): SkeletonBubble[] {
             width: Math.round(25 + size * 40),
             lines: size > 0.8 ? 3 : size > 0.5 ? 2 : 1,
             continuation: i > 0 && bubbles[i - 1].own === own,
+            last: true,
         });
+        if (i > 0 && bubbles[i - 1].own === own) bubbles[i - 1].last = false;
     }
     return bubbles;
 }
@@ -69,6 +73,7 @@ export function TgMessagesSkeleton({ count, className, style }: Props): JSX.Elem
                     className={classNames("mx_TgMessagesSkeleton_bubble", {
                         mx_TgMessagesSkeleton_own: bubble.own,
                         mx_TgMessagesSkeleton_continuation: bubble.continuation,
+                        mx_TgMessagesSkeleton_last: bubble.last,
                     })}
                     style={{ "width": `${bubble.width}%`, "--lines": bubble.lines } as CSSProperties}
                 />

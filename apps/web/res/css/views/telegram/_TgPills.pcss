@@ -462,6 +462,12 @@ html[data-tg-screen="mobile"] {
            16px is Safari's minimum editable font size before it zooms the viewport. */
         --tg-composer-font-size: max(16px, 1.0625rem);
         --tg-composer-height: max(40px, calc(var(--tg-composer-font-size) * 1.25 + 18px));
+        /*
+         * In from the screen's edges as far as the messages are. At the page's 8px the composer
+         * reached well past the bubbles on either side - they sit a message-list padding in - and
+         * read as wider than the chat it belongs to.
+         */
+        width: calc(100% - 2 * var(--RoomView_MessageList-padding, 18px));
 
         .mx_TgAttachButton {
             width: 100%;

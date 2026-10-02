@@ -28,6 +28,10 @@ describe("TgMessagesSkeleton", () => {
         bubbles.slice(1).forEach((bubble, index) => {
             expect(bubble.continuation).toBe(bubble.own === bubbles[index].own);
         });
+        // The last of each run is the one the next bubble does not continue; the very last always is
+        bubbles.forEach((bubble, index) => {
+            expect(bubble.last).toBe(index === bubbles.length - 1 || !bubbles[index + 1].continuation);
+        });
         for (const bubble of bubbles) {
             expect(bubble.width).toBeGreaterThanOrEqual(25);
             expect(bubble.width).toBeLessThanOrEqual(65);
@@ -46,6 +50,7 @@ describe("TgMessagesSkeleton", () => {
         drawn.forEach((bubble, index) => {
             expect(bubble.classList.contains("mx_TgMessagesSkeleton_own")).toBe(expected[index].own);
             expect(bubble.classList.contains("mx_TgMessagesSkeleton_continuation")).toBe(expected[index].continuation);
+            expect(bubble.classList.contains("mx_TgMessagesSkeleton_last")).toBe(expected[index].last);
         });
     });
 });

@@ -579,24 +579,52 @@ Please see LICENSE files in the repository root for full details.
     inset: 0;
 }
 
+/*
+ * Each one a bubble as the timeline draws them (EventTileView's bubble geometry as this layout sets it,
+ * above and in _TelegramLayout.pcss): the same two surfaces, the same 15px corners tucked in to tweb's
+ * small radius where a bubble meets the next of its run, the same 85% of the column at most, 2.5px
+ * between the bubbles of a run and Telegram's 8px between runs. Only the words are missing.
+ */
 .mx_TgMessagesSkeleton_bubble {
+    --skeleton-radius: 15px;
+    --skeleton-radius-join: 0.375rem;
+
     flex: none;
     align-self: flex-start;
-    /* One line of text and the bubble's own padding, as a message has. */
+    max-width: 85%;
+    /* The lines of text it stands for, and the bubble's own padding around them. */
     height: calc(var(--lines, 1) * 1.3125rem + 0.75rem);
     margin-top: 0.5rem;
-    border-radius: 12px;
-    background: var(--cpd-color-bg-subtle-secondary);
+    border-radius: var(--skeleton-radius);
+    background: var(--event-tile-bubble-other-background, var(--cpd-color-gray-300));
     animation: mx_TgMessagesSkeleton_pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+
+    /* Not the first of its run: the corner facing the bubble above is tucked in. */
+    &.mx_TgMessagesSkeleton_continuation {
+        margin-top: 2.5px;
+        border-start-start-radius: var(--skeleton-radius-join);
+    }
+
+    /* Not the last of its run: the corner facing the bubble below is. */
+    &:not(.mx_TgMessagesSkeleton_last) {
+        border-end-start-radius: var(--skeleton-radius-join);
+    }
 }
 
+/* Our own: on the other side, on our surface, with the corners of that side tucked in. */
 .mx_TgMessagesSkeleton_own {
     align-self: flex-end;
-    background: var(--cpd-color-bg-subtle-primary);
-}
+    background: var(--event-tile-bubble-self-background, var(--cpd-color-green-300));
 
-.mx_TgMessagesSkeleton_continuation {
-    margin-top: 0.125rem;
+    &.mx_TgMessagesSkeleton_continuation {
+        border-start-start-radius: var(--skeleton-radius);
+        border-start-end-radius: var(--skeleton-radius-join);
+    }
+
+    &:not(.mx_TgMessagesSkeleton_last) {
+        border-end-start-radius: var(--skeleton-radius);
+        border-end-end-radius: var(--skeleton-radius-join);
+    }
 }
 
 .mx_NewTimelinePanel_loadingMessages {
