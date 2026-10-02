@@ -109,6 +109,26 @@ html[data-tg-screen="mobile"] {
     height: 100dvh !important;
 }
 
+/*
+ * Installed to the home screen, the app has the whole screen and no browser toolbars to come and go.
+ * iOS all the same reports the dynamic viewport a status bar short there (768 of 812 on an iPhone 11
+ * Pro, measured on the device) for as long as the page is no taller than that - while drawing it from
+ * under the status bar - so an app sized to the dynamic viewport stopped that far above the bottom of
+ * the screen. Sized to the large viewport it fills the screen, and iOS then reports the dynamic one at
+ * the same height too. In a browser tab the large viewport is the screen with the toolbars away, which
+ * is not what the app has, so this is for the installed app alone.
+ */
+@media (display-mode: standalone) {
+    html[data-tg-screen="mobile"] {
+        height: 100lvh !important;
+    }
+
+    html:not([data-tg-keyboard]),
+    html:not([data-tg-keyboard]) [class*="cpd-theme-"] {
+        --tg-app-height: 100lvh;
+    }
+}
+
 /* Set by viewportHeight.ts: how far iOS has panned the visual viewport (0 unless the keyboard is up). */
 :root {
     --tg-vv-top: 0px;
