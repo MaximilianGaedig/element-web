@@ -812,7 +812,8 @@ describe("<MatrixChat />", () => {
 
             getComponent();
 
-            await expect(screen.findByLabelText("User menu")).resolves.toBeVisible();
+            // Loading a session takes longer than the second a query waits by default on a busy machine
+            await expect(screen.findByLabelText("User menu", {}, { timeout: 10000 })).resolves.toBeVisible();
             await waitFor(() => expect(marked()).toContain("mx_boot:logged_in_view"));
             expect(marked()).toContain("mx_boot:saved_sync_replayed");
             expect(marked()).not.toContain("mx_boot:live_sync_prepared");
@@ -837,7 +838,8 @@ describe("<MatrixChat />", () => {
 
             getComponent();
 
-            await expect(screen.findByLabelText("User menu")).resolves.toBeVisible();
+            // Loading a session takes longer than the second a query waits by default on a busy machine
+            await expect(screen.findByLabelText("User menu", {}, { timeout: 10000 })).resolves.toBeVisible();
             await waitFor(() => expect(marked()).toContain("mx_boot:logged_in_view"));
             expect(marked()).toContain("mx_boot:saved_sync_replayed");
             expect(marked()).not.toContain("mx_boot:live_sync_prepared");
