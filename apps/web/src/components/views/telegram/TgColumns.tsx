@@ -62,6 +62,7 @@ import {
 } from "../../../utils/telegram/tgLayout/longPress";
 import { TABS_TRANSITION_MS } from "../../../utils/telegram/tgLayout/constants";
 import { playLadder } from "../../../utils/telegram/tgLayout/ladder";
+import { lowPower } from "../../../utils/lowPower";
 import dis from "../../../dispatcher/dispatcher";
 import { Action } from "../../../dispatcher/actions";
 import { type ActionPayload } from "../../../dispatcher/payloads";
@@ -315,8 +316,13 @@ export function TgColumns({
         const center = centerRef.current;
         if (!center || !chatKey) return;
         let raf = 0;
+        // An animation for show, and one that runs on every chat opened: not while power is being saved.
+        if (lowPower.isOn()) return;
         const tryPlay = (): boolean => {
-            const list = center.querySelector(".mx_RoomView_MessageList");
+            // The room in front: the ones kept mounted behind it have message lists of their own.
+            const list =
+                center.querySelector('.mx_RoomView_kept[data-active="true"] .mx_RoomView_MessageList') ??
+                center.querySelector(".mx_RoomView_MessageList");
             if (!list?.querySelector('[data-testid="event-tile"]')) return false;
             raf = window.requestAnimationFrame(() => {
                 const viewport = (center.querySelector(".mx_RoomView_messagePanel") ?? center).getBoundingClientRect();
