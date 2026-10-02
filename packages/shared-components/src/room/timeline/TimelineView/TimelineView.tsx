@@ -375,6 +375,18 @@ export function TimelineView({
     // of rows, as a render may run twice.
     const virtualizerRef = useRef<Virtualizer<HTMLDivElement, Element> | null>(null);
     const atEndBeforeRef = useRef<{ items: TimelineItem[]; atEnd: boolean }>({ items, atEnd: false });
+    // The same question for the space kept clear at either end, which changes as what floats there does
+    // (a composer growing a line, a reply being quoted above it).
+    const clearanceKey = `${paddingStart}:${paddingEnd}`;
+    const atEndBeforeClearanceRef = useRef({ key: clearanceKey, atEnd: false });
+    if (atEndBeforeClearanceRef.current.key !== clearanceKey) {
+        atEndBeforeClearanceRef.current = {
+            key: clearanceKey,
+            atEnd:
+                revealFrameRef.current !== undefined ||
+                (virtualizerRef.current?.isAtEnd(AT_BOTTOM_THRESHOLD_PX) ?? false),
+        };
+    }
     const reducedMotion =
         typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const revealNewMessages = animateNewMessages && !reducedMotion;
@@ -478,6 +490,19 @@ export function TimelineView({
             stopReveal();
         };
     }, [stopReveal]);
+
+    // A reader at the end stays at the end when the space kept clear there changes. Nothing else holds
+    // them: it is no row changing size, so the virtualizer has no reason to move, and the last message
+    // went behind a composer that grew - after which the reader was no longer "at the end" for new
+    // messages to be followed either. Declared after the virtualizer, so its new extent is in place.
+    useLayoutEffect(() => {
+        const scroller = scrollerRef.current;
+        if (!scroller || phaseRef.current !== "live" || !atEndBeforeClearanceRef.current.atEnd) return;
+        if (snapshotRef.current.pendingAnchor !== null || !snapshotRef.current.atLiveEnd) return;
+        // On the way to a new message already: that ends at the end as it now is.
+        if (revealFrameRef.current !== undefined) return;
+        scroller.scrollTop = scroller.scrollHeight - scroller.clientHeight;
+    }, [paddingStart, paddingEnd]);
 
     const justAddedTimersRef = useRef(new Set<number>());
     useEffect(() => {

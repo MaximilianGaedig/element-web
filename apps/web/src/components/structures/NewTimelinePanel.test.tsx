@@ -8,7 +8,7 @@ Please see LICENSE files in the repository root for full details.
 // @vitest-environment happy-dom
 
 import React from "react";
-import { render, screen } from "test-utils-rtl";
+import { render, screen, waitFor } from "test-utils-rtl";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { EventStatus, type MatrixClient, MatrixEvent, PendingEventOrdering, Room } from "matrix-js-sdk/src/matrix";
 import type { TimelineItem } from "@element-hq/web-shared-components";
@@ -39,7 +39,11 @@ vi.mock("@element-hq/web-shared-components", async () => {
             renderItem,
             renderPlaceholder,
             animateNewMessages,
+            paddingStart,
+            paddingEnd,
         }: {
+            paddingStart?: number;
+            paddingEnd?: number;
             vm: { getSnapshot: () => { items: TimelineItem[] } };
             renderItem: (item: TimelineItem) => React.ReactNode;
             renderPlaceholder?: () => React.ReactNode;
@@ -49,7 +53,11 @@ vi.mock("@element-hq/web-shared-components", async () => {
             rowsRendered.current = items;
             return (
                 <>
-                    <div data-testid="timeline-stub" data-animates={String(!!animateNewMessages)}>
+                    <div
+                        data-testid="timeline-stub"
+                        data-animates={String(!!animateNewMessages)}
+                        data-padding={`${paddingStart}/${paddingEnd}`}
+                    >
                         {items.map((item) => renderItem(item))}
                     </div>
                     <div data-testid="placeholder">{renderPlaceholder?.()}</div>
@@ -215,6 +223,32 @@ describe("<NewTimelinePanel />", () => {
         expect(placeholder.querySelector(".mx_TgMessagesSkeleton_opening")).not.toBeNull();
         expect(placeholder.querySelectorAll(".mx_TgMessagesSkeleton_bubble")).toHaveLength(20);
         expect(screen.getByTestId("timeline-stub")).toHaveAttribute("data-animates", "true");
+    });
+
+    it("keeps a gap between the messages and what floats over them, and none where nothing floats", async () => {
+        withItems([]);
+        // What the chrome has measured, as the panel reads it off the room body
+        const measured: Record<string, string> = { "--tg-header-block": "56px" };
+        vi.spyOn(window, "getComputedStyle").mockImplementation(
+            () => ({ getPropertyValue: (name: string) => measured[name] ?? "" }) as CSSStyleDeclaration,
+        );
+        const { container } = render(
+            <div className="mx_RoomView_body">
+                <MatrixClientContext.Provider value={client}>
+                    <SDKContext.Provider value={new TestSDKContext()}>
+                        <NewTimelinePanel room={room} />
+                    </SDKContext.Provider>
+                </MatrixClientContext.Provider>
+            </div>,
+        );
+
+        // Nothing floats over the end yet: no composer, no gap
+        expect(screen.getByTestId("timeline-stub")).toHaveAttribute("data-padding", "64/0");
+
+        // The chrome writes the composer's height onto the room body as it measures it
+        measured["--tg-composer-block"] = "60px";
+        (container.firstElementChild as HTMLElement).style.setProperty("--tg-composer-block", "60px");
+        await waitFor(() => expect(screen.getByTestId("timeline-stub")).toHaveAttribute("data-padding", "64/68"));
     });
 
     it("leaves the other layouts their spinner and their jump to a new message", () => {
