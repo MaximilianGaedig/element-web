@@ -140,7 +140,15 @@ function renderTimelineItem(item: TimelineItem, ctx: RenderItemContext): ReactNo
             // gappy sync can trigger a timeline reset, which drops every loaded event.
             // Rendering a tile without its event crashes, replacing the whole timeline
             // with an error, so leave the row empty until the next snapshot.
-            const mxEvent = ctx.room.findEventById(item.key);
+            /*
+             * A message of ours that has not gone out yet is not in the room's timelines: the room
+             * holds it apart as a pending event, where looking it up by id does not find it. The view
+             * model lists those all the same - being sent, or failed - and each one drew as an empty
+             * row: a failed message left the "not sent" mark on the chat and nothing in it to see.
+             */
+            const mxEvent =
+                ctx.room.findEventById(item.key) ??
+                ctx.room.getPendingEvents().find((pending) => pending.getId() === item.key);
             if (!mxEvent) return null;
 
             // For now, all events go through the legacy adapter.

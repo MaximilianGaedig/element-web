@@ -10,7 +10,7 @@ Please see LICENSE files in the repository root for full details.
 import React from "react";
 import { render, screen } from "test-utils-rtl";
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import { type MatrixClient, MatrixEvent, PendingEventOrdering, Room } from "matrix-js-sdk/src/matrix";
+import { EventStatus, type MatrixClient, MatrixEvent, PendingEventOrdering, Room } from "matrix-js-sdk/src/matrix";
 import type { TimelineItem } from "@element-hq/web-shared-components";
 import { createTestClient, mkMessage, TestSDKContext } from "test-utils";
 
@@ -129,6 +129,34 @@ describe("<NewTimelinePanel />", () => {
 
         expect(screen.getByTestId("event-row")).toBeInTheDocument();
         expect(tileProps.current[0].mxEvent).toBe(event);
+    });
+
+    /*
+     * The view model listed a message that had failed to send, and the row for it was empty: the chat
+     * carried the "not sent" mark and showed nothing that was not sent.
+     */
+    it("draws a row for a message of ours that has not gone out, which the room holds apart", () => {
+        const unsent = new MatrixEvent({
+            type: "m.room.message",
+            content: { msgtype: "m.text", body: "did this go out?" },
+            event_id: `~${ROOM_ID}:m1.0`,
+            sender: USER_ID,
+            room_id: ROOM_ID,
+            origin_server_ts: 2,
+        });
+        unsent.setStatus(EventStatus.NOT_SENT);
+        room.addPendingEvent(unsent, "m1.0");
+        // Held apart: looking it up as a message of the room finds nothing.
+        expect(room.findEventById(unsent.getId()!)).toBeUndefined();
+        withItems([
+            { key: event.getId()!, kind: "event", continuation: false, lastInSection: false } as TimelineItem,
+            { key: unsent.getId()!, kind: "event", continuation: false, lastInSection: true } as TimelineItem,
+        ]);
+
+        renderPanel();
+
+        expect(screen.getAllByTestId("event-row")).toHaveLength(2);
+        expect(tileProps.current.map((props) => props.mxEvent)).toEqual([event, unsent]);
     });
 
     it("skips a row whose event is no longer in the room instead of failing", () => {
