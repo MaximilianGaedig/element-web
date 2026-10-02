@@ -34,11 +34,16 @@ const ACTIVITY_TYPES = new Set<string>([
     EventType.RTCNotification,
 ]);
 
-function isActivity(event: MatrixEvent): boolean {
+/** Something said in the room, whoever or whatever said it: a message that is not an edit of another. */
+function isSaid(event: MatrixEvent): boolean {
     if (!ACTIVITY_TYPES.has(event.getType()) || event.isRedacted()) return false;
-    // An edit changes something already said, and a notice is a bot talking, not a person.
-    if (event.getRelation()?.rel_type === RelationType.Replace) return false;
-    return event.getContent().msgtype !== MsgType.Notice;
+    // An edit changes something already said.
+    return event.getRelation()?.rel_type !== RelationType.Replace;
+}
+
+function isActivity(event: MatrixEvent): boolean {
+    // A notice is a bot talking, not a person.
+    return isSaid(event) && event.getContent().msgtype !== MsgType.Notice;
 }
 
 function shouldCauseReorder(event: MatrixEvent): boolean {
@@ -99,12 +104,15 @@ export const getLastTimestamp = (r: Room, userId: string): number => {
          * the chat - the messages it brings are.
          */
         let latest = 0;
+        let latestNotice = 0;
         let ownMembership = 0;
         for (const ev of timeline) {
             const ts = ev.getTs();
             if (!ts) continue; // skip events that don't have timestamps (tests only?)
             if (isActivity(ev)) {
                 latest = Math.max(latest, ts);
+            } else if (isSaid(ev)) {
+                latestNotice = Math.max(latestNotice, ts);
             } else if (ev.getSender() === userId && ev.getType() === EventType.RoomMember && shouldCauseReorder(ev)) {
                 ownMembership = Math.max(ownMembership, ts);
             }
@@ -120,6 +128,14 @@ export const getLastTimestamp = (r: Room, userId: string): number => {
             return Math.max(latest, remembered ?? 0);
         }
         if (remembered !== undefined) return remembered;
+        /*
+         * Nothing a person said, but something was said: a notice. It does not move a room up when it
+         * arrives - that is what not counting it as activity is for - but where nothing else is known it
+         * is when the room was last heard from, which the reader's own join is not. A bridge making a
+         * portal for a chat whose history is one system message ("item bought") joined the reader today,
+         * and the chat sorted as today's, above chats written in this morning.
+         */
+        if (latestNotice) return latestNotice;
         if (ownMembership) return ownMembership;
 
         /*

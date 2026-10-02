@@ -208,6 +208,38 @@ describe("getLastTimestamp", () => {
             expect(getLastTimestamp(room, "@john:matrix.org")).toBe(100);
         });
 
+        /*
+         * A bridge made a portal today for a chat whose whole history is one system notice from months
+         * ago. The join was the only thing left to sort by, so the chat sat above ones written in today.
+         */
+        it("should sort a room with nothing but a notice by the notice, not by the reader being joined to it", () => {
+            const cli = stubClient();
+            const room = new Room("!portal:example.org", cli, "@john:matrix.org");
+            vi.spyOn(room, "getMyMembership").mockReturnValue(KnownMembership.Join);
+            const join = mkEvent({
+                type: "m.room.member",
+                room: room.roomId,
+                user: "@john:matrix.org",
+                skey: "@john:matrix.org",
+                content: { membership: "join" },
+                prev_content: { membership: "invite" },
+                ts: 9000,
+                event: true,
+            });
+            room.addLiveEvents([message(room, 100, { msgtype: "m.notice" }), join], { addToState: true });
+
+            expect(getLastTimestamp(room, "@john:matrix.org")).toBe(100);
+        });
+
+        it("should still not let a notice move a room that people have written in", () => {
+            const room = new Room("!busy:example.org", stubClient(), "@john:matrix.org");
+            vi.spyOn(room, "getMyMembership").mockReturnValue(KnownMembership.Join);
+            room.addLiveEvents([message(room, 500), message(room, 9000, { msgtype: "m.notice" })], {
+                addToState: true,
+            });
+            expect(getLastTimestamp(room, "@john:matrix.org")).toBe(500);
+        });
+
         it("should ignore edits", () => {
             const room = setup();
             const edit = message(room, 9000, {
