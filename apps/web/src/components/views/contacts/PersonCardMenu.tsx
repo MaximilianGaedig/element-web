@@ -27,8 +27,6 @@ import { isFavourite, setFavourite } from "../../../utils/contacts/favourites";
 import { contactTags, setInTag } from "../../../utils/contacts/tags";
 import { cardFor } from "../../../utils/contacts/card";
 import { cardForExport, shareVCard, toVCard } from "../../../utils/contacts/vcard";
-import ContentMessages from "../../../ContentMessages";
-import { SDKContextClass } from "../../../contexts/SDKContextClass.ts";
 
 interface Props {
     client: MatrixClient;
@@ -106,9 +104,22 @@ export function PersonCardMenu({ client, person, onChanged }: Props): JSX.Elemen
             onSend={(who) => {
                 const text = toVCard(cardForExport(who, cardFor(client, who)));
                 const file = new File([text], `${who.name}.vcf`, { type: "text/vcard" });
-                const roomId = SDKContextClass.instance.roomViewStore.getRoomId();
-                if (!roomId) return;
-                void ContentMessages.sharedInstance().sendContentToRoom(file, roomId, undefined, client, undefined);
+                // Loaded when used: the uploader and the stores are large modules, and a card that is only
+                // being shown should not pull them in - nor sit in an import cycle with them at startup.
+                void Promise.all([
+                    import("../../../ContentMessages"),
+                    import("../../../contexts/SDKContextClass.ts"),
+                ]).then(([{ default: ContentMessages }, { SDKContextClass }]) => {
+                    const roomId = SDKContextClass.instance.roomViewStore.getRoomId();
+                    if (!roomId) return;
+                    return ContentMessages.sharedInstance().sendContentToRoom(
+                        file,
+                        roomId,
+                        undefined,
+                        client,
+                        undefined,
+                    );
+                });
             }}
             tags={contactTags(client)}
             onTag={(tag, member) => void setInTag(client, tag.id, person, member).then(onChanged)}
