@@ -269,44 +269,111 @@ html[data-floating-bars] .mx_MessageComposer.mx_MessageComposer_tg {
     .mx_TgVoiceHold_slide {
         order: 2;
         display: flex;
-        flex: 1 1 auto;
+        flex: 0 0 auto;
         /* The row sets its children on its bottom edge; this is a line of text, centred in it. */
         align-self: center;
         align-items: center;
-        justify-content: center;
         gap: 2px;
-        box-sizing: border-box;
-        min-width: 0;
         /* The held button is drawn larger than its place, over the end of the row. */
-        padding-inline-end: 28px;
+        margin-inline: 4px 12px;
         color: var(--cpd-color-text-secondary);
-        font: var(--cpd-font-body-md-regular);
+        font: var(--cpd-font-body-sm-regular);
         white-space: nowrap;
         opacity: calc(1 - var(--tg-voice-cancelness, 0));
         transform: translateX(var(--tg-voice-dx, 0px));
-        /* It goes under the timer, not over it: cut off where its own place in the row begins. */
+        /* It goes under the recording, not over it: cut off where its own place in the row begins. */
         clip-path: inset(0 0 0 calc(-1 * var(--tg-voice-dx, 0px)));
 
         svg {
-            width: 20px;
-            height: 20px;
+            width: 16px;
+            height: 16px;
         }
     }
 
     /*
-     * While it is held there is nothing to press: no stop, no delete, and the waveform makes room for
-     * the label. The dot and the timer stay, as on Telegram.
+     * One recording row throughout - the dot, the waveform and the timer - whether the microphone is
+     * held, locked on, or was started with a click. Only what sits beside it changes: "Slide to cancel"
+     * under a finger, "Cancel" without one. Deleting and stopping have their own places in this layout
+     * (Cancel, and the button above the send button), so the row's own two are not drawn while recording.
      */
-    &.mx_MessageComposer_tgHolding {
+    &.mx_MessageComposer_tgHolding,
+    &.mx_MessageComposer_tgRecording {
         .mx_VoiceRecordComposerTile_delete,
-        .mx_VoiceRecordComposerTile_stop,
-        .mx_Waveform {
+        .mx_VoiceRecordComposerTile_stop {
             display: none;
         }
 
         .mx_VoiceMessagePrimaryContainer {
-            flex: 0 0 auto;
+            flex: 1 1 0;
+        }
+    }
+
+    /* Under a finger the row is shared with "Slide to cancel": the timer gives the waveform what it can. */
+    &.mx_MessageComposer_tgHolding .mx_VoiceMessagePrimaryContainer {
+        gap: 6px;
+
+        .mx_Clock {
+            min-width: 2.25rem;
+        }
+    }
+
+    /*
+     * The editor is switched off while there is a recording, but was still given its share of the row -
+     * its placeholder showed beside the recording, which was left with no room for its waveform.
+     */
+    &.mx_MessageComposer_tgVoice .mx_SendMessageComposer {
+        display: none;
+    }
+
+    /* 2.5rem all told, as the rule above means it: with its padding outside, it made the row taller. */
+    .mx_VoiceRecordComposerTile_delete {
+        box-sizing: border-box;
+    }
+
+    /* Telegram iOS: "Cancel" in the accent colour beside a locked recording. */
+    .mx_TgVoiceHold_cancel {
+        order: 2;
+        flex: 0 0 auto;
+        align-self: center;
+        padding: 0 var(--cpd-space-3x);
+        color: var(--cpd-color-text-action-accent);
+        font: var(--cpd-font-body-md-medium);
+        white-space: nowrap;
+    }
+
+    /* A recording is sent from where it was started: the microphone's island, turned into the send button. */
+    .mx_TgComposerIsland_send {
+        background-color: var(--cpd-color-bg-accent-rest);
+        backdrop-filter: none;
+
+        .mx_TgSendButton,
+        .mx_TgSendButton:hover {
+            color: #fff;
             background: none;
+        }
+    }
+
+    /* Where the lock was once it has closed: ends the recording, to be heard before it is sent. */
+    .mx_TgVoiceHold_stop {
+        position: absolute;
+        bottom: calc(100% + 56px);
+        left: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 36px;
+        height: 40px;
+        border-radius: 18px;
+        color: var(--cpd-color-icon-critical-primary);
+        background-color: var(--tg-glass-background);
+        backdrop-filter: var(--tg-glass-backdrop);
+        box-shadow: var(--tg-chat-input-box-shadow);
+        transform: translateX(-50%);
+        animation: mx_TgFade_in 150ms ease;
+
+        svg {
+            width: 20px;
+            height: 20px;
         }
     }
 }

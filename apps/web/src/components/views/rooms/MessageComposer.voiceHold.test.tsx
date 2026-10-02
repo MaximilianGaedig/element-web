@@ -49,7 +49,9 @@ class FakeRecording extends TypedEventEmitter<RecordingState, Record<RecordingSt
         this.emit(RecordingState.Started);
     });
     public stop = vi.fn(async (): Promise<void> => {
+        if (!this.isRecording) return;
         this.isRecording = false;
+        this.emit(RecordingState.Ended);
     });
     public destroy = vi.fn();
     public upload = vi.fn(async () => ({ mxc: "mxc://example.com/voice" }));
@@ -206,19 +208,93 @@ describe("MessageComposer, holding the microphone", () => {
         expect(sentVoiceMessages()).toHaveLength(0);
     });
 
-    it("keeps recording with the finger gone once it has slid up, with the recording's own buttons", async () => {
-        const { composer, mic } = await hold();
+    /** Held, then slid up far enough to lock, and the finger taken away. */
+    const lock = async (): Promise<{ composer: HTMLElement; mic: HTMLElement }> => {
+        const opened = await hold();
+        fireEvent.pointerMove(opened.mic, finger(0, -(LOCK_AT + 10)));
+        await waitFor(() => expect(opened.composer).toHaveClass("mx_MessageComposer_tgRecording"));
+        return opened;
+    };
+    /** The stop button ignores the touch that locked the recording; this is a later one. */
+    const later = (): void => {
+        vi.spyOn(Date, "now").mockReturnValue(Date.now() + 10_000);
+    };
 
-        fireEvent.pointerMove(mic, finger(0, -(LOCK_AT + 10)));
+    it("keeps the same recording row once it has slid up to lock, with the finger gone", async () => {
+        const { composer } = await lock();
 
-        await waitFor(() => expect(composer).not.toHaveClass("mx_MessageComposer_tgHolding"));
-        fireEvent.pointerUp(mic, finger(0, -(LOCK_AT + 10)));
-        await act(async () => {});
+        expect(composer).not.toHaveClass("mx_MessageComposer_tgHolding");
         expect(made!.isRecording).toBe(true);
         expect(made!.destroy).not.toHaveBeenCalled();
         expect(sentVoiceMessages()).toHaveLength(0);
+        // the row is still the recording, now with Cancel beside it instead of "Slide to cancel"
+        expect(composer.querySelector(".mx_VoiceRecordComposerTile_recording")).toBeTruthy();
+        expect(screen.queryByText("Slide to cancel")).toBeNull();
+        expect(screen.getByTestId("tgcancelrecording")).toHaveTextContent("Cancel");
+        // and it is sent from where the microphone was, with stopping above it
+        const island = composer.querySelector(".mx_TgComposerIsland_mic")!;
+        expect(island).not.toHaveClass("mx_TgComposerIsland_hidden");
+        expect(island).toContainElement(screen.getByTestId("sendmessagebtn"));
+        expect(island).toContainElement(screen.getByTestId("tgstoprecording"));
+        expect(screen.queryByTestId("tgrecordbtn")).toBeNull();
+        expect(composer.querySelectorAll("[data-testid='sendmessagebtn']")).toHaveLength(1);
+    });
+
+    it("sends a locked recording from the send button", async () => {
+        await lock();
+
+        fireEvent.click(screen.getByTestId("sendmessagebtn"));
+
+        await waitFor(() => expect(sentVoiceMessages()).toHaveLength(1));
+        await waitFor(() => expect(screen.getByTestId("tgrecordbtn")).toBeInTheDocument());
+    });
+
+    it("throws a locked recording away from Cancel", async () => {
+        const { composer } = await lock();
+
+        fireEvent.click(screen.getByTestId("tgcancelrecording"));
+
+        await waitFor(() => expect(made!.destroy).toHaveBeenCalled());
+        await waitFor(() => expect(screen.getByTestId("tgrecordbtn")).toBeInTheDocument());
+        expect(composer).not.toHaveClass("mx_MessageComposer_tgRecording");
+        expect(sentVoiceMessages()).toHaveLength(0);
+    });
+
+    it("does not stop the recording with the touch that locked it", async () => {
+        await lock();
+
+        fireEvent.click(screen.getByTestId("tgstoprecording"));
+        await act(async () => {});
+
+        expect(made!.isRecording).toBe(true);
+    });
+
+    it("stops a locked recording to be heard, deleted or sent", async () => {
+        const { composer } = await lock();
+        later();
+
+        fireEvent.click(screen.getByTestId("tgstoprecording"));
+
+        await waitFor(() => expect(made!.isRecording).toBe(false));
+        await waitFor(() => expect(composer).not.toHaveClass("mx_MessageComposer_tgRecording"));
+        expect(made!.destroy).not.toHaveBeenCalled();
+        expect(screen.queryByTestId("tgstoprecording")).toBeNull();
+        expect(screen.queryByTestId("tgcancelrecording")).toBeNull();
         expect(composer.querySelector(".mx_VoiceRecordComposerTile_delete")).toBeTruthy();
-        expect(composer.querySelector(".mx_VoiceRecordComposerTile_stop")).toBeTruthy();
+        expect(composer.querySelector(".mx_TgComposerIsland_mic")).toContainElement(
+            screen.getByTestId("sendmessagebtn"),
+        );
+    });
+
+    it("gives a recording started with a click the same row", async () => {
+        const { composer, mic } = open();
+
+        fireEvent.click(mic);
+
+        await waitFor(() => expect(composer).toHaveClass("mx_MessageComposer_tgRecording"));
+        expect(made!.isRecording).toBe(true);
+        expect(screen.getByTestId("tgcancelrecording")).toBeInTheDocument();
+        expect(screen.getByTestId("tgstoprecording")).toBeInTheDocument();
     });
 
     it("throws away a recording too short to be meant", async () => {

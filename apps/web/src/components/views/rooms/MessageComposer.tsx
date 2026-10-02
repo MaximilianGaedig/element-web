@@ -25,6 +25,7 @@ import {
     LockOffIcon,
     MicOnSolidIcon,
     SendSolidIcon,
+    StopSolidIcon,
 } from "@vector-im/compound-design-tokens/assets/web/icons";
 import { useCreateAutoDisposedViewModel } from "@element-hq/web-shared-components";
 
@@ -43,6 +44,7 @@ import BridgeReplyKeyboard from "./BridgeReplyKeyboard";
 import { UPDATE_EVENT } from "../../../stores/AsyncStore";
 import VoiceRecordComposerTile from "./VoiceRecordComposerTile";
 import { TgVoiceHoldButton, type VoiceHold } from "../telegram/TgVoiceHoldButton";
+import { RETOUCH_MS } from "../../../utils/telegram/voiceHold";
 import { VoiceRecordingStore } from "../../../stores/VoiceRecordingStore";
 import { RecordingState } from "../../../audio/VoiceRecording";
 import type ResizeNotifier from "../../../utils/ResizeNotifier";
@@ -141,6 +143,8 @@ interface IState {
     composerContent: string;
     isComposerEmpty: boolean;
     haveRecording: boolean;
+    /** The recording is still being made, rather than made and waiting to be sent. */
+    recordingRunning?: boolean;
     /** The microphone being held to record, or the recording locked on after sliding up. */
     voiceHold?: VoiceHold | null;
     recordingTimeLeftSeconds?: number;
@@ -262,6 +266,7 @@ export class MessageComposer extends React.Component<IProps, IState> {
     private set voiceRecording(rec: VoiceMessageRecording | undefined) {
         if (this._voiceRecording) {
             this._voiceRecording.off(RecordingState.Started, this.onRecordingStarted);
+            this._voiceRecording.off(RecordingState.Ended, this.onRecordingEnded);
             this._voiceRecording.off(RecordingState.EndingSoon, this.onRecordingEndingSoon);
         }
 
@@ -271,6 +276,7 @@ export class MessageComposer extends React.Component<IProps, IState> {
             // Delay saying we have a recording until it is started, as we might not yet
             // have A/V permissions
             rec.on(RecordingState.Started, this.onRecordingStarted);
+            rec.on(RecordingState.Ended, this.onRecordingEnded);
 
             // We show a little heads up that the recording is about to automatically end soon. The 3s
             // display time is completely arbitrary.
@@ -536,12 +542,12 @@ export class MessageComposer extends React.Component<IProps, IState> {
         if (this.voiceRecording) {
             // If the recording has already started, it's probably a cached one.
             if (this.voiceRecording.hasRecording && !this.voiceRecording.isRecording) {
-                this.setState({ haveRecording: true });
+                this.setState({ haveRecording: true, recordingRunning: false });
             }
 
             // Note: Listeners for recording states are set by the `this.voiceRecording` setter.
         } else {
-            this.setState({ haveRecording: false });
+            this.setState({ haveRecording: false, recordingRunning: false });
         }
     }
 
@@ -551,7 +557,12 @@ export class MessageComposer extends React.Component<IProps, IState> {
         this.voiceRecording = VoiceRecordingStore.instance.getActiveRecording(voiceRecordingId);
         this.setState({
             haveRecording: !!this.voiceRecording,
+            recordingRunning: !!this.voiceRecording,
         });
+    };
+
+    private onRecordingEnded = (): void => {
+        this.setState({ recordingRunning: false });
     };
 
     private onRecordingEndingSoon = ({ secondsLeft }: { secondsLeft: number }): void => {
@@ -614,7 +625,18 @@ export class MessageComposer extends React.Component<IProps, IState> {
     private recordedMs = (): number => this.voiceRecordingButton.current?.recordedMs ?? 0;
 
     private onVoiceHoldChange = (voiceHold: VoiceHold | null): void => {
+        if (voiceHold === "locked") this.lockedAt = Date.now();
         this.setState({ voiceHold });
+    };
+
+    /*
+     * Locking puts the stop button where the finger that locked it still is, or has just been: a touch
+     * that lands on it straight away is the end of that slide, not a press.
+     */
+    private lockedAt = 0;
+    private onStopRecordingClick = (): void => {
+        if (Date.now() - this.lockedAt < RETOUCH_MS) return;
+        this.onRecordStartEndClick();
     };
 
     private onRecordStartEndClick = (): void => {
@@ -769,6 +791,10 @@ export class MessageComposer extends React.Component<IProps, IState> {
         );
 
         const showSendButton = canSendMessages && (!this.state.isComposerEmpty || this.state.haveRecording);
+        const holding = this.state.voiceHold === "holding";
+        const recordingRunning = this.state.haveRecording && !!this.state.recordingRunning;
+        // In this layout a recording is sent from where it was started: the microphone's own place.
+        const sendFromIsland = this.state.haveRecording && !holding;
 
         const classes = classNames({
             "mx_MessageComposer": true,
@@ -777,7 +803,11 @@ export class MessageComposer extends React.Component<IProps, IState> {
             "mx_MessageComposer_wysiwyg": this.state.isWysiwygLabEnabled,
             "mx_MessageComposer_tg": telegram,
             // The microphone is being held: the row shows what sliding does, not the recording's buttons.
-            "mx_MessageComposer_tgHolding": this.state.voiceHold === "holding",
+            "mx_MessageComposer_tgHolding": holding,
+            // The row is the recording's, from the moment the microphone is held until it is sent or gone.
+            "mx_MessageComposer_tgVoice": telegram && (holding || this.state.haveRecording),
+            // A recording being made with no finger on it: locked on, or started with a click.
+            "mx_MessageComposer_tgRecording": telegram && recordingRunning && !holding,
         });
 
         const composerButtonsProps = {
@@ -833,13 +863,22 @@ export class MessageComposer extends React.Component<IProps, IState> {
                                     hasText={!this.state.isComposerEmpty}
                                 />
                             )}
-                            {this.state.voiceHold === "holding" && (
+                            {holding && (
                                 <span className="mx_TgVoiceHold_slide" aria-hidden="true">
                                     <ChevronLeftIcon />
                                     {_t("tg_layout|voice_slide_to_cancel")}
                                 </span>
                             )}
-                            {telegram && showSendButton && this.state.voiceHold !== "holding" && (
+                            {telegram && recordingRunning && !holding && (
+                                <AccessibleButton
+                                    className="mx_TgVoiceHold_cancel"
+                                    onClick={this.cancelRecording}
+                                    data-testid="tgcancelrecording"
+                                >
+                                    {_t("action|cancel")}
+                                </AccessibleButton>
+                            )}
+                            {telegram && showSendButton && !this.state.haveRecording && !holding && (
                                 <TelegramSendButton
                                     mode="send"
                                     onSend={this.sendMessage}
@@ -864,18 +903,40 @@ export class MessageComposer extends React.Component<IProps, IState> {
                     <div
                         className={classNames("mx_TgComposerIsland mx_TgComposerIsland_mic", {
                             // It stays under the finger for as long as it is held, recording or not.
-                            mx_TgComposerIsland_hidden: showSendButton && this.state.voiceHold !== "holding",
+                            mx_TgComposerIsland_hidden: showSendButton && !holding && !sendFromIsland,
+                            mx_TgComposerIsland_send: sendFromIsland,
                         })}
-                        aria-hidden={showSendButton && this.state.voiceHold !== "holding"}
+                        aria-hidden={showSendButton && !holding && !sendFromIsland}
                     >
-                        <TgVoiceHoldButton
-                            onBegin={this.beginHeldRecording}
-                            onSend={this.sendMessage}
-                            onCancel={this.cancelRecording}
-                            onHoldChange={this.onVoiceHoldChange}
-                            recordedMs={this.recordedMs}
-                            onToggle={this.onRecordStartEndClick}
-                        />
+                        {sendFromIsland ? (
+                            <>
+                                {recordingRunning && (
+                                    // Where the lock was: ends the recording, which can then be heard before sending.
+                                    <AccessibleButton
+                                        className="mx_TgVoiceHold_stop"
+                                        onClick={this.onStopRecordingClick}
+                                        title={_t("composer|stop_voice_message")}
+                                        data-testid="tgstoprecording"
+                                    >
+                                        <StopSolidIcon />
+                                    </AccessibleButton>
+                                )}
+                                <TelegramSendButton
+                                    mode="send"
+                                    onSend={this.sendMessage}
+                                    onRecord={this.onRecordStartEndClick}
+                                />
+                            </>
+                        ) : (
+                            <TgVoiceHoldButton
+                                onBegin={this.beginHeldRecording}
+                                onSend={this.sendMessage}
+                                onCancel={this.cancelRecording}
+                                onHoldChange={this.onVoiceHoldChange}
+                                recordedMs={this.recordedMs}
+                                onToggle={this.onRecordStartEndClick}
+                            />
+                        )}
                     </div>
                 )}
             </div>
