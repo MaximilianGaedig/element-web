@@ -68,7 +68,13 @@ declare module "matrix-js-sdk/src/types" {
     export interface AccountDataEvents {
         // What the reader decided about accounts no identifier ties together (utils/contacts): which
         // ones are one person, and which pairings they turned down so they stop being offered.
-        "im.mxg.contact_links": { links?: string[][]; dismissed?: string[][]; names?: Record<string, string> };
+        // `apart` is the accounts taken out of a person the client had grouped by what they publish.
+        "im.mxg.contact_links": {
+            links?: string[][];
+            dismissed?: string[][];
+            names?: Record<string, string>;
+            apart?: string[];
+        };
         "im.mxg.contact_appearance": { colours?: Record<string, number>; order?: "first" | "last" };
         "im.mxg.contact_cards": { cards?: Record<string, unknown> };
         "im.mxg.contact_tags": { tags?: { id: string; name: string; members: string[] }[] };
