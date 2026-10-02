@@ -96,6 +96,23 @@ const REVEAL_TIMEOUT_MS = 1000;
  */
 const SCROLL_IDLE_MS = 1350;
 
+/*
+ * Revealing a new message, as Telegram Web does it (tweb `helpers/fastSmoothScroll.ts`, called from
+ * `renderNewMessage` in `components/chat/bubbles.ts`): the message is added below the visible end and
+ * the list scrolls down to it, for a time that grows with the distance, easing out. These are its
+ * constants and its two easings; a distance over the long maximum is jumped, and only the rest eased.
+ */
+const REVEAL_MIN_MS = 250;
+const REVEAL_MAX_MS = 600;
+const REVEAL_LONG_MAX_DISTANCE = 1500;
+const REVEAL_SHORT_MAX_DISTANCE = 500;
+const revealShortEasing = (t: number): number => 1 - (1 - t) ** 3.5;
+const revealLongEasing = (t: number): number => 1 - (1 - t) ** 5;
+/** How long a new row is marked `data-just-added`: past the longer of the two message animations. */
+const JUST_ADDED_MS = 400;
+/** Whatever the reader does to scroll the list themselves, which takes it back from a reveal. */
+const TAKEOVER_EVENTS = ["wheel", "touchstart", "pointerdown", "keydown"] as const;
+
 /**
  * How far the view has got through its first load:
  *  - "init"    — nothing rendered yet; waiting for the first batch of messages.
@@ -114,6 +131,7 @@ export function TimelineView({
     alwaysShowStickyDate = false,
     paddingStart = 0,
     paddingEnd = 0,
+    animateNewMessages = false,
 }: TimelineViewProps): JSX.Element {
     const snapshot = useViewModel(vm);
 
@@ -200,6 +218,13 @@ export function TimelineView({
 
     // ─── State used by the scroll reporting below ──────────────────────────────
     const phaseRef = useRef<Phase>("init");
+    /** The animation frame of a reveal in progress (see `revealNewMessages`). */
+    const revealFrameRef = useRef<number | undefined>(undefined);
+    /**
+     * Set from the moment new rows are rendered until it is decided whether they are revealed: the
+     * virtualizer reports as it measures them, which is before that, and before the list has moved.
+     */
+    const holdAtBottomRef = useRef(false);
     // We only want to tell the view model about things that have actually changed, so these
     // hold the last values we sent and repeats are skipped.
     const lastVisibleRangeRef = useRef<{ start: number; end: number } | null>(null);
@@ -243,7 +268,12 @@ export function TimelineView({
             const scrollOffset = v.scrollOffset ?? 0;
             const viewportHeight = v.scrollRect?.height ?? 0;
             const totalSize = v.getTotalSize();
-            const atBottom = viewportHeight > 0 && scrollOffset + viewportHeight >= totalSize - AT_BOTTOM_THRESHOLD_PX;
+            // On the way down to a new message we are still following the live end: saying otherwise
+            // would flash the "jump to latest" button for the length of the reveal.
+            const atBottom =
+                revealFrameRef.current !== undefined ||
+                holdAtBottomRef.current ||
+                (viewportHeight > 0 && scrollOffset + viewportHeight >= totalSize - AT_BOTTOM_THRESHOLD_PX);
             if (atBottom !== lastAtBottomRef.current) {
                 lastAtBottomRef.current = atBottom;
                 vm.onAtBottomStateChange(atBottom);
@@ -322,6 +352,20 @@ export function TimelineView({
         [vm, updateStickyDate],
     );
 
+    // Whether the reader was at the end of the list before this render changed it. It has to be asked
+    // before the virtualizer is given the new rows, as it answers for the rows it has; and once per set
+    // of rows, as a render may run twice.
+    const virtualizerRef = useRef<Virtualizer<HTMLDivElement, Element> | null>(null);
+    const atEndBeforeRef = useRef<{ items: TimelineItem[]; atEnd: boolean }>({ items, atEnd: false });
+    const reducedMotion =
+        typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const revealNewMessages = animateNewMessages && !reducedMotion;
+    if (atEndBeforeRef.current.items !== items) {
+        const atEnd = virtualizerRef.current?.isAtEnd(AT_BOTTOM_THRESHOLD_PX) ?? false;
+        atEndBeforeRef.current = { items, atEnd };
+        holdAtBottomRef.current = atEnd && revealNewMessages;
+    }
+
     const virtualizer = useVirtualizer({
         count: items.length,
         getScrollElement: () => scrollerRef.current,
@@ -348,7 +392,9 @@ export function TimelineView({
         scrollEndThreshold: AT_BOTTOM_THRESHOLD_PX,
         // Scroll down to follow newly arrived messages, but only when we are at the live end
         // of the timeline and are not part-way through jumping somewhere else.
-        followOnAppend: snapshot.atLiveEnd && snapshot.pendingAnchor === null,
+        // When new messages are revealed instead, the list stays where it is as they are added and
+        // `revealNewMessages` below does the scrolling.
+        followOnAppend: !revealNewMessages && snapshot.atLiveEnd && snapshot.pendingAnchor === null,
         // Let TanStack place rows by writing to the DOM directly instead of re-rendering.
         // Because of this, never set transform or height on a row in JSX below — it would
         // fight with what TanStack writes.
@@ -356,6 +402,114 @@ export function TimelineView({
         // Called on every TanStack update; we use it to report what is on screen upwards.
         onChange: reportVisibleState,
     });
+
+    virtualizerRef.current = virtualizer;
+
+    // ─── New messages: added behind the end of the list, then scrolled into view ──
+    const stopReveal = useCallback((): void => {
+        if (revealFrameRef.current === undefined) return;
+        cancelAnimationFrame(revealFrameRef.current);
+        revealFrameRef.current = undefined;
+    }, []);
+    const startReveal = useCallback((): void => {
+        const scroller = scrollerRef.current;
+        if (!scroller) return;
+        stopReveal();
+        // A list nobody is looking at (a chat kept open behind another, a hidden tab) has no frames
+        // to animate with, and nothing to show: go to the end as the virtualizer would have.
+        if (document.hidden || scroller.clientHeight === 0) {
+            virtualizerRef.current?.scrollToEnd({ behavior: "auto" });
+            return;
+        }
+        const end = (): number => scroller.scrollHeight - scroller.clientHeight;
+        let path = 0;
+        let duration = 0;
+        let easing = revealShortEasing;
+        let startedAt: number | undefined;
+        const tick = (now: number): void => {
+            if (startedAt === undefined) {
+                // Measured a frame after the rows were added, as tweb does, when they have their sizes.
+                startedAt = now;
+                path = end() - scroller.scrollTop;
+                if (path < 1) {
+                    revealFrameRef.current = undefined;
+                    return;
+                }
+                if (path > REVEAL_LONG_MAX_DISTANCE) {
+                    path = REVEAL_LONG_MAX_DISTANCE;
+                    scroller.scrollTop = end() - path;
+                }
+                duration = REVEAL_MIN_MS + (path / REVEAL_LONG_MAX_DISTANCE) * (REVEAL_MAX_MS - REVEAL_MIN_MS);
+                easing = path < REVEAL_SHORT_MAX_DISTANCE ? revealShortEasing : revealLongEasing;
+            }
+            const t = Math.min((now - startedAt) / duration, 1);
+            // From the end as it is now: a row still finding its height moves the end under us.
+            scroller.scrollTop = Math.round(end() - path * (1 - easing(t)));
+            revealFrameRef.current = t < 1 ? requestAnimationFrame(tick) : undefined;
+        };
+        revealFrameRef.current = requestAnimationFrame(tick);
+    }, [stopReveal]);
+
+    // The reader scrolling takes the list back from a reveal.
+    useEffect(() => {
+        const scroller = scrollerRef.current;
+        if (!scroller) return;
+        for (const type of TAKEOVER_EVENTS) scroller.addEventListener(type, stopReveal, { passive: true });
+        return () => {
+            for (const type of TAKEOVER_EVENTS) scroller.removeEventListener(type, stopReveal);
+            stopReveal();
+        };
+    }, [stopReveal]);
+
+    const justAddedTimersRef = useRef(new Set<number>());
+    useEffect(() => {
+        const timers = justAddedTimersRef.current;
+        return () => {
+            for (const timer of timers) window.clearTimeout(timer);
+        };
+    }, []);
+    const previousItemsRef = useRef(items);
+    /** Where the rows added at the end of the list start, if this render added any there to reveal. */
+    const addedAtEnd = useCallback((previous: TimelineItem[], next: TimelineItem[]): number | null => {
+        if (phaseRef.current !== "live") return null;
+        // Rows added after the one that was last: not history loading above, nor a different window.
+        const previousLastKey = previous[previous.length - 1]?.key;
+        if (previousLastKey === undefined || next.length <= previous.length) return null;
+        if (next[next.length - 1].key === previousLastKey) return null;
+        let last = next.length - 1;
+        while (last >= 0 && next[last].key !== previousLastKey) last--;
+        if (last < 0) return null;
+        // Only for a reader who is at the live end, or on the way there with the last message.
+        const following = atEndBeforeRef.current.atEnd || revealFrameRef.current !== undefined;
+        if (!following || !snapshotRef.current.atLiveEnd || snapshotRef.current.pendingAnchor !== null) return null;
+        return last + 1;
+    }, []);
+    useLayoutEffect(() => {
+        const previous = previousItemsRef.current;
+        previousItemsRef.current = items;
+        const held = holdAtBottomRef.current;
+        holdAtBottomRef.current = false;
+        const from = revealNewMessages && previous !== items ? addedAtEnd(previous, items) : null;
+        if (from === null) {
+            // Nothing to reveal after all: say where the list really is.
+            if (held) reportVisibleState(virtualizer);
+            return;
+        }
+
+        const added = new Set(items.slice(from).map((item) => item.key));
+        const rows: HTMLElement[] = [];
+        for (const row of scrollerRef.current?.querySelectorAll<HTMLElement>("li[data-key]") ?? []) {
+            if (!added.has(row.dataset.key ?? "")) continue;
+            row.dataset.justAdded = "true";
+            rows.push(row);
+        }
+        const timer = window.setTimeout(() => {
+            justAddedTimersRef.current.delete(timer);
+            for (const row of rows) delete row.dataset.justAdded;
+        }, JUST_ADDED_MS);
+        justAddedTimersRef.current.add(timer);
+        startReveal();
+    }, [items, revealNewMessages, startReveal, addedAtEnd, reportVisibleState, virtualizer]);
 
     // Works out how far down the list we would have to scroll, in pixels, to bring the row
     // with `targetKey` into view — `align` saying whether it should end up at the top,

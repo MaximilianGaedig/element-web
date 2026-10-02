@@ -224,4 +224,12 @@ export interface TimelineViewProps {
      * wants it).
      */
     alwaysShowStickyDate?: boolean;
+
+    /**
+     * Bring a new message in the way Telegram Web does, rather than jumping to it: the row is
+     * added below the visible end of the list - behind whatever floats over it there - and the
+     * list then scrolls up to reveal it. The new rows carry `data-just-added` for that moment,
+     * for the embedder to animate the message itself with. Off, the list jumps to the new end.
+     */
+    animateNewMessages?: boolean;
 }

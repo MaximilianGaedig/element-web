@@ -8,7 +8,7 @@
 import React from "react";
 import { act, render, screen, waitFor, type RenderResult } from "@test-utils";
 import userEvent from "@testing-library/user-event";
-import { describe, it, expect, vi } from "vitest";
+import { afterEach, describe, it, expect, vi } from "vitest";
 
 import { TimelineView } from "./TimelineView";
 import styles from "./TimelineView.module.css";
@@ -109,7 +109,7 @@ const renderStickyDate = (ts: number): React.ReactNode => <div data-testid="stic
 
 // Fixed-height viewport: the TimelineView is height:100%, so its parent must size it.
 const VIEWPORT_HEIGHT = 300;
-function renderTimeline(vm: TimelineViewModel, alwaysShowStickyDate = false): RenderResult {
+function renderTimeline(vm: TimelineViewModel, alwaysShowStickyDate = false, animateNewMessages = false): RenderResult {
     return render(
         <div style={{ height: VIEWPORT_HEIGHT, width: 320 }}>
             <TimelineView
@@ -117,6 +117,7 @@ function renderTimeline(vm: TimelineViewModel, alwaysShowStickyDate = false): Re
                 renderItem={renderItem}
                 renderStickyDate={renderStickyDate}
                 alwaysShowStickyDate={alwaysShowStickyDate}
+                animateNewMessages={animateNewMessages}
             />
         </div>,
     );
@@ -195,6 +196,126 @@ describe("<TimelineView />", () => {
         expect(actions.onJumpToLive).toHaveBeenCalledTimes(1);
         // The View hands the VM its imperative scroll handle.
         expect(actions.onJumpToLive.mock.calls[0][0]).toBeTypeOf("function");
+    });
+
+    describe("a new message at the live end", () => {
+        const endOf = (scroller: HTMLElement): number => scroller.scrollHeight - scroller.clientHeight;
+        const rowOf = (key: string): HTMLElement => screen.getByTestId(`row-${key}`).closest("li")!;
+
+        afterEach(() => {
+            vi.restoreAllMocks();
+        });
+
+        /**
+         * A timeline of 30 messages, shown and resting at its end. The browser these tests run in asks
+         * for reduced motion, which turns the animation off: `motion` says whether this reader does.
+         */
+        async function atTheEnd(
+            animateNewMessages: boolean,
+            motion = true,
+        ): Promise<FakeVm & { scroller: HTMLElement }> {
+            if (motion) {
+                const matchMedia = window.matchMedia.bind(window);
+                vi.spyOn(window, "matchMedia").mockImplementation((query) =>
+                    query.includes("prefers-reduced-motion")
+                        ? ({ matches: false, media: query } as MediaQueryList)
+                        : matchMedia(query),
+                );
+            }
+            const fake = makeFakeVm({ items: eventItems(30) });
+            renderTimeline(fake.vm, false, animateNewMessages);
+            const scroller = screen.getByTestId("timeline-scroller");
+            await waitFor(() => expect(fake.actions.onAnchorReached).toHaveBeenCalled(), { timeout: 5000 });
+            await waitFor(() => expect(fake.actions.onAtBottomStateChange).toHaveBeenLastCalledWith(true));
+            expect(endOf(scroller)).toBeGreaterThan(0);
+            expect(scroller.scrollTop).toBeCloseTo(endOf(scroller), 0);
+            return { ...fake, scroller };
+        }
+
+        it("is added below the end and scrolled into view, not jumped to", async () => {
+            const { scroller, update, actions } = await atTheEnd(true);
+            const before = scroller.scrollTop;
+            actions.onAtBottomStateChange.mockClear();
+
+            update({ items: eventItems(31) });
+
+            // Added, marked for the embedder to animate, and still out of sight below the end
+            expect(rowOf("evt-30")).toHaveAttribute("data-just-added", "true");
+            expect(scroller.scrollTop).toBe(before);
+            expect(endOf(scroller)).toBeGreaterThan(before);
+
+            // ...on the way: past where it was, not yet at the end
+            await waitFor(() => {
+                expect(scroller.scrollTop).toBeGreaterThan(before);
+                expect(scroller.scrollTop).toBeLessThan(endOf(scroller));
+            });
+            // ...and there, with the mark gone again
+            await waitFor(() => expect(scroller.scrollTop).toBeCloseTo(endOf(scroller), 0));
+            await waitFor(() => expect(rowOf("evt-30")).not.toHaveAttribute("data-just-added"));
+            // The reader never left the live end as far as the view model is told
+            expect(actions.onAtBottomStateChange).not.toHaveBeenCalledWith(false);
+        });
+
+        it("follows a second message that arrives during the first one's reveal", async () => {
+            const { scroller, update } = await atTheEnd(true);
+            const before = scroller.scrollTop;
+
+            update({ items: eventItems(31) });
+            await waitFor(() => expect(scroller.scrollTop).toBeGreaterThan(before));
+            update({ items: eventItems(32) });
+
+            expect(rowOf("evt-31")).toHaveAttribute("data-just-added", "true");
+            await waitFor(() => expect(scroller.scrollTop).toBeCloseTo(endOf(scroller), 0));
+            expect(endOf(scroller)).toBeCloseTo(before + 2 * ROW_HEIGHT, 0);
+        });
+
+        it("leaves a reader who has scrolled up where they are", async () => {
+            const { scroller, update, actions } = await atTheEnd(true);
+            act(() => {
+                scroller.scrollTop = 100;
+            });
+            await waitFor(() => expect(actions.onAtBottomStateChange).toHaveBeenLastCalledWith(false));
+
+            update({ items: eventItems(31) });
+            await new Promise((resolve) => setTimeout(resolve, 400));
+
+            expect(scroller.scrollTop).toBe(100);
+            expect(scroller.querySelector("[data-just-added]")).toBeNull();
+        });
+
+        it("is handed back to a reader who scrolls during the reveal", async () => {
+            const { scroller, update } = await atTheEnd(true);
+            const before = scroller.scrollTop;
+
+            update({ items: eventItems(31) });
+            await waitFor(() => expect(scroller.scrollTop).toBeGreaterThan(before));
+            scroller.dispatchEvent(new WheelEvent("wheel", { deltaY: -10 }));
+            const stoppedAt = scroller.scrollTop;
+            await new Promise((resolve) => setTimeout(resolve, 300));
+
+            expect(scroller.scrollTop).toBe(stoppedAt);
+            expect(stoppedAt).toBeLessThan(endOf(scroller));
+        });
+
+        it("is jumped to, unmarked, for a reader who asked for reduced motion", async () => {
+            const { scroller, update } = await atTheEnd(true, false);
+
+            update({ items: eventItems(31) });
+
+            await waitFor(() => expect(scroller.scrollTop).toBeCloseTo(endOf(scroller), 0));
+            expect(scroller.scrollTop).toBeGreaterThan(0);
+            expect(scroller.querySelector("[data-just-added]")).toBeNull();
+        });
+
+        it("is jumped to, unmarked, when new messages are not animated", async () => {
+            const { scroller, update } = await atTheEnd(false);
+
+            update({ items: eventItems(31) });
+
+            await waitFor(() => expect(scroller.scrollTop).toBeCloseTo(endOf(scroller), 0));
+            expect(scroller.scrollTop).toBeGreaterThan(0);
+            expect(scroller.querySelector("[data-just-added]")).toBeNull();
+        });
     });
 
     describe("the floating date", () => {

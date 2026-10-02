@@ -418,6 +418,8 @@ export function NewTimelinePanel({
                 renderStickyDate={renderStickyDate}
                 // Telegram keeps the day's date pinned under the header, not only while scrolling.
                 alwaysShowStickyDate={telegramBubbles}
+                // ...and brings a new message up from behind the composer instead of jumping to it.
+                animateNewMessages={telegramBubbles}
                 paddingStart={clearance.start}
                 paddingEnd={clearance.end}
             />

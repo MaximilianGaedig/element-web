@@ -90,3 +90,59 @@ html[data-floating-bars] .mx_EditMessageComposer {
         opacity: 1;
     }
 }
+
+/*
+ * A new message arriving in the open chat. The timeline adds it below the end of the list and scrolls
+ * up to it (TimelineView, `animateNewMessages`), marking its row for the moment that takes; this is
+ * the message itself coming in.
+ *
+ * Someone else's grows in from its own side, fading: Telegram Web's `zoom-fade` (tweb
+ * `scss/partials/_chatBubble.scss`: from `scale3d(.8, .8, 1)` and transparent, origin "left center"
+ * for an incoming bubble, over `--transition-standard-in`, .3s cubic-bezier(.4, 0, .2, 1)).
+ *
+ * Our own lands from slightly large with a small bounce, from its side: a quarter of a second, opaque
+ * and at size by 80% of it, then 1.05 and back.
+ *
+ * `backwards`, so nothing of the animation is left on the tile afterwards: a transform would make it
+ * the containing block of whatever it positions (menus, the reaction picker).
+ */
+@media (prefers-reduced-motion: no-preference) {
+    [data-bubble-timeline="true"] .mx_TimelineView_tile[data-just-added] .mx_EventTile[data-testid="event-tile"] {
+        transform-origin: left center;
+        animation: mx_TgMessage_in 0.3s cubic-bezier(0.4, 0, 0.2, 1) backwards;
+    }
+
+    [data-bubble-timeline="true"]
+        .mx_TimelineView_tile[data-just-added]
+        .mx_EventTile[data-testid="event-tile"].mx_EventTile_tgOwn {
+        transform-origin: right center;
+        animation: mx_TgMessage_sent 0.25s linear backwards;
+    }
+}
+
+@keyframes mx_TgMessage_in {
+    from {
+        transform: scale3d(0.8, 0.8, 1);
+        opacity: 0;
+    }
+}
+
+@keyframes mx_TgMessage_sent {
+    0% {
+        transform: scale(1.3);
+        opacity: 0;
+    }
+
+    80% {
+        transform: scale(1);
+        opacity: 1;
+    }
+
+    90% {
+        transform: scale(1.05);
+    }
+
+    100% {
+        transform: scale(1);
+    }
+}
