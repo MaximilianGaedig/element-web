@@ -9,7 +9,8 @@
  * Remote inspection of this device, for looking into a problem on a phone that has no developer tools.
  *
  * Off until the person switches it on from the device itself (`/remotedebug on`), and visibly on for as
- * long as it is: a pill on screen says so and stops it when tapped. While it is on, the app holds a socket
+ * long as it is: a mark at the top of the screen says so. It stays on, over restarts too, until it is
+ * switched off the same way (`/remotedebug off`). While it is on, the app holds a socket
  * to the relay next to the web app and does what the relay's operator asks: answer questions about what is
  * on screen (layout, computed styles, console, timings) and run code, as a developer console would.
  *
@@ -443,21 +444,27 @@ class Session {
         this.emit("error", "error", `Unhandled rejection: ${describe(event.reason)}`);
     };
 
-    /** The person must always be able to see that the device is being looked at, and stop it with a tap. */
+    /*
+     * The person must always be able to see that the device is being looked at. The mark is not a button:
+     * it used to sit over the composer and stop the session when touched, which a thumb reaching for the
+     * composer did without meaning to. It is out of the way at the top of the screen, lets touches through,
+     * and the session is stopped the way it was started.
+     */
     private showIndicator(): void {
         let pill = document.getElementById(INDICATOR_ID);
         if (!pill) {
-            pill = document.createElement("button");
+            pill = document.createElement("div");
             pill.id = INDICATOR_ID;
+            pill.setAttribute("role", "status");
             pill.style.cssText =
-                "position:fixed;z-index:2147483647;left:8px;bottom:calc(8px + env(safe-area-inset-bottom));" +
-                "padding:4px 10px;border:0;border-radius:12px;font:600 11px/16px system-ui,sans-serif;" +
-                "color:#fff;background:#d92d20;opacity:0.9";
-            pill.addEventListener("click", () => disableRemoteDebug());
+                "position:fixed;z-index:2147483647;top:max(2px, calc(env(safe-area-inset-top) - 13px));" +
+                "left:50%;transform:translateX(-50%);padding:0 6px;border-radius:6px;" +
+                "font:600 9px/12px system-ui,sans-serif;white-space:nowrap;" +
+                "color:#fff;background:#d92d20;opacity:0.85;pointer-events:none";
             document.body.appendChild(pill);
         }
         const connected = this.socket?.readyState === WebSocket.OPEN;
-        pill.textContent = `Remote debug ${this.code} · ${connected ? "connected" : "connecting"} · tap to stop`;
+        pill.textContent = `Remote debug ${this.code} · ${connected ? "connected" : "connecting"}`;
     }
 }
 

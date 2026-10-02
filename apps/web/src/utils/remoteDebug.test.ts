@@ -131,7 +131,14 @@ describe("remoteDebug", () => {
         expect(enableRemoteDebug()).toBe(code);
         expect(FakeSocket.instances).toHaveLength(1);
 
+        // A touch on the mark does nothing: it used to sit over the composer and stop the session.
         pill.click();
+        expect(remoteDebugCode()).toBe(code);
+        expect(pill.style.pointerEvents).toBe("none");
+        expect(pill.tagName).toBe("DIV");
+        expect(FakeSocket.instances[0].readyState).not.toBe(3);
+
+        disableRemoteDebug();
         expect(remoteDebugCode()).toBeNull();
         expect(document.getElementById("mx_RemoteDebug_indicator")).toBeNull();
         expect(FakeSocket.instances[0].readyState).toBe(3);

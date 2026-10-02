@@ -3527,7 +3527,7 @@
         "rainbow": "Sends the given message coloured as a rainbow",
         "rainbowme": "Sends the given emote coloured as a rainbow",
         "remotedebug": "Lets the operator of this app's server inspect and control the app on this device, until switched off",
-        "remotedebug_on_description": "This device can now be inspected and controlled from the server. Its code is %(code)s. Tap the red label at the bottom of the screen, or send /remotedebug off, to stop.",
+        "remotedebug_on_description": "This device can now be inspected and controlled from the server. Its code is %(code)s. It stays on, with a red label at the top of the screen, until you send /remotedebug off.",
         "remotedebug_on_title": "Remote debugging is on",
         "remove": "Removes user with given id from this room",
         "roomavatar": "Changes the avatar of the current room",
