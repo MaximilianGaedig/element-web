@@ -15,8 +15,11 @@ Please see LICENSE files in the repository root for full details.
  * do. Putting them in the component that draws the columns is what made them one mode.
  */
 
+import { useEffect, useSyncExternalStore } from "react";
+
 import { useDocumentAttribute } from "./documentAttribute";
 import { useSettingValue } from "../../../hooks/useSettings";
+import { lowPower } from "../../lowPower";
 
 /** Set while the header, composer and scroll-down button float over the timeline. */
 export const FLOATING_BARS_ATTRIBUTE = "data-floating-bars";
@@ -31,6 +34,25 @@ export const TAIL_ATTRIBUTE = "data-tg-tail";
 /** How much room a message is given on a handheld. */
 export const MESSAGE_PADDING_ATTRIBUTE = "data-tg-message-padding";
 
+/** Set while the device is saving power: no glass, no animation for show, no work done on a guess. */
+export const LOW_POWER_ATTRIBUTE = "data-low-power";
+
+const subscribeLowPower = (listener: () => void): (() => void) => lowPower.subscribe(listener);
+const isLowPower = (): boolean => lowPower.isOn();
+
+/**
+ * Whether low-power mode is on: what the reader chose, or what the device says where they left it to it.
+ * Listening to the device starts here, with the app.
+ */
+export function useLowPower(): boolean {
+    const mode = useSettingValue("lowPowerMode");
+    useEffect(() => {
+        lowPower.setMode(mode);
+        lowPower.start();
+    }, [mode]);
+    return useSyncExternalStore(subscribeLowPower, isLowPower, isLowPower);
+}
+
 /** Writes every appearance setting onto <html> for as long as the app is mounted. */
 export function useAppearanceAttributes(): void {
     useDocumentAttribute(FLOATING_BARS_ATTRIBUTE, useSettingValue("floatingBars") ? "true" : undefined);
@@ -41,6 +63,7 @@ export function useAppearanceAttributes(): void {
     // The frosted panels are drawn by the GPU on every frame behind them, which is most of the
     // graphics work while scrolling; turning them off leaves plain panels (see _TgBase.pcss).
     useDocumentAttribute(NO_GLASS_ATTRIBUTE, useSettingValue("glassEffects") ? undefined : "true");
+    useDocumentAttribute(LOW_POWER_ATTRIBUTE, useLowPower() ? "true" : undefined);
 }
 
 /**

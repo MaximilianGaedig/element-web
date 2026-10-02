@@ -14,6 +14,7 @@ import { act, render } from "test-utils-rtl";
 import { AppearanceAttributes } from "./appearance";
 import SettingsStore from "../../../settings/SettingsStore";
 import { SettingLevel } from "../../../settings/SettingLevel";
+import { lowPower } from "../../lowPower";
 
 describe("AppearanceAttributes", () => {
     it("says on the document which of the appearance settings are on", () => {
@@ -37,6 +38,44 @@ describe("AppearanceAttributes", () => {
         }
         unmount();
         expect(document.documentElement).not.toHaveAttribute("data-tg-message-padding");
+    });
+
+    /* The stylesheets' hook existed and nothing ever set it: neither the device nor the reader could. */
+    it("says on the document when power is being saved, by the device or by the reader's choice", async () => {
+        render(<AppearanceAttributes />);
+        expect(document.documentElement).not.toHaveAttribute("data-low-power");
+
+        // The device: a battery on its last tenth.
+        act(() => lowPower.report({ battery: { level: 0.1, charging: false } }));
+        expect(document.documentElement).toHaveAttribute("data-low-power", "true");
+        // What plays by itself does not, while it is on, whatever it is set to.
+        await act(async () => {
+            await SettingsStore.setValue("autoplayGifs", null, SettingLevel.DEVICE, true);
+        });
+        expect(SettingsStore.getValue("autoplayGifs")).toBe(false);
+        expect(SettingsStore.getValue("showChatEffects")).toBe(false);
+
+        // The reader: never.
+        await act(async () => {
+            await SettingsStore.setValue("lowPowerMode", null, SettingLevel.DEVICE, "off");
+        });
+        expect(document.documentElement).not.toHaveAttribute("data-low-power");
+        expect(SettingsStore.getValue("autoplayGifs")).toBe(true);
+        expect(SettingsStore.getValue("showChatEffects")).toBe(true);
+
+        // The reader: always, on a device with nothing to say.
+        act(() => lowPower.report({ battery: { level: 1, charging: true } }));
+        await act(async () => {
+            await SettingsStore.setValue("lowPowerMode", null, SettingLevel.DEVICE, "on");
+        });
+        expect(document.documentElement).toHaveAttribute("data-low-power", "true");
+
+        await act(async () => {
+            await SettingsStore.setValue("lowPowerMode", null, SettingLevel.DEVICE, "auto");
+            await SettingsStore.setValue("autoplayGifs", null, SettingLevel.DEVICE, false);
+        });
+        act(() => lowPower.reset());
+        expect(document.documentElement).not.toHaveAttribute("data-low-power");
     });
 
     it("drops a setting's attribute when it is turned off, leaving the others alone", async () => {

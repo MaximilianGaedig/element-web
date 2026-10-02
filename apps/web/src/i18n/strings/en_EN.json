@@ -3114,6 +3114,11 @@
         "keyboard": {
             "title": "Keyboard"
         },
+        "low_power": "Power saving",
+        "low_power_auto": "When the device is saving power",
+        "low_power_description": "Turns off frosted glass, media that plays by itself, chat effects and opening animations, and stops getting chats ready ahead of time. Left to the device, it comes on below a fifth of battery, with data saving, or when the browser holds animation to thirty frames a second.",
+        "low_power_off": "Never",
+        "low_power_on": "Always",
         "media_preview": {
             "hide_avatars": "Hide avatars of room and inviter",
             "hide_media": "Always hide",
