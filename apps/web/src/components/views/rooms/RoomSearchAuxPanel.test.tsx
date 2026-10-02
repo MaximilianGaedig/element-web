@@ -70,7 +70,7 @@ describe("RoomSearchAuxPanel", () => {
                     onCancelClick={vi.fn()}
                 />,
             );
-            expect(screen.getByRole("button", { name: "Jump to date" })).toBeInTheDocument();
+            expect(screen.getByRole("button", { name: "Scroll to date" })).toBeInTheDocument();
         });
 
         it("is not offered across all rooms, where a date has no one history to look in", () => {
@@ -83,7 +83,7 @@ describe("RoomSearchAuxPanel", () => {
                     onCancelClick={vi.fn()}
                 />,
             );
-            expect(screen.queryByRole("button", { name: "Jump to date" })).not.toBeInTheDocument();
+            expect(screen.queryByRole("button", { name: "Scroll to date" })).not.toBeInTheDocument();
         });
 
         it("is not offered when the homeserver cannot look an event up by date", () => {
@@ -96,7 +96,7 @@ describe("RoomSearchAuxPanel", () => {
                     onCancelClick={vi.fn()}
                 />,
             );
-            expect(screen.queryByRole("button", { name: "Jump to date" })).not.toBeInTheDocument();
+            expect(screen.queryByRole("button", { name: "Scroll to date" })).not.toBeInTheDocument();
         });
     });
 
