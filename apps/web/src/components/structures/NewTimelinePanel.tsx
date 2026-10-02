@@ -99,6 +99,13 @@ interface RenderItemContext {
 
 const NO_RECEIPTS: ReadonlyMap<string, IReadReceiptProps[]> = new Map();
 
+/**
+ * The gap kept between the messages and what floats over either end of them, in pixels: the old
+ * timeline's padding (`.mx_RoomView_MessageList` in _TelegramLayout.pcss), without which the last
+ * message sat right on the composer.
+ */
+const CHROME_GAP = 8;
+
 /** Bubbles drawn where more history is being fetched, and over a chat that is slow to open. */
 const LOADING_ROW_BUBBLES = 4;
 const OPENING_BUBBLES = 20;
@@ -450,8 +457,8 @@ export function NewTimelinePanel({
                 // ...and brings a new message up from behind the composer instead of jumping to it.
                 animateNewMessages={telegramBubbles}
                 renderPlaceholder={telegramBubbles ? renderPlaceholder : undefined}
-                paddingStart={clearance.start}
-                paddingEnd={clearance.end}
+                paddingStart={clearance.start ? clearance.start + CHROME_GAP : 0}
+                paddingEnd={clearance.end ? clearance.end + CHROME_GAP : 0}
             />
         </div>
     );
