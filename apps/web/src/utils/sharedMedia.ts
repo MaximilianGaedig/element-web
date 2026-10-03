@@ -508,6 +508,7 @@ export class SharedMediaLoader {
                 }
                 this.places.set(tab, places);
                 this.empty.set(tab, empty);
+                this.finishIfSettled(tab);
             }
             this.emit();
         } catch (e) {
@@ -515,6 +516,22 @@ export class SharedMediaLoader {
         } finally {
             busy.delete(start);
         }
+    }
+
+    /**
+     * A tab whose every place in the index has been answered has nothing left to fetch.
+     *
+     * Loading by place never reaches the end of a paging token, so without this the tab went on
+     * believing there was more: the list kept its "loading more" state at the very end of a history
+     * that was already all there. The month counts say how many places there are; each place the
+     * server has answered is an item or known to hold nothing.
+     */
+    private finishIfSettled(tab: SharedMediaTab): void {
+        const months = this.months.get(tab);
+        if (!months?.length) return;
+        const total = months.reduce((sum, month) => sum + month.count, 0);
+        const settled = new Set<number>([...(this.places.get(tab)?.values() ?? []), ...(this.empty.get(tab) ?? [])]);
+        if (settled.size >= total) this.indexDone.add(tab);
     }
 
     /**

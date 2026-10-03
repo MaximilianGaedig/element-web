@@ -19,6 +19,19 @@ Please see LICENSE files in the repository root for full details.
     --SharedMedia-tabs-height: 2.5rem;
     --SharedMedia-tabs-inset: var(--cpd-space-2x);
 
+    /*
+     * How far down the selection bar sticks: below the strip that is floating over the top of the list,
+     * so the two sit one under the other instead of the bar sliding under (or over) the tabs.
+     */
+    --SharedMedia-sticky-offset: calc(
+        var(--SharedMedia-tabs-inset) + var(--SharedMedia-tabs-height) + var(--cpd-space-2x)
+    );
+
+    /* In the Telegram profile the tab strip is that profile's own, held at the very top of the panel. */
+    &.mx_SharedMedia_pane {
+        --SharedMedia-sticky-offset: calc(var(--SharedMedia-tabs-height) + var(--cpd-space-2x));
+    }
+
     /* Marks where the strip starts, so the strip can tell when it has been scrolled against the top. */
     .mx_SharedMedia_tabsSentinel {
         height: 0;
@@ -125,6 +138,8 @@ Please see LICENSE files in the repository root for full details.
         align-items: center;
         justify-content: space-between;
         min-height: 2.5rem;
+        /* The same space the selection bar leaves, so swapping one for the other moves nothing. */
+        margin-block-end: var(--cpd-space-2x);
 
         .mx_SharedMedia_subtitle {
             margin: 0;
@@ -474,7 +489,7 @@ Please see LICENSE files in the repository root for full details.
     /* Selecting, as Telegram does it: a tick on each item and a bar of actions for what is ticked. */
     .mx_SharedMedia_selectionBar {
         position: sticky;
-        inset-block-start: 0;
+        inset-block-start: var(--SharedMedia-sticky-offset);
         z-index: 4;
         display: flex;
         align-items: center;
@@ -488,6 +503,11 @@ Please see LICENSE files in the repository root for full details.
 
     .mx_SharedMedia_selectionCount {
         flex: 1 1 auto;
+        /* Gives way to the buttons on a narrow panel instead of pushing them out of the bar. */
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
         font: var(--cpd-font-body-md-semibold);
     }
 
@@ -586,10 +606,27 @@ Please see LICENSE files in the repository root for full details.
         color: var(--cpd-color-text-secondary);
     }
 
+    /* Where the next page will go: nothing to see until it is loading, and then only skeletons. */
     .mx_SharedMedia_more {
-        display: flex;
-        justify-content: center;
-        min-height: 40px;
+        min-height: 1px;
+    }
+
+    /* A row of the grid's squares, laid out exactly as the grid lays out its own. */
+    .mx_SharedMedia_skeletonTiles {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 1px;
+        border-radius: var(--SharedMedia-radius-big);
+        overflow: hidden;
+
+        .mx_SharedMedia_pending {
+            height: auto;
+            aspect-ratio: 1;
+        }
+    }
+
+    .mx_SharedMedia_skeletonRow {
+        border-radius: var(--cpd-space-2x);
     }
 }
 
