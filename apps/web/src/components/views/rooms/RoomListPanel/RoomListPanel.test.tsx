@@ -64,9 +64,9 @@ describe("<RoomListPanel />", () => {
         vi.mocked(shouldShowComponent).mockReturnValue(true);
     });
 
-    it("renders the bar that moves between the chats, the people and the calls", () => {
+    it("renders the bar that moves between the chats, the people, the calls and the settings", () => {
         renderComponent();
-        const pill = screen.getByRole("navigation", { name: "Chats, people and calls" });
+        const pill = screen.getByRole("navigation", { name: "Chats, people, calls and settings" });
         expect(pill).toBeInTheDocument();
         expect(screen.getByRole("button", { name: "People" })).toBeInTheDocument();
         expect(screen.getByRole("button", { name: "Calls" })).toBeInTheDocument();
@@ -79,6 +79,16 @@ describe("<RoomListPanel />", () => {
         await userEvent.click(screen.getByRole("button", { name: "People" }));
         // The list's own header goes with the list: one column, one thing in it.
         expect(screen.queryByTestId("room-list-header")).toBeNull();
+    });
+
+    it("shows the settings' sections in place of the list while the column is on them", () => {
+        setRoomListPanelView("settings");
+        renderComponent();
+        expect(screen.queryByTestId("room-list-header")).toBeNull();
+        expect(screen.getByRole("heading", { name: "Settings" })).toBeInTheDocument();
+        expect(screen.getByRole("button", { name: "Account" })).toBeInTheDocument();
+        // The bar stays, to go anywhere else from here.
+        expect(screen.getByRole("button", { name: "Messages" })).toBeInTheDocument();
     });
 
     it("offers search beside the bar when UIComponent.FilterContainer is at true", () => {

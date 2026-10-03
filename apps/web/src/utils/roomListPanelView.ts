@@ -22,12 +22,16 @@ import { useSyncExternalStore } from "react";
 import { clearSearch } from "./panelSearch";
 
 /*
- * The three things this column can be, which are the three entries in the bar at the bottom of it: the
- * chats, the people, and the calls. Contacts and calls are two views rather than one with a tab inside it
- * because the bar is what switches between them - a tab strip under a bar that already switches views is
- * the same control twice.
+ * The four things this column can be, which are the four entries in the bar at the bottom of it: the
+ * chats, the people, the calls and the settings. Contacts and calls are two views rather than one with a
+ * tab inside it because the bar is what switches between them - a tab strip under a bar that already
+ * switches views is the same control twice.
+ *
+ * Settings is one of them as it is in Telegram: the column lists the sections and the page beside it is
+ * the one chosen. Unlike the other three it is also a page (MatrixChat's PageType.Settings), so it is
+ * entered by Action.ViewUserSettings rather than set here directly - MatrixChat sets it.
  */
-export type RoomListPanelView = "rooms" | "contacts" | "calls";
+export type RoomListPanelView = "rooms" | "contacts" | "calls" | "settings";
 
 let view: RoomListPanelView = "rooms";
 const listeners = new Set<() => void>();
@@ -49,11 +53,12 @@ export function setRoomListPanelView(next: RoomListPanelView): void {
     for (const listener of [...listeners]) listener();
 }
 
-function subscribe(listener: () => void): () => void {
+/** Told of every change; returns the unsubscribe. For whoever is not a component (MatrixChat). */
+export function subscribeRoomListPanelView(listener: () => void): () => void {
     listeners.add(listener);
     return () => listeners.delete(listener);
 }
 
 /** The third argument is the same read: with no DOM to subscribe to, the value is still just the value. */
 export const useRoomListPanelView = (): RoomListPanelView =>
-    useSyncExternalStore(subscribe, roomListPanelView, roomListPanelView);
+    useSyncExternalStore(subscribeRoomListPanelView, roomListPanelView, roomListPanelView);

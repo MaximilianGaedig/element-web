@@ -24,7 +24,7 @@ import { KeyboardShortcut } from "../../KeyboardShortcut";
 import SettingsTab from "../SettingsTab";
 import { SettingsSection } from "../../shared/SettingsSection";
 import { SettingsSubsection } from "../../shared/SettingsSubsection";
-import { showLabsFlags } from "./LabsUserSettingsTab";
+import { showLabsFlags } from "../../userSettingsSections";
 
 interface IKeyboardShortcutRowProps {
     name: KeyBindingAction;

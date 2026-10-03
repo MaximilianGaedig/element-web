@@ -22,61 +22,6 @@ import type { MatrixClient } from "matrix-js-sdk/src/matrix";
 import { clearAllUserStatus } from "../../utils/userStatus";
 import { type SetStatusViewModel, UserMenuSetStatusViewModel } from "../status/SetStatusViewModel";
 import SettingsStore from "../../settings/SettingsStore";
-import { UIFeature } from "../../settings/UIFeature";
-import { _t } from "../../languageHandler";
-import {
-    CalendarIcon,
-    ChartIcon,
-    ComputerIcon,
-    HelpIcon,
-    KeyIcon,
-    LinkIcon,
-    LabsIcon,
-    LockIcon,
-    MicOnIcon,
-    NotificationsIcon,
-    PreferencesIcon,
-    SidebarIcon,
-    UserProfileIcon,
-    VisibilityOnIcon,
-} from "@vector-im/compound-design-tokens/assets/web/icons";
-import type React from "react";
-
-/** The settings sections the menu lists on a handheld, in Element's usual order. */
-const SECTIONS: Array<{
-    id: UserTab;
-    label: Parameters<typeof _t>[0];
-    Icon: React.ComponentType<React.SVGAttributes<SVGElement>>;
-    /** The section is only there when this holds (the same conditions as the settings dialog's tabs). */
-    when?: () => boolean;
-}> = [
-    { id: UserTab.Account, label: "settings|account|title", Icon: UserProfileIcon },
-    { id: UserTab.SessionManager, label: "settings|sessions|title", Icon: ComputerIcon },
-    { id: UserTab.Appearance, label: "common|appearance", Icon: VisibilityOnIcon },
-    { id: UserTab.Notifications, label: "notifications|enable_prompt_toast_title", Icon: NotificationsIcon },
-    { id: UserTab.Preferences, label: "common|preferences", Icon: PreferencesIcon },
-    { id: UserTab.Sidebar, label: "settings|sidebar|title", Icon: SidebarIcon },
-    {
-        id: UserTab.Voice,
-        label: "settings|voip|title",
-        Icon: MicOnIcon,
-        when: () => !!SettingsStore.getValue(UIFeature.Voip),
-    },
-    { id: UserTab.Security, label: "room_settings|security|title", Icon: LockIcon },
-    { id: UserTab.Encryption, label: "settings|encryption|title", Icon: KeyIcon },
-    {
-        id: UserTab.Labs,
-        label: "common|labs",
-        Icon: LabsIcon,
-        when: () =>
-            !!(SdkConfig.get("show_labs_settings") || SettingsStore.getValue("developerMode")) ||
-            SettingsStore.getFeatureSettingNames().some((k) => !!SettingsStore.getBetaInfo(k)),
-    },
-    { id: UserTab.Bridges, label: "tg_layout|bridges_tab", Icon: LinkIcon },
-    { id: UserTab.Activity, label: "tg_layout|activity_tab", Icon: CalendarIcon },
-    { id: UserTab.Storage, label: "settings|storage|title", Icon: ChartIcon },
-    { id: UserTab.Help, label: "setting|help_about|title", Icon: HelpIcon },
-];
 
 // Matches maximum size of an avatar in the UserMenu
 const AVATAR_PX = 88;
@@ -128,9 +73,6 @@ export class UserMenuViewModel
         };
     }
 
-    /** What the menu offers on a desktop, kept so a handheld open can be undone. */
-    private readonly baseActions: UserMenuSnapshot["actions"];
-
     public constructor(
         props: UserMenuViewModelProps,
         private readonly dispatcher: MatrixDispatcher,
@@ -138,7 +80,6 @@ export class UserMenuViewModel
         isPanelCollapsed: boolean,
     ) {
         super(props, UserMenuViewModel.computeSnapshot(client, props.ownProfileStore, isPanelCollapsed));
-        this.baseActions = this.snapshot.current.actions;
         this.setStatusVm = new UserMenuSetStatusViewModel({ client, ownProfileStore: props.ownProfileStore });
         props.ownProfileStore.on(UPDATE_EVENT, this.recalculateProfile);
     }
@@ -156,36 +97,12 @@ export class UserMenuViewModel
         this.snapshot.merge({ displayName, avatarUrl, userStatus });
     };
 
-    public readonly setOpen = (isOpen: boolean): void => {
-        // On a phone the menu is the settings' front page: list the sections (fresh, as the screen size may
-        // have changed since the menu was built).
-        this.snapshot.merge({
-            open: isOpen,
-            ...(isOpen ? this.handheldParts() : {}),
-        });
-    };
-
-    /**
-     * Settings sections shown in the menu on a handheld, and the entries they replace. The window can be
-     * resized across the handheld width while the menu lives, so the desktop case restores the entries
-     * rather than only dropping the sections - otherwise Settings would stay missing until a reload.
+    /*
+     * The settings' sections are not listed here, on a phone or anywhere: they are the column's settings
+     * view, beside the chats (UserSettingsList), and "All settings" takes you there.
      */
-    private handheldParts(): Partial<UserMenuSnapshot> {
-        const handheld = document.documentElement.dataset.tgScreen === "mobile" && this.snapshot.current.showAvatar;
-        if (!handheld) return { sections: undefined, actions: this.baseActions };
-        return {
-            sections: SECTIONS.filter(({ when }) => !when || when()).map(({ id, label, Icon }) => ({
-                id,
-                label: _t(label),
-                Icon,
-            })),
-            actions: { ...this.baseActions, openSecurity: false, openSettings: false },
-        };
-    }
-
-    public readonly openSection = (id: string): void => {
-        this.setOpen(false);
-        this.dispatcher.dispatch({ action: Action.ViewUserSettings, initialTabId: id });
+    public readonly setOpen = (isOpen: boolean): void => {
+        this.snapshot.merge({ open: isOpen });
     };
 
     public readonly setExpanded = (expanded: boolean): void => {

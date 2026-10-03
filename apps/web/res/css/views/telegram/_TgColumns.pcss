@@ -181,6 +181,35 @@ Please see LICENSE files in the repository root for full details.
             display: none;
         }
     }
+
+    /* The settings' sections as the chats are here: the icons alone, the open one still marked. */
+    .mx_UserSettingsList_header {
+        justify-content: center;
+        padding-inline: 0;
+    }
+
+    .mx_UserSettingsList_title {
+        display: none;
+    }
+
+    .mx_UserSettingsList_section {
+        justify-content: center;
+
+        /* Out of sight but still the button's name. */
+        > span {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            overflow: hidden;
+            clip-path: inset(50%);
+        }
+
+        &[data-alert]::after {
+            position: absolute;
+            top: var(--cpd-space-2x);
+            inset-inline-end: var(--cpd-space-2x);
+        }
+    }
 }
 
 /*

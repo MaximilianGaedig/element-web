@@ -43,6 +43,7 @@ const loggedInPageTypeMap: Record<PageType | string, ScreenName> = {
     [PageType.HomePage]: "Home",
     [PageType.RoomView]: "Room",
     [PageType.UserView]: "User",
+    [PageType.Settings]: "UserSettings",
 };
 
 const SortingAlgorithmMap: Record<SortingAlgorithm, RoomListSortingAlgorithmChanged["newAlgorithm"]> = {

@@ -200,9 +200,10 @@ html[data-tg-screen="mobile"] {
 }
 
 /*
- * Settings on a handheld: a full-height drawer whose first screen is your profile and the list of sections
+ * Room and space settings on a handheld: a full-height drawer whose first screen is the list of sections
  * (Element's own menu look: plain rows, secondary-colour icons, hairlines), and whose second screen is the
- * chosen section under a bar with a back arrow. The desktop layout is untouched.
+ * chosen section under a bar with a back arrow. The desktop layout is untouched. The user's own settings
+ * are not a dialog at all but the column's settings view and the page beside it (_UserSettingsPage.pcss).
  */
 .mx_SettingsNavBar {
     display: none;
@@ -211,7 +212,6 @@ html[data-tg-screen="mobile"] {
 /* The settings sheet: the profile drawer's twin. Same surface, same 28px edge, same grabber; the dialog's
    own close button is left out because the bar has one. */
 :root[data-tg-screen="mobile"] {
-    .mx_UserSettingsDialog,
     .mx_RoomSettingsDialog,
     .mx_SpaceSettingsDialog {
         position: relative;
@@ -236,8 +236,7 @@ html[data-tg-screen="mobile"] {
          */
         .mx_Dialog_header,
         .mx_Dialog_cancelButton,
-        > h2,
-        .mx_UserSettingsDialog_title {
+        > h2 {
             display: none;
         }
     }
@@ -296,9 +295,7 @@ html[data-tg-screen="mobile"] {
         justify-self: end;
     }
 
-    /* The user settings' sections are listed in the user menu's drawer, so the dialog is only ever a
-       page. The room settings carry their own list, and show one screen at a time. */
-    .mx_UserSettingsDialog .mx_TabbedView_tabsOnLeft .mx_TabbedView_tabLabels,
+    /* The room settings carry their own list, and show one screen at a time. */
     .mx_SettingsDialog_content[data-page="page"] .mx_TabbedView_tabsOnLeft .mx_TabbedView_tabLabels {
         display: none;
     }
@@ -387,14 +384,9 @@ html[data-tg-screen="mobile"] {
         padding: 0;
     }
 
-    .mx_UserSettingsDialog .mx_TabbedView_tabsOnLeft.mx_TabbedView_responsive .mx_TabbedView_tabPanel {
-        margin: 0;
-        padding: 0 0 1rem;
-        overflow-y: auto;
-    }
-
     /* Settings written for a wide pane: on a phone their fixed widths must give way to the screen's. */
-    .mx_SettingsDialog_content .mx_TabbedView_tabPanelContent {
+    .mx_SettingsDialog_content .mx_TabbedView_tabPanelContent,
+    .mx_UserSettingsPage_body {
         .mx_SettingsSection_newUi {
             align-items: stretch;
         }
