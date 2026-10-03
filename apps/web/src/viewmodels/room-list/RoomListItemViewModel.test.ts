@@ -11,7 +11,9 @@ import EventEmitter from "node:events";
 import { vi, describe, it, expect, beforeEach, afterEach, type Mock } from "vitest";
 import {
     type MatrixClient,
-    type MatrixEvent,
+    MatrixEvent,
+    EventStatus,
+    ReceiptType,
     KnownMembership,
     Room,
     RoomEvent,
@@ -19,7 +21,7 @@ import {
     type RoomMember,
 } from "matrix-js-sdk/src/matrix";
 import { CallType } from "matrix-js-sdk/src/webrtc/call";
-import { createTestClient, flushPromises } from "test-utils";
+import { createTestClient, flushPromises, mkEvent, mkMessage } from "test-utils";
 
 import { RoomNotificationState } from "../../stores/notifications/RoomNotificationState";
 import { RoomNotificationStateStore } from "../../stores/notifications/RoomNotificationStateStore";
@@ -36,6 +38,7 @@ import { RoomListItemViewModel } from "./RoomListItemViewModel";
 import RoomListStoreV3 from "../../stores/room-list-v3/RoomListStoreV3";
 import * as tagRoomModule from "../../utils/room/tagRoom";
 import { CHATS_TAG } from "../../stores/room-list-v3/section";
+import { MatrixClientPeg } from "../../MatrixClientPeg";
 
 vi.mock("./utils", () => ({
     hasAccessToOptionsMenu: vi.fn().mockReturnValue(true),
@@ -163,14 +166,23 @@ describe("RoomListItemViewModel", () => {
             expect(viewModel.getSnapshot().notification.count).toBe(3);
         });
 
-        it("should show bold text when has notifications", async () => {
-            vi.spyOn(notificationState, "hasAnyNotificationOrActivity", "get").mockReturnValue(true);
-
+        // The unread decoration is the only unread indicator: nothing else about the row may change with it.
+        it("should describe the row the same whether it has unread messages or not", async () => {
             viewModel = new RoomListItemViewModel({ room, client: matrixClient });
+            await flushPromises();
+            const { notification: readNotification, ...read } = viewModel.getSnapshot();
+            expect(readNotification.hasAnyNotificationOrActivity).toBe(false);
 
+            vi.spyOn(notificationState, "hasAnyNotificationOrActivity", "get").mockReturnValue(true);
+            vi.spyOn(notificationState, "hasUnreadCount", "get").mockReturnValue(true);
+            vi.spyOn(notificationState, "count", "get").mockReturnValue(2);
+            notificationState.emit(NotificationStateEvents.Update);
             await flushPromises();
 
-            expect(viewModel.getSnapshot().isBold).toBe(true);
+            const { notification, ...unread } = viewModel.getSnapshot();
+            expect(notification.hasAnyNotificationOrActivity).toBe(true);
+            expect(notification.count).toBe(2);
+            expect(unread).toEqual(read);
         });
 
         it("should show mention badge", async () => {
@@ -721,6 +733,147 @@ describe("RoomListItemViewModel", () => {
             viewModel.dispose();
 
             expect(offSpy).toHaveBeenCalled();
+        });
+    });
+
+    describe("Last message ticks", () => {
+        const me = "@userId:matrix.org";
+
+        beforeEach(() => {
+            // The room's notification state reads receipts through the peg
+            vi.spyOn(MatrixClientPeg, "safeGet").mockReturnValue(matrixClient);
+            vi.spyOn(MatrixClientPeg, "get").mockReturnValue(matrixClient);
+        });
+
+        /** Show `event` as the room's message preview, with the preview setting on. */
+        const previewOf = (event: MatrixEvent): void => {
+            vi.spyOn(SettingsStore, "getValue").mockImplementation((setting) => {
+                if (setting === "RoomList.showMessagePreview") return true;
+                if (setting === "RoomList.OrderedCustomSections") return [];
+                if (setting === "RoomList.CustomSectionData") return {};
+                return false;
+            });
+            vi.spyOn(MessagePreviewStore.instance, "getPreviewForRoom").mockResolvedValue({
+                event,
+                text: event.getContent().body,
+                isThreadReply: false,
+            });
+        };
+
+        const message = (sender: string, id = "$msg"): MatrixEvent => {
+            const event = mkMessage({ room: room.roomId, user: sender, msg: "hi", event: true, ts: 10 });
+            event.event.event_id = id;
+            room.addLiveEvents([event], { addToState: false });
+            return event;
+        };
+
+        /** `userId`'s read receipt on `eventId`, as the homeserver hands it over. */
+        const receipt = (userId: string, eventId: string): void => {
+            room.addReceipt(
+                new MatrixEvent({
+                    type: "m.receipt",
+                    room_id: room.roomId,
+                    content: { [eventId]: { [ReceiptType.Read]: { [userId]: { ts: 20 } } } },
+                }),
+            );
+        };
+
+        const state = (type: string, content: object, stateKey = ""): void => {
+            room.currentState.setStateEvents([
+                mkEvent({ type, room: room.roomId, user: "@bot:server", skey: stateKey, content, event: true }),
+            ]);
+        };
+
+        const ticks = (): string | undefined => viewModel.getSnapshot().messagePreviewSendState;
+
+        it("has none on somebody else's message", async () => {
+            previewOf(message("@alice:server"));
+            viewModel = new RoomListItemViewModel({ room, client: matrixClient });
+            await flushPromises();
+
+            expect(viewModel.getSnapshot().messagePreview).toBe("hi");
+            expect(ticks()).toBeUndefined();
+        });
+
+        it("shows a clock while ours is sending, then one tick once it is sent", async () => {
+            const event = message(me);
+            event.setStatus(EventStatus.SENDING);
+            previewOf(event);
+            viewModel = new RoomListItemViewModel({ room, client: matrixClient });
+            await flushPromises();
+            expect(ticks()).toBe("sending");
+
+            event.setStatus(null);
+            room.emit(RoomEvent.LocalEchoUpdated, event, room);
+            expect(ticks()).toBe("sent");
+        });
+
+        it("shows the failure when ours did not send", async () => {
+            const event = message(me);
+            event.setStatus(EventStatus.NOT_SENT);
+            previewOf(event);
+            viewModel = new RoomListItemViewModel({ room, client: matrixClient });
+            await flushPromises();
+
+            expect(ticks()).toBe("error");
+        });
+
+        it("turns to two ticks when somebody else's read receipt arrives", async () => {
+            previewOf(message(me));
+            viewModel = new RoomListItemViewModel({ room, client: matrixClient });
+            await flushPromises();
+            expect(ticks()).toBe("sent");
+
+            receipt("@alice:server", "$msg");
+            expect(ticks()).toBe("read");
+        });
+
+        it("counts a bridged chat's ghost reading it, as the remote side reading it", async () => {
+            state("m.bridge", { bridgebot: "@bot:server" }, "telegram");
+            previewOf(message(me));
+            viewModel = new RoomListItemViewModel({ room, client: matrixClient });
+            await flushPromises();
+
+            receipt("@telegram_42:server", "$msg");
+            expect(ticks()).toBe("read");
+        });
+
+        // A bridge bot's receipt at most says the network accepted the message: one tick, not two.
+        it("does not count the bridge bot's receipt, or a service member's, as read", async () => {
+            state("m.bridge", { bridgebot: "@bot:server" }, "telegram");
+            state("io.element.functional_members", { service_members: ["@bot:server", "@telegram_me:server"] });
+            previewOf(message(me));
+            viewModel = new RoomListItemViewModel({ room, client: matrixClient });
+            await flushPromises();
+
+            receipt("@bot:server", "$msg");
+            receipt("@telegram_me:server", "$msg");
+            receipt(me, "$msg");
+            expect(ticks()).toBe("sent");
+        });
+
+        it("follows the bridge's delivery report for the message", async () => {
+            state("m.bridge", { bridgebot: "@bot:server" }, "whatsapp");
+            previewOf(message(me));
+            viewModel = new RoomListItemViewModel({ room, client: matrixClient });
+            await flushPromises();
+            expect(ticks()).toBe("sent");
+
+            const status = mkEvent({
+                type: "com.beeper.message_send_status",
+                room: room.roomId,
+                user: "@bot:server",
+                content: {
+                    "m.relates_to": { rel_type: "m.reference", event_id: "$msg" },
+                    "status": "SUCCESS",
+                    "delivered_to_users": ["@whatsapp_42:server"],
+                },
+                event: true,
+            });
+            room.addLiveEvents([status], { addToState: false });
+            // The store hears of it through the client, as it would through a sync
+            matrixClient.emit(RoomEvent.Timeline, status, room, false, false, {} as any);
+            expect(ticks()).toBe("delivered");
         });
     });
 });

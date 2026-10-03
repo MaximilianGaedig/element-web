@@ -13,14 +13,22 @@ import { isReadByOthers } from "./readByOthers";
 const event = (id: string, ts: number): MatrixEvent => ({ getId: () => id, getTs: () => ts }) as unknown as MatrixEvent;
 
 /** A room whose live timeline is `events`, with `receipts` (user ids) on the named events. */
-const roomWith = (events: MatrixEvent[], receipts: Record<string, string[]>, bots: string[] = []): Room =>
+const roomWith = (
+    events: MatrixEvent[],
+    receipts: Record<string, string[]>,
+    bots: string[] = [],
+    serviceMembers: string[] = [],
+): Room =>
     ({
         client: { getSafeUserId: () => "@me:e" },
         getLiveTimeline: () => ({ getEvents: () => events }),
         getReceiptsForEvent: (ev: MatrixEvent) =>
             (receipts[ev.getId()!] ?? []).map((userId) => ({ userId, type: ReceiptType.Read })),
         currentState: {
-            getStateEvents: () => bots.map((bot) => ({ getContent: () => ({ bridgebot: bot }) })),
+            getStateEvents: (type: string) =>
+                type === "io.element.functional_members"
+                    ? [{ getContent: () => ({ service_members: serviceMembers }) }]
+                    : bots.map((bot) => ({ getContent: () => ({ bridgebot: bot }) })),
         },
     }) as unknown as Room;
 
@@ -35,6 +43,12 @@ describe("whether somebody else has read our message", () => {
 
     it("does not count our own receipt, or a bridge bot's", () => {
         const room = roomWith(events, { $3: ["@me:e", "@bot:e"] }, ["@bot:e"]);
+        expect(events.map((ev) => isReadByOthers(room, ev))).toEqual([false, false, false]);
+    });
+
+    // The room's service members are there to bridge, not to read: the bot, and the ghosts of our own accounts.
+    it("does not count a service member's receipt", () => {
+        const room = roomWith(events, { $3: ["@telegram_me:e"] }, [], ["@telegram_me:e"]);
         expect(events.map((ev) => isReadByOthers(room, ev))).toEqual([false, false, false]);
     });
 });

@@ -14,7 +14,7 @@ import { Flex } from "../../../../core/utils/Flex";
 import { useViewModel } from "../../../../core/viewmodel";
 import { NotificationDecoration } from "./NotificationDecoration";
 import { RoomListItemHoverMenu } from "./RoomListItemHoverMenu";
-import { type Room, type RoomListItemViewModel } from "./RoomListItemView";
+import { type Room, type RoomListItemSendState, type RoomListItemViewModel } from "./RoomListItemView";
 import styles from "./RoomListItemView.module.css";
 
 /**
@@ -27,6 +27,8 @@ export interface RoomListItemContentProps {
     renderAvatar: (room: Room) => ReactNode;
     /** Optional function to render the room path (e.g. space breadcrumbs) */
     renderRoomPath?: (room: Room) => ReactNode;
+    /** Fork: optional function to render the previewed message's delivery state (its ticks) */
+    renderSendState?: (state: RoomListItemSendState) => ReactNode;
     /** Whether the item is being dragged */
     isDragging?: boolean;
 }
@@ -40,6 +42,7 @@ export const RoomListItemContent = memo(function RoomListItemContent({
     vm,
     renderAvatar,
     renderRoomPath,
+    renderSendState,
     isDragging = false,
 }: RoomListItemContentProps): JSX.Element {
     const item = useViewModel(vm);
@@ -56,15 +59,23 @@ export const RoomListItemContent = memo(function RoomListItemContent({
             <Flex className={styles.content} gap="var(--cpd-space-2x)" align="center" justify="space-between">
                 {/* We truncate the room name when too long. Title here is to show the full name on hover */}
                 <div className={styles.ellipsis}>
-                    <div className={styles.roomName} title={item.name} data-testid="room-name">
-                        {item.name}
-                        {renderRoomPath?.(item.room)}
-                        {item.userStatus && (
-                            <Tooltip description={item.userStatus.text} maxWidth="30ch" maxLines={1}>
-                                <Text as="span" className={styles.userStatusEmoji}>
-                                    {item.userStatus.emoji}
-                                </Text>
-                            </Tooltip>
+                    {/* Fork: the name line, with the last message's ticks at its end when it is ours, as in Telegram */}
+                    <div className={styles.nameLine}>
+                        <div className={styles.roomName} title={item.name} data-testid="room-name">
+                            {item.name}
+                            {renderRoomPath?.(item.room)}
+                            {item.userStatus && (
+                                <Tooltip description={item.userStatus.text} maxWidth="30ch" maxLines={1}>
+                                    <Text as="span" className={styles.userStatusEmoji}>
+                                        {item.userStatus.emoji}
+                                    </Text>
+                                </Tooltip>
+                            )}
+                        </div>
+                        {item.messagePreviewSendState && renderSendState && (
+                            <span className={styles.sendState} data-testid="room-send-state">
+                                {renderSendState(item.messagePreviewSendState)}
+                            </span>
                         )}
                     </div>
 

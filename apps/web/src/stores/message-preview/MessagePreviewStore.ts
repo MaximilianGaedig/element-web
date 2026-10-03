@@ -187,7 +187,8 @@ export class MessagePreviewStore extends AsyncStoreWithClient<EmptyObject> {
             const anyPreviewText = previewDef.previewer.getTextFor(event);
             if (!anyPreviewText) continue; // not previewable for some reason
 
-            changed = changed || anyPreviewText !== map.get(TAG_ANY)?.text;
+            // Fork: a different event with the same text is a change too - the chat list's ticks are the event's
+            changed = changed || anyPreviewText !== map.get(TAG_ANY)?.text || event !== map.get(TAG_ANY)?.event;
             map.set(TAG_ANY, mkMessagePreview(anyPreviewText, event));
 
             const tagsToGenerate = Array.from(map.keys()).filter((t) => t !== TAG_ANY); // we did the any tag above

@@ -46,6 +46,13 @@ function getA11yLabel(roomName: string, notification: NotificationDecorationData
 }
 
 /**
+ * Fork: the delivery state of the previewed message when it is the current user's, as Telegram's chat
+ * list shows it next to the name: a clock while sending, one tick once sent, two ticks once delivered
+ * or read (read in the accent colour), and a "!" when it failed.
+ */
+export type RoomListItemSendState = "sending" | "error" | "sent" | "delivered" | "read";
+
+/**
  * Describes a section that a room can be assigned to.
  * Used to render toggle items in the "Move to section" submenu.
  */
@@ -69,8 +76,6 @@ export interface RoomListItemViewSnapshot {
     room: Room;
     /** The name of the room */
     name: string;
-    /** Whether the room name should be bolded (has unread/activity) */
-    isBold: boolean;
     /** Optional message preview text */
     messagePreview?: string;
     /**
@@ -80,6 +85,8 @@ export interface RoomListItemViewSnapshot {
     messagePreviewThumbnail?: string;
     /** Fork: the thumbnail is of the message being replied to, so it gets a reply arrow in front. */
     messagePreviewThumbnailIsReply?: boolean;
+    /** Fork: the delivery state of the previewed message, only when the current user sent it. */
+    messagePreviewSendState?: RoomListItemSendState;
     /** The MSC4426 user status of the other user in a DM room, if any */
     userStatus?: UserStatus;
     /** Notification decoration data */
@@ -171,6 +178,8 @@ export interface RoomListItemViewProps extends Omit<React.HTMLAttributes<HTMLBut
     renderAvatar: (room: Room) => ReactNode;
     /** Optional function to render the room path (e.g. space breadcrumbs) */
     renderRoomPath?: (room: Room) => ReactNode;
+    /** Fork: optional function to render the previewed message's delivery state (its ticks) */
+    renderSendState?: (state: RoomListItemSendState) => ReactNode;
     /** Whether this item is the source of an active drag operation */
     isDragSource?: boolean;
     ref?: Ref<Element>;
@@ -189,6 +198,7 @@ export const RoomListItemView = memo(function RoomListItemView({
     isLastItem,
     renderAvatar,
     renderRoomPath,
+    renderSendState,
     isDragSource = false,
     ref,
     ...props
@@ -240,7 +250,6 @@ export const RoomListItemView = memo(function RoomListItemView({
                 className={classNames(styles.roomListItem, "mx_RoomListItemView", {
                     [styles.keyboardActive]: keyboardActive,
                     [styles.selected]: isSelected,
-                    [styles.bold]: item.isBold,
                     [styles.firstItem]: isFirstItem,
                     [styles.lastItem]: isLastItem,
                     [styles.dragSource]: isDragSource,
@@ -257,7 +266,12 @@ export const RoomListItemView = memo(function RoomListItemView({
                 aria-selected={props.role === "option" ? isSelected : undefined}
                 {...props}
             >
-                <RoomListItemContent vm={vm} renderAvatar={renderAvatar} renderRoomPath={renderRoomPath} />
+                <RoomListItemContent
+                    vm={vm}
+                    renderAvatar={renderAvatar}
+                    renderRoomPath={renderRoomPath}
+                    renderSendState={renderSendState}
+                />
             </Flex>
         </RoomListItemContextMenu>
     );

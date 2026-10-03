@@ -61,7 +61,6 @@ export class PreviewRoomListItemViewModel
             id: roomId,
             room: new PreviewRoomAvatarData(roomId, name, avatarUrl, roomType),
             name,
-            isBold: false,
             notification: {
                 hasAnyNotificationOrActivity: false,
                 isUnsentMessage: false,

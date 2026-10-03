@@ -37,7 +37,7 @@ exports[`<VirtualizedRoomListView /> > renders Default story 1`] = `
                 aria-posinset="1"
                 aria-selected="true"
                 aria-setsize="10"
-                class="Flex-module_flex RoomListItemView-module_roomListItem mx_RoomListItemView RoomListItemView-module_selected RoomListItemView-module_bold RoomListItemView-module_firstItem mx_RoomListItemView_selected"
+                class="Flex-module_flex RoomListItemView-module_roomListItem mx_RoomListItemView RoomListItemView-module_selected RoomListItemView-module_firstItem mx_RoomListItemView_selected"
                 data-state="closed"
                 role="option"
                 style="--mx-flex-display: flex; --mx-flex-direction: row; --mx-flex-align: stretch; --mx-flex-justify: start; --mx-flex-gap: var(--cpd-space-3x); --mx-flex-wrap: nowrap;"
@@ -63,11 +63,15 @@ exports[`<VirtualizedRoomListView /> > renders Default story 1`] = `
                       class="RoomListItemView-module_ellipsis"
                     >
                       <div
-                        class="RoomListItemView-module_roomName"
-                        data-testid="room-name"
-                        title="General"
+                        class="RoomListItemView-module_nameLine"
                       >
-                        General
+                        <div
+                          class="RoomListItemView-module_roomName"
+                          data-testid="room-name"
+                          title="General"
+                        >
+                          General
+                        </div>
                       </div>
                       <div
                         class="_typography_6v6n8_153 _font-body-sm-regular_6v6n8_31 RoomListItemView-module_preview"
@@ -216,11 +220,15 @@ exports[`<VirtualizedRoomListView /> > renders Default story 1`] = `
                       class="RoomListItemView-module_ellipsis"
                     >
                       <div
-                        class="RoomListItemView-module_roomName"
-                        data-testid="room-name"
-                        title="Random"
+                        class="RoomListItemView-module_nameLine"
                       >
-                        Random
+                        <div
+                          class="RoomListItemView-module_roomName"
+                          data-testid="room-name"
+                          title="Random"
+                        >
+                          Random
+                        </div>
                       </div>
                     </div>
                     <div
@@ -338,11 +346,15 @@ exports[`<VirtualizedRoomListView /> > renders Default story 1`] = `
                       class="RoomListItemView-module_ellipsis"
                     >
                       <div
-                        class="RoomListItemView-module_roomName"
-                        data-testid="room-name"
-                        title="Engineering"
+                        class="RoomListItemView-module_nameLine"
                       >
-                        Engineering
+                        <div
+                          class="RoomListItemView-module_roomName"
+                          data-testid="room-name"
+                          title="Engineering"
+                        >
+                          Engineering
+                        </div>
                       </div>
                       <div
                         class="_typography_6v6n8_153 _font-body-sm-regular_6v6n8_31 RoomListItemView-module_preview"
@@ -444,7 +456,7 @@ exports[`<VirtualizedRoomListView /> > renders Default story 1`] = `
                 aria-posinset="4"
                 aria-selected="false"
                 aria-setsize="10"
-                class="Flex-module_flex RoomListItemView-module_roomListItem mx_RoomListItemView RoomListItemView-module_bold"
+                class="Flex-module_flex RoomListItemView-module_roomListItem mx_RoomListItemView"
                 data-state="closed"
                 role="option"
                 style="--mx-flex-display: flex; --mx-flex-direction: row; --mx-flex-align: stretch; --mx-flex-justify: start; --mx-flex-gap: var(--cpd-space-3x); --mx-flex-wrap: nowrap;"
@@ -470,11 +482,15 @@ exports[`<VirtualizedRoomListView /> > renders Default story 1`] = `
                       class="RoomListItemView-module_ellipsis"
                     >
                       <div
-                        class="RoomListItemView-module_roomName"
-                        data-testid="room-name"
-                        title="Design"
+                        class="RoomListItemView-module_nameLine"
                       >
-                        Design
+                        <div
+                          class="RoomListItemView-module_roomName"
+                          data-testid="room-name"
+                          title="Design"
+                        >
+                          Design
+                        </div>
                       </div>
                     </div>
                     <div
@@ -592,11 +608,15 @@ exports[`<VirtualizedRoomListView /> > renders Default story 1`] = `
                       class="RoomListItemView-module_ellipsis"
                     >
                       <div
-                        class="RoomListItemView-module_roomName"
-                        data-testid="room-name"
-                        title="Product"
+                        class="RoomListItemView-module_nameLine"
                       >
-                        Product
+                        <div
+                          class="RoomListItemView-module_roomName"
+                          data-testid="room-name"
+                          title="Product"
+                        >
+                          Product
+                        </div>
                       </div>
                       <div
                         class="_typography_6v6n8_153 _font-body-sm-regular_6v6n8_31 RoomListItemView-module_preview"
@@ -724,11 +744,15 @@ exports[`<VirtualizedRoomListView /> > renders Default story 1`] = `
                       class="RoomListItemView-module_ellipsis"
                     >
                       <div
-                        class="RoomListItemView-module_roomName"
-                        data-testid="room-name"
-                        title="Marketing"
+                        class="RoomListItemView-module_nameLine"
                       >
-                        Marketing
+                        <div
+                          class="RoomListItemView-module_roomName"
+                          data-testid="room-name"
+                          title="Marketing"
+                        >
+                          Marketing
+                        </div>
                       </div>
                     </div>
                     <div
@@ -843,7 +867,7 @@ exports[`<VirtualizedRoomListView /> > renders Default story 1`] = `
                 aria-posinset="7"
                 aria-selected="false"
                 aria-setsize="10"
-                class="Flex-module_flex RoomListItemView-module_roomListItem mx_RoomListItemView RoomListItemView-module_bold"
+                class="Flex-module_flex RoomListItemView-module_roomListItem mx_RoomListItemView"
                 data-state="closed"
                 role="option"
                 style="--mx-flex-display: flex; --mx-flex-direction: row; --mx-flex-align: stretch; --mx-flex-justify: start; --mx-flex-gap: var(--cpd-space-3x); --mx-flex-wrap: nowrap;"
@@ -869,11 +893,15 @@ exports[`<VirtualizedRoomListView /> > renders Default story 1`] = `
                       class="RoomListItemView-module_ellipsis"
                     >
                       <div
-                        class="RoomListItemView-module_roomName"
-                        data-testid="room-name"
-                        title="Sales"
+                        class="RoomListItemView-module_nameLine"
                       >
-                        Sales
+                        <div
+                          class="RoomListItemView-module_roomName"
+                          data-testid="room-name"
+                          title="Sales"
+                        >
+                          Sales
+                        </div>
                       </div>
                       <div
                         class="_typography_6v6n8_153 _font-body-sm-regular_6v6n8_31 RoomListItemView-module_preview"
@@ -1001,11 +1029,15 @@ exports[`<VirtualizedRoomListView /> > renders Default story 1`] = `
                       class="RoomListItemView-module_ellipsis"
                     >
                       <div
-                        class="RoomListItemView-module_roomName"
-                        data-testid="room-name"
-                        title="Support"
+                        class="RoomListItemView-module_nameLine"
                       >
-                        Support
+                        <div
+                          class="RoomListItemView-module_roomName"
+                          data-testid="room-name"
+                          title="Support"
+                        >
+                          Support
+                        </div>
                       </div>
                     </div>
                     <div
@@ -1123,11 +1155,15 @@ exports[`<VirtualizedRoomListView /> > renders Default story 1`] = `
                       class="RoomListItemView-module_ellipsis"
                     >
                       <div
-                        class="RoomListItemView-module_roomName"
-                        data-testid="room-name"
-                        title="Announcements"
+                        class="RoomListItemView-module_nameLine"
                       >
-                        Announcements
+                        <div
+                          class="RoomListItemView-module_roomName"
+                          data-testid="room-name"
+                          title="Announcements"
+                        >
+                          Announcements
+                        </div>
                       </div>
                       <div
                         class="_typography_6v6n8_153 _font-body-sm-regular_6v6n8_31 RoomListItemView-module_preview"
@@ -1229,7 +1265,7 @@ exports[`<VirtualizedRoomListView /> > renders Default story 1`] = `
                 aria-posinset="10"
                 aria-selected="false"
                 aria-setsize="10"
-                class="Flex-module_flex RoomListItemView-module_roomListItem mx_RoomListItemView RoomListItemView-module_bold RoomListItemView-module_lastItem"
+                class="Flex-module_flex RoomListItemView-module_roomListItem mx_RoomListItemView RoomListItemView-module_lastItem"
                 data-state="closed"
                 role="option"
                 style="--mx-flex-display: flex; --mx-flex-direction: row; --mx-flex-align: stretch; --mx-flex-justify: start; --mx-flex-gap: var(--cpd-space-3x); --mx-flex-wrap: nowrap;"
@@ -1255,11 +1291,15 @@ exports[`<VirtualizedRoomListView /> > renders Default story 1`] = `
                       class="RoomListItemView-module_ellipsis"
                     >
                       <div
-                        class="RoomListItemView-module_roomName"
-                        data-testid="room-name"
-                        title="Off-topic"
+                        class="RoomListItemView-module_nameLine"
                       >
-                        Off-topic
+                        <div
+                          class="RoomListItemView-module_roomName"
+                          data-testid="room-name"
+                          title="Off-topic"
+                        >
+                          Off-topic
+                        </div>
                       </div>
                     </div>
                     <div
