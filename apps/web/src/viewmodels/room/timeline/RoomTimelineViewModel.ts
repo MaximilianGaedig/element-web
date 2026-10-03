@@ -1301,7 +1301,8 @@ export class RoomTimelineViewModel
                 const atLiveEnd = this.windowAtLiveEnd();
                 let pendingAnchor: NavigationAnchor | null = null;
                 if (marker) pendingAnchor = { targetKey: marker.key, align: "start", settle: true };
-                else if (atLiveEnd) pendingAnchor = { targetKey: items[items.length - 1].key, align: "end", settle: true };
+                else if (atLiveEnd)
+                    pendingAnchor = { targetKey: items[items.length - 1].key, align: "end", settle: true };
                 this.mergeSnapshot(
                     {
                         items,
