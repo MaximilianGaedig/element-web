@@ -106,6 +106,17 @@ Please see LICENSE files in the repository root for full details.
     color: var(--cpd-color-text-primary);
 }
 
+/*
+ * The quote's lines are single lines cut short with an ellipsis, but its wrapper is an item of the
+ * bubble's flex row, which by default is never narrower than what is in it: a long quoted line made the
+ * whole quote that wide, and it ran out of the bubble (930px in a 537px bubble, measured).
+ */
+.mx_EventTile_line > * > .mx_ReplyChain_wrapper,
+.mx_EventTile_line > .mx_ReplyChain_wrapper {
+    min-width: 0;
+    max-width: 100%;
+}
+
 /* tweb .bubble .reply: margin 0 0 .5rem inside the bubble. */
 .mx_TgReplyQuote_bubble {
     --TgReplyQuote-font-size: calc(var(--cpd-font-size-body-md) - 1px);
