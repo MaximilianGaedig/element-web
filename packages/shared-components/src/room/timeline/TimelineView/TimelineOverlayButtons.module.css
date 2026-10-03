@@ -24,7 +24,7 @@
 .topUnreadBar {
     position: absolute;
     top: var(--cpd-space-6x);
-    right: var(--cpd-space-6x);
+    right: calc(var(--cpd-space-6x) + var(--mx-timeline-scrubber-inset, 0px));
     width: 38px;
     pointer-events: all;
 }
@@ -51,14 +51,19 @@
     border-radius: 19px;
     box-sizing: border-box;
     background: var(--cpd-color-bg-canvas-default);
+    padding: 0;
     border: 1.3px solid var(--cpd-color-icon-tertiary);
     cursor: pointer;
 }
 
-.topUnreadBarScrollUp svg {
+button.topUnreadBarScrollUp svg {
+    display: block;
+    box-sizing: content-box;
     width: 20px;
     height: 20px;
-    flex-shrink: 0;
+    padding: 0;
+    margin: 0;
+    flex: none;
     color: var(--cpd-color-icon-tertiary);
 }
 
@@ -68,6 +73,7 @@
     justify-content: center;
     width: 18px;
     height: 18px;
+    padding: 0;
     background: var(--cpd-color-bg-canvas-default);
     border: 1.3px solid var(--cpd-color-icon-tertiary);
     border-radius: 10px;
@@ -75,10 +81,14 @@
     cursor: pointer;
 }
 
-.topUnreadBarMarkAsRead svg {
+button.topUnreadBarMarkAsRead svg {
+    display: block;
+    box-sizing: content-box;
     width: 12px;
     height: 12px;
-    flex-shrink: 0;
+    padding: 0;
+    margin: 0;
+    flex: none;
     color: var(--cpd-color-icon-tertiary);
 }
 
@@ -87,7 +97,7 @@
 .belowUnreadBar {
     position: absolute;
     top: var(--cpd-space-6x);
-    right: var(--cpd-space-6x);
+    right: calc(var(--cpd-space-6x) + var(--mx-timeline-scrubber-inset, 0px));
     width: 38px;
     pointer-events: all;
 }
@@ -115,14 +125,19 @@
     border-radius: 19px;
     box-sizing: border-box;
     background: var(--cpd-color-bg-canvas-default);
+    padding: 0;
     border: 1.3px solid var(--cpd-color-icon-tertiary);
     cursor: pointer;
 }
 
-.belowUnreadBarScrollDown svg {
+button.belowUnreadBarScrollDown svg {
+    display: block;
+    box-sizing: content-box;
     width: 20px;
     height: 20px;
-    flex-shrink: 0;
+    padding: 0;
+    margin: 0;
+    flex: none;
     color: var(--cpd-color-icon-tertiary);
 }
 
@@ -132,6 +147,7 @@
     justify-content: center;
     width: 18px;
     height: 18px;
+    padding: 0;
     background: var(--cpd-color-bg-canvas-default);
     border: 1.3px solid var(--cpd-color-icon-tertiary);
     border-radius: 10px;
@@ -140,34 +156,58 @@
     cursor: pointer;
 }
 
-.belowUnreadBarMarkAsRead svg {
+button.belowUnreadBarMarkAsRead svg {
+    display: block;
+    box-sizing: content-box;
     width: 12px;
     height: 12px;
-    flex-shrink: 0;
+    padding: 0;
+    margin: 0;
+    flex: none;
     color: var(--cpd-color-icon-tertiary);
 }
 
-/* ── Jump-to-bottom button — matches legacy JumpToBottomButton ───── */
+/* ── Jump stack — the buttons in the bottom-right corner, bottom to top: scroll down, mentions, reactions ── */
 
-.jumpToBottom {
+.jumpStack {
     position: absolute;
-    /* 12 because height is 50 but button is only 38 = 12+(50-38) = 24 */
+    /* 12 because an item is 50 tall but its button only 38 = 12+(50-38) = 24 */
     bottom: var(--cpd-space-3x);
-    right: var(--cpd-space-6x);
+    /* Clear of whatever else lives at the right edge of the timeline (a scrubber): it sets this to its own width. */
+    right: calc(var(--cpd-space-6x) + var(--mx-timeline-scrubber-inset, 0px));
     width: 38px;
+    display: flex;
+    /* The first button is the lowest; the others stack up from it. */
+    flex-direction: column-reverse;
+    /* Flush with the right edge, as wide as the widest button. */
+    align-items: flex-end;
+    /* Only the buttons take clicks; the stack's own box would otherwise swallow them over the list. */
+    pointer-events: none;
+}
+
+.jumpItem {
+    position: relative;
+    flex: none;
+    width: var(--mx-jump-item-width, 38px);
     /* give it a fixed height so the badge doesn't make */
     /* it taller and pop upwards when visible */
-    height: 50px;
+    height: var(--mx-jump-item-height, 50px);
+    margin-top: var(--mx-jump-gap, 0px);
     text-align: center;
     pointer-events: none;
-    /* Grows in from half its size as it fades in, and shrinks away the same way. */
+    /* Grows in from half its size as it fades in, and shrinks away the same way. The space it took goes
+       with it, so what is above it settles down (Telegram iOS slides the others over the gap). */
     transition:
         transform var(--mx-overlay-button-transition),
         opacity var(--mx-overlay-button-transition),
+        height var(--mx-overlay-button-transition),
+        margin-top var(--mx-overlay-button-transition),
         visibility 0s;
 }
 
-.jumpToBottom.away {
+.jumpItem.away {
+    height: 0;
+    margin-top: 0;
     transform: scale(0.5);
     opacity: 0;
     /* Out of reach once it has gone, not before: the delay is the length of the transition. */
@@ -175,6 +215,8 @@
     transition:
         transform var(--mx-overlay-button-transition),
         opacity var(--mx-overlay-button-transition),
+        height var(--mx-overlay-button-transition),
+        margin-top var(--mx-overlay-button-transition),
         visibility 0s 150ms;
 }
 
@@ -192,8 +234,8 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .jumpToBottom,
-    .jumpToBottom.away {
+    .jumpItem,
+    .jumpItem.away {
         transition: none;
     }
 
@@ -203,7 +245,7 @@
     }
 }
 
-.jumpToBottomBadge {
+.jumpBadge {
     position: relative;
     top: -12px;
     border-radius: 16px;
@@ -217,17 +259,25 @@
     background-color: var(--cpd-color-icon-secondary);
 }
 
-.highlight .jumpToBottomBadge {
+.highlight .jumpBadge {
     background-color: var(--cpd-color-icon-critical-primary);
 }
 
-.jumpToBottomScrollDown {
+/*
+ * The button is a flex box centring one icon, and it has to be the only thing deciding where the icon
+ * goes. Three other rules used to: a browser's own padding on <button>, which this resets; the old
+ * timeline's `.mx_JumpToBottomButton_scrollDown svg` (padding 7px 8px 7px 6px, so 2px off to one side,
+ * and "inherit" sizes); and the layouts' own paddings on the svg. The icon is therefore sized and
+ * unpadded here, with the element in the selector to win over those same-weight rules.
+ */
+.jumpButton {
     position: relative;
     display: flex;
     align-items: center;
     justify-content: center;
     width: 38px;
     height: 38px;
+    padding: 0;
     border-radius: 50%;
     box-sizing: border-box;
     background: var(--cpd-color-bg-canvas-default);
@@ -236,9 +286,13 @@
     pointer-events: all;
 }
 
-.jumpToBottomScrollDown svg {
+button.jumpButton svg {
+    display: block;
+    flex: none;
+    box-sizing: content-box;
     width: 20px;
     height: 20px;
-    flex-shrink: 0;
+    padding: 0;
+    margin: 0;
     color: var(--cpd-color-icon-tertiary);
 }

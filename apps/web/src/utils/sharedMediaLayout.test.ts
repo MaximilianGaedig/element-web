@@ -216,6 +216,17 @@ describe("monthAt", () => {
  * decided for itself, so there were states with no scrollbar and no working scrubber. Exported from
  * the panel and tested here because it is the agreement, not the drawing.
  */
+describe("the scrubber and the floating bars", () => {
+    it("starts its track below the bars once they are pinned, not at the top of the box", () => {
+        // The chrome above the column has scrolled away; the bars reach 100px down and stay.
+        expect(scrubberTrackHeight({ viewport: 800, offset: 120, top: 900, floor: 100 })).toBe(700);
+    });
+
+    it("leaves the track alone while the chrome above the column is still taller than the bars", () => {
+        expect(scrubberTrackHeight({ viewport: 800, offset: 300, top: 0, floor: 100 })).toBe(500);
+    });
+});
+
 describe("scrubberTrackHeight", () => {
     /*
      * The bug: the track is sticky inside a column that starts below the tabs and header, so at the top

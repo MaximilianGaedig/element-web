@@ -106,7 +106,9 @@
      */
     background: color-mix(in srgb, var(--cpd-color-bg-canvas-default) 72%, transparent);
     backdrop-filter: blur(16px) saturate(180%);
+    /* The Telegram layout's glass rim (_TgBase.pcss); nothing outside that layout defines it, so no rim there. */
     box-shadow:
+        var(--tg-glass-border, 0 0 transparent),
         0 1px 2px rgb(0 0 0 / 10%),
         0 8px 24px rgb(0 0 0 / 14%);
 }

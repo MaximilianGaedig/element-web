@@ -158,12 +158,20 @@ button.mx_TgRow {
     padding-top: 0.5rem;
 }
 
-/* tweb .menu-horizontal-scrollable: the tabs keep their width and the strip scrolls sideways. */
+/*
+ * tweb .menu-horizontal-scrollable: the tabs keep their width and the strip scrolls sideways. It
+ * floats at the top of the panel while the tab's content scrolls under it, as the shared media card's
+ * strip does, so the media types stay within reach wherever the panel was opened from.
+ */
 .mx_TgTabs_menu {
-    position: relative;
+    position: sticky;
+    inset-block-start: 0;
+    z-index: 3;
     display: flex;
     padding: 0 0.25rem;
     margin-bottom: 0.5rem;
+    background-color: color-mix(in srgb, var(--cpd-color-bg-canvas-default) 72%, transparent);
+    backdrop-filter: blur(16px);
     overflow-x: auto;
     overscroll-behavior-x: contain;
     scrollbar-width: none;
@@ -725,7 +733,7 @@ html[data-floating-bars] .mx_RoomView_body > .mx_TgImport {
     border-radius: var(--tg-border-radius-big);
     background-color: var(--tg-glass-background);
     backdrop-filter: var(--tg-glass-backdrop);
-    box-shadow: var(--tg-topbar-box-shadow);
+    box-shadow: var(--tg-glass-border), var(--tg-topbar-box-shadow);
 }
 
 /*

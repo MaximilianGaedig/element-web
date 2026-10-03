@@ -68,7 +68,7 @@ export function TgTabs({ tabs, initial }: { tabs: TgTab[]; initial?: string }): 
     if (!current) return null;
     return (
         <div className="mx_TgTabs">
-            <div className="mx_TgTabs_menu" role="tablist">
+            <div className="mx_TgTabs_menu" role="tablist" data-mx-floating>
                 {pill && (
                     <span
                         className="mx_TgTabs_pill"

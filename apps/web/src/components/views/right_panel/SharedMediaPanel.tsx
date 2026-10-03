@@ -44,6 +44,7 @@ import {
     anchorAt,
     anchoredTop,
     type ScrollAnchor,
+    floatingFloor,
     scrubberDragAt,
     scrubberLineTop,
     scrubberPillTop,
@@ -60,9 +61,8 @@ import IconizedContextMenu, {
     IconizedContextMenuOptionList,
 } from "../context_menus/IconizedContextMenu";
 import { useContextMenu } from "../../structures/ContextMenu";
-import UIStore from "../../../stores/UIStore";
+import UIStore, { UI_EVENTS } from "../../../stores/UIStore";
 import { scrollStripTo } from "../telegram/TgStickersPanel";
-import Spinner from "../elements/Spinner";
 import Modal from "../../../Modal";
 import AlbumLightbox from "../elements/AlbumLightbox";
 import { chatColumnsEnabled } from "../../../utils/telegram/telegramLayout";
@@ -230,8 +230,17 @@ function useRoomKindCounts(room: Room): Record<string, number> | undefined {
     return byKind;
 }
 
-/** Grid thumbnails are requested at this size (3 columns of the right panel), cropped square server-side. */
+/** Grid thumbnails are requested at least this size (3 columns of a narrow panel), cropped square server-side. */
 const THUMB_SIZE = 160;
+
+/**
+ * The size to ask for, for a cell this wide. The panel is resizable, and a thumbnail fetched for a
+ * narrow panel is a blur in a wide one - but it moves in steps, so dragging the edge does not fetch a
+ * new picture for every pixel of it.
+ */
+export function thumbSizeFor(cell: number, pixelRatio: number): number {
+    return Math.max(THUMB_SIZE, Math.ceil((cell * pixelRatio) / THUMB_SIZE) * THUMB_SIZE);
+}
 
 function jumpTo(event: MatrixEvent): void {
     dis.dispatch<ViewRoomPayload>({
@@ -372,6 +381,112 @@ async function forwardAll(client: MatrixClient, events: MatrixEvent[]): Promise<
     Modal.createDialog(ForwardDialog, { matrixClient: client, events, permalinkCreator: null });
 }
 
+/** Asks, then removes what the selection holds, one message after another. */
+async function removeAll(
+    client: MatrixClient,
+    room: Room,
+    events: MatrixEvent[],
+    onConfirmed: () => void,
+): Promise<void> {
+    const { default: QuestionDialog } = await import("../dialogs/QuestionDialog");
+    const { finished } = Modal.createDialog(QuestionDialog, {
+        title: _t("bridge|shared_media|delete_title", { count: events.length }),
+        description: _t("bridge|shared_media|delete_description", { count: events.length }),
+        button: _t("action|remove"),
+        danger: true,
+    });
+    const [proceed] = await finished;
+    if (!proceed) return;
+    onConfirmed();
+    for (const event of events) {
+        const id = event.getId();
+        if (!id) continue;
+        try {
+            await client.redactEvent(room.roomId, id);
+        } catch (e) {
+            logger.warn("Shared media: could not remove", id, e);
+        }
+    }
+}
+
+/**
+ * What right-clicking an item offers: the same things the selection bar does for one message, in a
+ * menu at the pointer. Built from Element's own menu components, like the tab's "⋮" menu.
+ */
+function ItemContextMenu({
+    room,
+    event,
+    at,
+    onFinished,
+    onOpen,
+    onSelect,
+}: {
+    room: Room;
+    event: MatrixEvent;
+    at: { x: number; y: number };
+    onFinished: () => void;
+    /** Only the grid has a viewer to open the picture in. */
+    onOpen?: () => void;
+    onSelect: () => void;
+}): JSX.Element {
+    const client = useMatrixClientContext();
+    const mayRedact = room.currentState.maySendRedactionForEvent(event, client.getSafeUserId());
+    const act = (action: () => void) => () => {
+        onFinished();
+        action();
+    };
+    return (
+        <IconizedContextMenu onFinished={onFinished} left={at.x} top={at.y} compact>
+            <IconizedContextMenuOptionList>
+                {onOpen && <IconizedContextMenuOption label={_t("action|open")} onClick={act(onOpen)} />}
+                <IconizedContextMenuOption
+                    label={_t("bridge|shared_media|show_in_chat")}
+                    onClick={act(() => jumpTo(event))}
+                />
+                {MediaEventHelper.isEligible(event) && (
+                    <IconizedContextMenuOption
+                        label={_t("action|download")}
+                        onClick={act(() => void downloadAll([event]))}
+                    />
+                )}
+                <IconizedContextMenuOption
+                    label={_t("action|forward")}
+                    onClick={act(() => void forwardAll(client, [event]))}
+                />
+                <IconizedContextMenuOption label={_t("bridge|shared_media|select")} onClick={act(onSelect)} />
+                {mayRedact && (
+                    <IconizedContextMenuOption
+                        label={_t("action|remove")}
+                        onClick={act(() => void removeAll(client, room, [event], () => {}))}
+                    />
+                )}
+            </IconizedContextMenuOptionList>
+        </IconizedContextMenu>
+    );
+}
+
+/**
+ * Right-click on an item. A touch that holds long enough to raise `contextmenu` (Android does) is not
+ * a request for this menu: holding already starts a selection (useDragSelect), which carries the same
+ * actions in its bar, and a menu opening over the selection it just began would be two answers to one press.
+ */
+function useItemMenu(): {
+    menu: { x: number; y: number } | null;
+    close: () => void;
+    onContextMenu: (e: React.MouseEvent, touch: boolean) => void;
+} {
+    const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
+    return {
+        menu,
+        close: useCallback(() => setMenu(null), []),
+        onContextMenu: useCallback((e, touch) => {
+            e.preventDefault();
+            if (touch) return;
+            setMenu({ x: e.clientX, y: e.clientY });
+        }, []),
+    };
+}
+
 /** Telegram's selection bar: how many are ticked, and what can be done with them. */
 function SelectionBar({
     room,
@@ -386,29 +501,9 @@ function SelectionBar({
     const userId = client.getSafeUserId();
     const hasMedia = events.some((ev) => MediaEventHelper.isEligible(ev));
     const mayRedact = events.every((ev) => room.currentState.maySendRedactionForEvent(ev, userId));
-    const remove = async (): Promise<void> => {
-        const { default: QuestionDialog } = await import("../dialogs/QuestionDialog");
-        const { finished } = Modal.createDialog(QuestionDialog, {
-            title: _t("bridge|shared_media|delete_title", { count: events.length }),
-            description: _t("bridge|shared_media|delete_description", { count: events.length }),
-            button: _t("action|remove"),
-            danger: true,
-        });
-        const [proceed] = await finished;
-        if (!proceed) return;
-        selection.clear();
-        for (const event of events) {
-            const id = event.getId();
-            if (!id) continue;
-            try {
-                await client.redactEvent(room.roomId, id);
-            } catch (e) {
-                logger.warn("Shared media: could not remove", id, e);
-            }
-        }
-    };
+    const remove = (): Promise<void> => removeAll(client, room, events, selection.clear);
     return (
-        <div className="mx_SharedMedia_selectionBar" role="toolbar">
+        <div className="mx_SharedMedia_selectionBar" role="toolbar" data-mx-floating>
             <AccessibleButton
                 className="mx_SharedMedia_selectionAction"
                 onClick={selection.clear}
@@ -476,27 +571,35 @@ function GridThumb({
     selection,
     onOpen,
     index,
+    size,
     drag,
     onRange,
+    onContextMenu,
 }: {
     event: MatrixEvent;
     selection: Selection;
     onOpen: () => void;
     index: number;
+    /** What to ask the server for, which follows the width of the cell. */
+    size: number;
     drag: DragSelect;
     onRange: (from: number, to: number) => void;
+    onContextMenu: (e: React.MouseEvent, touch: boolean) => void;
 }): JSX.Element {
     const content = event.getContent<MediaEventContent>();
+    const touched = useRef(false);
     const encrypted = !!content.file;
-    const [src, setSrc] = useState<string | null>(() => {
+    const plain = useMemo(() => {
         if (encrypted) return null;
         const media = mediaFromContent(content);
         return media.hasThumbnail
-            ? media.getThumbnailHttp(THUMB_SIZE, THUMB_SIZE, "crop")
+            ? media.getThumbnailHttp(size, size, "crop")
             : content.msgtype === MsgType.Image
-              ? media.getThumbnailOfSourceHttp(THUMB_SIZE, THUMB_SIZE, "crop")
+              ? media.getThumbnailOfSourceHttp(size, size, "crop")
               : null;
-    });
+    }, [content, encrypted, size]);
+    const [decrypted, setDecrypted] = useState<string | null>(null);
+    const src = plain ?? decrypted;
     const ref = useRef<HTMLButtonElement>(null);
     useEffect(() => {
         if (!encrypted || !ref.current) return;
@@ -509,7 +612,7 @@ function GridThumb({
                 content.info && "thumbnail_file" in content.info && content.info.thumbnail_file
                     ? helper.thumbnailUrl.value
                     : helper.sourceUrl.value;
-            url.then(setSrc).catch(() => {});
+            url.then(setDecrypted).catch(() => {});
             observer.disconnect();
         });
         observer.observe(ref.current);
@@ -529,7 +632,11 @@ function GridThumb({
             data-tg-media-id={event.getId()}
             data-grid-index={index}
             aria-pressed={selection.active ? selected : undefined}
-            onPointerDown={(e) => drag.onPointerDown(index, e)}
+            onPointerDown={(e) => {
+                touched.current = e.pointerType === "touch";
+                drag.onPointerDown(index, e);
+            }}
+            onContextMenu={(e) => onContextMenu(e, touched.current)}
             onPointerEnter={() => drag.onPointerEnter(index)}
             // Ctrl/⌘-click starts a selection without going through the menu, as elsewhere in Element.
             onClick={(e) => {
@@ -588,6 +695,8 @@ function useDragSelect(
     const anchor = useRef<number | undefined>(undefined);
     const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
     const swallow = useRef(false);
+    // Pointers whose capture onPointerDown let go of itself, so that is not mistaken for losing it.
+    const released = useRef(new Set<number>());
 
     const idsOf = useCallback((from: number, to: number) => items.slice(from, to + 1), [items]);
 
@@ -598,6 +707,8 @@ function useDragSelect(
             const [lo, hi] = [Math.min(d.from, index), Math.max(d.from, index)];
             const [was, wasTo] = [Math.min(d.from, d.last), Math.max(d.from, d.last)];
             selection.setMany(idsOf(lo, hi), d.on);
+            // Only once the drag has gone somewhere is it a drag, and so something shift-click can reach back to.
+            anchor.current = d.from;
             // Anything the drag had reached and no longer covers goes back to how it started, so a
             // drag that went too far can simply be pulled back.
             const dropped = [...idsOf(was, lo - 1), ...idsOf(hi + 1, wasTo)];
@@ -665,20 +776,47 @@ function useDragSelect(
             at = { x: e.clientX, y: e.clientY };
             frame ??= requestAnimationFrame(step);
         };
-        const end = (): void => {
+        /*
+         * Two ways for a press to stop. Letting go is the ordinary one, and the click that follows it
+         * still has to be told it ended a drag. Everything else - the system cancelling the touch,
+         * the pointer being taken from us, the window losing focus or being hidden mid-drag - leaves
+         * no pointerup coming at all, so a drag only listening for that stayed "down": the next
+         * pointer to cross the grid went on selecting, and a hold timer could start a selection
+         * nobody was asking for. Those end it for good, and no click is coming to swallow.
+         */
+        const finish = (): void => {
             clearTimeout(timer.current);
             drag.current = null;
             at = undefined;
             if (frame !== undefined) cancelAnimationFrame(frame);
             frame = undefined;
         };
+        const abort = (): void => {
+            finish();
+            swallow.current = false;
+            released.current.clear();
+        };
+        const lostCapture = (e: PointerEvent): void => {
+            // Letting go of the capture a touch starts with is how the drag begins (see onPointerDown).
+            if (released.current.delete(e.pointerId)) return;
+            abort();
+        };
+        const hidden = (): void => {
+            if (document.hidden) abort();
+        };
         window.addEventListener("pointermove", move);
-        window.addEventListener("pointerup", end);
-        window.addEventListener("pointercancel", end);
+        window.addEventListener("pointerup", finish);
+        window.addEventListener("pointercancel", abort);
+        window.addEventListener("lostpointercapture", lostCapture, true);
+        window.addEventListener("blur", abort);
+        document.addEventListener("visibilitychange", hidden);
         return () => {
             window.removeEventListener("pointermove", move);
-            window.removeEventListener("pointerup", end);
-            window.removeEventListener("pointercancel", end);
+            window.removeEventListener("pointerup", finish);
+            window.removeEventListener("pointercancel", abort);
+            window.removeEventListener("lostpointercapture", lostCapture, true);
+            window.removeEventListener("blur", abort);
+            document.removeEventListener("visibilitychange", hidden);
             clearTimeout(timer.current);
             if (frame !== undefined) cancelAnimationFrame(frame);
         };
@@ -690,10 +828,22 @@ function useDragSelect(
         onPointerDown: (index, e) => {
             // A touch captures the pointer to the element it started on, so without releasing it the
             // drag would never enter the neighbours and could only ever select the one item.
+            if (e.currentTarget.hasPointerCapture?.(e.pointerId)) released.current.add(e.pointerId);
             e.currentTarget.releasePointerCapture?.(e.pointerId);
             swallow.current = false;
             if (selection.active) {
-                begin(index, !selection.ids.has(items[index]?.getId() ?? ""));
+                /*
+                 * Armed, not applied. The press itself changes nothing: if it turns into a drag the
+                 * items it reaches are set (the first move covers the one it started on), and if it
+                 * stays a tap the click that follows toggles it. Applying it here as well made the
+                 * click toggle it a second time - a selected item deselected and came straight back.
+                 */
+                drag.current = {
+                    from: index,
+                    last: index,
+                    on: !selection.ids.has(items[index]?.getId() ?? ""),
+                    before: new Set(selection.ids),
+                };
                 return;
             }
             timer.current = setTimeout(() => {
@@ -740,14 +890,29 @@ function VirtualRows({
 }): JSX.Element {
     const ref = useRef<HTMLDivElement>(null);
     const [measured, setMeasured] = useState<Map<number, number>>(new Map());
+    // Which width the heights in `measured` were taken at; see the note where it changes.
+    const [epoch, setEpoch] = useState(0);
     const [scroll, setScroll] = useState({ top: 0, viewport: 0 });
 
     useLayoutEffect(() => {
         const el = ref.current;
         if (!el) return;
         const box = scrollParentOf(el);
+        let width = el.clientWidth;
         const measure = (): void => {
             if (!box) return;
+            /*
+             * A row's height depends on how wide it is: a link's text wraps and a file's name
+             * truncates differently. The heights measured at the old width are wrong for the new one,
+             * and a row that is not on screen is never asked again, so they are dropped. The rows
+             * that are on screen are remounted (the epoch is in their key), because a row only reports
+             * when its size changes, and one that is still there at the new width has nothing to say.
+             */
+            if (el.clientWidth !== width) {
+                width = el.clientWidth;
+                setMeasured(new Map());
+                setEpoch((n) => n + 1);
+            }
             // Where the rows begin within everything the box scrolls: the tabs and the header are
             // above them, and a window that ignores that is out by their height. Taken from the two
             // boxes because offsetTop answers about a positioned ancestor, not about the box.
@@ -758,6 +923,7 @@ function VirtualRows({
         box?.addEventListener("scroll", measure, { passive: true });
         const observer = typeof ResizeObserver === "undefined" ? undefined : new ResizeObserver(measure);
         if (box) observer?.observe(box);
+        observer?.observe(el);
         return () => {
             box?.removeEventListener("scroll", measure);
             observer?.disconnect();
@@ -790,7 +956,7 @@ function VirtualRows({
     return (
         <div ref={ref} className="mx_SharedMedia_rows" style={{ height: offsets[count] }}>
             {shown.map((index) => (
-                <MeasuredRow key={index} top={offsets[index]} onHeight={(h) => remember(index, h)}>
+                <MeasuredRow key={`${epoch}-${index}`} top={offsets[index]} onHeight={(h) => remember(index, h)}>
                     {children(index)}
                 </MeasuredRow>
             ))}
@@ -857,13 +1023,15 @@ function useGridLayout(
     rows: MediaRow[];
     height: number;
     window: [number, number];
+    /** How wide a square cell is, which is zero until the column has been measured. */
+    cell: number;
     month?: { section: MediaSection; headingVisible: boolean };
     /**
      * The scroll, in the scrolling box's own terms rather than the column's: the scrubber's handle
      * has to span the whole of what scrolls, tabs and header included, or it reaches the end of its
      * track before the list reaches its end. `offset` is where the column starts inside that.
      */
-    scroll: { top: number; viewport: number; content: number; offset: number; belowScreen?: number };
+    scroll: { top: number; viewport: number; content: number; offset: number; belowScreen?: number; floor?: number };
     seek: (top: number) => void;
     /** Hides the native scrollbar, for as long as the scrubber is standing in for it. */
     setScrubbed: (on: boolean) => void;
@@ -876,6 +1044,7 @@ function useGridLayout(
         content: number;
         offset: number;
         belowScreen?: number;
+        floor?: number;
     }>({ top: 0, viewport: 0, content: 0, offset: 0 });
 
     // Measured before the first paint: the column's width sets every row's height, so measuring
@@ -907,6 +1076,7 @@ function useGridLayout(
                 content: box.scrollHeight,
                 offset: Math.max(0, offset),
                 belowScreen: Math.max(0, Math.round(boxRect.bottom - screen)),
+                floor: floatingFloor(box),
             });
         };
         measure();
@@ -915,11 +1085,26 @@ function useGridLayout(
         const observer = typeof ResizeObserver === "undefined" ? undefined : new ResizeObserver(measure);
         observer?.observe(el);
         if (box) observer?.observe(box);
+        // The box need not change size when the window does (it can reach past the bottom of the
+        // screen), but how much of it is past the screen does, and the track has to stop short of that.
+        UIStore.instance.on(UI_EVENTS.Resize, measure);
         return () => {
             box?.removeEventListener("scroll", measure);
             observer?.disconnect();
+            UIStore.instance.off(UI_EVENTS.Resize, measure);
         };
     }, []);
+
+    /*
+     * The bars that float over the top of the box come and go without the box or the column changing
+     * size (the selection bar replaces the header the moment something is ticked), so nothing above
+     * is told. Read again after every render, and kept only when it differs.
+     */
+    // oxlint-disable-next-line react-hooks/exhaustive-deps -- after every render, on purpose; it settles at once
+    useLayoutEffect(() => {
+        const floor = floatingFloor(scrollParentOf(ref.current));
+        setScroll((prev) => (prev.floor === floor || (prev.floor === undefined && !floor) ? prev : { ...prev, floor }));
+    });
 
     const cell = width ? (width - GRID_GAP * (GRID_COLUMNS - 1)) / GRID_COLUMNS : 0;
     /*
@@ -990,6 +1175,7 @@ function useGridLayout(
         rows,
         height,
         window: shown,
+        cell,
         month: sectionAt(rows, Math.max(0, scroll.top - scroll.offset)),
         scroll,
         seek,
@@ -1012,7 +1198,7 @@ function DateScrubber({
     onPickMonth,
 }: {
     rows: MediaRow[];
-    scroll: { top: number; viewport: number; content: number; offset: number; belowScreen?: number };
+    scroll: { top: number; viewport: number; content: number; offset: number; belowScreen?: number; floor?: number };
     seek: (top: number) => void;
     /**
      * What the whole history holds per month, from the server's index. With this the bar addresses
@@ -1152,6 +1338,7 @@ function DateScrubber({
 }
 
 function MediaGrid({
+    room,
     items,
     selection,
     total,
@@ -1161,6 +1348,7 @@ function MediaGrid({
     onSeekDate,
     onLoadPlaces,
 }: {
+    room: Room;
     items: MatrixEvent[];
     selection: Selection;
     total?: number;
@@ -1180,6 +1368,7 @@ function MediaGrid({
         rows,
         height,
         window: shown,
+        cell,
         month,
         scroll,
         seek,
@@ -1254,6 +1443,8 @@ function MediaGrid({
         if (atEnd) nearEnd.current();
     }, [atEnd, lastReal]);
     const drag = useDragSelect(items, selection, ref);
+    const itemMenu = useItemMenu();
+    const [menuFor, setMenuFor] = useState<number | null>(null);
     const range = useCallback(
         (from: number, to: number) => selection.setMany(items.slice(Math.min(from, to), Math.max(from, to) + 1), true),
         [items, selection],
@@ -1288,7 +1479,11 @@ function MediaGrid({
          * there it stops floating and becomes a bar in the flow. This block is neither flex nor
          * clipping, which is what the float and the stickiness each need.
          */
-        <div className="mx_SharedMedia_column">
+        <div
+            className="mx_SharedMedia_column"
+            // Where the floating bars end, so what floats beside the column keeps clear of them.
+            style={{ "--SharedMedia-floor": `${scroll.floor ?? 0}px` } as React.CSSProperties}
+        >
             {/*
              * A dock with no height, pinned to the top of the scroll: the track hangs from it. Floated,
              * the track was a box as tall as the screen, and the grid - which clips its corners, and so
@@ -1337,8 +1532,13 @@ function MediaGrid({
                                     selection={selection}
                                     onOpen={() => open(i)}
                                     index={i}
+                                    size={thumbSizeFor(cell, window.devicePixelRatio || 1)}
                                     drag={drag}
                                     onRange={range}
+                                    onContextMenu={(e, touch) => {
+                                        itemMenu.onContextMenu(e, touch);
+                                        setMenuFor(i);
+                                    }}
                                 />
                             ))}
                             {Array.from({ length: row.placeholders ?? 0 }, (_, i) => (
@@ -1348,6 +1548,19 @@ function MediaGrid({
                     ),
                 )}
             </div>
+            {itemMenu.menu && menuFor !== null && items[menuFor] && (
+                <ItemContextMenu
+                    room={room}
+                    event={items[menuFor]}
+                    at={itemMenu.menu}
+                    onFinished={itemMenu.close}
+                    onOpen={() => open(menuFor)}
+                    onSelect={() => {
+                        drag.setAnchor(menuFor);
+                        selection.toggle(items[menuFor]);
+                    }}
+                />
+            )}
         </div>
     );
 }
@@ -1388,6 +1601,42 @@ function Selectable({
                 aria-label={_t("bridge|shared_media|select")}
                 onClick={() => selection.toggle(event)}
             />
+        </div>
+    );
+}
+
+/** A list row that answers a right-click with the item's menu, except on a link, which keeps the browser's own. */
+function MenuRow({
+    event,
+    room,
+    selection,
+    children,
+}: {
+    event: MatrixEvent;
+    room: Room;
+    selection: Selection;
+    children: React.ReactNode;
+}): JSX.Element {
+    const itemMenu = useItemMenu();
+    return (
+        <div
+            onContextMenu={(e) => {
+                if ((e.target as Element).closest("a")) return;
+                itemMenu.onContextMenu(e, false);
+            }}
+        >
+            <Selectable event={event} selection={selection}>
+                {children}
+            </Selectable>
+            {itemMenu.menu && (
+                <ItemContextMenu
+                    room={room}
+                    event={event}
+                    at={itemMenu.menu}
+                    onFinished={itemMenu.close}
+                    onSelect={() => selection.toggle(event)}
+                />
+            )}
         </div>
     );
 }
@@ -1448,6 +1697,30 @@ function BodyRow({ event, room }: { event: MatrixEvent; room: Room }): JSX.Eleme
     );
 }
 
+/**
+ * What stands in for the next page while it loads: tiles the size of the ones that will replace them
+ * (a row of the grid's squares, or a list row at its estimated height), so nothing moves when they do.
+ */
+function SkeletonRows({ tab }: { tab: SharedMediaTab }): JSX.Element {
+    if (tab === "media") {
+        return (
+            <div className="mx_SharedMedia_skeletonTiles" data-testid="shared-media-skeleton" aria-hidden>
+                {Array.from({ length: GRID_COLUMNS }, (_, i) => (
+                    <span key={i} className="mx_SharedMedia_pending" />
+                ))}
+            </div>
+        );
+    }
+    return (
+        <div
+            className="mx_SharedMedia_skeletonRow mx_SharedMedia_pending"
+            data-testid="shared-media-skeleton"
+            style={{ height: ROW_ESTIMATE[tab] ?? 64 }}
+            aria-hidden
+        />
+    );
+}
+
 function TabContent({
     loader,
     tab,
@@ -1468,20 +1741,6 @@ function TabContent({
         () => (tab === "media" ? state.items.filter((e) => matchesMediaFilter(e, filter)) : state.items),
         [state.items, tab, filter],
     );
-    const sentinel = useRef<HTMLDivElement>(null);
-    useEffect(() => {
-        const el = sentinel.current;
-        if (!el || done) return;
-        const observer = new IntersectionObserver(
-            (entries) => {
-                if (entries.some((e) => e.isIntersecting)) void loader.loadMore(tab);
-            },
-            { rootMargin: "400px" },
-        );
-        observer.observe(el);
-        return () => observer.disconnect();
-    }, [loader, tab, done, items.length, loading]);
-
     /*
      * What the whole history holds per month, so the scrubber addresses the chat rather than the
      * column. Asked per tab, once, and empty where the homeserver keeps no index - which is every
@@ -1498,6 +1757,25 @@ function TabContent({
             alive = false;
         };
     }, [loader, tab]);
+    /*
+     * With the server's counts the grid loads what is on screen by its place, wherever the reader
+     * has scrolled to, so there is no "next page" for the end of the list to ask for.
+     */
+    const sparse = tab === "media" && months.length > 0;
+    const sentinel = useRef<HTMLDivElement>(null);
+    useEffect(() => {
+        const el = sentinel.current;
+        if (!el || done || sparse) return;
+        const observer = new IntersectionObserver(
+            (entries) => {
+                if (entries.some((e) => e.isIntersecting)) void loader.loadMore(tab);
+            },
+            { rootMargin: "400px" },
+        );
+        observer.observe(el);
+        return () => observer.disconnect();
+    }, [loader, tab, done, sparse, items.length, loading]);
+
     const seekDate = useCallback((ts: number) => loader.seekTo(tab, ts), [loader, tab]);
     const loadPlaces = useCallback(
         (start: number, count: number) => loader.loadPlaces(tab, start, count),
@@ -1512,12 +1790,15 @@ function TabContent({
         return { places: state.places, empty };
     }, [items, state.items, state.places, state.empty]);
 
+    // The grid draws its own placeholders for what the server says is still to come.
+    const pendingBelow = tab === "media" && (total ?? 0) > items.length;
     const room = loader.room;
     let list: JSX.Element | null = null;
     if (items.length) {
         if (tab === "media") {
             list = (
                 <MediaGrid
+                    room={room}
                     items={items}
                     selection={selection}
                     total={total}
@@ -1536,7 +1817,7 @@ function TabContent({
                     onNearEnd={() => void loader.loadMore(tab)}
                 >
                     {(index) => (
-                        <Selectable event={items[index]} selection={selection}>
+                        <MenuRow event={items[index]} room={room} selection={selection}>
                             {tab === "links" ? (
                                 <LinkRow event={items[index]} room={room} />
                             ) : tab === "files" ? (
@@ -1544,7 +1825,7 @@ function TabContent({
                             ) : (
                                 <AudioRow event={items[index]} room={room} />
                             )}
-                        </Selectable>
+                        </MenuRow>
                     )}
                 </VirtualRows>
             );
@@ -1554,9 +1835,11 @@ function TabContent({
         <div className={`mx_SharedMedia_content mx_SharedMedia_content_${tab}`} role="tabpanel">
             {list}
             {!items.length && done && <div className="mx_SharedMedia_empty">{EMPTY_LABELS[tab]()}</div>}
-            {!done && (
+            {/* Only where there is a next page to ask for, and then only skeletons while it comes: a
+                spinner is a different shape from what it turns into, and the list moves when it goes. */}
+            {!done && !sparse && (
                 <div ref={sentinel} className="mx_SharedMedia_more">
-                    {loading && <Spinner size={24} />}
+                    {loading && !pendingBelow && <SkeletonRows tab={tab} />}
                 </div>
             )}
         </div>
@@ -1687,6 +1970,7 @@ export default function SharedMediaPanel({ room, onClose }: Props): JSX.Element 
                     className={classNames("mx_SharedMedia_tabsRow", {
                         mx_SharedMedia_tabsRow_stuck: stuck,
                     })}
+                    data-mx-floating
                 >
                     <Tabs active={tab} onChange={setTab} />
                 </div>

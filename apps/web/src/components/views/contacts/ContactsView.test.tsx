@@ -424,4 +424,55 @@ describe("ContactsView calls", () => {
         await userEvent.click(screen.getByRole("tab", { name: "Missed" }));
         expect(screen.getByText("No calls match")).toBeInTheDocument();
     });
+    describe("a group call", () => {
+        const people = (...names: string[]): Call["participants"] =>
+            names.map((name) => ({ userId: `@${name}:e`, name, you: name === "You" }));
+        const group = (over: Partial<Call>): Call =>
+            call({ title: "Spektrum", group: true, outcome: "answered", joined: true, ...over });
+
+        it("says who was in it, with the reader first, and how long it ran", async () => {
+            vi.spyOn(callsModule, "callHistory").mockReturnValue([
+                group({ seconds: 2700, participants: people("Ada", "You", "Ben", "Cyd", "Dan") }),
+            ]);
+            await openCalls();
+
+            const row = screen.getByText("Spektrum").closest(".mx_Contacts_row")!;
+            expect(row).toHaveTextContent("You, Ada and 3 others · 45m 0s");
+            // Everyone, for the one who wants the whole list.
+            expect(row).toHaveAttribute("title", expect.stringContaining("You, Ada, Ben, Cyd, Dan"));
+        });
+
+        it("offers to join one that is still going, and only that one", async () => {
+            vi.spyOn(callsModule, "callHistory").mockReturnValue([
+                group({
+                    eventId: "$live",
+                    ongoing: true,
+                    joined: false,
+                    outcome: "unknown",
+                    participants: people("Ada"),
+                }),
+                group({ eventId: "$over", title: "Over", seconds: 60, participants: people("Ada") }),
+            ]);
+            await openCalls();
+
+            expect(screen.getAllByRole("button", { name: "Join" })).toHaveLength(1);
+            expect(screen.getByText("Spektrum").closest(".mx_Contacts_row")).toHaveTextContent("Ongoing · Ada");
+        });
+
+        it("marks a missed one and shows each call once", async () => {
+            vi.spyOn(callsModule, "callHistory").mockReturnValue([
+                group({ outcome: "missed", joined: false, participants: people("Ada", "Ben") }),
+            ]);
+            await openCalls();
+
+            expect(screen.getAllByText("Spektrum")).toHaveLength(1);
+            expect(screen.getByRole("img", { name: "Missed" })).toBeInTheDocument();
+        });
+
+        it("still says it was a group call where nobody is named", async () => {
+            vi.spyOn(callsModule, "callHistory").mockReturnValue([group({ seconds: 5 })]);
+            await openCalls();
+            expect(screen.getByText("Spektrum").closest(".mx_Contacts_row")).toHaveTextContent("5s · Group call");
+        });
+    });
 });

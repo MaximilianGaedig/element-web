@@ -678,6 +678,20 @@ Please see LICENSE files in the repository root for full details.
         display: block;
     }
 
+    /* The way into a call that is still going: a pill beside the row, in the colour of a live thing. */
+    .mx_Contacts_joinCall {
+        flex-shrink: 0;
+        margin-inline-start: var(--cpd-space-2x);
+        padding: 0 var(--cpd-space-3x);
+        border: 0;
+        border-radius: 99px;
+        background: var(--cpd-color-bg-success-subtle);
+        color: var(--cpd-color-text-success-primary);
+        font: var(--cpd-font-body-sm-semibold);
+        line-height: 28px;
+        cursor: pointer;
+    }
+
     .mx_Contacts_network {
         padding: 0 var(--cpd-space-2x);
         /* A pill, as Element's other rounded chrome writes it. */

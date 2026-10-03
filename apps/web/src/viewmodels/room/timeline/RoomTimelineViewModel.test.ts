@@ -14,6 +14,7 @@ import {
     EventType,
     MatrixEvent,
     MatrixEventEvent,
+    NotificationCountType,
     PendingEventOrdering,
     ReceiptType,
     Room,
@@ -889,6 +890,318 @@ describe("RoomTimelineViewModel", () => {
             vm.onMarkAllAsRead();
 
             await vi.waitFor(() => expect(kinds(vm.getSnapshot().items)).not.toContain("read-marker"));
+        });
+    });
+
+    describe("unread mentions and reactions", () => {
+        const BOB = OTHER_USER_ID;
+
+        // The reader is the room's own user here, whose messages these are.
+        beforeEach(() => {
+            vi.spyOn(client, "getSafeUserId").mockReturnValue(USER_ID);
+            vi.spyOn(client, "getUserId").mockReturnValue(USER_ID);
+        });
+
+        /** A message from somebody else that names the reader. */
+        const makeMention = (id: string, opts: { ts?: number; user?: string } = {}): MatrixEvent => {
+            const event = makeMessage(id, { user: opts.user ?? BOB, ts: opts.ts });
+            event.event.content = { ...event.event.content, "m.mentions": { user_ids: [USER_ID] } };
+            return event;
+        };
+
+        const makeReaction = (id: string, target: string, user = BOB): MatrixEvent =>
+            new MatrixEvent({
+                type: EventType.Reaction,
+                sender: user,
+                room_id: ROOM_ID,
+                event_id: id,
+                origin_server_ts: Date.now(),
+                content: { "m.relates_to": { rel_type: "m.annotation", event_id: target, key: "\u2764" } },
+            });
+
+        const markReadUpTo = (eventId: string): void => {
+            room.addAccountData([
+                new MatrixEvent({ type: EventType.FullyRead, room_id: ROOM_ID, content: { event_id: eventId } }),
+            ]);
+        };
+
+        /** What the server says: this many unread highlights. */
+        const serverCountsHighlights = (count: number): void => {
+            room.setUnreadNotificationCount(NotificationCountType.Highlight, count);
+        };
+
+        /** A live event arriving as sync delivers it. */
+        const arriveLive = (event: MatrixEvent): void => {
+            room.getUnfilteredTimelineSet().addLiveEvent(event, { addToState: false });
+            room.emit(RoomEvent.Timeline, event, room, false, false, {
+                timeline: room.getLiveTimeline(),
+                liveEvent: true,
+            } as any);
+        };
+
+        describe("mentions", () => {
+            it("counts what mentions the reader after the place they had read to", async () => {
+                seedTimeline([
+                    makeMention("$old", { ts: 1 }),
+                    makeMessage("$read"),
+                    makeMention("$m1", { ts: 3 }),
+                    makeMessage("$plain", { user: BOB }),
+                    makeMention("$m2", { ts: 5 }),
+                ]);
+                markReadUpTo("$read");
+                serverCountsHighlights(2);
+
+                const vm = await createStartedViewModel();
+
+                expect(vm.getSnapshot().unreadMentions).toBe(2);
+            });
+
+            it("counts a message that only a push rule calls a highlight", async () => {
+                seedTimeline([makeMessage("$read"), makeMessage("$rule", { user: BOB })]);
+                markReadUpTo("$read");
+                serverCountsHighlights(1);
+                vi.mocked(client.getPushActionsForEvent).mockImplementation(
+                    (event) => ({ notify: true, tweaks: { highlight: event.getId() === "$rule" } }) as any,
+                );
+
+                const vm = await createStartedViewModel();
+
+                expect(vm.getSnapshot().unreadMentions).toBe(1);
+            });
+
+            it("does not count the reader's own messages, or any where the server counts no highlights", async () => {
+                seedTimeline([makeMessage("$read"), makeMention("$mine", { user: USER_ID }), makeMention("$m")]);
+                markReadUpTo("$read");
+                serverCountsHighlights(0);
+
+                const vm = await createStartedViewModel();
+
+                expect(vm.getSnapshot().unreadMentions).toBe(0);
+            });
+
+            it("goes to the oldest first, and to the next on the next tap, the count falling as it goes", async () => {
+                seedTimeline([
+                    makeMessage("$read"),
+                    makeMention("$m2", { ts: 20 }),
+                    makeMention("$m1", { ts: 10 }),
+                    makeMention("$m3", { ts: 30 }),
+                ]);
+                markReadUpTo("$read");
+                serverCountsHighlights(3);
+                const vm = await createStartedViewModel();
+                vm.onAnchorReached();
+                const scrollNow = vi.fn();
+
+                vm.onJumpToUnreadMention(scrollNow);
+                expect(scrollNow).toHaveBeenLastCalledWith({ targetKey: "$m1", align: "center" });
+                expect(vm.getSnapshot().unreadMentions).toBe(2);
+
+                vm.onJumpToUnreadMention(scrollNow);
+                expect(scrollNow).toHaveBeenLastCalledWith({ targetKey: "$m2", align: "center" });
+
+                vm.onJumpToUnreadMention(scrollNow);
+                expect(scrollNow).toHaveBeenLastCalledWith({ targetKey: "$m3", align: "center" });
+                expect(vm.getSnapshot().unreadMentions).toBe(0);
+
+                // Nothing left: a stray tap goes nowhere.
+                vm.onJumpToUnreadMention(scrollNow);
+                expect(scrollNow).toHaveBeenCalledTimes(3);
+            });
+
+            it("counts a mention as seen once it has been on screen", async () => {
+                seedTimeline([makeMessage("$read"), makeMention("$m1", { ts: 10 }), makeMention("$m2", { ts: 20 })]);
+                markReadUpTo("$read");
+                serverCountsHighlights(2);
+                const vm = await createStartedViewModel();
+                vm.onAnchorReached();
+                const items = vm.getSnapshot().items;
+
+                vm.onVisibleRangeChanged(indexOfKey(items, "$m1"), indexOfKey(items, "$m1"));
+
+                expect(vm.getSnapshot().unreadMentions).toBe(1);
+                const scrollNow = vi.fn();
+                vm.onJumpToUnreadMention(scrollNow);
+                expect(scrollNow).toHaveBeenCalledWith({ targetKey: "$m2", align: "center" });
+            });
+
+            it("does not count a mention as seen because the room is behind another one", async () => {
+                seedTimeline([makeMessage("$read"), makeMention("$m1")]);
+                markReadUpTo("$read");
+                serverCountsHighlights(1);
+                const vm = await createStartedViewModel();
+                vm.onAnchorReached();
+                vm.setActive(false);
+
+                vm.onVisibleRangeChanged(0, vm.getSnapshot().items.length - 1);
+
+                expect(vm.getSnapshot().unreadMentions).toBe(1);
+            });
+
+            it("loads the message when it is not among those loaded, to scroll to it once it is", async () => {
+                seedTimeline([makeMessage("$read"), makeMention("$m1")]);
+                markReadUpTo("$read");
+                serverCountsHighlights(1);
+                const vm = await createStartedViewModel();
+                vm.onAnchorReached();
+                // Not in the list the view has, as when the window has since moved on.
+                (vm as any).baseItems = [];
+                (vm as any).republish("test");
+                const scrollNow = vi.fn();
+
+                vm.onJumpToUnreadMention(scrollNow);
+
+                expect(scrollNow).not.toHaveBeenCalled();
+                await vi.waitFor(() =>
+                    expect(vm.getSnapshot().pendingAnchor).toEqual({ targetKey: "$m1", align: "center" }),
+                );
+            });
+
+            it("adds a mention that arrives while the reader is further back", async () => {
+                seedTimeline([makeMessage("$a"), makeMessage("$b")]);
+                const vm = await createStartedViewModel();
+                vm.onAnchorReached();
+                vm.onAtBottomStateChange(false);
+
+                arriveLive(makeMention("$m1"));
+
+                expect(vm.getSnapshot().unreadMentions).toBe(1);
+            });
+
+            it("does not add one that arrives in front of a reader at the bottom: they are reading it", async () => {
+                seedTimeline([makeMessage("$a"), makeMessage("$b")]);
+                const vm = await createStartedViewModel();
+                vm.onAnchorReached();
+                vm.onAtBottomStateChange(true);
+
+                arriveLive(makeMention("$m1"));
+
+                expect(vm.getSnapshot().unreadMentions).toBe(0);
+            });
+
+            it("takes one off that is redacted", async () => {
+                seedTimeline([makeMessage("$read"), makeMention("$m1")]);
+                markReadUpTo("$read");
+                serverCountsHighlights(1);
+                const vm = await createStartedViewModel();
+                expect(vm.getSnapshot().unreadMentions).toBe(1);
+
+                room.emit(
+                    RoomEvent.Redaction,
+                    new MatrixEvent({ type: EventType.RoomRedaction, redacts: "$m1", room_id: ROOM_ID }),
+                    room,
+                );
+
+                expect(vm.getSnapshot().unreadMentions).toBe(0);
+            });
+        });
+
+        describe("reactions", () => {
+            it("counts the reader's messages that others reacted to since they read, once each", async () => {
+                seedTimeline([
+                    makeMessage("$read"),
+                    makeMessage("$mine", { user: USER_ID, ts: 10 }),
+                    makeMessage("$theirs", { user: BOB }),
+                    makeReaction("$r1", "$mine"),
+                    makeReaction("$r2", "$mine", "@carol:example.org"),
+                    makeReaction("$r3", "$theirs"),
+                    makeReaction("$r4", "$mine", USER_ID),
+                ]);
+                markReadUpTo("$read");
+
+                const vm = await createStartedViewModel();
+
+                expect(vm.getSnapshot().unreadReactions).toBe(1);
+            });
+
+            it("does not count a reaction from before the reader read", async () => {
+                seedTimeline([
+                    makeMessage("$mine", { user: USER_ID }),
+                    makeReaction("$r1", "$mine"),
+                    makeMessage("$read", { user: BOB }),
+                ]);
+                markReadUpTo("$read");
+
+                const vm = await createStartedViewModel();
+
+                expect(vm.getSnapshot().unreadReactions).toBe(0);
+            });
+
+            it("goes to the reacted message, oldest first, and on to the next on the next tap", async () => {
+                seedTimeline([
+                    makeMessage("$read"),
+                    makeMessage("$mine2", { user: USER_ID, ts: 20 }),
+                    makeMessage("$mine1", { user: USER_ID, ts: 10 }),
+                    makeReaction("$r2", "$mine2"),
+                    makeReaction("$r1", "$mine1"),
+                ]);
+                markReadUpTo("$read");
+                const vm = await createStartedViewModel();
+                vm.onAnchorReached();
+                const scrollNow = vi.fn();
+                expect(vm.getSnapshot().unreadReactions).toBe(2);
+
+                vm.onJumpToUnreadReaction(scrollNow);
+                expect(scrollNow).toHaveBeenLastCalledWith({ targetKey: "$mine1", align: "center" });
+                expect(vm.getSnapshot().unreadReactions).toBe(1);
+
+                vm.onJumpToUnreadReaction(scrollNow);
+                expect(scrollNow).toHaveBeenLastCalledWith({ targetKey: "$mine2", align: "center" });
+                expect(vm.getSnapshot().unreadReactions).toBe(0);
+            });
+
+            it("counts the reacted message as seen once it is on screen", async () => {
+                seedTimeline([
+                    makeMessage("$read"),
+                    makeMessage("$mine", { user: USER_ID }),
+                    makeReaction("$r1", "$mine"),
+                ]);
+                markReadUpTo("$read");
+                const vm = await createStartedViewModel();
+                vm.onAnchorReached();
+                const at = indexOfKey(vm.getSnapshot().items, "$mine");
+
+                vm.onVisibleRangeChanged(at, at);
+
+                expect(vm.getSnapshot().unreadReactions).toBe(0);
+            });
+
+            it("adds a reaction that arrives to a message that is out of sight, not to one that is on screen", async () => {
+                seedTimeline([
+                    makeMessage("$mine1", { user: USER_ID, ts: 1 }),
+                    makeMessage("$mine2", { user: USER_ID, ts: 2 }),
+                    makeMessage("$x", { user: BOB }),
+                ]);
+                const vm = await createStartedViewModel();
+                vm.onAnchorReached();
+                const items = vm.getSnapshot().items;
+                vm.onAtBottomStateChange(false);
+                vm.onVisibleRangeChanged(indexOfKey(items, "$mine2"), indexOfKey(items, "$x"));
+
+                arriveLive(makeReaction("$r-on", "$mine2"));
+                expect(vm.getSnapshot().unreadReactions).toBe(0);
+
+                arriveLive(makeReaction("$r-off", "$mine1"));
+                expect(vm.getSnapshot().unreadReactions).toBe(1);
+            });
+
+            it("takes a message off once its only reaction is redacted", async () => {
+                seedTimeline([
+                    makeMessage("$read"),
+                    makeMessage("$mine", { user: USER_ID }),
+                    makeReaction("$r1", "$mine"),
+                ]);
+                markReadUpTo("$read");
+                const vm = await createStartedViewModel();
+                expect(vm.getSnapshot().unreadReactions).toBe(1);
+
+                room.emit(
+                    RoomEvent.Redaction,
+                    new MatrixEvent({ type: EventType.RoomRedaction, redacts: "$r1", room_id: ROOM_ID }),
+                    room,
+                );
+
+                expect(vm.getSnapshot().unreadReactions).toBe(0);
+            });
         });
     });
 

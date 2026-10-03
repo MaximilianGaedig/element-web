@@ -160,6 +160,26 @@ describe("SharedMediaLoader with the server's media index", () => {
         expect([...state.empty]).toEqual([120, 122]);
     });
 
+    it("is done once every place the month counts promise has been answered", async () => {
+        const a = msg({ msgtype: "m.image", body: "a", url: "mxc://x/a" }, 300);
+        const b = msg({ msgtype: "m.image", body: "b", url: "mxc://x/b" }, 200);
+        // Four places in all: two items and two the server holds nothing to show for.
+        const months = [{ month: "2026-09", count: 4, before_ts: 400 }];
+        const { loader } = setup({
+            media: [
+                { chunk: [], months } as any,
+                { chunk: [a.event], positions: [0], next_position: 2 } as any,
+                { chunk: [b.event], positions: [3], next_position: 4 } as any,
+            ],
+        });
+        await loader.monthCounts("media");
+
+        await loader.loadPlaces("media", 0, 2);
+        expect(loader.state("media").done).toBe(false);
+        await loader.loadPlaces("media", 2, 2);
+        expect(loader.state("media").done).toBe(true);
+    });
+
     it("opens the list at a date instead of paging back to it", async () => {
         const march = msg({ msgtype: "m.image", body: "march", url: "mxc://x/m" }, 300);
         const { loader, authedRequest } = setup({ media: [{ chunk: [march.event], end: "t-march" }] });

@@ -144,6 +144,8 @@
         "jump_to_date": "Scroll to date",
         "jump_to_date_beginning": "The beginning of the room",
         "jump_to_date_prompt": "Pick a date to scroll to",
+        "jump_to_mention": "Scroll to next unread mention",
+        "jump_to_reaction": "Scroll to next unread reaction",
         "knock_sent": "Request to join sent",
         "pinned_message_badge": "Pinned message",
         "status_bar": {

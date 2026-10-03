@@ -66,7 +66,7 @@ import {
 import { readKey } from "../../../utils/contacts/identity";
 import { PersonCard } from "./PersonCard";
 import { callInRoom, messagePerson as openChatWith } from "../../../utils/contacts/actions";
-import { CallMark, readDuration, timeOfDay } from "./CallMark";
+import { CallMark, callDetail, callTooltip, timeOfDay } from "./CallMark";
 import { ContactFace } from "./ContactFace";
 import { usePersonPresence } from "../../../utils/contacts/presence";
 import { filingName } from "../../../utils/contacts/names";
@@ -345,16 +345,11 @@ function CallRow({
 }): JSX.Element {
     const missed = call.outcome === "missed" && !call.outgoing;
     /*
-     * How long it ran, and whether it was a group. Not the direction or the outcome: the coloured mark in
-     * front of this says both, and not the network either - the face carries that, as it does in the room
-     * list.
+     * Whether it is still going, who was in it and how long it ran. Not the direction or the outcome: the
+     * coloured mark in front of this says both, and not the network either - the face carries that, as it
+     * does in the room list.
      */
-    const detail = [
-        call.seconds !== undefined ? readDuration(call.seconds) : undefined,
-        call.group ? _t("contacts|call_group") : undefined,
-    ]
-        .filter(Boolean)
-        .join(" · ");
+    const detail = callDetail(call).join(" · ");
 
     /*
      * One row, one control.
@@ -376,6 +371,7 @@ function CallRow({
             <button
                 type="button"
                 className={`mx_Contacts_row${missed ? " mx_Contacts_row_missed" : ""}`}
+                title={callTooltip(call)}
                 onClick={() => onOpen(call)}
             >
                 <span className="mx_Contacts_faceWith">
@@ -396,6 +392,12 @@ function CallRow({
                 </span>
                 <span className="mx_Contacts_when">{timeOfDay(call.ts)}</span>
             </button>
+            {call.ongoing && (
+                /* Beside the row, not in it: a button inside a button is not one control. */
+                <button type="button" className="mx_Contacts_joinCall" onClick={() => onCallBack(call, call.video)}>
+                    {_t("contacts|call_join")}
+                </button>
+            )}
             <Menu
                 className="mx_Contacts_menu"
                 title={call.title}
@@ -413,7 +415,7 @@ function CallRow({
                 <MenuItem
                     hideChevron
                     Icon={VoiceCallIcon}
-                    label={_t("contacts|call_back")}
+                    label={call.ongoing ? _t("contacts|call_join_voice") : _t("contacts|call_back")}
                     onSelect={() => onCallBack(call, false)}
                 />
                 <MenuItem
