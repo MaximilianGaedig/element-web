@@ -35,6 +35,9 @@ const ACTIVITY_TYPES = new Set<string>([
 ]);
 
 /** Something said in the room, whoever or whatever said it: a message that is not an edit of another. */
+/** Below this a bump_stamp is a position in the server's stream, not a time: 2001-09-09 in milliseconds. */
+const MIN_TIMESTAMP = 1_000_000_000_000;
+
 function isSaid(event: MatrixEvent): boolean {
     if (!ACTIVITY_TYPES.has(event.getType()) || event.isRedacted()) return false;
     // An edit changes something already said.
@@ -72,12 +75,15 @@ export const getLastTimestamp = (r: Room, userId: string): number => {
     const mainTimelineLastTs = ((): number => {
         const timeline = r.getLiveTimeline().getEvents();
 
-        // MSC4186: Simplified Sliding Sync sets this.
-        // If it's present, sort by it.
+        /*
+         * Fork: MSC4186's bump_stamp only orders rooms the way the server sees them - by where the last
+         * message sits in its stream, which a bridge catching up on old history moves forward too. It is a
+         * floor below what the timeline says, and only when it is a time (our server sends the bumping
+         * event's timestamp); a stream position cannot be set against the timestamps everything else here
+         * is, and would sort every room that has one apart from every room that has not.
+         */
         const bumpStamp = r.getBumpStamp();
-        if (bumpStamp) {
-            return bumpStamp;
-        }
+        const bumpedAt = bumpStamp && bumpStamp >= MIN_TIMESTAMP ? bumpStamp : 0;
 
         // If the room hasn't been joined yet, it probably won't have a timeline to
         // parse. We'll still fall back to the timeline if this fails, but chances
@@ -125,9 +131,10 @@ export const getLastTimestamp = (r: Room, userId: string): number => {
         const remembered = rememberedActivity(r.roomId);
         if (latest) {
             rememberActivity(r.roomId, latest);
-            return Math.max(latest, remembered ?? 0);
+            return Math.max(latest, remembered ?? 0, bumpedAt);
         }
-        if (remembered !== undefined) return remembered;
+        if (remembered !== undefined) return Math.max(remembered, bumpedAt);
+        if (bumpedAt) return bumpedAt;
         /*
          * Nothing a person said, but something was said: a notice. It does not move a room up when it
          * arrives - that is what not counting it as activity is for - but where nothing else is known it

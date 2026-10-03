@@ -8,7 +8,7 @@ Please see LICENSE files in the repository root for full details.
 // @vitest-environment happy-dom
 
 import { describe, it, expect, vi } from "vitest";
-import { Room, type RoomState } from "matrix-js-sdk/src/matrix";
+import { EventTimeline, Room, type RoomState } from "matrix-js-sdk/src/matrix";
 import { KnownMembership } from "matrix-js-sdk/src/types";
 import { mkEvent, mkMessage, mkRoom, stubClient } from "test-utils";
 
@@ -66,29 +66,39 @@ describe("getLastTimestamp", () => {
         expect(getLastTimestamp(room, "@john:matrix.org")).toBe(500);
     });
 
-    it("should return bump stamp when using sliding sync", () => {
-        const cli = stubClient();
-        const room = new Room("room123", cli, "@john:matrix.org");
+    describe("with sliding sync's bump_stamp", () => {
+        const T = 1_760_000_000_000; // a time, in milliseconds
+        const roomWith = (id: string, bumpStamp: number, ...ts: number[]): Room => {
+            const room = new Room(id, stubClient(), "@john:matrix.org");
+            vi.spyOn(room, "getMyMembership").mockReturnValue(KnownMembership.Join);
+            vi.spyOn(room, "getBumpStamp").mockReturnValue(bumpStamp);
+            room.addLiveEvents(
+                ts.map((t) => mkMessage({ room: id, msg: "hi", user: "@alice:matrix.org", ts: t, event: true })),
+                { addToState: true },
+            );
+            return room;
+        };
 
-        const event1 = mkMessage({
-            room: room.roomId,
-            msg: "Hello world!",
-            user: "@alice:matrix.org",
-            ts: 5,
-            event: true,
-        });
-        const event2 = mkMessage({
-            room: room.roomId,
-            msg: "Howdy!",
-            user: "@bob:matrix.org",
-            ts: 10,
-            event: true,
+        // A position in the server's stream says nothing about when: rooms with one would sort apart from
+        // rooms without, and a bridge's backfill moves it forward.
+        it("ignores one that is a position in the server's stream, not a time", () => {
+            expect(getLastTimestamp(roomWith("!stream:x", 41514013, T - 10, T), "@john:matrix.org")).toBe(T);
         });
 
-        vi.spyOn(room, "getMyMembership").mockReturnValue(KnownMembership.Join);
-        vi.spyOn(room, "getBumpStamp").mockReturnValue(314);
-        room.addLiveEvents([event1, event2], { addToState: true });
-        expect(getLastTimestamp(room, "@john:matrix.org")).toBe(314);
+        it("goes by the newest message when that is newer", () => {
+            expect(getLastTimestamp(roomWith("!newer:x", T - 1000, T - 10, T), "@john:matrix.org")).toBe(T);
+        });
+
+        // The message that bumped the room may not be among the few events sliding sync gave.
+        it("goes by the bump when no message as new is loaded", () => {
+            expect(getLastTimestamp(roomWith("!bumped:x", T + 5000, T), "@john:matrix.org")).toBe(T + 5000);
+        });
+
+        it("uses the bump when nothing loaded counts", () => {
+            const room = roomWith("!quiet:x", T + 7000);
+            room.getLiveTimeline().setPaginationToken("back", EventTimeline.BACKWARDS);
+            expect(getLastTimestamp(room, "@john:matrix.org")).toBe(T + 7000);
+        });
     });
 
     /*
