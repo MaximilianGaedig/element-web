@@ -17,7 +17,7 @@ import MatrixClientContext from "../../../contexts/MatrixClientContext";
 import { bridgeHealthOf } from "../../../utils/bridgeLogins";
 import { onBridgeStatusChange } from "../../../utils/chatHistory";
 import { deleteFailed, resendFailed, useFailedSends } from "../../../utils/room/failedSends";
-import { useReadByOthers } from "../../../utils/telegram/readByOthers";
+import { useAcceptedByBridge, useReadByOthers } from "../../../utils/telegram/readByOthers";
 
 /**
  * Whether this event's room comes through a bridge that says it is not connected.
@@ -73,6 +73,7 @@ export default function TelegramTimeSlot({
     const failed = useFailedSends(mxEvent, room);
     // Worked out here, from the room, so it holds in the new timeline too, which never passed it in.
     const readFromRoom = useReadByOthers(room, mxEvent, isOwnEvent && !readByOthers);
+    const bridgeAccepted = useAcceptedByBridge(room, mxEvent, isOwnEvent && bridgeDown && !bridgeStatus);
     const sendState =
         failed.length > 0
             ? "error"
@@ -81,6 +82,7 @@ export default function TelegramTimeSlot({
                     eventSendStatus,
                     bridgeStatus: bridgeStatus?.status,
                     bridgeDelivered: !!bridgeStatus?.delivered_to_users?.length,
+                    bridgeAccepted,
                     readByOthers: readByOthers || readFromRoom,
                     bridgeDown,
                 })

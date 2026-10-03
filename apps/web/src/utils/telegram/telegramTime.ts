@@ -29,6 +29,11 @@ export interface TelegramSendStateInput {
     bridgeStatus?: "SUCCESS" | "PENDING" | "FAIL_RETRIABLE" | "FAIL_PERMANENT";
     /** Whether the bridge reported the message as delivered to someone (delivered_to_users). */
     bridgeDelivered?: boolean;
+    /**
+     * Whether the bridge's bot has a receipt on it: the bridge got it onto its network. The same as a
+     * SUCCESS status, which bridges leave out of the room when they send these instead.
+     */
+    bridgeAccepted?: boolean;
     /** Whether anyone other than us has a read receipt at or after this event. */
     readByOthers?: boolean;
     /**
@@ -43,6 +48,7 @@ export function getTelegramSendState({
     eventSendStatus,
     bridgeStatus,
     bridgeDelivered,
+    bridgeAccepted,
     readByOthers,
     bridgeDown,
 }: TelegramSendStateInput): TelegramSendState {
@@ -64,7 +70,7 @@ export function getTelegramSendState({
      * Last, so anything the bridge actually reported wins over what we inferred, and so a message
      * somebody has demonstrably read is never walked back to sending.
      */
-    if (bridgeDown && bridgeStatus === undefined) return "sending";
+    if (bridgeDown && bridgeStatus === undefined && !bridgeAccepted) return "sending";
     return "sent";
 }
 

@@ -57,6 +57,8 @@ describe("getTelegramSendState", () => {
         // A bridge can report on a message and be disconnected a moment later; what it said about
         // this message still stands. Only silence is filled in from the health.
         expect(getTelegramSendState({ bridgeStatus: "SUCCESS", bridgeDown: true })).toBe("sent");
+        // A bridge that leaves successes out of the room says so with its bot's receipt instead.
+        expect(getTelegramSendState({ bridgeAccepted: true, bridgeDown: true })).toBe("sent");
         expect(getTelegramSendState({ bridgeDelivered: true, bridgeStatus: "SUCCESS", bridgeDown: true })).toBe(
             "delivered",
         );

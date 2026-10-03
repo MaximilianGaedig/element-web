@@ -73,3 +73,33 @@ export function useReadByOthers(room: Room | null | undefined, event: MatrixEven
     const read = useCallback(() => !!room && enabled && isReadByOthers(room, event), [room, event, enabled]);
     return useSyncExternalStore(subscribe, read, read);
 }
+
+/**
+ * Whether a bridge's bot has a receipt at or after `event`: the bridge got it onto its network. Bridges
+ * say so this way (delivery_receipts) rather than with a status event after every message, and it is
+ * never a read - see {@link othersReadUpTo}.
+ */
+export function isAcceptedByBridge(room: Room, event: MatrixEvent): boolean {
+    const eventId = event.getId();
+    if (!eventId) return false;
+    for (const bot of getBridgeBots(room)) {
+        if (room.hasUserReadEvent(bot, eventId)) return true;
+    }
+    return false;
+}
+
+/** {@link isAcceptedByBridge}, kept current as receipts arrive. */
+export function useAcceptedByBridge(room: Room | null | undefined, event: MatrixEvent, enabled: boolean): boolean {
+    const subscribe = useCallback(
+        (listener: () => void) => {
+            if (!room || !enabled) return () => {};
+            room.on(RoomEvent.Receipt, listener);
+            return () => {
+                room.off(RoomEvent.Receipt, listener);
+            };
+        },
+        [room, enabled],
+    );
+    const accepted = useCallback(() => !!room && enabled && isAcceptedByBridge(room, event), [room, event, enabled]);
+    return useSyncExternalStore(subscribe, accepted, accepted);
+}
