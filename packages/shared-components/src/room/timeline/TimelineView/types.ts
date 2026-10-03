@@ -73,6 +73,13 @@ export interface NavigationAnchor {
     targetKey: string;
     /** Where in the viewport to place the target. */
     align: AnchorAlign;
+    /**
+     * The rows around the target may not have been measured: they arrived while the timeline was off
+     * screen, where nothing is laid out. One scroll to where they are estimated to be lands somewhere
+     * else once they are, so the view steers towards the target until it has settled there, as it
+     * does when the timeline is first shown.
+     */
+    settle?: boolean;
 }
 
 /**

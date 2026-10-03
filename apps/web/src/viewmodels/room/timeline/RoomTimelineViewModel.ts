@@ -1291,10 +1291,34 @@ export class RoomTimelineViewModel
             if (this.started && this.snapshot.current.items.length > 0) {
                 this.freezeReadMarkerForSession();
                 const items = this.buildItems();
+                /*
+                 * And it opens where Telegram opens a chat: at the first message not yet read, or at the
+                 * newest - not wherever the last visit's scrolling was left. That place was kept, while
+                 * the messages that arrived meanwhile were added out of sight and never measured, so the
+                 * reader came back to the old place with the new messages missing until they scrolled.
+                 */
+                const marker = items.find((item) => item.kind === "read-marker");
+                const atLiveEnd = this.windowAtLiveEnd();
+                let pendingAnchor: NavigationAnchor | null = null;
+                if (marker) pendingAnchor = { targetKey: marker.key, align: "start", settle: true };
+                else if (atLiveEnd) pendingAnchor = { targetKey: items[items.length - 1].key, align: "end", settle: true };
                 this.mergeSnapshot(
-                    { items, canJumpToReadMarker: this.computeCanJumpToReadMarker(items) },
+                    {
+                        items,
+                        canJumpToReadMarker: this.computeCanJumpToReadMarker(items),
+                        ...(pendingAnchor ? { pendingAnchor } : {}),
+                    },
                     "back-on-screen",
                 );
+                // Neither is loaded: the first unread is further on than the window reaches, or the
+                // reader had gone back into history and the newest messages were let go.
+                if (!pendingAnchor) {
+                    void this.load(
+                        this.frozenMarkerEventId
+                            ? { kind: "permalink", eventId: this.frozenMarkerEventId }
+                            : { kind: "live" },
+                    );
+                }
             }
             this.sendAutoReadReceipt();
         } else {

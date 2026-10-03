@@ -1056,6 +1056,54 @@ describe("RoomTimelineViewModel", () => {
             expect(vi.mocked(client.sendReadReceipt).mock.calls[0][0]?.getId()).toBe("$b");
         });
 
+        /** A message from someone else arriving now, as sync delivers it. */
+        const arrive = (id: string): void => {
+            const event = makeMessage(id, { user: "@bob:example.org" });
+            room.getUnfilteredTimelineSet().addLiveEvent(event, { addToState: false });
+            room.emit(RoomEvent.Timeline, event, room, false, false, {
+                timeline: room.getLiveTimeline(),
+                liveEvent: true,
+            } as any);
+        };
+
+        // Telegram opens a chat at the newest message, or at the first unread - never at an old scroll position.
+        it("comes back at the newest message, settling there, wherever the last visit left it", async () => {
+            seedTimeline([makeMessage("$a"), makeMessage("$b"), makeMessage("$c")]);
+            const vm = await createStartedViewModel();
+            vm.onAnchorReached();
+            // Scrolled up to the first message, then away
+            vm.onAtBottomStateChange(false);
+            vm.onVisibleRangeChanged(0, 0);
+            vm.setActive(false);
+
+            vm.setActive(true);
+
+            expect(vm.getSnapshot().pendingAnchor).toEqual({ targetKey: "$c", align: "end", settle: true });
+        });
+
+        it("comes back at the first message that arrived while it was away", async () => {
+            const me = client.getUserId()!;
+            seedTimeline([makeMessage("$mine", { user: me }), makeMessage("$theirs", { user: "@bob:example.org" })]);
+            room.addAccountData([
+                new MatrixEvent({ type: EventType.FullyRead, room_id: ROOM_ID, content: { event_id: "$mine" } }),
+            ]);
+            const vm = await createStartedViewModel();
+            vm.onAnchorReached();
+            // Read to the end, then away while two more come in
+            vm.onVisibleRangeChanged(0, vm.getSnapshot().items.length - 1);
+            vm.setActive(false);
+            arrive("$new1");
+            arrive("$new2");
+            await vi.waitFor(() => expect(eventKeys(vm.getSnapshot().items)).toContain("$new2"));
+
+            vm.setActive(true);
+
+            const items = vm.getSnapshot().items;
+            const marker = items.findIndex((item) => item.kind === "read-marker");
+            expect(items[marker + 1]?.key).toBe("$new1");
+            expect(vm.getSnapshot().pendingAnchor).toEqual({ targetKey: "read-marker", align: "start", settle: true });
+        });
+
         it("going off screen moves the unread marker as leaving the room did", async () => {
             seedTimeline([makeMessage("$a"), makeMessage("$b")]);
             const vm = await createStartedViewModel();

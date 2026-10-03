@@ -607,6 +607,43 @@ export function TimelineView({
             if (coldRafRef.current !== undefined) cancelAnimationFrame(coldRafRef.current);
         };
     }, []);
+    // Steers to the row at `idx` until it sits where `align` puts it, then goes live. TanStack carries
+    // out the scroll: it keeps correcting the target as rows are measured and their real heights
+    // become known. We must not set the scroll position ourselves as well - two things moving the
+    // viewport at once end up fighting.
+    const settleAt = useCallback(
+        (idx: number, align: AnchorAlign): void => {
+            phaseRef.current = "placing";
+            if (coldRafRef.current !== undefined) cancelAnimationFrame(coldRafRef.current);
+            virtualizer.scrollToIndex(idx, { align, behavior: "auto" });
+            // Now watch each frame until that row actually reaches the position it was heading
+            // for, and reveal the timeline once it has. requestAnimationFrame passes the frame's
+            // timestamp, so we can measure how long we have been waiting in real time and give up
+            let startedAt: number | undefined;
+            const tick = (now: number): void => {
+                startedAt ??= now;
+                const info = virtualizer.getOffsetForIndex(idx, align);
+                const offset = virtualizer.scrollOffset ?? 0;
+                const landed = info !== undefined && Math.abs(info[0] - offset) <= 1.5;
+                if (landed || now - startedAt >= REVEAL_TIMEOUT_MS) {
+                    coldRafRef.current = undefined;
+                    phaseRef.current = "live";
+                    // Landed on the newest message: the reader is at the end, and is kept there.
+                    if (align === "end" && idx === itemsRef.current.length - 1) atEndRef.current = true;
+                    if (!revealedRef.current) {
+                        revealedRef.current = true;
+                        setRevealed(true);
+                    }
+                    vm.onAnchorReached();
+                    return;
+                }
+                coldRafRef.current = requestAnimationFrame(tick);
+            };
+            coldRafRef.current = requestAnimationFrame(tick);
+        },
+        [virtualizer, vm],
+    );
+
     useLayoutEffect(() => {
         if (phaseRef.current !== "init" || items.length === 0) return;
         // Move out of "init" immediately, so that if more messages arrive while we are
@@ -618,33 +655,8 @@ export function TimelineView({
         const list = itemsRef.current;
         let idx = anchor ? list.findIndex((i) => i.key === anchor.targetKey) : -1;
         if (idx < 0) idx = list.length - 1;
-        const align: AnchorAlign = anchor?.align ?? "end";
-        // Let TanStack carry out this scroll: it keeps correcting the target as rows are
-        // measured and their real heights become known. We must not set the scroll position
-        // ourselves as well — two things moving the viewport at once end up fighting.
-        if (idx >= 0) virtualizer.scrollToIndex(idx, { align, behavior: "auto" });
-        // Now watch each frame until that row actually reaches the position it was heading
-        // for, and reveal the timeline once it has. requestAnimationFrame passes the frame's
-        // timestamp, so we can measure how long we have been waiting in real time and give up
-        let startedAt: number | undefined;
-        const tick = (now: number): void => {
-            startedAt ??= now;
-            const info = virtualizer.getOffsetForIndex(idx, align);
-            const offset = virtualizer.scrollOffset ?? 0;
-            const landed = info !== undefined && Math.abs(info[0] - offset) <= 1.5;
-            if (landed || now - startedAt >= REVEAL_TIMEOUT_MS) {
-                phaseRef.current = "live";
-                if (!revealedRef.current) {
-                    revealedRef.current = true;
-                    setRevealed(true);
-                }
-                vm.onAnchorReached();
-                return;
-            }
-            coldRafRef.current = requestAnimationFrame(tick);
-        };
-        coldRafRef.current = requestAnimationFrame(tick);
-    }, [items.length, virtualizer, vm]);
+        settleAt(idx, anchor?.align ?? "end");
+    }, [items.length, settleAt]);
 
     // Tracks whether the list is moving, which is what decides if the floating date is
     // shown. TanStack has an `isScrolling` of its own, but it drops it 150ms after the
@@ -691,6 +703,15 @@ export function TimelineView({
         const anchor = snapshotRef.current.pendingAnchor;
         if (!anchor) {
             lastPlacedAnchorKeyRef.current = null;
+            return;
+        }
+        if (anchor.settle) {
+            // Coming back to a timeline that was off screen: placed as on first load.
+            const idx = itemsRef.current.findIndex((i) => i.key === anchor.targetKey);
+            if (idx >= 0) {
+                lastPlacedAnchorKeyRef.current = anchor.targetKey;
+                settleAt(idx, anchor.align);
+            }
             return;
         }
         if (lastPlacedAnchorKeyRef.current !== anchor.targetKey) {

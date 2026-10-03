@@ -292,6 +292,45 @@ describe("<TimelineView />", () => {
         });
     });
 
+    // A chat switched away from stays mounted but is not laid out; what arrives meanwhile is never measured.
+    describe("coming back on screen", () => {
+        const TALL = 120;
+        const tallRow = (item: TimelineItem): React.ReactNode => (
+            <div data-testid={`row-${item.key}`} style={{ height: item.key.startsWith("new") ? TALL : ROW_HEIGHT }}>
+                {item.key}
+            </div>
+        );
+        const Timeline = ({ vm, away }: { vm: TimelineViewModel; away: boolean }): React.ReactNode => (
+            <div style={{ height: VIEWPORT_HEIGHT, width: 320, contentVisibility: away ? "hidden" : "visible" }}>
+                <TimelineView vm={vm} renderItem={tallRow} />
+            </div>
+        );
+        const newRows = (count: number): TimelineItem[] =>
+            eventItems(count).map((item, i) => ({ ...item, key: `new-${i}` }));
+
+        it("settles on the newest message, though the ones that came while away were never measured", async () => {
+            const { vm, actions, update } = makeFakeVm({ items: eventItems(30) });
+            const { rerender } = render(<Timeline vm={vm} away={false} />);
+            const scroller = screen.getByTestId("timeline-scroller");
+            await waitFor(() => expect(actions.onAnchorReached).toHaveBeenCalled(), { timeout: 5000 });
+            await scrollTo(scroller, 100);
+
+            // Away, while eight tall messages arrive
+            rerender(<Timeline vm={vm} away={true} />);
+            const items = [...eventItems(30), ...newRows(8)];
+            update({ items });
+            actions.onAnchorReached.mockClear();
+
+            // Back, asked to settle at the newest
+            rerender(<Timeline vm={vm} away={false} />);
+            update({ pendingAnchor: { targetKey: "new-7", align: "end", settle: true } });
+
+            await waitFor(() => expect(actions.onAnchorReached).toHaveBeenCalled(), { timeout: 5000 });
+            expect(scroller.scrollTop).toBeCloseTo(scroller.scrollHeight - scroller.clientHeight, 0);
+            expect(screen.getByTestId("row-new-7")).toBeVisible();
+        });
+    });
+
     describe("the space kept clear at the end changing, as a composer growing does", () => {
         const endOf = (scroller: HTMLElement): number => scroller.scrollHeight - scroller.clientHeight;
         const Timeline = ({ vm, paddingEnd }: { vm: TimelineViewModel; paddingEnd: number }): React.ReactNode => (
