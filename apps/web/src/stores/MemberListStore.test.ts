@@ -26,7 +26,15 @@ describe("MemberListStore", () => {
     let client: MatrixClient;
     let room: Room;
 
+    // Taken before any test spies on it.
+    const realGetValue = SettingsStore.getValue.bind(SettingsStore);
+
     beforeEach(() => {
+        // Sliding sync is the default now; these tests are of the other sync unless they say otherwise.
+        vi.spyOn(SettingsStore, "getValue").mockImplementation(((name: string, ...rest: unknown[]) =>
+            name === "feature_simplified_sliding_sync"
+                ? false
+                : (realGetValue as (...a: unknown[]) => unknown)(name, ...rest)) as typeof SettingsStore.getValue);
         const context = new TestSDKContext();
         client = stubClient();
         client.baseUrl = "https://invalid.base.url.here";

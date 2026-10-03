@@ -113,6 +113,8 @@ vi.mock("./WidgetStore", async () => {
 vi.mock("./widgets/WidgetLayoutStore");
 
 describe("RoomViewStore", function () {
+    // Taken before any test spies on it.
+    const realGetValue = SettingsStore.getValue.bind(SettingsStore);
     const userId = "@alice:server";
     const roomId = "!randomcharacters:aser.ver";
     const roomId2 = "!room2:example.com";
@@ -178,6 +180,11 @@ describe("RoomViewStore", function () {
 
     beforeEach(function () {
         vi.clearAllMocks();
+        // Sliding sync is the default now; these tests are of the other sync unless they say otherwise.
+        vi.spyOn(SettingsStore, "getValue").mockImplementation(((name: string, ...rest: unknown[]) =>
+            name === "feature_simplified_sliding_sync"
+                ? false
+                : (realGetValue as (...a: unknown[]) => unknown)(name, ...rest)) as typeof SettingsStore.getValue);
         mockClient.credentials = { userId: userId };
         mockClient.joinRoom.mockResolvedValue(room);
         mockClient.getRoom.mockImplementation((roomId?: string): Room | null => {
