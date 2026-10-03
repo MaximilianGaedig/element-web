@@ -92,6 +92,7 @@ export function mergeRoomData(
         // from it, and the state the new one leaves out (it may ask for less) is kept rather than lost.
         room.required_state = kept.required_state;
         room.timeline = kept.timeline;
+        room.prev_batch = kept.prev_batch;
     }
     const given = data as unknown as Record<string, unknown>;
     for (const key of SCALARS) {
@@ -116,13 +117,21 @@ export function mergeRoomData(
         timeline = [];
     }
     const seen = new Set(timeline.map((event) => event.event_id));
-    room.timeline = [...timeline, ...incoming.filter((event) => !seen.has(event.event_id))].slice(-CACHED_TIMELINE);
+    const merged = [...timeline, ...incoming.filter((event) => !seen.has(event.event_id))];
+    room.timeline = merged.slice(-CACHED_TIMELINE);
+    // The token for the history before the earliest kept event, while it is still the one the server gave
+    // with it: the next session's timeline goes back from there. Once that event is dropped (only the latest
+    // few are kept) the token would lead back from somewhere else, and there is none until the live sync
+    // sends one.
+    const earliest = room.timeline[0]?.event_id;
+    if (incoming.length && earliest === incoming[0].event_id) room.prev_batch = data.prev_batch;
+    else if (earliest !== timeline[0]?.event_id) room.prev_batch = undefined;
     return room;
 }
 
 /** What a cached room is replayed as: complete as far as it goes, with its earlier history to be asked for. */
 function asRoomData(room: CachedRoom): MSC3575RoomData {
-    return { ...room, name: room.name ?? "", initial: true, limited: true, num_live: 0, prev_batch: undefined };
+    return { ...room, name: room.name ?? "", initial: true, limited: true, num_live: 0, prev_batch: room.prev_batch };
 }
 
 function openDb(): Promise<IDBDatabase> {

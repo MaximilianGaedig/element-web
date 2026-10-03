@@ -104,6 +104,68 @@ describe("mergeRoomData", () => {
         expect(room.timeline.map((event) => event.event_id)).toEqual(["$9"]);
     });
 
+    // The next session's timeline goes back into the room's history from the earliest kept event.
+    describe("the token for the history before what is kept", () => {
+        it("is kept with the earliest event it was given with", () => {
+            let room = mergeRoomData(
+                undefined,
+                update({
+                    initial: true,
+                    limited: true,
+                    required_state: [],
+                    timeline: [message("$1")],
+                    prev_batch: "t1",
+                }),
+                keepListState,
+            );
+            expect(room.prev_batch).toBe("t1");
+            room = mergeRoomData(room, update({ required_state: [], timeline: [message("$2")] }), keepListState);
+            expect(room.prev_batch).toBe("t1");
+        });
+
+        it("is let go with that event, once newer ones push it out", () => {
+            let room = mergeRoomData(
+                undefined,
+                update({
+                    initial: true,
+                    limited: true,
+                    required_state: [],
+                    timeline: [message("$0")],
+                    prev_batch: "t0",
+                }),
+                keepListState,
+            );
+            const ids = Array.from({ length: CACHED_TIMELINE }, (_, i) => `$${i + 1}`);
+            room = mergeRoomData(
+                room,
+                update({ required_state: [], timeline: ids.map((id) => message(id)) }),
+                keepListState,
+            );
+            expect(room.timeline[0].event_id).toBe("$1");
+            expect(room.prev_batch).toBeUndefined();
+        });
+
+        it("is the new one when a timeline that does not carry on replaces what is kept", () => {
+            let room = mergeRoomData(
+                undefined,
+                update({
+                    initial: true,
+                    limited: true,
+                    required_state: [],
+                    timeline: [message("$1")],
+                    prev_batch: "t1",
+                }),
+                keepListState,
+            );
+            room = mergeRoomData(
+                room,
+                update({ limited: true, required_state: [], timeline: [message("$9")], prev_batch: "t9" }),
+                keepListState,
+            );
+            expect(room.prev_batch).toBe("t9");
+        });
+    });
+
     it("takes the names and counts as the server last gave them", () => {
         let room = mergeRoomData(
             undefined,
