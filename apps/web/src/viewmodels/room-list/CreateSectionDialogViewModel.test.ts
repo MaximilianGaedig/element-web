@@ -31,8 +31,9 @@ describe("CreateSectionDialogViewModel", () => {
             mkStubRoom("!second:matrix.org", "Second room", matrixClient),
             mkStubRoom("!other:matrix.org", "Something else", matrixClient),
         ];
-        // getLastTimestamp uses the bump stamp when it is set, which gives us control over recency.
-        rooms.forEach((room, i) => vi.mocked(room.getBumpStamp).mockReturnValue(i + 1));
+        // getLastTimestamp goes by the bump stamp when nothing newer is loaded, which gives us control over
+        // recency. Our server's is a time: when the room's newest message was sent.
+        rooms.forEach((room, i) => vi.mocked(room.getBumpStamp).mockReturnValue(1_760_000_000_000 + i));
         vi.mocked(matrixClient.getRoom).mockImplementation(
             (roomId) => rooms.find((room) => room.roomId === roomId) ?? null,
         );
