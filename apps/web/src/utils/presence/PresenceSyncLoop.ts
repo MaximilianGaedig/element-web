@@ -16,8 +16,8 @@ import {
 } from "matrix-js-sdk/src/matrix";
 import { logger as rootLogger } from "matrix-js-sdk/src/logger";
 
-import SettingsStore from "../../settings/SettingsStore";
 import { isPresenceEnabled } from "../presence";
+import { isSlidingSyncActive } from "../sync/slidingSyncActive";
 
 const logger = rootLogger.getChild("PresenceSyncLoop");
 
@@ -102,7 +102,7 @@ export class PresenceSyncLoop {
 
     /** Whether the loop should run for this client at all. */
     public static isApplicable(client: MatrixClient): boolean {
-        return !!SettingsStore.getValue("feature_simplified_sliding_sync") && isPresenceEnabled(client);
+        return isSlidingSyncActive() && isPresenceEnabled(client);
     }
 
     /** Starts the loop for this client if applicable (stopping any previous loop). */

@@ -23,6 +23,7 @@ import {
 import SettingsStore from "../../settings/SettingsStore";
 import SdkConfig from "../../SdkConfig";
 import DMRoomMap from "../DMRoomMap";
+import { setSlidingSyncActive } from "../sync/slidingSyncActive";
 
 const HS = "https://maximiliangaedig.com";
 const GHOST_STATUS = {
@@ -58,15 +59,14 @@ const flush = async (): Promise<void> => {
 };
 
 describe("PresencePoller", () => {
-    let slidingSync: boolean;
     let visibility: DocumentVisibilityState;
 
     beforeEach(() => {
         vi.useFakeTimers();
-        slidingSync = true;
+        setSlidingSyncActive(true);
         visibility = "visible";
         vi.spyOn(SettingsStore, "getValue").mockImplementation(
-            (name: string) => (name === "feature_simplified_sliding_sync" ? slidingSync : false) as any,
+            () => false as any,
         );
         SdkConfig.put({ enable_presence_by_hs_url: { [HS]: true } });
         vi.spyOn(document, "visibilityState", "get").mockImplementation(() => visibility);
@@ -84,12 +84,12 @@ describe("PresencePoller", () => {
 
     it("does nothing without simplified sliding sync, or with presence disabled for the HS", async () => {
         const client = makeClient(1);
-        slidingSync = false;
+        setSlidingSyncActive(false);
         PresencePoller.start(client, { getOpenRoomId: () => "!dm0:x" });
         await vi.advanceTimersByTimeAsync(DM_LIST_INTERVAL_MS);
         expect(client.getPresence).not.toHaveBeenCalled();
 
-        slidingSync = true;
+        setSlidingSyncActive(true);
         SdkConfig.put({ enable_presence_by_hs_url: { [HS]: false } });
         PresencePoller.start(client, { getOpenRoomId: () => "!dm0:x" });
         await vi.advanceTimersByTimeAsync(DM_LIST_INTERVAL_MS);

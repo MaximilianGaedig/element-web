@@ -14,6 +14,7 @@ import { BRIDGE_LOGIN_EVENT_TYPE } from "./utils/bridgeLogins";
 import { ROOM_LIST_STATE_TYPES } from "./utils/sync/roomListState";
 import { forgetLegacySyncStore, SlidingSyncCacheStore } from "./utils/sync/slidingSyncCache";
 import { rememberSlidingSyncSupport } from "./utils/createMatrixClient";
+import { setSlidingSyncActive } from "./utils/sync/slidingSyncActive";
 import { type IStartClientOpts, type MatrixClient, MemoryStore, PendingEventOrdering } from "matrix-js-sdk/src/matrix";
 import * as utils from "matrix-js-sdk/src/utils";
 import { logger } from "matrix-js-sdk/src/logger";
@@ -170,6 +171,7 @@ class MatrixClientPegClass implements IMatrixClientPeg {
 
     public unset(): void {
         this.matrixClient = null;
+        setSlidingSyncActive(false);
 
         MatrixActionCreators.stop();
     }
@@ -331,6 +333,7 @@ class MatrixClientPegClass implements IMatrixClientPeg {
         } else {
             void SlidingSyncManager.instance.checkSupport(this.matrixClient);
         }
+        setSlidingSyncActive(!!opts.slidingSync);
 
         // Connect the matrix client to the dispatcher and setting handlers
         MatrixActionCreators.start(this.matrixClient);

@@ -56,6 +56,7 @@ import { ConnectionState, ElementCall } from "../models/Call";
 import { isVideoRoom } from "../utils/video-rooms";
 import { ModuleApi } from "../modules/Api";
 import ActiveWidgetStore from "./ActiveWidgetStore";
+import { isSlidingSyncActive } from "../utils/sync/slidingSyncActive";
 
 const NUM_JOIN_RETRY = 5;
 
@@ -399,7 +400,7 @@ export class RoomViewStore extends EventEmitter {
             if (prevRoomCall !== null && (!payload.view_call || payload.room_id !== this.state.roomId))
                 prevRoomCall.presented = false;
 
-            if (SettingsStore.getValue("feature_simplified_sliding_sync") && this.state.roomId !== payload.room_id) {
+            if (isSlidingSyncActive() && this.state.roomId !== payload.room_id) {
                 this.setState({
                     subscribingRoomId: payload.room_id,
                     roomId: payload.room_id,

@@ -8,11 +8,11 @@ Please see LICENSE files in the repository root for full details.
 import { type MatrixClient, MatrixError } from "matrix-js-sdk/src/matrix";
 import { logger as rootLogger } from "matrix-js-sdk/src/logger";
 
-import SettingsStore from "../../settings/SettingsStore";
 import DMRoomMap from "../DMRoomMap";
 import { isPresenceEnabled } from "../presence";
 import { getBridgedDmUserId } from "../bridge/bridgeInfo";
 import { applyPresenceEvent } from "./PresenceSyncLoop";
+import { isSlidingSyncActive } from "../sync/slidingSyncActive";
 
 const logger = rootLogger.getChild("PresencePoller");
 
@@ -47,7 +47,7 @@ export class PresencePoller {
     /** Starts polling for this client if applicable (stopping any previous poller). */
     public static start(client: MatrixClient, opts: PresencePollerOptions): void {
         PresencePoller.stop();
-        if (!SettingsStore.getValue("feature_simplified_sliding_sync") || !isPresenceEnabled(client)) return;
+        if (!isSlidingSyncActive() || !isPresenceEnabled(client)) return;
         PresencePoller.current = new PresencePoller(client, opts);
         PresencePoller.current.start();
     }

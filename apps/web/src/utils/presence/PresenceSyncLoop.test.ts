@@ -30,6 +30,7 @@ import {
 } from "./PresenceSyncLoop";
 import SettingsStore from "../../settings/SettingsStore";
 import SdkConfig from "../../SdkConfig";
+import { setSlidingSyncActive } from "../sync/slidingSyncActive";
 
 const HS = "https://maximiliangaedig.com";
 
@@ -75,15 +76,14 @@ const presence = (sender: string, content: Record<string, unknown>): Partial<IEv
 });
 
 describe("PresenceSyncLoop", () => {
-    let slidingSync: boolean;
     let visibility: DocumentVisibilityState;
 
     beforeEach(() => {
         vi.useFakeTimers();
-        slidingSync = true;
+        setSlidingSyncActive(true);
         visibility = "visible";
         vi.spyOn(SettingsStore, "getValue").mockImplementation(
-            (name: string) => (name === "feature_simplified_sliding_sync" ? slidingSync : false) as any,
+            () => false as any,
         );
         SdkConfig.put({ enable_presence_by_hs_url: { [HS]: true } });
         vi.spyOn(document, "visibilityState", "get").mockImplementation(() => visibility);
@@ -103,7 +103,7 @@ describe("PresenceSyncLoop", () => {
     describe("snapshot", () => {
         it("asks once, without `since`, and applies everyone's current presence", async () => {
             const { client, requests } = makeClient();
-            slidingSync = false;
+            setSlidingSyncActive(false);
             const done = PresenceSyncLoop.snapshot(client);
             expect(requests).toHaveLength(1);
             expect(requests[0].params).toEqual({ filter: JSON.stringify(PRESENCE_ONLY_FILTER), timeout: "0" });
@@ -138,9 +138,9 @@ describe("PresenceSyncLoop", () => {
 
     it("only runs with simplified sliding sync and presence enabled for the HS", () => {
         const { client, requests } = makeClient();
-        slidingSync = false;
+        setSlidingSyncActive(false);
         expect(PresenceSyncLoop.start(client)).toBeUndefined();
-        slidingSync = true;
+        setSlidingSyncActive(true);
         SdkConfig.put({ enable_presence_by_hs_url: { [HS]: false } });
         expect(PresenceSyncLoop.start(client)).toBeUndefined();
         expect(requests).toHaveLength(0);

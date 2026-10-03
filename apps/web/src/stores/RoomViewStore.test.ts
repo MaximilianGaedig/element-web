@@ -27,7 +27,6 @@ import {
 
 import { RoomViewStore } from "./RoomViewStore";
 import { Action } from "../dispatcher/actions";
-import SettingsStore from "../settings/SettingsStore";
 import { SlidingSyncManager } from "../SlidingSyncManager";
 import { PosthogAnalytics } from "../PosthogAnalytics";
 import { TimelineRenderingType } from "../contexts/RoomContext";
@@ -50,6 +49,7 @@ import { type Call, ConnectionState } from "../models/Call.ts";
 import ActiveWidgetStore from "./ActiveWidgetStore";
 import { ModuleApi } from "../modules/Api";
 import { type JoinRoomPayload } from "../dispatcher/payloads/JoinRoomPayload.ts";
+import { setSlidingSyncActive } from "../utils/sync/slidingSyncActive";
 
 vi.mock("../Modal");
 
@@ -113,8 +113,6 @@ vi.mock("./WidgetStore", async () => {
 vi.mock("./widgets/WidgetLayoutStore");
 
 describe("RoomViewStore", function () {
-    // Taken before any test spies on it.
-    const realGetValue = SettingsStore.getValue.bind(SettingsStore);
     const userId = "@alice:server";
     const roomId = "!randomcharacters:aser.ver";
     const roomId2 = "!room2:example.com";
@@ -180,11 +178,6 @@ describe("RoomViewStore", function () {
 
     beforeEach(function () {
         vi.clearAllMocks();
-        // Sliding sync is the default now; these tests are of the other sync unless they say otherwise.
-        vi.spyOn(SettingsStore, "getValue").mockImplementation(((name: string, ...rest: unknown[]) =>
-            name === "feature_simplified_sliding_sync"
-                ? false
-                : (realGetValue as (...a: unknown[]) => unknown)(name, ...rest)) as typeof SettingsStore.getValue);
         mockClient.credentials = { userId: userId };
         mockClient.joinRoom.mockResolvedValue(room);
         mockClient.getRoom.mockImplementation((roomId?: string): Room | null => {
@@ -584,18 +577,16 @@ describe("RoomViewStore", function () {
 
     describe("Sliding Sync", function () {
         beforeEach(() => {
-            vi.spyOn(SettingsStore, "getValue").mockImplementation((settingName, roomId, value) => {
-                return settingName === "feature_simplified_sliding_sync"; // this is enabled, everything else is disabled.
-            });
+            setSlidingSyncActive(true);
         });
 
         afterEach(() => {
-            // Restore immediately: this mock makes RoomViewStore.viewRoom() take the "simplified sliding sync"
+            // Restore immediately: sliding sync makes RoomViewStore.viewRoom() take the "simplified sliding sync"
             // branch, which re-dispatches Action.ViewRoom asynchronously. If left in place after this describe
             // block, it leaks into later tests (vi.clearAllMocks() clears call history but not implementations)
             // and can cause a dangling re-dispatch that fires during a later test and crashes on
             // MatrixClientPeg.safeGet() once that room is no longer set up.
-            vi.mocked(SettingsStore.getValue).mockRestore();
+            setSlidingSyncActive(false);
         });
 
         it("subscribes to the room", async () => {

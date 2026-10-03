@@ -10,12 +10,13 @@ Please see LICENSE files in the repository root for full details.
 
 import { EventType, type IContent, type MatrixClient, MatrixEvent, Room } from "matrix-js-sdk/src/matrix";
 import { KnownMembership } from "matrix-js-sdk/src/types";
-import { vi, describe, it, expect, beforeEach } from "vitest";
+import { vi, describe, it, expect, beforeEach, afterEach } from "vitest";
 import { stubClient, TestSDKContext } from "test-utils";
 
 import SdkConfig from "../SdkConfig";
 import SettingsStore from "../settings/SettingsStore";
 import { MemberListStore } from "./MemberListStore";
+import { setSlidingSyncActive } from "../utils/sync/slidingSyncActive";
 
 describe("MemberListStore", () => {
     const alice = "@alice:bar";
@@ -26,15 +27,7 @@ describe("MemberListStore", () => {
     let client: MatrixClient;
     let room: Room;
 
-    // Taken before any test spies on it.
-    const realGetValue = SettingsStore.getValue.bind(SettingsStore);
-
     beforeEach(() => {
-        // Sliding sync is the default now; these tests are of the other sync unless they say otherwise.
-        vi.spyOn(SettingsStore, "getValue").mockImplementation(((name: string, ...rest: unknown[]) =>
-            name === "feature_simplified_sliding_sync"
-                ? false
-                : (realGetValue as (...a: unknown[]) => unknown)(name, ...rest)) as typeof SettingsStore.getValue);
         const context = new TestSDKContext();
         client = stubClient();
         client.baseUrl = "https://invalid.base.url.here";
@@ -165,15 +158,24 @@ describe("MemberListStore", () => {
             expect(joined).toEqual([room.getMember(alice)]);
             expect(room.loadMembersIfNeeded).toHaveBeenCalledTimes(1);
         });
+
+        it("loads members the usual way when sliding sync is wanted but the server does not have it", async () => {
+            vi.spyOn(SettingsStore, "getValue").mockImplementation(
+                (name: string) => (name === "feature_simplified_sliding_sync") as any,
+            );
+            const { joined } = await store.loadMemberList(roomId);
+            expect(joined).toEqual([room.getMember(alice)]);
+            expect(room.loadMembersIfNeeded).toHaveBeenCalledTimes(1);
+        });
     });
 
     describe("sliding sync", () => {
         beforeEach(() => {
-            vi.spyOn(SettingsStore, "getValue").mockImplementation((settingName, roomId, value) => {
-                return settingName === "feature_simplified_sliding_sync"; // this is enabled, everything else is disabled.
-            });
+            setSlidingSyncActive(true);
             client.members = vi.fn();
         });
+
+        afterEach(() => setSlidingSyncActive(false));
 
         it("calls /members when lazy loading", async () => {
             vi.mocked(client.members).mockResolvedValue({
