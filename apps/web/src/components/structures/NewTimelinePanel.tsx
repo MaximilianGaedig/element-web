@@ -20,6 +20,7 @@ import {
     EventType,
     RoomEvent,
     type MatrixClient,
+    type MatrixEvent,
     type RelationType,
     type Relations,
     type Room,
@@ -41,6 +42,7 @@ import type { RoomPermalinkCreator } from "../../utils/permalinks/Permalinks";
 import type EditorStateTransfer from "../../utils/EditorStateTransfer";
 import { DateSeparatorWrapper } from "./DateSeparatorWrapper";
 import { TgMessagesSkeleton } from "../views/telegram/TgMessagesSkeleton";
+import { hasCodeBlock, preloadCodeHighlighter, roomHasCodeBlock } from "../../utils/timeline/codeHighlighter";
 
 interface NewTimelinePanelProps {
     room: Room;
@@ -306,13 +308,13 @@ export function NewTimelinePanel({
         // Disposal is handled by useCreateAutoDisposedViewModel; no cleanup needed here.
     }, [vm]);
 
+    // The syntax highlighter, ahead of the first code block in this chat (see utils/timeline/codeHighlighter).
     useEffect(() => {
-        // Load the syntax highlighter up front. Code blocks fetch it the first time
-        // one is shown, and if that arrives late the block re-wraps after its row
-        // has been measured and the timeline jumps. Loading it now means the
-        // highlighting is ready before the first code block is drawn.
-        void import("highlight.js");
-    }, []);
+        if (roomHasCodeBlock(room)) preloadCodeHighlighter();
+    }, [room]);
+    useTypedEventEmitter(room, RoomEvent.Timeline, (event: MatrixEvent) => {
+        if (hasCodeBlock(event)) preloadCodeHighlighter();
+    });
 
     // How a tile finds the reactions and edits attached to its message. Without
     // this, no reactions are drawn at all.
