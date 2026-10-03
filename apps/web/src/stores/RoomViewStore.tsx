@@ -234,6 +234,8 @@ export class RoomViewStore extends EventEmitter {
             // for these events blank out the roomId as we are no longer in the RoomView
             case "view_welcome_page":
             case Action.ViewHomePage:
+            // Fork: the settings are a page in the room's place, not a dialog over it (MatrixChat.viewSettings).
+            case Action.ViewUserSettings:
                 this.setState({
                     roomId: null,
                     roomAlias: null,

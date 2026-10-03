@@ -87,7 +87,6 @@ export const createMockRoomSnapshot = (
     id,
     room: { name },
     name,
-    isBold: index % 3 === 0,
     messagePreview: index % 2 === 0 ? `Last message in ${name}` : undefined,
     notification: {
         hasAnyNotificationOrActivity: index % 5 === 0,

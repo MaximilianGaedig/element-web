@@ -12,6 +12,8 @@ enum PageType {
     HomePage = "home_page",
     RoomView = "room_view",
     UserView = "user_view",
+    /** Fork: the user's settings, a section of them beside the column that lists them. */
+    Settings = "settings",
 }
 
 export default PageType;

@@ -76,7 +76,8 @@ import Modal from "../../Modal.tsx";
 import { SetupEncryptionStore } from "../../stores/SetupEncryptionStore.ts";
 import { ShareFormat } from "../../dispatcher/payloads/SharePayload.ts";
 import { clearStorage } from "../../Lifecycle";
-import UserSettingsDialog from "../../components/views/dialogs/UserSettingsDialog.tsx";
+import { roomListPanelView, setRoomListPanelView } from "../../utils/roomListPanelView";
+import { userSettingsSection } from "../../utils/userSettingsSection";
 import { SDKContextClass } from "../../contexts/SDKContextClass";
 import { type QrLoginCredentials } from "../../components/views/auth/LoginWithQR.tsx";
 import { storeAuthContext } from "../../utils/oauth/persistOAuthSettings.ts";
@@ -86,6 +87,12 @@ import { resetBootTimings } from "../../utils/bootTimings.ts";
 // plus JSDOM's implementation of CSSStyleDeclaration has a bunch of differences to real browsers which cause issues.
 vi.mock("../../settings/watchers/ThemeWatcher");
 vi.mock("../../theme");
+
+// The settings page's sections are tested on their own; here it only matters which one is asked for.
+vi.mock("../../components/views/settings/UserSettingsPage", () => ({
+    __esModule: true,
+    default: ({ section }: { section?: string }) => <h1>Settings page: {section ?? "first"}</h1>,
+}));
 
 vi.mock("../../async-components/views/dialogs/security/NewRecoveryMethodDialog", () => ({
     __test: true,
@@ -214,6 +221,7 @@ describe("<MatrixChat />", () => {
         }),
         secretStorage: {
             isStored: vi.fn().mockReturnValue(null),
+            getDefaultKeyId: vi.fn().mockResolvedValue(null),
         },
         matrixRTC: createStubMatrixRTC(),
         getDehydratedDevice: vi.fn(),
@@ -898,25 +906,75 @@ describe("<MatrixChat />", () => {
                 vi.restoreAllMocks();
             });
 
-            it("ViewUserDeviceSettings should open user device settings", async () => {
-                await getComponentAndWaitForReady();
+            describe("the settings", () => {
+                afterEach(() => setRoomListPanelView("rooms"));
 
-                const createDialog = vi.spyOn(Modal, "createDialog").mockReturnValue({} as any);
+                /* One place for the settings: a page beside the column's list of them, never a dialog. */
+                it("opens the device settings as the settings page, on the sessions", async () => {
+                    await getComponentAndWaitForReady();
+                    const createDialog = vi.spyOn(Modal, "createDialog");
 
-                await act(async () => {
-                    defaultDispatcher.dispatch({
-                        action: Action.ViewUserDeviceSettings,
+                    act(() => defaultDispatcher.dispatch({ action: Action.ViewUserDeviceSettings }));
+
+                    await screen.findByRole("heading", { name: `Settings page: ${UserTab.SessionManager}` });
+                    expect(createDialog).not.toHaveBeenCalled();
+                    expect(roomListPanelView()).toBe("settings");
+                    expect(userSettingsSection()).toBe(UserTab.SessionManager);
+                    expect(defaultProps.onNewScreen).toHaveBeenLastCalledWith(
+                        `settings/${UserTab.SessionManager}`,
+                        false,
+                    );
+                });
+
+                it("opens the settings with no section asked for at #/settings", async () => {
+                    await getComponentAndWaitForReady();
+
+                    act(() => defaultDispatcher.dispatch({ action: Action.ViewUserSettings }));
+
+                    await screen.findByRole("heading", { name: "Settings page: first" });
+                    expect(userSettingsSection()).toBeUndefined();
+                    expect(defaultProps.onNewScreen).toHaveBeenLastCalledWith("settings", false);
+                });
+
+                it("opens the section a link names", async () => {
+                    await getComponentAndWaitForReady({
+                        initialScreenAfterLogin: { screen: `settings/${UserTab.Help}`, params: {} },
                     });
+                    await screen.findByRole("heading", { name: `Settings page: ${UserTab.Help}` });
+                    expect(roomListPanelView()).toBe("settings");
+                });
+
+                it("ignores a link to a section that does not exist, rather than showing nothing", async () => {
+                    await getComponentAndWaitForReady({
+                        initialScreenAfterLogin: { screen: "settings/nonsense", params: {} },
+                    });
+                    expect(await screen.findByRole("heading", { name: "Settings page: first" })).toBeInTheDocument();
+                });
+
+                /* The column moving off the settings (its bar, its back button) takes the page with it. */
+                it("leaves the page when the column leaves the settings", async () => {
+                    await getComponentAndWaitForReady();
+                    act(() => defaultDispatcher.dispatch({ action: Action.ViewUserSettings }));
+                    await screen.findByRole("heading", { name: "Settings page: first" });
+
+                    act(() => setRoomListPanelView("rooms"));
 
                     await waitFor(() =>
-                        expect(createDialog).toHaveBeenCalledWith(
-                            UserSettingsDialog,
-                            { initialTabId: UserTab.SessionManager, sdkContext: expect.any(SDKContextClass) },
-                            /*className=*/ undefined,
-                            /*isPriority=*/ false,
-                            /*isStatic=*/ true,
-                        ),
+                        expect(screen.queryByRole("heading", { name: "Settings page: first" })).toBeNull(),
                     );
+                    expect(defaultProps.onNewScreen).toHaveBeenLastCalledWith("home", false);
+                });
+
+                /* ...and going somewhere else from the page takes the column back to the chats. */
+                it("takes the column back to the chats when another page is opened", async () => {
+                    await getComponentAndWaitForReady();
+                    act(() => defaultDispatcher.dispatch({ action: Action.ViewUserSettings }));
+                    await screen.findByRole("heading", { name: "Settings page: first" });
+                    expect(roomListPanelView()).toBe("settings");
+
+                    act(() => defaultDispatcher.dispatch({ action: Action.ViewHomePage }));
+
+                    await waitFor(() => expect(roomListPanelView()).toBe("rooms"));
                 });
             });
 

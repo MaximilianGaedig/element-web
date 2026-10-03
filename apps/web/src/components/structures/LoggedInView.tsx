@@ -6,7 +6,7 @@ SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only OR LicenseRef-Element-Com
 Please see LICENSE files in the repository root for full details.
 */
 
-import React, { type ClipboardEvent, startTransition } from "react";
+import React, { type ClipboardEvent, lazy, startTransition, Suspense } from "react";
 import {
     ClientEvent,
     type MatrixClient,
@@ -72,6 +72,13 @@ import { TgColumns } from "../views/telegram/TgColumns";
 import { AppearanceAttributes } from "../../utils/telegram/tgLayout/appearance";
 import { TgTweaksPanel } from "../views/telegram/TgTweaksPanel";
 import { TgMetricsPanel } from "../views/telegram/TgMetricsPanel";
+import { type UserSettingsPageProps } from "../views/settings/UserSettingsPage";
+
+/*
+ * Every section of the settings and all they import, which is most of the app's settings code: loaded when
+ * the settings are first opened rather than with the page around them, which every start goes through.
+ */
+const UserSettingsPage = lazy(() => import("../views/settings/UserSettingsPage"));
 
 // We need to fetch each pinned message individually (if we don't already have it)
 // so each pinned message may trigger a request. Limit the number per room for sanity.
@@ -104,6 +111,9 @@ interface IProps {
     justRegistered?: boolean;
     roomJustCreatedOpts?: IOpts;
     forceTimeline?: boolean; // see props on MatrixChat
+    /** Fork: on the settings page, the section open (see MatrixChat.viewSettings). */
+    settingsSection?: UserTab;
+    settingsProps?: Omit<UserSettingsPageProps, "section">;
 }
 
 interface IState {
@@ -324,9 +334,16 @@ class LoggedInView extends React.Component<IProps, IState> {
         void monitorSyncedPushRules(event, this._matrixClient);
     };
 
-    /** Fork: the handheld Telegram-style layout's back navigation, from a chat to the chat list. */
+    /**
+     * Fork: the handheld Telegram-style layout's back navigation, from a chat to the chat list - or from a
+     * section of the settings to the list of them, which is what the column shows while they are open.
+     */
     private onTgBack = (): void => {
-        dis.dispatch({ action: Action.ViewHomePage });
+        if (this.props.page_type === PageTypes.Settings) {
+            dis.dispatch<OpenToTabPayload>({ action: Action.ViewUserSettings });
+        } else {
+            dis.dispatch({ action: Action.ViewHomePage });
+        }
     };
 
     private onCompactLayoutChanged = (): void => {
@@ -814,6 +831,14 @@ class LoggedInView extends React.Component<IProps, IState> {
                 pageElement = <HomePage justRegistered={this.props.justRegistered} />;
                 break;
 
+            case PageTypes.Settings:
+                pageElement = (
+                    <Suspense fallback={null}>
+                        <UserSettingsPage section={this.props.settingsSection} {...this.props.settingsProps} />
+                    </Suspense>
+                );
+                break;
+
             case PageTypes.UserView:
                 if (!!this.props.currentUserId) {
                     pageElement = (
@@ -873,9 +898,16 @@ class LoggedInView extends React.Component<IProps, IState> {
                     leftPanel={leftPanel}
                     resizeNotifier={this.context.resizeNotifier}
                     chatOpen={
-                        this.props.page_type === PageTypes.RoomView || this.props.page_type === PageTypes.UserView
+                        this.props.page_type === PageTypes.RoomView ||
+                        this.props.page_type === PageTypes.UserView ||
+                        // A section of the settings is a page over their list as a chat is over the chats.
+                        (this.props.page_type === PageTypes.Settings && !!this.props.settingsSection)
                     }
-                    chatKey={this.props.currentRoomId ?? this.props.currentUserId ?? undefined}
+                    chatKey={
+                        this.props.page_type === PageTypes.Settings
+                            ? `settings/${this.props.settingsSection ?? ""}`
+                            : (this.props.currentRoomId ?? this.props.currentUserId ?? undefined)
+                    }
                     onBack={this.onTgBack}
                 >
                     {roomView}

@@ -85,7 +85,7 @@ exports[`<RoomListView /> > renders Default story 1`] = `
                   aria-posinset="1"
                   aria-selected="false"
                   aria-setsize="20"
-                  class="Flex-module_flex RoomListItemView-module_roomListItem mx_RoomListItemView RoomListItemView-module_bold RoomListItemView-module_firstItem"
+                  class="Flex-module_flex RoomListItemView-module_roomListItem mx_RoomListItemView RoomListItemView-module_firstItem"
                   data-state="closed"
                   role="option"
                   style="--mx-flex-display: flex; --mx-flex-direction: row; --mx-flex-align: stretch; --mx-flex-justify: start; --mx-flex-gap: var(--cpd-space-3x); --mx-flex-wrap: nowrap;"
@@ -111,11 +111,15 @@ exports[`<RoomListView /> > renders Default story 1`] = `
                         class="RoomListItemView-module_ellipsis"
                       >
                         <div
-                          class="RoomListItemView-module_roomName"
-                          data-testid="room-name"
-                          title="General"
+                          class="RoomListItemView-module_nameLine"
                         >
-                          General
+                          <div
+                            class="RoomListItemView-module_roomName"
+                            data-testid="room-name"
+                            title="General"
+                          >
+                            General
+                          </div>
                         </div>
                         <div
                           class="_typography_6v6n8_153 _font-body-sm-regular_6v6n8_31 RoomListItemView-module_preview"
@@ -264,11 +268,15 @@ exports[`<RoomListView /> > renders Default story 1`] = `
                         class="RoomListItemView-module_ellipsis"
                       >
                         <div
-                          class="RoomListItemView-module_roomName"
-                          data-testid="room-name"
-                          title="Random"
+                          class="RoomListItemView-module_nameLine"
                         >
-                          Random
+                          <div
+                            class="RoomListItemView-module_roomName"
+                            data-testid="room-name"
+                            title="Random"
+                          >
+                            Random
+                          </div>
                         </div>
                       </div>
                       <div
@@ -386,11 +394,15 @@ exports[`<RoomListView /> > renders Default story 1`] = `
                         class="RoomListItemView-module_ellipsis"
                       >
                         <div
-                          class="RoomListItemView-module_roomName"
-                          data-testid="room-name"
-                          title="Engineering"
+                          class="RoomListItemView-module_nameLine"
                         >
-                          Engineering
+                          <div
+                            class="RoomListItemView-module_roomName"
+                            data-testid="room-name"
+                            title="Engineering"
+                          >
+                            Engineering
+                          </div>
                         </div>
                         <div
                           class="_typography_6v6n8_153 _font-body-sm-regular_6v6n8_31 RoomListItemView-module_preview"
@@ -492,7 +504,7 @@ exports[`<RoomListView /> > renders Default story 1`] = `
                   aria-posinset="4"
                   aria-selected="false"
                   aria-setsize="20"
-                  class="Flex-module_flex RoomListItemView-module_roomListItem mx_RoomListItemView RoomListItemView-module_bold"
+                  class="Flex-module_flex RoomListItemView-module_roomListItem mx_RoomListItemView"
                   data-state="closed"
                   role="option"
                   style="--mx-flex-display: flex; --mx-flex-direction: row; --mx-flex-align: stretch; --mx-flex-justify: start; --mx-flex-gap: var(--cpd-space-3x); --mx-flex-wrap: nowrap;"
@@ -518,11 +530,15 @@ exports[`<RoomListView /> > renders Default story 1`] = `
                         class="RoomListItemView-module_ellipsis"
                       >
                         <div
-                          class="RoomListItemView-module_roomName"
-                          data-testid="room-name"
-                          title="Design"
+                          class="RoomListItemView-module_nameLine"
                         >
-                          Design
+                          <div
+                            class="RoomListItemView-module_roomName"
+                            data-testid="room-name"
+                            title="Design"
+                          >
+                            Design
+                          </div>
                         </div>
                       </div>
                       <div
@@ -640,11 +656,15 @@ exports[`<RoomListView /> > renders Default story 1`] = `
                         class="RoomListItemView-module_ellipsis"
                       >
                         <div
-                          class="RoomListItemView-module_roomName"
-                          data-testid="room-name"
-                          title="Product"
+                          class="RoomListItemView-module_nameLine"
                         >
-                          Product
+                          <div
+                            class="RoomListItemView-module_roomName"
+                            data-testid="room-name"
+                            title="Product"
+                          >
+                            Product
+                          </div>
                         </div>
                         <div
                           class="_typography_6v6n8_153 _font-body-sm-regular_6v6n8_31 RoomListItemView-module_preview"
@@ -772,11 +792,15 @@ exports[`<RoomListView /> > renders Default story 1`] = `
                         class="RoomListItemView-module_ellipsis"
                       >
                         <div
-                          class="RoomListItemView-module_roomName"
-                          data-testid="room-name"
-                          title="Marketing"
+                          class="RoomListItemView-module_nameLine"
                         >
-                          Marketing
+                          <div
+                            class="RoomListItemView-module_roomName"
+                            data-testid="room-name"
+                            title="Marketing"
+                          >
+                            Marketing
+                          </div>
                         </div>
                       </div>
                       <div
@@ -891,7 +915,7 @@ exports[`<RoomListView /> > renders Default story 1`] = `
                   aria-posinset="7"
                   aria-selected="false"
                   aria-setsize="20"
-                  class="Flex-module_flex RoomListItemView-module_roomListItem mx_RoomListItemView RoomListItemView-module_bold"
+                  class="Flex-module_flex RoomListItemView-module_roomListItem mx_RoomListItemView"
                   data-state="closed"
                   role="option"
                   style="--mx-flex-display: flex; --mx-flex-direction: row; --mx-flex-align: stretch; --mx-flex-justify: start; --mx-flex-gap: var(--cpd-space-3x); --mx-flex-wrap: nowrap;"
@@ -917,11 +941,15 @@ exports[`<RoomListView /> > renders Default story 1`] = `
                         class="RoomListItemView-module_ellipsis"
                       >
                         <div
-                          class="RoomListItemView-module_roomName"
-                          data-testid="room-name"
-                          title="Sales"
+                          class="RoomListItemView-module_nameLine"
                         >
-                          Sales
+                          <div
+                            class="RoomListItemView-module_roomName"
+                            data-testid="room-name"
+                            title="Sales"
+                          >
+                            Sales
+                          </div>
                         </div>
                         <div
                           class="_typography_6v6n8_153 _font-body-sm-regular_6v6n8_31 RoomListItemView-module_preview"
@@ -1049,11 +1077,15 @@ exports[`<RoomListView /> > renders Default story 1`] = `
                         class="RoomListItemView-module_ellipsis"
                       >
                         <div
-                          class="RoomListItemView-module_roomName"
-                          data-testid="room-name"
-                          title="Support"
+                          class="RoomListItemView-module_nameLine"
                         >
-                          Support
+                          <div
+                            class="RoomListItemView-module_roomName"
+                            data-testid="room-name"
+                            title="Support"
+                          >
+                            Support
+                          </div>
                         </div>
                       </div>
                       <div
@@ -1171,11 +1203,15 @@ exports[`<RoomListView /> > renders Default story 1`] = `
                         class="RoomListItemView-module_ellipsis"
                       >
                         <div
-                          class="RoomListItemView-module_roomName"
-                          data-testid="room-name"
-                          title="Announcements"
+                          class="RoomListItemView-module_nameLine"
                         >
-                          Announcements
+                          <div
+                            class="RoomListItemView-module_roomName"
+                            data-testid="room-name"
+                            title="Announcements"
+                          >
+                            Announcements
+                          </div>
                         </div>
                         <div
                           class="_typography_6v6n8_153 _font-body-sm-regular_6v6n8_31 RoomListItemView-module_preview"
@@ -1277,7 +1313,7 @@ exports[`<RoomListView /> > renders Default story 1`] = `
                   aria-posinset="10"
                   aria-selected="false"
                   aria-setsize="20"
-                  class="Flex-module_flex RoomListItemView-module_roomListItem mx_RoomListItemView RoomListItemView-module_bold"
+                  class="Flex-module_flex RoomListItemView-module_roomListItem mx_RoomListItemView"
                   data-state="closed"
                   role="option"
                   style="--mx-flex-display: flex; --mx-flex-direction: row; --mx-flex-align: stretch; --mx-flex-justify: start; --mx-flex-gap: var(--cpd-space-3x); --mx-flex-wrap: nowrap;"
@@ -1303,11 +1339,15 @@ exports[`<RoomListView /> > renders Default story 1`] = `
                         class="RoomListItemView-module_ellipsis"
                       >
                         <div
-                          class="RoomListItemView-module_roomName"
-                          data-testid="room-name"
-                          title="Off-topic"
+                          class="RoomListItemView-module_nameLine"
                         >
-                          Off-topic
+                          <div
+                            class="RoomListItemView-module_roomName"
+                            data-testid="room-name"
+                            title="Off-topic"
+                          >
+                            Off-topic
+                          </div>
                         </div>
                       </div>
                       <div
@@ -1425,11 +1465,15 @@ exports[`<RoomListView /> > renders Default story 1`] = `
                         class="RoomListItemView-module_ellipsis"
                       >
                         <div
-                          class="RoomListItemView-module_roomName"
-                          data-testid="room-name"
-                          title="Team Alpha"
+                          class="RoomListItemView-module_nameLine"
                         >
-                          Team Alpha
+                          <div
+                            class="RoomListItemView-module_roomName"
+                            data-testid="room-name"
+                            title="Team Alpha"
+                          >
+                            Team Alpha
+                          </div>
                         </div>
                         <div
                           class="_typography_6v6n8_153 _font-body-sm-regular_6v6n8_31 RoomListItemView-module_preview"
@@ -1580,11 +1624,15 @@ exports[`<RoomListView /> > renders Default story 1`] = `
                         class="RoomListItemView-module_ellipsis"
                       >
                         <div
-                          class="RoomListItemView-module_roomName"
-                          data-testid="room-name"
-                          title="Team Beta"
+                          class="RoomListItemView-module_nameLine"
                         >
-                          Team Beta
+                          <div
+                            class="RoomListItemView-module_roomName"
+                            data-testid="room-name"
+                            title="Team Beta"
+                          >
+                            Team Beta
+                          </div>
                         </div>
                       </div>
                       <div
@@ -1676,7 +1724,7 @@ exports[`<RoomListView /> > renders Default story 1`] = `
                   aria-posinset="13"
                   aria-selected="false"
                   aria-setsize="20"
-                  class="Flex-module_flex RoomListItemView-module_roomListItem mx_RoomListItemView RoomListItemView-module_bold"
+                  class="Flex-module_flex RoomListItemView-module_roomListItem mx_RoomListItemView"
                   data-state="closed"
                   role="option"
                   style="--mx-flex-display: flex; --mx-flex-direction: row; --mx-flex-align: stretch; --mx-flex-justify: start; --mx-flex-gap: var(--cpd-space-3x); --mx-flex-wrap: nowrap;"
@@ -1702,11 +1750,15 @@ exports[`<RoomListView /> > renders Default story 1`] = `
                         class="RoomListItemView-module_ellipsis"
                       >
                         <div
-                          class="RoomListItemView-module_roomName"
-                          data-testid="room-name"
-                          title="Project X"
+                          class="RoomListItemView-module_nameLine"
                         >
-                          Project X
+                          <div
+                            class="RoomListItemView-module_roomName"
+                            data-testid="room-name"
+                            title="Project X"
+                          >
+                            Project X
+                          </div>
                         </div>
                         <div
                           class="_typography_6v6n8_153 _font-body-sm-regular_6v6n8_31 RoomListItemView-module_preview"
@@ -1834,11 +1886,15 @@ exports[`<RoomListView /> > renders Default story 1`] = `
                         class="RoomListItemView-module_ellipsis"
                       >
                         <div
-                          class="RoomListItemView-module_roomName"
-                          data-testid="room-name"
-                          title="Project Y"
+                          class="RoomListItemView-module_nameLine"
                         >
-                          Project Y
+                          <div
+                            class="RoomListItemView-module_roomName"
+                            data-testid="room-name"
+                            title="Project Y"
+                          >
+                            Project Y
+                          </div>
                         </div>
                       </div>
                       <div
@@ -1956,11 +2012,15 @@ exports[`<RoomListView /> > renders Default story 1`] = `
                         class="RoomListItemView-module_ellipsis"
                       >
                         <div
-                          class="RoomListItemView-module_roomName"
-                          data-testid="room-name"
-                          title="Water Cooler"
+                          class="RoomListItemView-module_nameLine"
                         >
-                          Water Cooler
+                          <div
+                            class="RoomListItemView-module_roomName"
+                            data-testid="room-name"
+                            title="Water Cooler"
+                          >
+                            Water Cooler
+                          </div>
                         </div>
                         <div
                           class="_typography_6v6n8_153 _font-body-sm-regular_6v6n8_31 RoomListItemView-module_preview"
@@ -2062,7 +2122,7 @@ exports[`<RoomListView /> > renders Default story 1`] = `
                   aria-posinset="16"
                   aria-selected="false"
                   aria-setsize="20"
-                  class="Flex-module_flex RoomListItemView-module_roomListItem mx_RoomListItemView RoomListItemView-module_bold"
+                  class="Flex-module_flex RoomListItemView-module_roomListItem mx_RoomListItemView"
                   data-state="closed"
                   role="option"
                   style="--mx-flex-display: flex; --mx-flex-direction: row; --mx-flex-align: stretch; --mx-flex-justify: start; --mx-flex-gap: var(--cpd-space-3x); --mx-flex-wrap: nowrap;"
@@ -2088,11 +2148,15 @@ exports[`<RoomListView /> > renders Default story 1`] = `
                         class="RoomListItemView-module_ellipsis"
                       >
                         <div
-                          class="RoomListItemView-module_roomName"
-                          data-testid="room-name"
-                          title="Feedback"
+                          class="RoomListItemView-module_nameLine"
                         >
-                          Feedback
+                          <div
+                            class="RoomListItemView-module_roomName"
+                            data-testid="room-name"
+                            title="Feedback"
+                          >
+                            Feedback
+                          </div>
                         </div>
                       </div>
                       <div
@@ -2233,11 +2297,15 @@ exports[`<RoomListView /> > renders Default story 1`] = `
                         class="RoomListItemView-module_ellipsis"
                       >
                         <div
-                          class="RoomListItemView-module_roomName"
-                          data-testid="room-name"
-                          title="Ideas"
+                          class="RoomListItemView-module_nameLine"
                         >
-                          Ideas
+                          <div
+                            class="RoomListItemView-module_roomName"
+                            data-testid="room-name"
+                            title="Ideas"
+                          >
+                            Ideas
+                          </div>
                         </div>
                         <div
                           class="_typography_6v6n8_153 _font-body-sm-regular_6v6n8_31 RoomListItemView-module_preview"
@@ -2365,11 +2433,15 @@ exports[`<RoomListView /> > renders Default story 1`] = `
                         class="RoomListItemView-module_ellipsis"
                       >
                         <div
-                          class="RoomListItemView-module_roomName"
-                          data-testid="room-name"
-                          title="Bugs"
+                          class="RoomListItemView-module_nameLine"
                         >
-                          Bugs
+                          <div
+                            class="RoomListItemView-module_roomName"
+                            data-testid="room-name"
+                            title="Bugs"
+                          >
+                            Bugs
+                          </div>
                         </div>
                       </div>
                       <div
@@ -2461,7 +2533,7 @@ exports[`<RoomListView /> > renders Default story 1`] = `
                   aria-posinset="19"
                   aria-selected="false"
                   aria-setsize="20"
-                  class="Flex-module_flex RoomListItemView-module_roomListItem mx_RoomListItemView RoomListItemView-module_bold"
+                  class="Flex-module_flex RoomListItemView-module_roomListItem mx_RoomListItemView"
                   data-state="closed"
                   role="option"
                   style="--mx-flex-display: flex; --mx-flex-direction: row; --mx-flex-align: stretch; --mx-flex-justify: start; --mx-flex-gap: var(--cpd-space-3x); --mx-flex-wrap: nowrap;"
@@ -2487,11 +2559,15 @@ exports[`<RoomListView /> > renders Default story 1`] = `
                         class="RoomListItemView-module_ellipsis"
                       >
                         <div
-                          class="RoomListItemView-module_roomName"
-                          data-testid="room-name"
-                          title="Features"
+                          class="RoomListItemView-module_nameLine"
                         >
-                          Features
+                          <div
+                            class="RoomListItemView-module_roomName"
+                            data-testid="room-name"
+                            title="Features"
+                          >
+                            Features
+                          </div>
                         </div>
                         <div
                           class="_typography_6v6n8_153 _font-body-sm-regular_6v6n8_31 RoomListItemView-module_preview"
@@ -2619,11 +2695,15 @@ exports[`<RoomListView /> > renders Default story 1`] = `
                         class="RoomListItemView-module_ellipsis"
                       >
                         <div
-                          class="RoomListItemView-module_roomName"
-                          data-testid="room-name"
-                          title="Releases"
+                          class="RoomListItemView-module_nameLine"
                         >
-                          Releases
+                          <div
+                            class="RoomListItemView-module_roomName"
+                            data-testid="room-name"
+                            title="Releases"
+                          >
+                            Releases
+                          </div>
                         </div>
                       </div>
                       <div
@@ -3383,7 +3463,7 @@ exports[`<RoomListView /> > renders LargeFlatList story 1`] = `
                   aria-posinset="1"
                   aria-selected="false"
                   aria-setsize="100"
-                  class="Flex-module_flex RoomListItemView-module_roomListItem mx_RoomListItemView RoomListItemView-module_bold RoomListItemView-module_firstItem"
+                  class="Flex-module_flex RoomListItemView-module_roomListItem mx_RoomListItemView RoomListItemView-module_firstItem"
                   data-state="closed"
                   role="option"
                   style="--mx-flex-display: flex; --mx-flex-direction: row; --mx-flex-align: stretch; --mx-flex-justify: start; --mx-flex-gap: var(--cpd-space-3x); --mx-flex-wrap: nowrap;"
@@ -3409,11 +3489,15 @@ exports[`<RoomListView /> > renders LargeFlatList story 1`] = `
                         class="RoomListItemView-module_ellipsis"
                       >
                         <div
-                          class="RoomListItemView-module_roomName"
-                          data-testid="room-name"
-                          title="General"
+                          class="RoomListItemView-module_nameLine"
                         >
-                          General
+                          <div
+                            class="RoomListItemView-module_roomName"
+                            data-testid="room-name"
+                            title="General"
+                          >
+                            General
+                          </div>
                         </div>
                         <div
                           class="_typography_6v6n8_153 _font-body-sm-regular_6v6n8_31 RoomListItemView-module_preview"
@@ -3562,11 +3646,15 @@ exports[`<RoomListView /> > renders LargeFlatList story 1`] = `
                         class="RoomListItemView-module_ellipsis"
                       >
                         <div
-                          class="RoomListItemView-module_roomName"
-                          data-testid="room-name"
-                          title="Random"
+                          class="RoomListItemView-module_nameLine"
                         >
-                          Random
+                          <div
+                            class="RoomListItemView-module_roomName"
+                            data-testid="room-name"
+                            title="Random"
+                          >
+                            Random
+                          </div>
                         </div>
                       </div>
                       <div
@@ -3684,11 +3772,15 @@ exports[`<RoomListView /> > renders LargeFlatList story 1`] = `
                         class="RoomListItemView-module_ellipsis"
                       >
                         <div
-                          class="RoomListItemView-module_roomName"
-                          data-testid="room-name"
-                          title="Engineering"
+                          class="RoomListItemView-module_nameLine"
                         >
-                          Engineering
+                          <div
+                            class="RoomListItemView-module_roomName"
+                            data-testid="room-name"
+                            title="Engineering"
+                          >
+                            Engineering
+                          </div>
                         </div>
                         <div
                           class="_typography_6v6n8_153 _font-body-sm-regular_6v6n8_31 RoomListItemView-module_preview"
@@ -3790,7 +3882,7 @@ exports[`<RoomListView /> > renders LargeFlatList story 1`] = `
                   aria-posinset="4"
                   aria-selected="false"
                   aria-setsize="100"
-                  class="Flex-module_flex RoomListItemView-module_roomListItem mx_RoomListItemView RoomListItemView-module_bold"
+                  class="Flex-module_flex RoomListItemView-module_roomListItem mx_RoomListItemView"
                   data-state="closed"
                   role="option"
                   style="--mx-flex-display: flex; --mx-flex-direction: row; --mx-flex-align: stretch; --mx-flex-justify: start; --mx-flex-gap: var(--cpd-space-3x); --mx-flex-wrap: nowrap;"
@@ -3816,11 +3908,15 @@ exports[`<RoomListView /> > renders LargeFlatList story 1`] = `
                         class="RoomListItemView-module_ellipsis"
                       >
                         <div
-                          class="RoomListItemView-module_roomName"
-                          data-testid="room-name"
-                          title="Design"
+                          class="RoomListItemView-module_nameLine"
                         >
-                          Design
+                          <div
+                            class="RoomListItemView-module_roomName"
+                            data-testid="room-name"
+                            title="Design"
+                          >
+                            Design
+                          </div>
                         </div>
                       </div>
                       <div
@@ -3938,11 +4034,15 @@ exports[`<RoomListView /> > renders LargeFlatList story 1`] = `
                         class="RoomListItemView-module_ellipsis"
                       >
                         <div
-                          class="RoomListItemView-module_roomName"
-                          data-testid="room-name"
-                          title="Product"
+                          class="RoomListItemView-module_nameLine"
                         >
-                          Product
+                          <div
+                            class="RoomListItemView-module_roomName"
+                            data-testid="room-name"
+                            title="Product"
+                          >
+                            Product
+                          </div>
                         </div>
                         <div
                           class="_typography_6v6n8_153 _font-body-sm-regular_6v6n8_31 RoomListItemView-module_preview"
@@ -4070,11 +4170,15 @@ exports[`<RoomListView /> > renders LargeFlatList story 1`] = `
                         class="RoomListItemView-module_ellipsis"
                       >
                         <div
-                          class="RoomListItemView-module_roomName"
-                          data-testid="room-name"
-                          title="Marketing"
+                          class="RoomListItemView-module_nameLine"
                         >
-                          Marketing
+                          <div
+                            class="RoomListItemView-module_roomName"
+                            data-testid="room-name"
+                            title="Marketing"
+                          >
+                            Marketing
+                          </div>
                         </div>
                       </div>
                       <div
@@ -4189,7 +4293,7 @@ exports[`<RoomListView /> > renders LargeFlatList story 1`] = `
                   aria-posinset="7"
                   aria-selected="false"
                   aria-setsize="100"
-                  class="Flex-module_flex RoomListItemView-module_roomListItem mx_RoomListItemView RoomListItemView-module_bold"
+                  class="Flex-module_flex RoomListItemView-module_roomListItem mx_RoomListItemView"
                   data-state="closed"
                   role="option"
                   style="--mx-flex-display: flex; --mx-flex-direction: row; --mx-flex-align: stretch; --mx-flex-justify: start; --mx-flex-gap: var(--cpd-space-3x); --mx-flex-wrap: nowrap;"
@@ -4215,11 +4319,15 @@ exports[`<RoomListView /> > renders LargeFlatList story 1`] = `
                         class="RoomListItemView-module_ellipsis"
                       >
                         <div
-                          class="RoomListItemView-module_roomName"
-                          data-testid="room-name"
-                          title="Sales"
+                          class="RoomListItemView-module_nameLine"
                         >
-                          Sales
+                          <div
+                            class="RoomListItemView-module_roomName"
+                            data-testid="room-name"
+                            title="Sales"
+                          >
+                            Sales
+                          </div>
                         </div>
                         <div
                           class="_typography_6v6n8_153 _font-body-sm-regular_6v6n8_31 RoomListItemView-module_preview"
@@ -4347,11 +4455,15 @@ exports[`<RoomListView /> > renders LargeFlatList story 1`] = `
                         class="RoomListItemView-module_ellipsis"
                       >
                         <div
-                          class="RoomListItemView-module_roomName"
-                          data-testid="room-name"
-                          title="Support"
+                          class="RoomListItemView-module_nameLine"
                         >
-                          Support
+                          <div
+                            class="RoomListItemView-module_roomName"
+                            data-testid="room-name"
+                            title="Support"
+                          >
+                            Support
+                          </div>
                         </div>
                       </div>
                       <div
@@ -4469,11 +4581,15 @@ exports[`<RoomListView /> > renders LargeFlatList story 1`] = `
                         class="RoomListItemView-module_ellipsis"
                       >
                         <div
-                          class="RoomListItemView-module_roomName"
-                          data-testid="room-name"
-                          title="Announcements"
+                          class="RoomListItemView-module_nameLine"
                         >
-                          Announcements
+                          <div
+                            class="RoomListItemView-module_roomName"
+                            data-testid="room-name"
+                            title="Announcements"
+                          >
+                            Announcements
+                          </div>
                         </div>
                         <div
                           class="_typography_6v6n8_153 _font-body-sm-regular_6v6n8_31 RoomListItemView-module_preview"
@@ -4575,7 +4691,7 @@ exports[`<RoomListView /> > renders LargeFlatList story 1`] = `
                   aria-posinset="10"
                   aria-selected="false"
                   aria-setsize="100"
-                  class="Flex-module_flex RoomListItemView-module_roomListItem mx_RoomListItemView RoomListItemView-module_bold"
+                  class="Flex-module_flex RoomListItemView-module_roomListItem mx_RoomListItemView"
                   data-state="closed"
                   role="option"
                   style="--mx-flex-display: flex; --mx-flex-direction: row; --mx-flex-align: stretch; --mx-flex-justify: start; --mx-flex-gap: var(--cpd-space-3x); --mx-flex-wrap: nowrap;"
@@ -4601,11 +4717,15 @@ exports[`<RoomListView /> > renders LargeFlatList story 1`] = `
                         class="RoomListItemView-module_ellipsis"
                       >
                         <div
-                          class="RoomListItemView-module_roomName"
-                          data-testid="room-name"
-                          title="Off-topic"
+                          class="RoomListItemView-module_nameLine"
                         >
-                          Off-topic
+                          <div
+                            class="RoomListItemView-module_roomName"
+                            data-testid="room-name"
+                            title="Off-topic"
+                          >
+                            Off-topic
+                          </div>
                         </div>
                       </div>
                       <div
@@ -4723,11 +4843,15 @@ exports[`<RoomListView /> > renders LargeFlatList story 1`] = `
                         class="RoomListItemView-module_ellipsis"
                       >
                         <div
-                          class="RoomListItemView-module_roomName"
-                          data-testid="room-name"
-                          title="Team Alpha"
+                          class="RoomListItemView-module_nameLine"
                         >
-                          Team Alpha
+                          <div
+                            class="RoomListItemView-module_roomName"
+                            data-testid="room-name"
+                            title="Team Alpha"
+                          >
+                            Team Alpha
+                          </div>
                         </div>
                         <div
                           class="_typography_6v6n8_153 _font-body-sm-regular_6v6n8_31 RoomListItemView-module_preview"
@@ -4878,11 +5002,15 @@ exports[`<RoomListView /> > renders LargeFlatList story 1`] = `
                         class="RoomListItemView-module_ellipsis"
                       >
                         <div
-                          class="RoomListItemView-module_roomName"
-                          data-testid="room-name"
-                          title="Team Beta"
+                          class="RoomListItemView-module_nameLine"
                         >
-                          Team Beta
+                          <div
+                            class="RoomListItemView-module_roomName"
+                            data-testid="room-name"
+                            title="Team Beta"
+                          >
+                            Team Beta
+                          </div>
                         </div>
                       </div>
                       <div
@@ -4974,7 +5102,7 @@ exports[`<RoomListView /> > renders LargeFlatList story 1`] = `
                   aria-posinset="13"
                   aria-selected="false"
                   aria-setsize="100"
-                  class="Flex-module_flex RoomListItemView-module_roomListItem mx_RoomListItemView RoomListItemView-module_bold"
+                  class="Flex-module_flex RoomListItemView-module_roomListItem mx_RoomListItemView"
                   data-state="closed"
                   role="option"
                   style="--mx-flex-display: flex; --mx-flex-direction: row; --mx-flex-align: stretch; --mx-flex-justify: start; --mx-flex-gap: var(--cpd-space-3x); --mx-flex-wrap: nowrap;"
@@ -5000,11 +5128,15 @@ exports[`<RoomListView /> > renders LargeFlatList story 1`] = `
                         class="RoomListItemView-module_ellipsis"
                       >
                         <div
-                          class="RoomListItemView-module_roomName"
-                          data-testid="room-name"
-                          title="Project X"
+                          class="RoomListItemView-module_nameLine"
                         >
-                          Project X
+                          <div
+                            class="RoomListItemView-module_roomName"
+                            data-testid="room-name"
+                            title="Project X"
+                          >
+                            Project X
+                          </div>
                         </div>
                         <div
                           class="_typography_6v6n8_153 _font-body-sm-regular_6v6n8_31 RoomListItemView-module_preview"
@@ -5132,11 +5264,15 @@ exports[`<RoomListView /> > renders LargeFlatList story 1`] = `
                         class="RoomListItemView-module_ellipsis"
                       >
                         <div
-                          class="RoomListItemView-module_roomName"
-                          data-testid="room-name"
-                          title="Project Y"
+                          class="RoomListItemView-module_nameLine"
                         >
-                          Project Y
+                          <div
+                            class="RoomListItemView-module_roomName"
+                            data-testid="room-name"
+                            title="Project Y"
+                          >
+                            Project Y
+                          </div>
                         </div>
                       </div>
                       <div
@@ -5254,11 +5390,15 @@ exports[`<RoomListView /> > renders LargeFlatList story 1`] = `
                         class="RoomListItemView-module_ellipsis"
                       >
                         <div
-                          class="RoomListItemView-module_roomName"
-                          data-testid="room-name"
-                          title="Water Cooler"
+                          class="RoomListItemView-module_nameLine"
                         >
-                          Water Cooler
+                          <div
+                            class="RoomListItemView-module_roomName"
+                            data-testid="room-name"
+                            title="Water Cooler"
+                          >
+                            Water Cooler
+                          </div>
                         </div>
                         <div
                           class="_typography_6v6n8_153 _font-body-sm-regular_6v6n8_31 RoomListItemView-module_preview"
@@ -5360,7 +5500,7 @@ exports[`<RoomListView /> > renders LargeFlatList story 1`] = `
                   aria-posinset="16"
                   aria-selected="false"
                   aria-setsize="100"
-                  class="Flex-module_flex RoomListItemView-module_roomListItem mx_RoomListItemView RoomListItemView-module_bold"
+                  class="Flex-module_flex RoomListItemView-module_roomListItem mx_RoomListItemView"
                   data-state="closed"
                   role="option"
                   style="--mx-flex-display: flex; --mx-flex-direction: row; --mx-flex-align: stretch; --mx-flex-justify: start; --mx-flex-gap: var(--cpd-space-3x); --mx-flex-wrap: nowrap;"
@@ -5386,11 +5526,15 @@ exports[`<RoomListView /> > renders LargeFlatList story 1`] = `
                         class="RoomListItemView-module_ellipsis"
                       >
                         <div
-                          class="RoomListItemView-module_roomName"
-                          data-testid="room-name"
-                          title="Feedback"
+                          class="RoomListItemView-module_nameLine"
                         >
-                          Feedback
+                          <div
+                            class="RoomListItemView-module_roomName"
+                            data-testid="room-name"
+                            title="Feedback"
+                          >
+                            Feedback
+                          </div>
                         </div>
                       </div>
                       <div
@@ -5531,11 +5675,15 @@ exports[`<RoomListView /> > renders LargeFlatList story 1`] = `
                         class="RoomListItemView-module_ellipsis"
                       >
                         <div
-                          class="RoomListItemView-module_roomName"
-                          data-testid="room-name"
-                          title="Ideas"
+                          class="RoomListItemView-module_nameLine"
                         >
-                          Ideas
+                          <div
+                            class="RoomListItemView-module_roomName"
+                            data-testid="room-name"
+                            title="Ideas"
+                          >
+                            Ideas
+                          </div>
                         </div>
                         <div
                           class="_typography_6v6n8_153 _font-body-sm-regular_6v6n8_31 RoomListItemView-module_preview"
@@ -5663,11 +5811,15 @@ exports[`<RoomListView /> > renders LargeFlatList story 1`] = `
                         class="RoomListItemView-module_ellipsis"
                       >
                         <div
-                          class="RoomListItemView-module_roomName"
-                          data-testid="room-name"
-                          title="Bugs"
+                          class="RoomListItemView-module_nameLine"
                         >
-                          Bugs
+                          <div
+                            class="RoomListItemView-module_roomName"
+                            data-testid="room-name"
+                            title="Bugs"
+                          >
+                            Bugs
+                          </div>
                         </div>
                       </div>
                       <div
@@ -5759,7 +5911,7 @@ exports[`<RoomListView /> > renders LargeFlatList story 1`] = `
                   aria-posinset="19"
                   aria-selected="false"
                   aria-setsize="100"
-                  class="Flex-module_flex RoomListItemView-module_roomListItem mx_RoomListItemView RoomListItemView-module_bold"
+                  class="Flex-module_flex RoomListItemView-module_roomListItem mx_RoomListItemView"
                   data-state="closed"
                   role="option"
                   style="--mx-flex-display: flex; --mx-flex-direction: row; --mx-flex-align: stretch; --mx-flex-justify: start; --mx-flex-gap: var(--cpd-space-3x); --mx-flex-wrap: nowrap;"
@@ -5785,11 +5937,15 @@ exports[`<RoomListView /> > renders LargeFlatList story 1`] = `
                         class="RoomListItemView-module_ellipsis"
                       >
                         <div
-                          class="RoomListItemView-module_roomName"
-                          data-testid="room-name"
-                          title="Features"
+                          class="RoomListItemView-module_nameLine"
                         >
-                          Features
+                          <div
+                            class="RoomListItemView-module_roomName"
+                            data-testid="room-name"
+                            title="Features"
+                          >
+                            Features
+                          </div>
                         </div>
                         <div
                           class="_typography_6v6n8_153 _font-body-sm-regular_6v6n8_31 RoomListItemView-module_preview"
@@ -5917,11 +6073,15 @@ exports[`<RoomListView /> > renders LargeFlatList story 1`] = `
                         class="RoomListItemView-module_ellipsis"
                       >
                         <div
-                          class="RoomListItemView-module_roomName"
-                          data-testid="room-name"
-                          title="Releases"
+                          class="RoomListItemView-module_nameLine"
                         >
-                          Releases
+                          <div
+                            class="RoomListItemView-module_roomName"
+                            data-testid="room-name"
+                            title="Releases"
+                          >
+                            Releases
+                          </div>
                         </div>
                       </div>
                       <div
@@ -6039,11 +6199,15 @@ exports[`<RoomListView /> > renders LargeFlatList story 1`] = `
                         class="RoomListItemView-module_ellipsis"
                       >
                         <div
-                          class="RoomListItemView-module_roomName"
-                          data-testid="room-name"
-                          title="General"
+                          class="RoomListItemView-module_nameLine"
                         >
-                          General
+                          <div
+                            class="RoomListItemView-module_roomName"
+                            data-testid="room-name"
+                            title="General"
+                          >
+                            General
+                          </div>
                         </div>
                         <div
                           class="_typography_6v6n8_153 _font-body-sm-regular_6v6n8_31 RoomListItemView-module_preview"
@@ -6168,7 +6332,7 @@ exports[`<RoomListView /> > renders LargeFlatList story 1`] = `
                   aria-posinset="22"
                   aria-selected="false"
                   aria-setsize="100"
-                  class="Flex-module_flex RoomListItemView-module_roomListItem mx_RoomListItemView RoomListItemView-module_bold"
+                  class="Flex-module_flex RoomListItemView-module_roomListItem mx_RoomListItemView"
                   data-state="closed"
                   role="option"
                   style="--mx-flex-display: flex; --mx-flex-direction: row; --mx-flex-align: stretch; --mx-flex-justify: start; --mx-flex-gap: var(--cpd-space-3x); --mx-flex-wrap: nowrap;"
@@ -6194,11 +6358,15 @@ exports[`<RoomListView /> > renders LargeFlatList story 1`] = `
                         class="RoomListItemView-module_ellipsis"
                       >
                         <div
-                          class="RoomListItemView-module_roomName"
-                          data-testid="room-name"
-                          title="Random"
+                          class="RoomListItemView-module_nameLine"
                         >
-                          Random
+                          <div
+                            class="RoomListItemView-module_roomName"
+                            data-testid="room-name"
+                            title="Random"
+                          >
+                            Random
+                          </div>
                         </div>
                       </div>
                       <div
@@ -6488,7 +6656,7 @@ exports[`<RoomListView /> > renders LargeSectionList story 1`] = `
                         aria-describedby="00000000-0000-0000-0000-000000000006"
                         aria-haspopup="menu"
                         aria-label="Open room General"
-                        class="Flex-module_flex RoomListItemView-module_roomListItem mx_RoomListItemView RoomListItemView-module_bold"
+                        class="Flex-module_flex RoomListItemView-module_roomListItem mx_RoomListItemView"
                         data-state="closed"
                         style="--mx-flex-display: flex; --mx-flex-direction: row; --mx-flex-align: stretch; --mx-flex-justify: start; --mx-flex-gap: var(--cpd-space-3x); --mx-flex-wrap: nowrap;"
                         tabindex="-1"
@@ -6513,11 +6681,15 @@ exports[`<RoomListView /> > renders LargeSectionList story 1`] = `
                               class="RoomListItemView-module_ellipsis"
                             >
                               <div
-                                class="RoomListItemView-module_roomName"
-                                data-testid="room-name"
-                                title="General"
+                                class="RoomListItemView-module_nameLine"
                               >
-                                General
+                                <div
+                                  class="RoomListItemView-module_roomName"
+                                  data-testid="room-name"
+                                  title="General"
+                                >
+                                  General
+                                </div>
                               </div>
                               <div
                                 class="_typography_6v6n8_153 _font-body-sm-regular_6v6n8_31 RoomListItemView-module_preview"
@@ -6675,11 +6847,15 @@ exports[`<RoomListView /> > renders LargeSectionList story 1`] = `
                               class="RoomListItemView-module_ellipsis"
                             >
                               <div
-                                class="RoomListItemView-module_roomName"
-                                data-testid="room-name"
-                                title="Random"
+                                class="RoomListItemView-module_nameLine"
                               >
-                                Random
+                                <div
+                                  class="RoomListItemView-module_roomName"
+                                  data-testid="room-name"
+                                  title="Random"
+                                >
+                                  Random
+                                </div>
                               </div>
                             </div>
                             <div
@@ -6806,11 +6982,15 @@ exports[`<RoomListView /> > renders LargeSectionList story 1`] = `
                               class="RoomListItemView-module_ellipsis"
                             >
                               <div
-                                class="RoomListItemView-module_roomName"
-                                data-testid="room-name"
-                                title="Engineering"
+                                class="RoomListItemView-module_nameLine"
                               >
-                                Engineering
+                                <div
+                                  class="RoomListItemView-module_roomName"
+                                  data-testid="room-name"
+                                  title="Engineering"
+                                >
+                                  Engineering
+                                </div>
                               </div>
                               <div
                                 class="_typography_6v6n8_153 _font-body-sm-regular_6v6n8_31 RoomListItemView-module_preview"
@@ -6922,7 +7102,7 @@ exports[`<RoomListView /> > renders LargeSectionList story 1`] = `
                         aria-describedby="00000000-0000-0000-0000-000000000006"
                         aria-haspopup="menu"
                         aria-label="Open room Design"
-                        class="Flex-module_flex RoomListItemView-module_roomListItem mx_RoomListItemView RoomListItemView-module_bold"
+                        class="Flex-module_flex RoomListItemView-module_roomListItem mx_RoomListItemView"
                         data-state="closed"
                         style="--mx-flex-display: flex; --mx-flex-direction: row; --mx-flex-align: stretch; --mx-flex-justify: start; --mx-flex-gap: var(--cpd-space-3x); --mx-flex-wrap: nowrap;"
                         tabindex="-1"
@@ -6947,11 +7127,15 @@ exports[`<RoomListView /> > renders LargeSectionList story 1`] = `
                               class="RoomListItemView-module_ellipsis"
                             >
                               <div
-                                class="RoomListItemView-module_roomName"
-                                data-testid="room-name"
-                                title="Design"
+                                class="RoomListItemView-module_nameLine"
                               >
-                                Design
+                                <div
+                                  class="RoomListItemView-module_roomName"
+                                  data-testid="room-name"
+                                  title="Design"
+                                >
+                                  Design
+                                </div>
                               </div>
                             </div>
                             <div
@@ -7078,11 +7262,15 @@ exports[`<RoomListView /> > renders LargeSectionList story 1`] = `
                               class="RoomListItemView-module_ellipsis"
                             >
                               <div
-                                class="RoomListItemView-module_roomName"
-                                data-testid="room-name"
-                                title="Product"
+                                class="RoomListItemView-module_nameLine"
                               >
-                                Product
+                                <div
+                                  class="RoomListItemView-module_roomName"
+                                  data-testid="room-name"
+                                  title="Product"
+                                >
+                                  Product
+                                </div>
                               </div>
                               <div
                                 class="_typography_6v6n8_153 _font-body-sm-regular_6v6n8_31 RoomListItemView-module_preview"
@@ -7219,11 +7407,15 @@ exports[`<RoomListView /> > renders LargeSectionList story 1`] = `
                               class="RoomListItemView-module_ellipsis"
                             >
                               <div
-                                class="RoomListItemView-module_roomName"
-                                data-testid="room-name"
-                                title="Marketing"
+                                class="RoomListItemView-module_nameLine"
                               >
-                                Marketing
+                                <div
+                                  class="RoomListItemView-module_roomName"
+                                  data-testid="room-name"
+                                  title="Marketing"
+                                >
+                                  Marketing
+                                </div>
                               </div>
                             </div>
                             <div
@@ -7348,7 +7540,7 @@ exports[`<RoomListView /> > renders LargeSectionList story 1`] = `
                         aria-describedby="00000000-0000-0000-0000-000000000006"
                         aria-haspopup="menu"
                         aria-label="Open room Sales"
-                        class="Flex-module_flex RoomListItemView-module_roomListItem mx_RoomListItemView RoomListItemView-module_bold"
+                        class="Flex-module_flex RoomListItemView-module_roomListItem mx_RoomListItemView"
                         data-state="closed"
                         style="--mx-flex-display: flex; --mx-flex-direction: row; --mx-flex-align: stretch; --mx-flex-justify: start; --mx-flex-gap: var(--cpd-space-3x); --mx-flex-wrap: nowrap;"
                         tabindex="-1"
@@ -7373,11 +7565,15 @@ exports[`<RoomListView /> > renders LargeSectionList story 1`] = `
                               class="RoomListItemView-module_ellipsis"
                             >
                               <div
-                                class="RoomListItemView-module_roomName"
-                                data-testid="room-name"
-                                title="Sales"
+                                class="RoomListItemView-module_nameLine"
                               >
-                                Sales
+                                <div
+                                  class="RoomListItemView-module_roomName"
+                                  data-testid="room-name"
+                                  title="Sales"
+                                >
+                                  Sales
+                                </div>
                               </div>
                               <div
                                 class="_typography_6v6n8_153 _font-body-sm-regular_6v6n8_31 RoomListItemView-module_preview"
@@ -7514,11 +7710,15 @@ exports[`<RoomListView /> > renders LargeSectionList story 1`] = `
                               class="RoomListItemView-module_ellipsis"
                             >
                               <div
-                                class="RoomListItemView-module_roomName"
-                                data-testid="room-name"
-                                title="Support"
+                                class="RoomListItemView-module_nameLine"
                               >
-                                Support
+                                <div
+                                  class="RoomListItemView-module_roomName"
+                                  data-testid="room-name"
+                                  title="Support"
+                                >
+                                  Support
+                                </div>
                               </div>
                             </div>
                             <div
@@ -7645,11 +7845,15 @@ exports[`<RoomListView /> > renders LargeSectionList story 1`] = `
                               class="RoomListItemView-module_ellipsis"
                             >
                               <div
-                                class="RoomListItemView-module_roomName"
-                                data-testid="room-name"
-                                title="Announcements"
+                                class="RoomListItemView-module_nameLine"
                               >
-                                Announcements
+                                <div
+                                  class="RoomListItemView-module_roomName"
+                                  data-testid="room-name"
+                                  title="Announcements"
+                                >
+                                  Announcements
+                                </div>
                               </div>
                               <div
                                 class="_typography_6v6n8_153 _font-body-sm-regular_6v6n8_31 RoomListItemView-module_preview"
@@ -7761,7 +7965,7 @@ exports[`<RoomListView /> > renders LargeSectionList story 1`] = `
                         aria-describedby="00000000-0000-0000-0000-000000000006"
                         aria-haspopup="menu"
                         aria-label="Open room Off-topic"
-                        class="Flex-module_flex RoomListItemView-module_roomListItem mx_RoomListItemView RoomListItemView-module_bold"
+                        class="Flex-module_flex RoomListItemView-module_roomListItem mx_RoomListItemView"
                         data-state="closed"
                         style="--mx-flex-display: flex; --mx-flex-direction: row; --mx-flex-align: stretch; --mx-flex-justify: start; --mx-flex-gap: var(--cpd-space-3x); --mx-flex-wrap: nowrap;"
                         tabindex="-1"
@@ -7786,11 +7990,15 @@ exports[`<RoomListView /> > renders LargeSectionList story 1`] = `
                               class="RoomListItemView-module_ellipsis"
                             >
                               <div
-                                class="RoomListItemView-module_roomName"
-                                data-testid="room-name"
-                                title="Off-topic"
+                                class="RoomListItemView-module_nameLine"
                               >
-                                Off-topic
+                                <div
+                                  class="RoomListItemView-module_roomName"
+                                  data-testid="room-name"
+                                  title="Off-topic"
+                                >
+                                  Off-topic
+                                </div>
                               </div>
                             </div>
                             <div
@@ -7917,11 +8125,15 @@ exports[`<RoomListView /> > renders LargeSectionList story 1`] = `
                               class="RoomListItemView-module_ellipsis"
                             >
                               <div
-                                class="RoomListItemView-module_roomName"
-                                data-testid="room-name"
-                                title="Team Alpha"
+                                class="RoomListItemView-module_nameLine"
                               >
-                                Team Alpha
+                                <div
+                                  class="RoomListItemView-module_roomName"
+                                  data-testid="room-name"
+                                  title="Team Alpha"
+                                >
+                                  Team Alpha
+                                </div>
                               </div>
                               <div
                                 class="_typography_6v6n8_153 _font-body-sm-regular_6v6n8_31 RoomListItemView-module_preview"
@@ -8081,11 +8293,15 @@ exports[`<RoomListView /> > renders LargeSectionList story 1`] = `
                               class="RoomListItemView-module_ellipsis"
                             >
                               <div
-                                class="RoomListItemView-module_roomName"
-                                data-testid="room-name"
-                                title="Team Beta"
+                                class="RoomListItemView-module_nameLine"
                               >
-                                Team Beta
+                                <div
+                                  class="RoomListItemView-module_roomName"
+                                  data-testid="room-name"
+                                  title="Team Beta"
+                                >
+                                  Team Beta
+                                </div>
                               </div>
                             </div>
                             <div
@@ -8187,7 +8403,7 @@ exports[`<RoomListView /> > renders LargeSectionList story 1`] = `
                         aria-describedby="00000000-0000-0000-0000-000000000006"
                         aria-haspopup="menu"
                         aria-label="Open room Project X"
-                        class="Flex-module_flex RoomListItemView-module_roomListItem mx_RoomListItemView RoomListItemView-module_bold"
+                        class="Flex-module_flex RoomListItemView-module_roomListItem mx_RoomListItemView"
                         data-state="closed"
                         style="--mx-flex-display: flex; --mx-flex-direction: row; --mx-flex-align: stretch; --mx-flex-justify: start; --mx-flex-gap: var(--cpd-space-3x); --mx-flex-wrap: nowrap;"
                         tabindex="-1"
@@ -8212,11 +8428,15 @@ exports[`<RoomListView /> > renders LargeSectionList story 1`] = `
                               class="RoomListItemView-module_ellipsis"
                             >
                               <div
-                                class="RoomListItemView-module_roomName"
-                                data-testid="room-name"
-                                title="Project X"
+                                class="RoomListItemView-module_nameLine"
                               >
-                                Project X
+                                <div
+                                  class="RoomListItemView-module_roomName"
+                                  data-testid="room-name"
+                                  title="Project X"
+                                >
+                                  Project X
+                                </div>
                               </div>
                               <div
                                 class="_typography_6v6n8_153 _font-body-sm-regular_6v6n8_31 RoomListItemView-module_preview"
@@ -8353,11 +8573,15 @@ exports[`<RoomListView /> > renders LargeSectionList story 1`] = `
                               class="RoomListItemView-module_ellipsis"
                             >
                               <div
-                                class="RoomListItemView-module_roomName"
-                                data-testid="room-name"
-                                title="Project Y"
+                                class="RoomListItemView-module_nameLine"
                               >
-                                Project Y
+                                <div
+                                  class="RoomListItemView-module_roomName"
+                                  data-testid="room-name"
+                                  title="Project Y"
+                                >
+                                  Project Y
+                                </div>
                               </div>
                             </div>
                             <div
@@ -8484,11 +8708,15 @@ exports[`<RoomListView /> > renders LargeSectionList story 1`] = `
                               class="RoomListItemView-module_ellipsis"
                             >
                               <div
-                                class="RoomListItemView-module_roomName"
-                                data-testid="room-name"
-                                title="Water Cooler"
+                                class="RoomListItemView-module_nameLine"
                               >
-                                Water Cooler
+                                <div
+                                  class="RoomListItemView-module_roomName"
+                                  data-testid="room-name"
+                                  title="Water Cooler"
+                                >
+                                  Water Cooler
+                                </div>
                               </div>
                               <div
                                 class="_typography_6v6n8_153 _font-body-sm-regular_6v6n8_31 RoomListItemView-module_preview"
@@ -8600,7 +8828,7 @@ exports[`<RoomListView /> > renders LargeSectionList story 1`] = `
                         aria-describedby="00000000-0000-0000-0000-000000000006"
                         aria-haspopup="menu"
                         aria-label="Open room Feedback with 15 unread mentions."
-                        class="Flex-module_flex RoomListItemView-module_roomListItem mx_RoomListItemView RoomListItemView-module_bold"
+                        class="Flex-module_flex RoomListItemView-module_roomListItem mx_RoomListItemView"
                         data-state="closed"
                         style="--mx-flex-display: flex; --mx-flex-direction: row; --mx-flex-align: stretch; --mx-flex-justify: start; --mx-flex-gap: var(--cpd-space-3x); --mx-flex-wrap: nowrap;"
                         tabindex="-1"
@@ -8625,11 +8853,15 @@ exports[`<RoomListView /> > renders LargeSectionList story 1`] = `
                               class="RoomListItemView-module_ellipsis"
                             >
                               <div
-                                class="RoomListItemView-module_roomName"
-                                data-testid="room-name"
-                                title="Feedback"
+                                class="RoomListItemView-module_nameLine"
                               >
-                                Feedback
+                                <div
+                                  class="RoomListItemView-module_roomName"
+                                  data-testid="room-name"
+                                  title="Feedback"
+                                >
+                                  Feedback
+                                </div>
                               </div>
                             </div>
                             <div
@@ -8779,11 +9011,15 @@ exports[`<RoomListView /> > renders LargeSectionList story 1`] = `
                               class="RoomListItemView-module_ellipsis"
                             >
                               <div
-                                class="RoomListItemView-module_roomName"
-                                data-testid="room-name"
-                                title="Ideas"
+                                class="RoomListItemView-module_nameLine"
                               >
-                                Ideas
+                                <div
+                                  class="RoomListItemView-module_roomName"
+                                  data-testid="room-name"
+                                  title="Ideas"
+                                >
+                                  Ideas
+                                </div>
                               </div>
                               <div
                                 class="_typography_6v6n8_153 _font-body-sm-regular_6v6n8_31 RoomListItemView-module_preview"
@@ -8920,11 +9156,15 @@ exports[`<RoomListView /> > renders LargeSectionList story 1`] = `
                               class="RoomListItemView-module_ellipsis"
                             >
                               <div
-                                class="RoomListItemView-module_roomName"
-                                data-testid="room-name"
-                                title="Bugs"
+                                class="RoomListItemView-module_nameLine"
                               >
-                                Bugs
+                                <div
+                                  class="RoomListItemView-module_roomName"
+                                  data-testid="room-name"
+                                  title="Bugs"
+                                >
+                                  Bugs
+                                </div>
                               </div>
                             </div>
                             <div
@@ -9026,7 +9266,7 @@ exports[`<RoomListView /> > renders LargeSectionList story 1`] = `
                         aria-describedby="00000000-0000-0000-0000-000000000006"
                         aria-haspopup="menu"
                         aria-label="Open room Features"
-                        class="Flex-module_flex RoomListItemView-module_roomListItem mx_RoomListItemView RoomListItemView-module_bold"
+                        class="Flex-module_flex RoomListItemView-module_roomListItem mx_RoomListItemView"
                         data-state="closed"
                         style="--mx-flex-display: flex; --mx-flex-direction: row; --mx-flex-align: stretch; --mx-flex-justify: start; --mx-flex-gap: var(--cpd-space-3x); --mx-flex-wrap: nowrap;"
                         tabindex="-1"
@@ -9051,11 +9291,15 @@ exports[`<RoomListView /> > renders LargeSectionList story 1`] = `
                               class="RoomListItemView-module_ellipsis"
                             >
                               <div
-                                class="RoomListItemView-module_roomName"
-                                data-testid="room-name"
-                                title="Features"
+                                class="RoomListItemView-module_nameLine"
                               >
-                                Features
+                                <div
+                                  class="RoomListItemView-module_roomName"
+                                  data-testid="room-name"
+                                  title="Features"
+                                >
+                                  Features
+                                </div>
                               </div>
                               <div
                                 class="_typography_6v6n8_153 _font-body-sm-regular_6v6n8_31 RoomListItemView-module_preview"
@@ -9192,11 +9436,15 @@ exports[`<RoomListView /> > renders LargeSectionList story 1`] = `
                               class="RoomListItemView-module_ellipsis"
                             >
                               <div
-                                class="RoomListItemView-module_roomName"
-                                data-testid="room-name"
-                                title="Releases"
+                                class="RoomListItemView-module_nameLine"
                               >
-                                Releases
+                                <div
+                                  class="RoomListItemView-module_roomName"
+                                  data-testid="room-name"
+                                  title="Releases"
+                                >
+                                  Releases
+                                </div>
                               </div>
                             </div>
                             <div
@@ -9323,11 +9571,15 @@ exports[`<RoomListView /> > renders LargeSectionList story 1`] = `
                               class="RoomListItemView-module_ellipsis"
                             >
                               <div
-                                class="RoomListItemView-module_roomName"
-                                data-testid="room-name"
-                                title="General"
+                                class="RoomListItemView-module_nameLine"
                               >
-                                General
+                                <div
+                                  class="RoomListItemView-module_roomName"
+                                  data-testid="room-name"
+                                  title="General"
+                                >
+                                  General
+                                </div>
                               </div>
                               <div
                                 class="_typography_6v6n8_153 _font-body-sm-regular_6v6n8_31 RoomListItemView-module_preview"
@@ -9602,7 +9854,7 @@ exports[`<RoomListView /> > renders SmallFlatList story 1`] = `
                   aria-posinset="1"
                   aria-selected="false"
                   aria-setsize="2"
-                  class="Flex-module_flex RoomListItemView-module_roomListItem mx_RoomListItemView RoomListItemView-module_bold RoomListItemView-module_firstItem"
+                  class="Flex-module_flex RoomListItemView-module_roomListItem mx_RoomListItemView RoomListItemView-module_firstItem"
                   data-state="closed"
                   role="option"
                   style="--mx-flex-display: flex; --mx-flex-direction: row; --mx-flex-align: stretch; --mx-flex-justify: start; --mx-flex-gap: var(--cpd-space-3x); --mx-flex-wrap: nowrap;"
@@ -9628,11 +9880,15 @@ exports[`<RoomListView /> > renders SmallFlatList story 1`] = `
                         class="RoomListItemView-module_ellipsis"
                       >
                         <div
-                          class="RoomListItemView-module_roomName"
-                          data-testid="room-name"
-                          title="General"
+                          class="RoomListItemView-module_nameLine"
                         >
-                          General
+                          <div
+                            class="RoomListItemView-module_roomName"
+                            data-testid="room-name"
+                            title="General"
+                          >
+                            General
+                          </div>
                         </div>
                         <div
                           class="_typography_6v6n8_153 _font-body-sm-regular_6v6n8_31 RoomListItemView-module_preview"
@@ -9781,11 +10037,15 @@ exports[`<RoomListView /> > renders SmallFlatList story 1`] = `
                         class="RoomListItemView-module_ellipsis"
                       >
                         <div
-                          class="RoomListItemView-module_roomName"
-                          data-testid="room-name"
-                          title="Random"
+                          class="RoomListItemView-module_nameLine"
                         >
-                          Random
+                          <div
+                            class="RoomListItemView-module_roomName"
+                            data-testid="room-name"
+                            title="Random"
+                          >
+                            Random
+                          </div>
                         </div>
                       </div>
                       <div
@@ -10075,7 +10335,7 @@ exports[`<RoomListView /> > renders SmallSectionList story 1`] = `
                         aria-describedby="00000000-0000-0000-0000-000000000003"
                         aria-haspopup="menu"
                         aria-label="Open room General"
-                        class="Flex-module_flex RoomListItemView-module_roomListItem mx_RoomListItemView RoomListItemView-module_bold"
+                        class="Flex-module_flex RoomListItemView-module_roomListItem mx_RoomListItemView"
                         data-state="closed"
                         style="--mx-flex-display: flex; --mx-flex-direction: row; --mx-flex-align: stretch; --mx-flex-justify: start; --mx-flex-gap: var(--cpd-space-3x); --mx-flex-wrap: nowrap;"
                         tabindex="-1"
@@ -10100,11 +10360,15 @@ exports[`<RoomListView /> > renders SmallSectionList story 1`] = `
                               class="RoomListItemView-module_ellipsis"
                             >
                               <div
-                                class="RoomListItemView-module_roomName"
-                                data-testid="room-name"
-                                title="General"
+                                class="RoomListItemView-module_nameLine"
                               >
-                                General
+                                <div
+                                  class="RoomListItemView-module_roomName"
+                                  data-testid="room-name"
+                                  title="General"
+                                >
+                                  General
+                                </div>
                               </div>
                               <div
                                 class="_typography_6v6n8_153 _font-body-sm-regular_6v6n8_31 RoomListItemView-module_preview"
@@ -10262,11 +10526,15 @@ exports[`<RoomListView /> > renders SmallSectionList story 1`] = `
                               class="RoomListItemView-module_ellipsis"
                             >
                               <div
-                                class="RoomListItemView-module_roomName"
-                                data-testid="room-name"
-                                title="Random"
+                                class="RoomListItemView-module_nameLine"
                               >
-                                Random
+                                <div
+                                  class="RoomListItemView-module_roomName"
+                                  data-testid="room-name"
+                                  title="Random"
+                                >
+                                  Random
+                                </div>
                               </div>
                             </div>
                             <div
@@ -10501,7 +10769,7 @@ exports[`<RoomListView /> > renders Toast story 1`] = `
                   aria-posinset="1"
                   aria-selected="false"
                   aria-setsize="20"
-                  class="Flex-module_flex RoomListItemView-module_roomListItem mx_RoomListItemView RoomListItemView-module_bold RoomListItemView-module_firstItem"
+                  class="Flex-module_flex RoomListItemView-module_roomListItem mx_RoomListItemView RoomListItemView-module_firstItem"
                   data-state="closed"
                   role="option"
                   style="--mx-flex-display: flex; --mx-flex-direction: row; --mx-flex-align: stretch; --mx-flex-justify: start; --mx-flex-gap: var(--cpd-space-3x); --mx-flex-wrap: nowrap;"
@@ -10527,11 +10795,15 @@ exports[`<RoomListView /> > renders Toast story 1`] = `
                         class="RoomListItemView-module_ellipsis"
                       >
                         <div
-                          class="RoomListItemView-module_roomName"
-                          data-testid="room-name"
-                          title="General"
+                          class="RoomListItemView-module_nameLine"
                         >
-                          General
+                          <div
+                            class="RoomListItemView-module_roomName"
+                            data-testid="room-name"
+                            title="General"
+                          >
+                            General
+                          </div>
                         </div>
                         <div
                           class="_typography_6v6n8_153 _font-body-sm-regular_6v6n8_31 RoomListItemView-module_preview"
@@ -10680,11 +10952,15 @@ exports[`<RoomListView /> > renders Toast story 1`] = `
                         class="RoomListItemView-module_ellipsis"
                       >
                         <div
-                          class="RoomListItemView-module_roomName"
-                          data-testid="room-name"
-                          title="Random"
+                          class="RoomListItemView-module_nameLine"
                         >
-                          Random
+                          <div
+                            class="RoomListItemView-module_roomName"
+                            data-testid="room-name"
+                            title="Random"
+                          >
+                            Random
+                          </div>
                         </div>
                       </div>
                       <div
@@ -10802,11 +11078,15 @@ exports[`<RoomListView /> > renders Toast story 1`] = `
                         class="RoomListItemView-module_ellipsis"
                       >
                         <div
-                          class="RoomListItemView-module_roomName"
-                          data-testid="room-name"
-                          title="Engineering"
+                          class="RoomListItemView-module_nameLine"
                         >
-                          Engineering
+                          <div
+                            class="RoomListItemView-module_roomName"
+                            data-testid="room-name"
+                            title="Engineering"
+                          >
+                            Engineering
+                          </div>
                         </div>
                         <div
                           class="_typography_6v6n8_153 _font-body-sm-regular_6v6n8_31 RoomListItemView-module_preview"
@@ -10908,7 +11188,7 @@ exports[`<RoomListView /> > renders Toast story 1`] = `
                   aria-posinset="4"
                   aria-selected="false"
                   aria-setsize="20"
-                  class="Flex-module_flex RoomListItemView-module_roomListItem mx_RoomListItemView RoomListItemView-module_bold"
+                  class="Flex-module_flex RoomListItemView-module_roomListItem mx_RoomListItemView"
                   data-state="closed"
                   role="option"
                   style="--mx-flex-display: flex; --mx-flex-direction: row; --mx-flex-align: stretch; --mx-flex-justify: start; --mx-flex-gap: var(--cpd-space-3x); --mx-flex-wrap: nowrap;"
@@ -10934,11 +11214,15 @@ exports[`<RoomListView /> > renders Toast story 1`] = `
                         class="RoomListItemView-module_ellipsis"
                       >
                         <div
-                          class="RoomListItemView-module_roomName"
-                          data-testid="room-name"
-                          title="Design"
+                          class="RoomListItemView-module_nameLine"
                         >
-                          Design
+                          <div
+                            class="RoomListItemView-module_roomName"
+                            data-testid="room-name"
+                            title="Design"
+                          >
+                            Design
+                          </div>
                         </div>
                       </div>
                       <div
@@ -11056,11 +11340,15 @@ exports[`<RoomListView /> > renders Toast story 1`] = `
                         class="RoomListItemView-module_ellipsis"
                       >
                         <div
-                          class="RoomListItemView-module_roomName"
-                          data-testid="room-name"
-                          title="Product"
+                          class="RoomListItemView-module_nameLine"
                         >
-                          Product
+                          <div
+                            class="RoomListItemView-module_roomName"
+                            data-testid="room-name"
+                            title="Product"
+                          >
+                            Product
+                          </div>
                         </div>
                         <div
                           class="_typography_6v6n8_153 _font-body-sm-regular_6v6n8_31 RoomListItemView-module_preview"
@@ -11188,11 +11476,15 @@ exports[`<RoomListView /> > renders Toast story 1`] = `
                         class="RoomListItemView-module_ellipsis"
                       >
                         <div
-                          class="RoomListItemView-module_roomName"
-                          data-testid="room-name"
-                          title="Marketing"
+                          class="RoomListItemView-module_nameLine"
                         >
-                          Marketing
+                          <div
+                            class="RoomListItemView-module_roomName"
+                            data-testid="room-name"
+                            title="Marketing"
+                          >
+                            Marketing
+                          </div>
                         </div>
                       </div>
                       <div
@@ -11307,7 +11599,7 @@ exports[`<RoomListView /> > renders Toast story 1`] = `
                   aria-posinset="7"
                   aria-selected="false"
                   aria-setsize="20"
-                  class="Flex-module_flex RoomListItemView-module_roomListItem mx_RoomListItemView RoomListItemView-module_bold"
+                  class="Flex-module_flex RoomListItemView-module_roomListItem mx_RoomListItemView"
                   data-state="closed"
                   role="option"
                   style="--mx-flex-display: flex; --mx-flex-direction: row; --mx-flex-align: stretch; --mx-flex-justify: start; --mx-flex-gap: var(--cpd-space-3x); --mx-flex-wrap: nowrap;"
@@ -11333,11 +11625,15 @@ exports[`<RoomListView /> > renders Toast story 1`] = `
                         class="RoomListItemView-module_ellipsis"
                       >
                         <div
-                          class="RoomListItemView-module_roomName"
-                          data-testid="room-name"
-                          title="Sales"
+                          class="RoomListItemView-module_nameLine"
                         >
-                          Sales
+                          <div
+                            class="RoomListItemView-module_roomName"
+                            data-testid="room-name"
+                            title="Sales"
+                          >
+                            Sales
+                          </div>
                         </div>
                         <div
                           class="_typography_6v6n8_153 _font-body-sm-regular_6v6n8_31 RoomListItemView-module_preview"
@@ -11465,11 +11761,15 @@ exports[`<RoomListView /> > renders Toast story 1`] = `
                         class="RoomListItemView-module_ellipsis"
                       >
                         <div
-                          class="RoomListItemView-module_roomName"
-                          data-testid="room-name"
-                          title="Support"
+                          class="RoomListItemView-module_nameLine"
                         >
-                          Support
+                          <div
+                            class="RoomListItemView-module_roomName"
+                            data-testid="room-name"
+                            title="Support"
+                          >
+                            Support
+                          </div>
                         </div>
                       </div>
                       <div
@@ -11587,11 +11887,15 @@ exports[`<RoomListView /> > renders Toast story 1`] = `
                         class="RoomListItemView-module_ellipsis"
                       >
                         <div
-                          class="RoomListItemView-module_roomName"
-                          data-testid="room-name"
-                          title="Announcements"
+                          class="RoomListItemView-module_nameLine"
                         >
-                          Announcements
+                          <div
+                            class="RoomListItemView-module_roomName"
+                            data-testid="room-name"
+                            title="Announcements"
+                          >
+                            Announcements
+                          </div>
                         </div>
                         <div
                           class="_typography_6v6n8_153 _font-body-sm-regular_6v6n8_31 RoomListItemView-module_preview"
@@ -11693,7 +11997,7 @@ exports[`<RoomListView /> > renders Toast story 1`] = `
                   aria-posinset="10"
                   aria-selected="false"
                   aria-setsize="20"
-                  class="Flex-module_flex RoomListItemView-module_roomListItem mx_RoomListItemView RoomListItemView-module_bold"
+                  class="Flex-module_flex RoomListItemView-module_roomListItem mx_RoomListItemView"
                   data-state="closed"
                   role="option"
                   style="--mx-flex-display: flex; --mx-flex-direction: row; --mx-flex-align: stretch; --mx-flex-justify: start; --mx-flex-gap: var(--cpd-space-3x); --mx-flex-wrap: nowrap;"
@@ -11719,11 +12023,15 @@ exports[`<RoomListView /> > renders Toast story 1`] = `
                         class="RoomListItemView-module_ellipsis"
                       >
                         <div
-                          class="RoomListItemView-module_roomName"
-                          data-testid="room-name"
-                          title="Off-topic"
+                          class="RoomListItemView-module_nameLine"
                         >
-                          Off-topic
+                          <div
+                            class="RoomListItemView-module_roomName"
+                            data-testid="room-name"
+                            title="Off-topic"
+                          >
+                            Off-topic
+                          </div>
                         </div>
                       </div>
                       <div
@@ -11841,11 +12149,15 @@ exports[`<RoomListView /> > renders Toast story 1`] = `
                         class="RoomListItemView-module_ellipsis"
                       >
                         <div
-                          class="RoomListItemView-module_roomName"
-                          data-testid="room-name"
-                          title="Team Alpha"
+                          class="RoomListItemView-module_nameLine"
                         >
-                          Team Alpha
+                          <div
+                            class="RoomListItemView-module_roomName"
+                            data-testid="room-name"
+                            title="Team Alpha"
+                          >
+                            Team Alpha
+                          </div>
                         </div>
                         <div
                           class="_typography_6v6n8_153 _font-body-sm-regular_6v6n8_31 RoomListItemView-module_preview"
@@ -11996,11 +12308,15 @@ exports[`<RoomListView /> > renders Toast story 1`] = `
                         class="RoomListItemView-module_ellipsis"
                       >
                         <div
-                          class="RoomListItemView-module_roomName"
-                          data-testid="room-name"
-                          title="Team Beta"
+                          class="RoomListItemView-module_nameLine"
                         >
-                          Team Beta
+                          <div
+                            class="RoomListItemView-module_roomName"
+                            data-testid="room-name"
+                            title="Team Beta"
+                          >
+                            Team Beta
+                          </div>
                         </div>
                       </div>
                       <div
@@ -12092,7 +12408,7 @@ exports[`<RoomListView /> > renders Toast story 1`] = `
                   aria-posinset="13"
                   aria-selected="false"
                   aria-setsize="20"
-                  class="Flex-module_flex RoomListItemView-module_roomListItem mx_RoomListItemView RoomListItemView-module_bold"
+                  class="Flex-module_flex RoomListItemView-module_roomListItem mx_RoomListItemView"
                   data-state="closed"
                   role="option"
                   style="--mx-flex-display: flex; --mx-flex-direction: row; --mx-flex-align: stretch; --mx-flex-justify: start; --mx-flex-gap: var(--cpd-space-3x); --mx-flex-wrap: nowrap;"
@@ -12118,11 +12434,15 @@ exports[`<RoomListView /> > renders Toast story 1`] = `
                         class="RoomListItemView-module_ellipsis"
                       >
                         <div
-                          class="RoomListItemView-module_roomName"
-                          data-testid="room-name"
-                          title="Project X"
+                          class="RoomListItemView-module_nameLine"
                         >
-                          Project X
+                          <div
+                            class="RoomListItemView-module_roomName"
+                            data-testid="room-name"
+                            title="Project X"
+                          >
+                            Project X
+                          </div>
                         </div>
                         <div
                           class="_typography_6v6n8_153 _font-body-sm-regular_6v6n8_31 RoomListItemView-module_preview"
@@ -12250,11 +12570,15 @@ exports[`<RoomListView /> > renders Toast story 1`] = `
                         class="RoomListItemView-module_ellipsis"
                       >
                         <div
-                          class="RoomListItemView-module_roomName"
-                          data-testid="room-name"
-                          title="Project Y"
+                          class="RoomListItemView-module_nameLine"
                         >
-                          Project Y
+                          <div
+                            class="RoomListItemView-module_roomName"
+                            data-testid="room-name"
+                            title="Project Y"
+                          >
+                            Project Y
+                          </div>
                         </div>
                       </div>
                       <div
@@ -12372,11 +12696,15 @@ exports[`<RoomListView /> > renders Toast story 1`] = `
                         class="RoomListItemView-module_ellipsis"
                       >
                         <div
-                          class="RoomListItemView-module_roomName"
-                          data-testid="room-name"
-                          title="Water Cooler"
+                          class="RoomListItemView-module_nameLine"
                         >
-                          Water Cooler
+                          <div
+                            class="RoomListItemView-module_roomName"
+                            data-testid="room-name"
+                            title="Water Cooler"
+                          >
+                            Water Cooler
+                          </div>
                         </div>
                         <div
                           class="_typography_6v6n8_153 _font-body-sm-regular_6v6n8_31 RoomListItemView-module_preview"
@@ -12478,7 +12806,7 @@ exports[`<RoomListView /> > renders Toast story 1`] = `
                   aria-posinset="16"
                   aria-selected="false"
                   aria-setsize="20"
-                  class="Flex-module_flex RoomListItemView-module_roomListItem mx_RoomListItemView RoomListItemView-module_bold"
+                  class="Flex-module_flex RoomListItemView-module_roomListItem mx_RoomListItemView"
                   data-state="closed"
                   role="option"
                   style="--mx-flex-display: flex; --mx-flex-direction: row; --mx-flex-align: stretch; --mx-flex-justify: start; --mx-flex-gap: var(--cpd-space-3x); --mx-flex-wrap: nowrap;"
@@ -12504,11 +12832,15 @@ exports[`<RoomListView /> > renders Toast story 1`] = `
                         class="RoomListItemView-module_ellipsis"
                       >
                         <div
-                          class="RoomListItemView-module_roomName"
-                          data-testid="room-name"
-                          title="Feedback"
+                          class="RoomListItemView-module_nameLine"
                         >
-                          Feedback
+                          <div
+                            class="RoomListItemView-module_roomName"
+                            data-testid="room-name"
+                            title="Feedback"
+                          >
+                            Feedback
+                          </div>
                         </div>
                       </div>
                       <div
@@ -12649,11 +12981,15 @@ exports[`<RoomListView /> > renders Toast story 1`] = `
                         class="RoomListItemView-module_ellipsis"
                       >
                         <div
-                          class="RoomListItemView-module_roomName"
-                          data-testid="room-name"
-                          title="Ideas"
+                          class="RoomListItemView-module_nameLine"
                         >
-                          Ideas
+                          <div
+                            class="RoomListItemView-module_roomName"
+                            data-testid="room-name"
+                            title="Ideas"
+                          >
+                            Ideas
+                          </div>
                         </div>
                         <div
                           class="_typography_6v6n8_153 _font-body-sm-regular_6v6n8_31 RoomListItemView-module_preview"
@@ -12781,11 +13117,15 @@ exports[`<RoomListView /> > renders Toast story 1`] = `
                         class="RoomListItemView-module_ellipsis"
                       >
                         <div
-                          class="RoomListItemView-module_roomName"
-                          data-testid="room-name"
-                          title="Bugs"
+                          class="RoomListItemView-module_nameLine"
                         >
-                          Bugs
+                          <div
+                            class="RoomListItemView-module_roomName"
+                            data-testid="room-name"
+                            title="Bugs"
+                          >
+                            Bugs
+                          </div>
                         </div>
                       </div>
                       <div
@@ -12877,7 +13217,7 @@ exports[`<RoomListView /> > renders Toast story 1`] = `
                   aria-posinset="19"
                   aria-selected="false"
                   aria-setsize="20"
-                  class="Flex-module_flex RoomListItemView-module_roomListItem mx_RoomListItemView RoomListItemView-module_bold"
+                  class="Flex-module_flex RoomListItemView-module_roomListItem mx_RoomListItemView"
                   data-state="closed"
                   role="option"
                   style="--mx-flex-display: flex; --mx-flex-direction: row; --mx-flex-align: stretch; --mx-flex-justify: start; --mx-flex-gap: var(--cpd-space-3x); --mx-flex-wrap: nowrap;"
@@ -12903,11 +13243,15 @@ exports[`<RoomListView /> > renders Toast story 1`] = `
                         class="RoomListItemView-module_ellipsis"
                       >
                         <div
-                          class="RoomListItemView-module_roomName"
-                          data-testid="room-name"
-                          title="Features"
+                          class="RoomListItemView-module_nameLine"
                         >
-                          Features
+                          <div
+                            class="RoomListItemView-module_roomName"
+                            data-testid="room-name"
+                            title="Features"
+                          >
+                            Features
+                          </div>
                         </div>
                         <div
                           class="_typography_6v6n8_153 _font-body-sm-regular_6v6n8_31 RoomListItemView-module_preview"
@@ -13035,11 +13379,15 @@ exports[`<RoomListView /> > renders Toast story 1`] = `
                         class="RoomListItemView-module_ellipsis"
                       >
                         <div
-                          class="RoomListItemView-module_roomName"
-                          data-testid="room-name"
-                          title="Releases"
+                          class="RoomListItemView-module_nameLine"
                         >
-                          Releases
+                          <div
+                            class="RoomListItemView-module_roomName"
+                            data-testid="room-name"
+                            title="Releases"
+                          >
+                            Releases
+                          </div>
                         </div>
                       </div>
                       <div
@@ -13247,7 +13595,7 @@ exports[`<RoomListView /> > renders WithActiveFilter story 1`] = `
                   aria-posinset="1"
                   aria-selected="false"
                   aria-setsize="20"
-                  class="Flex-module_flex RoomListItemView-module_roomListItem mx_RoomListItemView RoomListItemView-module_bold RoomListItemView-module_firstItem"
+                  class="Flex-module_flex RoomListItemView-module_roomListItem mx_RoomListItemView RoomListItemView-module_firstItem"
                   data-state="closed"
                   role="option"
                   style="--mx-flex-display: flex; --mx-flex-direction: row; --mx-flex-align: stretch; --mx-flex-justify: start; --mx-flex-gap: var(--cpd-space-3x); --mx-flex-wrap: nowrap;"
@@ -13273,11 +13621,15 @@ exports[`<RoomListView /> > renders WithActiveFilter story 1`] = `
                         class="RoomListItemView-module_ellipsis"
                       >
                         <div
-                          class="RoomListItemView-module_roomName"
-                          data-testid="room-name"
-                          title="General"
+                          class="RoomListItemView-module_nameLine"
                         >
-                          General
+                          <div
+                            class="RoomListItemView-module_roomName"
+                            data-testid="room-name"
+                            title="General"
+                          >
+                            General
+                          </div>
                         </div>
                         <div
                           class="_typography_6v6n8_153 _font-body-sm-regular_6v6n8_31 RoomListItemView-module_preview"
@@ -13426,11 +13778,15 @@ exports[`<RoomListView /> > renders WithActiveFilter story 1`] = `
                         class="RoomListItemView-module_ellipsis"
                       >
                         <div
-                          class="RoomListItemView-module_roomName"
-                          data-testid="room-name"
-                          title="Random"
+                          class="RoomListItemView-module_nameLine"
                         >
-                          Random
+                          <div
+                            class="RoomListItemView-module_roomName"
+                            data-testid="room-name"
+                            title="Random"
+                          >
+                            Random
+                          </div>
                         </div>
                       </div>
                       <div
@@ -13548,11 +13904,15 @@ exports[`<RoomListView /> > renders WithActiveFilter story 1`] = `
                         class="RoomListItemView-module_ellipsis"
                       >
                         <div
-                          class="RoomListItemView-module_roomName"
-                          data-testid="room-name"
-                          title="Engineering"
+                          class="RoomListItemView-module_nameLine"
                         >
-                          Engineering
+                          <div
+                            class="RoomListItemView-module_roomName"
+                            data-testid="room-name"
+                            title="Engineering"
+                          >
+                            Engineering
+                          </div>
                         </div>
                         <div
                           class="_typography_6v6n8_153 _font-body-sm-regular_6v6n8_31 RoomListItemView-module_preview"
@@ -13654,7 +14014,7 @@ exports[`<RoomListView /> > renders WithActiveFilter story 1`] = `
                   aria-posinset="4"
                   aria-selected="false"
                   aria-setsize="20"
-                  class="Flex-module_flex RoomListItemView-module_roomListItem mx_RoomListItemView RoomListItemView-module_bold"
+                  class="Flex-module_flex RoomListItemView-module_roomListItem mx_RoomListItemView"
                   data-state="closed"
                   role="option"
                   style="--mx-flex-display: flex; --mx-flex-direction: row; --mx-flex-align: stretch; --mx-flex-justify: start; --mx-flex-gap: var(--cpd-space-3x); --mx-flex-wrap: nowrap;"
@@ -13680,11 +14040,15 @@ exports[`<RoomListView /> > renders WithActiveFilter story 1`] = `
                         class="RoomListItemView-module_ellipsis"
                       >
                         <div
-                          class="RoomListItemView-module_roomName"
-                          data-testid="room-name"
-                          title="Design"
+                          class="RoomListItemView-module_nameLine"
                         >
-                          Design
+                          <div
+                            class="RoomListItemView-module_roomName"
+                            data-testid="room-name"
+                            title="Design"
+                          >
+                            Design
+                          </div>
                         </div>
                       </div>
                       <div
@@ -13802,11 +14166,15 @@ exports[`<RoomListView /> > renders WithActiveFilter story 1`] = `
                         class="RoomListItemView-module_ellipsis"
                       >
                         <div
-                          class="RoomListItemView-module_roomName"
-                          data-testid="room-name"
-                          title="Product"
+                          class="RoomListItemView-module_nameLine"
                         >
-                          Product
+                          <div
+                            class="RoomListItemView-module_roomName"
+                            data-testid="room-name"
+                            title="Product"
+                          >
+                            Product
+                          </div>
                         </div>
                         <div
                           class="_typography_6v6n8_153 _font-body-sm-regular_6v6n8_31 RoomListItemView-module_preview"
@@ -13934,11 +14302,15 @@ exports[`<RoomListView /> > renders WithActiveFilter story 1`] = `
                         class="RoomListItemView-module_ellipsis"
                       >
                         <div
-                          class="RoomListItemView-module_roomName"
-                          data-testid="room-name"
-                          title="Marketing"
+                          class="RoomListItemView-module_nameLine"
                         >
-                          Marketing
+                          <div
+                            class="RoomListItemView-module_roomName"
+                            data-testid="room-name"
+                            title="Marketing"
+                          >
+                            Marketing
+                          </div>
                         </div>
                       </div>
                       <div
@@ -14053,7 +14425,7 @@ exports[`<RoomListView /> > renders WithActiveFilter story 1`] = `
                   aria-posinset="7"
                   aria-selected="false"
                   aria-setsize="20"
-                  class="Flex-module_flex RoomListItemView-module_roomListItem mx_RoomListItemView RoomListItemView-module_bold"
+                  class="Flex-module_flex RoomListItemView-module_roomListItem mx_RoomListItemView"
                   data-state="closed"
                   role="option"
                   style="--mx-flex-display: flex; --mx-flex-direction: row; --mx-flex-align: stretch; --mx-flex-justify: start; --mx-flex-gap: var(--cpd-space-3x); --mx-flex-wrap: nowrap;"
@@ -14079,11 +14451,15 @@ exports[`<RoomListView /> > renders WithActiveFilter story 1`] = `
                         class="RoomListItemView-module_ellipsis"
                       >
                         <div
-                          class="RoomListItemView-module_roomName"
-                          data-testid="room-name"
-                          title="Sales"
+                          class="RoomListItemView-module_nameLine"
                         >
-                          Sales
+                          <div
+                            class="RoomListItemView-module_roomName"
+                            data-testid="room-name"
+                            title="Sales"
+                          >
+                            Sales
+                          </div>
                         </div>
                         <div
                           class="_typography_6v6n8_153 _font-body-sm-regular_6v6n8_31 RoomListItemView-module_preview"
@@ -14211,11 +14587,15 @@ exports[`<RoomListView /> > renders WithActiveFilter story 1`] = `
                         class="RoomListItemView-module_ellipsis"
                       >
                         <div
-                          class="RoomListItemView-module_roomName"
-                          data-testid="room-name"
-                          title="Support"
+                          class="RoomListItemView-module_nameLine"
                         >
-                          Support
+                          <div
+                            class="RoomListItemView-module_roomName"
+                            data-testid="room-name"
+                            title="Support"
+                          >
+                            Support
+                          </div>
                         </div>
                       </div>
                       <div
@@ -14333,11 +14713,15 @@ exports[`<RoomListView /> > renders WithActiveFilter story 1`] = `
                         class="RoomListItemView-module_ellipsis"
                       >
                         <div
-                          class="RoomListItemView-module_roomName"
-                          data-testid="room-name"
-                          title="Announcements"
+                          class="RoomListItemView-module_nameLine"
                         >
-                          Announcements
+                          <div
+                            class="RoomListItemView-module_roomName"
+                            data-testid="room-name"
+                            title="Announcements"
+                          >
+                            Announcements
+                          </div>
                         </div>
                         <div
                           class="_typography_6v6n8_153 _font-body-sm-regular_6v6n8_31 RoomListItemView-module_preview"
@@ -14439,7 +14823,7 @@ exports[`<RoomListView /> > renders WithActiveFilter story 1`] = `
                   aria-posinset="10"
                   aria-selected="false"
                   aria-setsize="20"
-                  class="Flex-module_flex RoomListItemView-module_roomListItem mx_RoomListItemView RoomListItemView-module_bold"
+                  class="Flex-module_flex RoomListItemView-module_roomListItem mx_RoomListItemView"
                   data-state="closed"
                   role="option"
                   style="--mx-flex-display: flex; --mx-flex-direction: row; --mx-flex-align: stretch; --mx-flex-justify: start; --mx-flex-gap: var(--cpd-space-3x); --mx-flex-wrap: nowrap;"
@@ -14465,11 +14849,15 @@ exports[`<RoomListView /> > renders WithActiveFilter story 1`] = `
                         class="RoomListItemView-module_ellipsis"
                       >
                         <div
-                          class="RoomListItemView-module_roomName"
-                          data-testid="room-name"
-                          title="Off-topic"
+                          class="RoomListItemView-module_nameLine"
                         >
-                          Off-topic
+                          <div
+                            class="RoomListItemView-module_roomName"
+                            data-testid="room-name"
+                            title="Off-topic"
+                          >
+                            Off-topic
+                          </div>
                         </div>
                       </div>
                       <div
@@ -14587,11 +14975,15 @@ exports[`<RoomListView /> > renders WithActiveFilter story 1`] = `
                         class="RoomListItemView-module_ellipsis"
                       >
                         <div
-                          class="RoomListItemView-module_roomName"
-                          data-testid="room-name"
-                          title="Team Alpha"
+                          class="RoomListItemView-module_nameLine"
                         >
-                          Team Alpha
+                          <div
+                            class="RoomListItemView-module_roomName"
+                            data-testid="room-name"
+                            title="Team Alpha"
+                          >
+                            Team Alpha
+                          </div>
                         </div>
                         <div
                           class="_typography_6v6n8_153 _font-body-sm-regular_6v6n8_31 RoomListItemView-module_preview"
@@ -14742,11 +15134,15 @@ exports[`<RoomListView /> > renders WithActiveFilter story 1`] = `
                         class="RoomListItemView-module_ellipsis"
                       >
                         <div
-                          class="RoomListItemView-module_roomName"
-                          data-testid="room-name"
-                          title="Team Beta"
+                          class="RoomListItemView-module_nameLine"
                         >
-                          Team Beta
+                          <div
+                            class="RoomListItemView-module_roomName"
+                            data-testid="room-name"
+                            title="Team Beta"
+                          >
+                            Team Beta
+                          </div>
                         </div>
                       </div>
                       <div
@@ -14838,7 +15234,7 @@ exports[`<RoomListView /> > renders WithActiveFilter story 1`] = `
                   aria-posinset="13"
                   aria-selected="false"
                   aria-setsize="20"
-                  class="Flex-module_flex RoomListItemView-module_roomListItem mx_RoomListItemView RoomListItemView-module_bold"
+                  class="Flex-module_flex RoomListItemView-module_roomListItem mx_RoomListItemView"
                   data-state="closed"
                   role="option"
                   style="--mx-flex-display: flex; --mx-flex-direction: row; --mx-flex-align: stretch; --mx-flex-justify: start; --mx-flex-gap: var(--cpd-space-3x); --mx-flex-wrap: nowrap;"
@@ -14864,11 +15260,15 @@ exports[`<RoomListView /> > renders WithActiveFilter story 1`] = `
                         class="RoomListItemView-module_ellipsis"
                       >
                         <div
-                          class="RoomListItemView-module_roomName"
-                          data-testid="room-name"
-                          title="Project X"
+                          class="RoomListItemView-module_nameLine"
                         >
-                          Project X
+                          <div
+                            class="RoomListItemView-module_roomName"
+                            data-testid="room-name"
+                            title="Project X"
+                          >
+                            Project X
+                          </div>
                         </div>
                         <div
                           class="_typography_6v6n8_153 _font-body-sm-regular_6v6n8_31 RoomListItemView-module_preview"
@@ -14996,11 +15396,15 @@ exports[`<RoomListView /> > renders WithActiveFilter story 1`] = `
                         class="RoomListItemView-module_ellipsis"
                       >
                         <div
-                          class="RoomListItemView-module_roomName"
-                          data-testid="room-name"
-                          title="Project Y"
+                          class="RoomListItemView-module_nameLine"
                         >
-                          Project Y
+                          <div
+                            class="RoomListItemView-module_roomName"
+                            data-testid="room-name"
+                            title="Project Y"
+                          >
+                            Project Y
+                          </div>
                         </div>
                       </div>
                       <div
@@ -15118,11 +15522,15 @@ exports[`<RoomListView /> > renders WithActiveFilter story 1`] = `
                         class="RoomListItemView-module_ellipsis"
                       >
                         <div
-                          class="RoomListItemView-module_roomName"
-                          data-testid="room-name"
-                          title="Water Cooler"
+                          class="RoomListItemView-module_nameLine"
                         >
-                          Water Cooler
+                          <div
+                            class="RoomListItemView-module_roomName"
+                            data-testid="room-name"
+                            title="Water Cooler"
+                          >
+                            Water Cooler
+                          </div>
                         </div>
                         <div
                           class="_typography_6v6n8_153 _font-body-sm-regular_6v6n8_31 RoomListItemView-module_preview"
@@ -15224,7 +15632,7 @@ exports[`<RoomListView /> > renders WithActiveFilter story 1`] = `
                   aria-posinset="16"
                   aria-selected="false"
                   aria-setsize="20"
-                  class="Flex-module_flex RoomListItemView-module_roomListItem mx_RoomListItemView RoomListItemView-module_bold"
+                  class="Flex-module_flex RoomListItemView-module_roomListItem mx_RoomListItemView"
                   data-state="closed"
                   role="option"
                   style="--mx-flex-display: flex; --mx-flex-direction: row; --mx-flex-align: stretch; --mx-flex-justify: start; --mx-flex-gap: var(--cpd-space-3x); --mx-flex-wrap: nowrap;"
@@ -15250,11 +15658,15 @@ exports[`<RoomListView /> > renders WithActiveFilter story 1`] = `
                         class="RoomListItemView-module_ellipsis"
                       >
                         <div
-                          class="RoomListItemView-module_roomName"
-                          data-testid="room-name"
-                          title="Feedback"
+                          class="RoomListItemView-module_nameLine"
                         >
-                          Feedback
+                          <div
+                            class="RoomListItemView-module_roomName"
+                            data-testid="room-name"
+                            title="Feedback"
+                          >
+                            Feedback
+                          </div>
                         </div>
                       </div>
                       <div
@@ -15395,11 +15807,15 @@ exports[`<RoomListView /> > renders WithActiveFilter story 1`] = `
                         class="RoomListItemView-module_ellipsis"
                       >
                         <div
-                          class="RoomListItemView-module_roomName"
-                          data-testid="room-name"
-                          title="Ideas"
+                          class="RoomListItemView-module_nameLine"
                         >
-                          Ideas
+                          <div
+                            class="RoomListItemView-module_roomName"
+                            data-testid="room-name"
+                            title="Ideas"
+                          >
+                            Ideas
+                          </div>
                         </div>
                         <div
                           class="_typography_6v6n8_153 _font-body-sm-regular_6v6n8_31 RoomListItemView-module_preview"
@@ -15527,11 +15943,15 @@ exports[`<RoomListView /> > renders WithActiveFilter story 1`] = `
                         class="RoomListItemView-module_ellipsis"
                       >
                         <div
-                          class="RoomListItemView-module_roomName"
-                          data-testid="room-name"
-                          title="Bugs"
+                          class="RoomListItemView-module_nameLine"
                         >
-                          Bugs
+                          <div
+                            class="RoomListItemView-module_roomName"
+                            data-testid="room-name"
+                            title="Bugs"
+                          >
+                            Bugs
+                          </div>
                         </div>
                       </div>
                       <div
@@ -15623,7 +16043,7 @@ exports[`<RoomListView /> > renders WithActiveFilter story 1`] = `
                   aria-posinset="19"
                   aria-selected="false"
                   aria-setsize="20"
-                  class="Flex-module_flex RoomListItemView-module_roomListItem mx_RoomListItemView RoomListItemView-module_bold"
+                  class="Flex-module_flex RoomListItemView-module_roomListItem mx_RoomListItemView"
                   data-state="closed"
                   role="option"
                   style="--mx-flex-display: flex; --mx-flex-direction: row; --mx-flex-align: stretch; --mx-flex-justify: start; --mx-flex-gap: var(--cpd-space-3x); --mx-flex-wrap: nowrap;"
@@ -15649,11 +16069,15 @@ exports[`<RoomListView /> > renders WithActiveFilter story 1`] = `
                         class="RoomListItemView-module_ellipsis"
                       >
                         <div
-                          class="RoomListItemView-module_roomName"
-                          data-testid="room-name"
-                          title="Features"
+                          class="RoomListItemView-module_nameLine"
                         >
-                          Features
+                          <div
+                            class="RoomListItemView-module_roomName"
+                            data-testid="room-name"
+                            title="Features"
+                          >
+                            Features
+                          </div>
                         </div>
                         <div
                           class="_typography_6v6n8_153 _font-body-sm-regular_6v6n8_31 RoomListItemView-module_preview"
@@ -15781,11 +16205,15 @@ exports[`<RoomListView /> > renders WithActiveFilter story 1`] = `
                         class="RoomListItemView-module_ellipsis"
                       >
                         <div
-                          class="RoomListItemView-module_roomName"
-                          data-testid="room-name"
-                          title="Releases"
+                          class="RoomListItemView-module_nameLine"
                         >
-                          Releases
+                          <div
+                            class="RoomListItemView-module_roomName"
+                            data-testid="room-name"
+                            title="Releases"
+                          >
+                            Releases
+                          </div>
                         </div>
                       </div>
                       <div

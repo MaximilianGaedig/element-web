@@ -99,6 +99,8 @@ import { mediaFromMxc } from "../../../customisations/Media";
 import dis from "../../../dispatcher/dispatcher";
 import ContentMessages from "../../../ContentMessages";
 import { Action } from "../../../dispatcher/actions";
+import { type OpenToTabPayload } from "../../../dispatcher/payloads/OpenToTabPayload";
+import { UserTab } from "../dialogs/UserTab";
 import { type ViewRoomPayload } from "../../../dispatcher/payloads/ViewRoomPayload";
 import { CallType } from "matrix-js-sdk/src/webrtc/call";
 import { type MatrixClient } from "matrix-js-sdk/src/matrix";
@@ -1162,7 +1164,7 @@ export function ContactsView({ tab, onFinished }: Props): JSX.Element {
 
     /** Your own card is your profile, which the client already has a screen for. */
     const openMe = useCallback((): void => {
-        dis.dispatch({ action: Action.ViewUserSettings });
+        dis.dispatch<OpenToTabPayload>({ action: Action.ViewUserSettings, initialTabId: UserTab.Account });
     }, []);
 
     /*

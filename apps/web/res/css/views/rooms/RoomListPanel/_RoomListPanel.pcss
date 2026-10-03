@@ -69,6 +69,8 @@
 .mx_RoomListPill_bar {
     --mx-room-list-island: 44px;
 
+    /* The entries ask how wide the row is, not the window: the column can be narrow in a wide window. */
+    container-type: inline-size;
     position: absolute;
     bottom: var(--mx-room-list-bar-bottom, var(--cpd-space-4x));
     inset-inline: var(--cpd-space-4x);
@@ -312,8 +314,11 @@
     align-items: center;
     justify-content: center;
     gap: var(--cpd-space-1x);
-    /* Three of these and two islands have to fit a phone-width column: 56px each, the label decides. */
-    min-width: 56px;
+    /*
+     * Four of these and two islands have to fit a phone-width column: 52px each, the label decides. That is
+     * what fits a 360px Android phone exactly (measured: the bar is 328px there, the pill gets 224).
+     */
+    min-width: 52px;
     min-height: 44px;
     padding: var(--cpd-space-1x) var(--cpd-space-2x);
     border: none;
@@ -341,9 +346,45 @@
     }
 }
 
+/*
+ * Narrower than that (a 320px phone, or a column dragged thin) the words go and the icons stay, rather than
+ * the last entry being cut off by the pill's edge: still the button's name, only out of sight.
+ */
+@container (width < 326px) {
+    .mx_RoomListPill_entry {
+        min-width: 42px;
+
+        span {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            overflow: hidden;
+            clip-path: inset(50%);
+        }
+    }
+}
+
 @media (prefers-reduced-motion: reduce) {
     .mx_RoomListPill_entry,
     .mx_RoomListPill_selection {
         transition: none;
+    }
+}
+
+/*
+ * The ticks of our last message at the end of a chat's name line, in the colours of the same ticks on our
+ * own bubbles (_TelegramMessages.pcss .mx_EventTile_tgOwn): the outgoing colour, read in the accent, a
+ * failure in red.
+ */
+.mx_RoomListItemView .mx_TelegramTime_status {
+    --TgTime-status-size: 18px;
+    --TgTime-status-color: var(--cpd-color-icon-success-primary);
+
+    &[data-state="read"] {
+        --TgTime-status-color: var(--cpd-color-icon-accent-primary);
+    }
+
+    &[data-state="error"] {
+        --TgTime-status-color: var(--cpd-color-icon-critical-primary);
     }
 }

@@ -10,6 +10,7 @@ import {
     RoomListView as SharedRoomListView,
     useCreateAutoDisposedViewModel,
     type Room as SharedRoom,
+    type RoomListItemSendState,
 } from "@element-hq/web-shared-components";
 import { Room } from "matrix-js-sdk/src/matrix";
 
@@ -24,6 +25,7 @@ import { RoomListViewModel } from "../../../../viewmodels/room-list/RoomListView
 import { SDKContext } from "../../../../contexts/SDKContext.ts";
 import { RoomPath } from "../RoomPath";
 import { WarmupOnRest } from "./WarmupOnRest";
+import { TelegramSendStatusIcon } from "../../telegram/TelegramTime";
 
 /**
  * RoomListView component using shared components with proper MVVM pattern.
@@ -69,6 +71,12 @@ export function RoomListView(): JSX.Element {
         return <RoomPath room={room} fullPath />;
     }, []);
 
+    // Fork: our last message's ticks, the same glyphs as on the message in the timeline
+    const renderSendState = useCallback(
+        (state: RoomListItemSendState): ReactNode => <TelegramSendStatusIcon state={state} />,
+        [],
+    );
+
     // Handle keyboard navigation for landmarks
     const onKeyDown = useCallback((ev: React.KeyboardEvent) => {
         const navAction = getKeyBindingsManager().getNavigationAction(ev);
@@ -83,6 +91,12 @@ export function RoomListView(): JSX.Element {
     }, []);
 
     return (
-        <SharedRoomListView vm={vm} renderAvatar={renderAvatar} renderRoomPath={renderRoomPath} onKeyDown={onKeyDown} />
+        <SharedRoomListView
+            vm={vm}
+            renderAvatar={renderAvatar}
+            renderRoomPath={renderRoomPath}
+            renderSendState={renderSendState}
+            onKeyDown={onKeyDown}
+        />
     );
 }
