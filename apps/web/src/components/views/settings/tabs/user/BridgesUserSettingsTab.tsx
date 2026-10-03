@@ -36,8 +36,6 @@ import Modal from "../../../../../Modal";
 import BridgeLoginDialog from "../../../dialogs/BridgeLoginDialog";
 import { type DeclaredSettings, declaredSettings } from "../../../../../utils/bridge/declaredSettings";
 import { bridgesToConnect, type KnownBridge, knownBridges } from "../../../../../utils/bridge/knownBridges";
-import { findDMForUser } from "../../../../../utils/dm/findDMForUser";
-import createRoom from "../../../../../createRoom";
 
 const number = (n: number): string => n.toLocaleString();
 
@@ -197,6 +195,11 @@ function useKnownBridges(): KnownBridge[] {
  * encrypted - a bridge bot reads its commands in the clear.
  */
 async function openBotChat(client: MatrixClient, bot: string): Promise<void> {
+    // Loaded when needed: a new static import into settings has broken the app's start before.
+    const [{ findDMForUser }, { default: createRoom }] = await Promise.all([
+        import("../../../../../utils/dm/findDMForUser"),
+        import("../../../../../createRoom"),
+    ]);
     const roomId =
         findDMForUser(client, bot)?.roomId ??
         (await createRoom(client, { dmUserId: bot, encryption: false, spinner: false, andView: false }));
