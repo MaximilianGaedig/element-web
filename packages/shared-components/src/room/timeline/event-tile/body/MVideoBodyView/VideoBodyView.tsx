@@ -12,8 +12,12 @@ import React, {
     type PropsWithChildren,
     type ReactEventHandler,
     type Ref,
+    type RefObject,
+    useEffect,
+    useRef,
 } from "react";
 import classNames from "classnames";
+import { useMergeRefs } from "react-merge-refs";
 import { FileErrorIcon, VisibilityOnIcon } from "@vector-im/compound-design-tokens/assets/web/icons";
 import { InlineSpinner } from "@vector-im/compound-web";
 
@@ -128,6 +132,32 @@ interface VideoBodyViewProps {
 }
 
 /**
+ * A video that plays by itself (autoplay) plays only while it is on screen, as in Telegram: scrolled
+ * away, or in a chat kept in the background, it is paused, so it is neither decoded nor drawn for
+ * nobody. One the reader started stays theirs to pause.
+ */
+function usePlayOnlyWhileVisible(ref: RefObject<HTMLVideoElement | null>, autoPlay: boolean, ready: boolean): void {
+    useEffect(() => {
+        const video = ref.current;
+        if (!video || !autoPlay || typeof IntersectionObserver === "undefined") return;
+        let pausedByUs = false;
+        const observer = new IntersectionObserver(([entry]) => {
+            if (!entry.isIntersecting) {
+                if (!video.paused) {
+                    video.pause();
+                    pausedByUs = true;
+                }
+            } else if (pausedByUs || (video.paused && video.autoplay && video.currentTime === 0)) {
+                pausedByUs = false;
+                void video.play().catch(() => {});
+            }
+        });
+        observer.observe(video);
+        return () => observer.disconnect();
+    }, [ref, autoPlay, ready]);
+}
+
+/**
  * Renders the body of a video message with ready, hidden, loading, and error states.
  *
  * The media frame preserves layout while loading and can render
@@ -156,6 +186,10 @@ export function VideoBodyView({
         muted,
         autoPlay,
     } = useViewModel(vm);
+
+    const ownRef = useRef<HTMLVideoElement>(null);
+    const mergedVideoRef = useMergeRefs([ownRef, videoRef]);
+    usePlayOnlyWhileVisible(ownRef, !!autoPlay, state === VideoBodyViewState.READY);
 
     const rootClassName = classNames(className, styles.root);
     const resolvedContainerClassName = classNames(containerClassName, styles.container);
@@ -212,7 +246,7 @@ export function VideoBodyView({
                 {/* Captions will be supplied from app-side data once the VM wiring is in place. */}
                 <video
                     className={styles.video}
-                    ref={videoRef}
+                    ref={mergedVideoRef}
                     src={src}
                     aria-label={videoLabel}
                     title={videoTitle}

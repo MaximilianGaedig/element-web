@@ -126,4 +126,43 @@ describe("VideoBodyView", () => {
         fireEvent.play(video);
         expect(onPlay).toHaveBeenCalledTimes(1);
     });
+
+    // As in Telegram: a video playing by itself plays only while it can be seen.
+    it("pauses an autoplaying video off screen and plays it again on screen", () => {
+        let report: (visible: boolean) => void = () => {};
+        vi.stubGlobal(
+            "IntersectionObserver",
+            class {
+                public constructor(callback: IntersectionObserverCallback) {
+                    report = (visible) =>
+                        callback([{ isIntersecting: visible } as IntersectionObserverEntry], this as never);
+                }
+                public observe(): void {}
+                public disconnect(): void {}
+            },
+        );
+        const pause = vi.spyOn(HTMLMediaElement.prototype, "pause").mockImplementation(() => {});
+        const play = vi.spyOn(HTMLMediaElement.prototype, "play").mockResolvedValue();
+        let paused = false;
+        vi.spyOn(HTMLMediaElement.prototype, "paused", "get").mockImplementation(() => paused);
+        const vm = new TestVideoBodyViewModel({
+            state: VideoBodyViewState.READY,
+            videoLabel: "Clip",
+            src: "https://example.org/clip.mp4",
+            preload: "none",
+            controls: true,
+            muted: true,
+            autoPlay: true,
+        });
+        render(<VideoBodyView vm={vm} />);
+
+        report(false);
+        expect(pause).toHaveBeenCalledTimes(1);
+        paused = true;
+
+        report(true);
+        expect(play).toHaveBeenCalledTimes(1);
+        vi.unstubAllGlobals();
+        vi.restoreAllMocks();
+    });
 });
