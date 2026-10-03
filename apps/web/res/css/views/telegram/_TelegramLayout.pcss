@@ -246,6 +246,16 @@ html[data-floating-bars] .mx_RoomView_body {
         margin-block-start: var(--tg-header-block, 0px);
     }
 
+    /*
+     * ...but only content that is there. The aux panel is rendered in every room, holding an empty
+     * <div> when it has nothing to show, and given the header's height above it, it pushed the
+     * timeline down to the bottom of the header: messages were cut off along that line, under a
+     * blank band, instead of running on under the glass.
+     */
+    > .mx_AuxPanel:not(:has(> :not(:empty))) {
+        margin-block-start: 0;
+    }
+
     /* A widget or call filling the room: the whole body starts clear of the header. */
     &:is(.mx_MainSplit_maximisedWidget, .mx_MainSplit_call) {
         padding-block-start: var(--tg-header-block, 0px);
