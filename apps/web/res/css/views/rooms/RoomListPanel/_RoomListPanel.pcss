@@ -370,3 +370,21 @@
         transition: none;
     }
 }
+
+/*
+ * The ticks of our last message at the end of a chat's name line, in the colours of the same ticks on our
+ * own bubbles (_TelegramMessages.pcss .mx_EventTile_tgOwn): the outgoing colour, read in the accent, a
+ * failure in red.
+ */
+.mx_RoomListItemView .mx_TelegramTime_status {
+    --TgTime-status-size: 18px;
+    --TgTime-status-color: var(--cpd-color-icon-success-primary);
+
+    &[data-state="read"] {
+        --TgTime-status-color: var(--cpd-color-icon-accent-primary);
+    }
+
+    &[data-state="error"] {
+        --TgTime-status-color: var(--cpd-color-icon-critical-primary);
+    }
+}

@@ -11,7 +11,7 @@ import { isEqual } from "lodash";
 import { DragDropProvider, DragOverlay, useDragOperation } from "@dnd-kit/react";
 import { KeyboardSensor, PointerActivationConstraints, PointerSensor } from "@dnd-kit/dom";
 
-import { type Room } from "./RoomListItemWrapper/RoomListItemView";
+import { type Room, type RoomListItemSendState } from "./RoomListItemWrapper/RoomListItemView";
 import { useViewModel } from "../../core/viewmodel";
 import {
     FlatVirtualizedList,
@@ -68,6 +68,11 @@ export interface VirtualizedRoomListViewProps {
      * Optional render function for room path / breadcrumbs
      */
     renderRoomPath?: (room: Room) => ReactNode;
+
+    /**
+     * Fork: optional render function for a room's last message ticks, when the current user sent it
+     */
+    renderSendState?: (state: RoomListItemSendState) => ReactNode;
 
     /**
      * Optional callback for keyboard key down events
@@ -153,6 +158,7 @@ export function VirtualizedRoomListView({
     vm,
     renderAvatar,
     renderRoomPath,
+    renderSendState,
     onKeyDown,
 }: VirtualizedRoomListViewProps): JSX.Element {
     const { translate: _t } = useI18n();
@@ -384,6 +390,7 @@ export function VirtualizedRoomListView({
                     vm={roomItemVM}
                     renderAvatar={renderAvatar}
                     renderRoomPath={renderRoomPath}
+                    renderSendState={renderSendState}
                     isSelected={isSelected}
                     isFocused={isFocused}
                     onFocus={onFocus}
@@ -397,7 +404,7 @@ export function VirtualizedRoomListView({
                 />
             );
         },
-        [renderAvatar, renderRoomPath],
+        [renderAvatar, renderRoomPath, renderSendState],
     );
 
     /**

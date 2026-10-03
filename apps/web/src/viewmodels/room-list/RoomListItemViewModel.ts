@@ -17,7 +17,7 @@ import { ClientEvent, KnownMembership, RoomEvent } from "matrix-js-sdk/src/matri
 import { CallType } from "matrix-js-sdk/src/webrtc/call";
 import { logger } from "matrix-js-sdk/src/logger";
 
-import type { Room, MatrixClient, RoomMember, ClientEventHandlerMap } from "matrix-js-sdk/src/matrix";
+import type { Room, MatrixClient, MatrixEvent, RoomMember, ClientEventHandlerMap } from "matrix-js-sdk/src/matrix";
 import type { RoomNotificationState } from "../../stores/notifications/RoomNotificationState";
 import { RoomNotificationStateStore } from "../../stores/notifications/RoomNotificationStateStore";
 import { NotificationStateEvents } from "../../stores/notifications/NotificationState";
@@ -43,8 +43,12 @@ import PosthogTrackers from "../../PosthogTrackers";
 import { type Call, CallEvent } from "../../models/Call";
 import RoomListStoreV3 from "../../stores/room-list-v3/RoomListStoreV3";
 import { getCustomSectionData, isDefaultSectionTag } from "../../stores/room-list-v3/section";
+import { getBridgeBots } from "../../utils/bridge/bridgeInfo";
 import { _t } from "../../languageHandler";
 import { fetchUserStatus } from "../../utils/userStatus";
+import { getPreviewSendState } from "../../utils/telegram/previewSendState";
+import { MessageSendStatusStore } from "../../utils/bridge/messageSendStatus";
+import { onBridgeStatusChange } from "../../utils/chatHistory";
 
 /**
  * View section type without `isSelected` field
@@ -83,6 +87,15 @@ export class RoomListItemViewModel
      * The user ID of the other user if this room is a DM, used to show their user status.
      */
     private readonly dmUserId?: string;
+
+    /**
+     * Fork: the event the message preview shows, for its ticks when we sent it, and what keeps them
+     * current: the bridge's send status for that event (keyed by its id, which changes when a local
+     * echo is sent) and, for a bridged room, whether the bridge is connected.
+     */
+    private previewEvent?: MatrixEvent;
+    private sendStatusWatch?: { eventId: string; stop: () => void };
+    private stopBridgeWatch?: () => void;
 
     public constructor(props: RoomItemProps) {
         // Get notification state first so we can generate a complete initial snapshot
@@ -135,6 +148,12 @@ export class RoomListItemViewModel
         // Subscribe to room-specific events
         this.disposables.trackListener(props.room, RoomEvent.Name, this.onRoomChanged);
         this.disposables.trackListener(props.room, RoomEvent.Tags, this.onRoomChanged);
+
+        // Fork: the ticks of our last message move as it is sent, delivered and read
+        this.disposables.trackListener(props.room, RoomEvent.Receipt, this.onSendStateChanged);
+        this.disposables.trackListener(props.room, RoomEvent.LocalEchoUpdated, this.onSendStateChanged);
+        this.disposables.trackListener(props.room, RoomEvent.Timeline, this.onSendStateChanged);
+        this.disposables.track(() => this.watchSendState(undefined));
 
         // Rebuild the available sections when their order changes or when one is created/renamed/removed
         const orderSectionsRef = SettingsStore.watchSetting("RoomList.OrderedCustomSections", null, () =>
@@ -240,6 +259,46 @@ export class RoomListItemViewModel
         this.updateItem();
     };
 
+    private onSendStateChanged = (): void => {
+        this.updateSendState();
+    };
+
+    /**
+     * Fork: recompute the ticks of the previewed message, and follow what can move them for as long as
+     * it is ours.
+     */
+    private updateSendState(): void {
+        if (this.disposables.isDisposed) return;
+        const { room, client } = this.props;
+        const messagePreviewSendState = getPreviewSendState(client, room, this.previewEvent);
+        this.watchSendState(messagePreviewSendState ? this.previewEvent : undefined);
+        this.snapshot.merge({ messagePreviewSendState });
+    }
+
+    /** Fork: watch the bridge's reports about `event` (ours), or stop watching with none. */
+    private watchSendState(event: MatrixEvent | undefined): void {
+        const eventId = event?.getId();
+        if (this.sendStatusWatch?.eventId !== eventId) {
+            this.sendStatusWatch?.stop();
+            this.sendStatusWatch = eventId
+                ? {
+                      eventId,
+                      stop: MessageSendStatusStore.forClient(this.props.client).subscribe(
+                          eventId,
+                          this.onSendStateChanged,
+                      ),
+                  }
+                : undefined;
+        }
+        const bridged = !!event && getBridgeBots(this.props.room).size > 0;
+        if (bridged && !this.stopBridgeWatch) {
+            this.stopBridgeWatch = onBridgeStatusChange(this.props.client, this.onSendStateChanged);
+        } else if (!bridged && this.stopBridgeWatch) {
+            this.stopBridgeWatch();
+            this.stopBridgeWatch = undefined;
+        }
+    }
+
     /**
      * Update the item snapshot with current sync data.
      * Preserves the message preview which is managed separately.
@@ -259,6 +318,7 @@ export class RoomListItemViewModel
             messagePreview: this.snapshot.current.messagePreview,
             messagePreviewThumbnail: this.snapshot.current.messagePreviewThumbnail,
             messagePreviewThumbnailIsReply: this.snapshot.current.messagePreviewThumbnailIsReply,
+            messagePreviewSendState: this.snapshot.current.messagePreviewSendState,
         });
     }
 
@@ -272,7 +332,12 @@ export class RoomListItemViewModel
      * Returns undefined if previews are disabled or couldn't be loaded.
      */
     private async loadMessagePreview(): Promise<
-        Pick<RoomListItemViewSnapshot, "messagePreview" | "messagePreviewThumbnail" | "messagePreviewThumbnailIsReply">
+        Pick<
+            RoomListItemViewSnapshot,
+            "messagePreview" | "messagePreviewThumbnail" | "messagePreviewThumbnailIsReply"
+        > & {
+            event?: MatrixEvent;
+        }
     > {
         const shouldShowMessagePreview = SettingsStore.getValue("RoomList.showMessagePreview");
         if (!shouldShowMessagePreview) {
@@ -291,6 +356,7 @@ export class RoomListItemViewModel
             messagePreview: preview?.text,
             messagePreviewThumbnail: thumbnail?.src,
             messagePreviewThumbnailIsReply: thumbnail?.isReply,
+            event: preview?.event,
         };
     }
 
@@ -298,7 +364,12 @@ export class RoomListItemViewModel
      * Load and set the message preview if it differs from current.
      */
     private async loadAndSetMessagePreview(): Promise<void> {
-        this.snapshot.merge(await this.loadMessagePreview());
+        const { event, ...preview } = await this.loadMessagePreview();
+        if (this.disposables.isDisposed) return;
+        this.snapshot.merge(preview);
+        // Fork: the ticks belong to the message the preview shows
+        this.previewEvent = event;
+        this.updateSendState();
     }
 
     /**
@@ -403,7 +474,6 @@ export class RoomListItemViewModel
             id: room.roomId,
             room,
             name: room.name,
-            isBold: notifState.hasAnyNotificationOrActivity,
             messagePreview,
             notification: {
                 hasAnyNotificationOrActivity: notifState.hasAnyNotificationOrActivity || hasParticipantsInCall,

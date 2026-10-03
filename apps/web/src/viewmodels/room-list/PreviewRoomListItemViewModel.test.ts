@@ -27,7 +27,6 @@ describe("PreviewRoomListItemViewModel", () => {
             id: props.roomId,
             name: props.name,
             room: { ...props, roomType: undefined },
-            isBold: false,
             notification: { hasAnyNotificationOrActivity: false, count: 0 },
             showMoreOptionsMenu: false,
             showNotificationMenu: false,

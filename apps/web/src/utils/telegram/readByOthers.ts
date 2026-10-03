@@ -12,30 +12,61 @@ Please see LICENSE files in the repository root for full details.
  * never did, so no message there could ever show as read. It is worked out here instead, from the room,
  * so any timeline gets it: the newest event somebody other than us (and not a bridge's bot) has a read
  * receipt on, and every event up to it counts as read - a receipt means everything before it was read.
+ *
+ * The chat list asks too, for rooms nobody has open, so the cache drops itself on the room's own events
+ * rather than relying on a timeline's hook to do it.
  */
 
 import { type MatrixEvent, type Room, ReceiptType, RoomEvent } from "matrix-js-sdk/src/matrix";
 import { useCallback, useSyncExternalStore } from "react";
 
 import { getBridgeBots } from "../bridge/bridgeInfo";
+import { getFunctionalMembers } from "../room/getFunctionalMembers";
 
 /** Per room, where others have read up to, recomputed when receipts or the timeline change. */
 const cache = new WeakMap<Room, { ts: number; eventId?: string }>();
+/** Rooms whose events already drop their cache entry. */
+const watched = new WeakSet<Room>();
+
+/**
+ * Drop the room's cache entry whenever a receipt or the live timeline changes. Prepended, so it runs
+ * before any other listener of the room that reads the answer back in response to the same event.
+ */
+function watch(room: Room): void {
+    if (watched.has(room) || typeof room.prependListener !== "function") return;
+    watched.add(room);
+    const drop = (): void => {
+        cache.delete(room);
+    };
+    room.prependListener(RoomEvent.Receipt, drop);
+    room.prependListener(RoomEvent.Timeline, drop);
+    room.prependListener(RoomEvent.TimelineReset, drop);
+}
+
+/**
+ * Whose receipts say nothing about the other side having read: us, the bridges' bots, and the room's
+ * service members (`io.element.functional_members`: the bot again, and the ghosts of our own accounts).
+ * A bot's receipt at most says the network accepted the message, which is the single tick already.
+ */
+function ignoredReaders(room: Room): Set<string> {
+    const ignored = getBridgeBots(room);
+    for (const userId of getFunctionalMembers(room)) ignored.add(userId);
+    ignored.add(room.client.getSafeUserId());
+    return ignored;
+}
 
 /** The newest event in the live timeline that somebody else has read: its timestamp, or -1 for none. */
 export function othersReadUpTo(room: Room): { ts: number; eventId?: string } {
     const held = cache.get(room);
     if (held) return held;
-    const me = room.client.getSafeUserId();
-    const bots = getBridgeBots(room);
+    watch(room);
+    const ignored = ignoredReaders(room);
     const events = room.getLiveTimeline().getEvents();
     let found: { ts: number; eventId?: string } = { ts: -1 };
     for (let i = events.length - 1; i >= 0; i--) {
         const readers = room
             .getReceiptsForEvent(events[i])
-            .filter(
-                (receipt) => receipt.type === ReceiptType.Read && receipt.userId !== me && !bots.has(receipt.userId),
-            );
+            .filter((receipt) => receipt.type === ReceiptType.Read && !ignored.has(receipt.userId));
         if (readers.length) {
             found = { ts: events[i].getTs(), eventId: events[i].getId() };
             break;

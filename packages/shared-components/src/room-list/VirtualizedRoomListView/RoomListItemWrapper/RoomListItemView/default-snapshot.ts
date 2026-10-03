@@ -14,7 +14,6 @@ export const defaultSnapshot: RoomListItemViewSnapshot = {
     id: "!room:server",
     room: mockRoom,
     name: "General",
-    isBold: false,
     messagePreview: "Alice: Hey everyone!",
     notification: {
         hasAnyNotificationOrActivity: false,

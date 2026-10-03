@@ -11,6 +11,7 @@ import { fn } from "storybook/test";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import {
     type Room,
+    type RoomListItemSendState,
     RoomListItemView,
     type RoomListItemViewSnapshot,
     type RoomListItemViewActions,
@@ -29,6 +30,7 @@ type RoomListItemProps = RoomListItemViewSnapshot &
         isFirstItem: boolean;
         isLastItem: boolean;
         renderAvatar: (room: Room) => React.ReactElement;
+        renderSendState?: (state: RoomListItemSendState) => React.ReactNode;
     };
 
 // Wrapper component that creates a mocked ViewModel
@@ -51,6 +53,7 @@ const RoomListItemWrapperImpl = ({
     isFirstItem,
     isLastItem,
     renderAvatar: renderAvatarProp,
+    renderSendState,
     ...rest
 }: RoomListItemProps): JSX.Element => {
     const vm = useMockedViewModel(rest, {
@@ -76,6 +79,7 @@ const RoomListItemWrapperImpl = ({
             isFirstItem={isFirstItem}
             isLastItem={isLastItem}
             renderAvatar={renderAvatarProp}
+            renderSendState={renderSendState}
             role="option"
         />
     );
@@ -129,16 +133,8 @@ export const Selected: Story = {
     },
 };
 
-export const Bold: Story = {
-    args: {
-        isBold: true,
-        name: "Team Updates",
-    },
-};
-
 export const WithNotification: Story = {
     args: {
-        isBold: true,
         notification: {
             hasAnyNotificationOrActivity: true,
             isUnsentMessage: false,
@@ -155,7 +151,6 @@ export const WithNotification: Story = {
 
 export const WithMention: Story = {
     args: {
-        isBold: true,
         notification: {
             hasAnyNotificationOrActivity: true,
             isUnsentMessage: false,
@@ -172,7 +167,6 @@ export const WithMention: Story = {
 
 export const WithVoiceCall: Story = {
     args: {
-        isBold: true,
         notification: {
             hasAnyNotificationOrActivity: true,
             isUnsentMessage: false,
@@ -190,7 +184,6 @@ export const WithVoiceCall: Story = {
 
 export const WithVideoCall: Story = {
     args: {
-        isBold: true,
         notification: {
             hasAnyNotificationOrActivity: true,
             isUnsentMessage: false,

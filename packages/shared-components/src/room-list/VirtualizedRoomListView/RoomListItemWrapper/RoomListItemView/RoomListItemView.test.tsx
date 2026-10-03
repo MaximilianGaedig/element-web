@@ -16,7 +16,6 @@ import * as stories from "./RoomListItemView.stories";
 const {
     Default,
     Selected,
-    Bold,
     WithNotification,
     WithMention,
     WithVoiceCall,
@@ -36,11 +35,6 @@ describe("<RoomListItemView />", () => {
 
     it("renders Selected story", () => {
         const { container } = render(<Selected />);
-        expect(container).toMatchSnapshot();
-    });
-
-    it("renders Bold story", () => {
-        const { container } = render(<Bold />);
         expect(container).toMatchSnapshot();
     });
 
@@ -162,5 +156,44 @@ describe("<RoomListItemView />", () => {
         // ...unless the pointer is resting on the row, which shows it too: these tests run in a real
         // browser, and an earlier one can have left the pointer where this row is drawn.
         if (!option.matches(":hover")) expect(moreButton).not.toBeVisible();
+    });
+
+    // The unread decoration is the only thing telling an unread room from a read one, as in Telegram.
+    it("styles an unread room's row exactly like a read one's, apart from the decoration", () => {
+        const classesOf = (root: HTMLElement): string[] =>
+            [root, ...root.querySelectorAll<HTMLElement>("*")]
+                .filter((el) => !el.closest('[data-testid="notification-decoration"]'))
+                .map((el) => `${el.tagName}.${el.getAttribute("class") ?? ""}`);
+
+        const look = (el: HTMLElement): string => {
+            const style = getComputedStyle(el);
+            return `${style.fontWeight} ${style.color}`;
+        };
+
+        const read = render(<WithNotification notification={Default.args.notification!} />);
+        const readClasses = classesOf(read.getByRole("option"));
+        const readName = look(read.getByTestId("room-name"));
+        read.unmount();
+
+        const unread = render(<WithNotification />);
+        expect(screen.getByTestId("notification-decoration")).toBeInTheDocument();
+        expect(classesOf(unread.getByRole("option"))).toEqual(readClasses);
+        expect(look(unread.getByTestId("room-name"))).toBe(readName);
+    });
+
+    it("shows the last message's ticks at the end of the name line when it is ours", () => {
+        render(
+            <Default
+                messagePreviewSendState="read"
+                renderSendState={(state) => <span data-testid="ticks">{state}</span>}
+            />,
+        );
+        expect(screen.getByTestId("room-send-state")).toContainElement(screen.getByTestId("ticks"));
+        expect(screen.getByTestId("ticks")).toHaveTextContent("read");
+    });
+
+    it("shows no ticks when the last message is not ours", () => {
+        render(<Default renderSendState={(state) => <span>{state}</span>} />);
+        expect(screen.queryByTestId("room-send-state")).toBeNull();
     });
 });

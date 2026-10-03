@@ -12,7 +12,11 @@ import { RoomListPrimaryFilters, type FilterId } from "../RoomListPrimaryFilters
 import { RoomListLoadingSkeleton } from "./RoomListLoadingSkeleton";
 import { RoomListEmptyStateView } from "./RoomListEmptyStateView";
 import { VirtualizedRoomListView, type RoomListViewState } from "../VirtualizedRoomListView";
-import { type Room, type RoomListItemViewModel } from "../VirtualizedRoomListView/RoomListItemWrapper/RoomListItemView";
+import {
+    type Room,
+    type RoomListItemSendState,
+    type RoomListItemViewModel,
+} from "../VirtualizedRoomListView/RoomListItemWrapper/RoomListItemView";
 import { type RoomListSectionHeaderViewModel } from "../VirtualizedRoomListView/RoomListSectionHeaderView";
 import { type ToastType, RoomListToast } from "./RoomListToast";
 import styles from "./RoomListView.module.css";
@@ -121,6 +125,8 @@ export interface RoomListViewProps {
     renderAvatar: (room: Room) => ReactNode;
     /** Optional render function for room path / breadcrumbs */
     renderRoomPath?: (room: Room) => ReactNode;
+    /** Fork: optional render function for a room's last message ticks, when the current user sent it */
+    renderSendState?: (state: RoomListItemSendState) => ReactNode;
     /** Optional callback for keyboard events on the room list */
     onKeyDown?: (e: React.KeyboardEvent<HTMLDivElement>) => void;
 }
@@ -132,6 +138,7 @@ export const RoomListView: React.FC<RoomListViewProps> = ({
     vm,
     renderAvatar,
     renderRoomPath,
+    renderSendState,
     onKeyDown,
 }): JSX.Element => {
     const snapshot = useViewModel(vm);
@@ -147,6 +154,7 @@ export const RoomListView: React.FC<RoomListViewProps> = ({
                 vm={vm}
                 renderAvatar={renderAvatar}
                 renderRoomPath={renderRoomPath}
+                renderSendState={renderSendState}
                 onKeyDown={onKeyDown}
             />
         );
