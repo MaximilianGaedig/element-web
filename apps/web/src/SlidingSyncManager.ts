@@ -93,6 +93,12 @@ const ENCRYPTED_SUBSCRIPTION = {
     ...DEFAULT_ROOM_SUBSCRIPTION_INFO,
 };
 
+// How many of each room's latest events the lists ask for: enough to find the one its line in the chat
+// list shows. The very latest is often not it - in a bridged chat each message is followed by the bridge's
+// delivery status, and reactions, edits and member changes come after messages too - and with only that
+// one the room had no preview at all until it was opened.
+export const LIST_TIMELINE_LIMIT = 10;
+
 // the complete set of lists made in SSS. The manager will spider all of these lists depending
 // on the count for each one.
 const sssLists: Record<string, MSC3575List> = {
@@ -110,7 +116,7 @@ const sssLists: Record<string, MSC3575List> = {
     },
     invites: {
         ranges: [[0, 10]],
-        timeline_limit: 1, // most recent message display
+        timeline_limit: LIST_TIMELINE_LIMIT,
         required_state: REQUIRED_STATE_LIST,
         include_old_rooms: {
             timeline_limit: 0,
@@ -122,7 +128,7 @@ const sssLists: Record<string, MSC3575List> = {
     },
     favourites: {
         ranges: [[0, 10]],
-        timeline_limit: 1, // most recent message display
+        timeline_limit: LIST_TIMELINE_LIMIT,
         required_state: REQUIRED_STATE_LIST,
         include_old_rooms: {
             timeline_limit: 0,
@@ -134,7 +140,7 @@ const sssLists: Record<string, MSC3575List> = {
     },
     dms: {
         ranges: [[0, 10]],
-        timeline_limit: 1, // most recent message display
+        timeline_limit: LIST_TIMELINE_LIMIT,
         required_state: REQUIRED_STATE_LIST,
         include_old_rooms: {
             timeline_limit: 0,
@@ -150,7 +156,7 @@ const sssLists: Record<string, MSC3575List> = {
     untagged: {
         // SSS will dupe suppress invites/dms from here, so we don't need "not dms, not invites"
         ranges: [[0, 10]],
-        timeline_limit: 1, // most recent message display
+        timeline_limit: LIST_TIMELINE_LIMIT,
         required_state: REQUIRED_STATE_LIST,
         include_old_rooms: {
             timeline_limit: 0,

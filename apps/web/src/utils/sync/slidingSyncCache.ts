@@ -34,8 +34,12 @@ import { type MSC3575RoomData, type SlidingSync, SlidingSyncEvent } from "matrix
 const DB_NAME = "mx-sliding-sync-cache";
 const STORE = "snapshots";
 
-/** How many of a room's latest events are kept: enough for its line in the list and a first look. */
-export const CACHED_TIMELINE = 5;
+/**
+ * How many of a room's latest events are kept: as many as the lists ask for (LIST_TIMELINE_LIMIT), so that
+ * the one its line in the list shows is among them - the very latest is often a delivery status or a
+ * reaction.
+ */
+export const CACHED_TIMELINE = 10;
 /** How many of the most recently active rooms are in the first record. */
 export const FIRST_ROOMS = 40;
 /** How long after a change the cache is written: changes come in bursts. */

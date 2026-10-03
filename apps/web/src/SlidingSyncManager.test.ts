@@ -16,7 +16,7 @@ import EventEmitter from "node:events";
 import { waitFor } from "test-utils-rtl";
 import { mkStubRoom, stubClient } from "test-utils";
 
-import { SlidingSyncManager } from "./SlidingSyncManager";
+import { LIST_TIMELINE_LIMIT, SlidingSyncManager } from "./SlidingSyncManager";
 
 class MockSlidingSync extends EventEmitter {
     lists = {};
@@ -48,6 +48,16 @@ describe("SlidingSyncManager", () => {
         (manager as any).configure(client, "invalid");
         manager.slidingSync = slidingSync;
         fetchMock.get("https://proxy/client/server.json", {});
+    });
+
+    it("asks for enough of each chat's latest events to find the one the chat list shows", () => {
+        const fresh = new SlidingSyncManager();
+        (fresh as any).configure(client, "invalid");
+        // A bridged chat's latest event is usually the delivery status of its last message.
+        expect(LIST_TIMELINE_LIMIT).toBeGreaterThanOrEqual(5);
+        for (const list of ["favourites", "dms", "untagged"]) {
+            expect(fresh.slidingSync!.getListParams(list)?.timeline_limit).toBe(LIST_TIMELINE_LIMIT);
+        }
     });
 
     describe("setRoomVisible", () => {
