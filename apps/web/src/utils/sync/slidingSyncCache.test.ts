@@ -39,21 +39,28 @@ const state = (type: string, stateKey = "", content: object = {}): IStateEvent =
     content,
 });
 const keepListState = (event: IStateEvent): boolean => ROOM_LIST_STATE_TYPES.includes(event.type);
+/** A room update with only the fields a test is about. */
+const update = (fields: Partial<MSC3575RoomData>): MSC3575RoomData => ({
+    name: "",
+    required_state: [],
+    timeline: [],
+    ...fields,
+});
 
 describe("mergeRoomData", () => {
     it("keeps the state the chat list reads, replaced by type and key, and nothing else", () => {
         let room = mergeRoomData(
             undefined,
-            {
+            update({
                 initial: true,
                 required_state: [state("m.room.name", "", { name: "Old" }), state("m.room.topic", "", { topic: "t" })],
                 timeline: [],
-            },
+            }),
             keepListState,
         );
         room = mergeRoomData(
             room,
-            { required_state: [state("m.room.name", "", { name: "New" })], timeline: [] },
+            update({ required_state: [state("m.room.name", "", { name: "New" })], timeline: [] }),
             keepListState,
         );
 
@@ -65,12 +72,12 @@ describe("mergeRoomData", () => {
     it("keeps the latest few events, without repeats", () => {
         let room = mergeRoomData(
             undefined,
-            { initial: true, required_state: [], timeline: [message("$1"), message("$2")] },
+            update({ initial: true, required_state: [], timeline: [message("$1"), message("$2")] }),
             keepListState,
         );
         room = mergeRoomData(
             room,
-            { required_state: [], timeline: ["$2", "$3", "$4", "$5", "$6", "$7"].map((id) => message(id)) },
+            update({ required_state: [], timeline: ["$2", "$3", "$4", "$5", "$6", "$7"].map((id) => message(id)) }),
             keepListState,
         );
 
@@ -82,10 +89,14 @@ describe("mergeRoomData", () => {
     it("lets the kept events go when a limited timeline does not carry on from them", () => {
         let room = mergeRoomData(
             undefined,
-            { initial: true, required_state: [], timeline: [message("$1"), message("$2")] },
+            update({ initial: true, required_state: [], timeline: [message("$1"), message("$2")] }),
             keepListState,
         );
-        room = mergeRoomData(room, { limited: true, required_state: [], timeline: [message("$9")] }, keepListState);
+        room = mergeRoomData(
+            room,
+            update({ limited: true, required_state: [], timeline: [message("$9")] }),
+            keepListState,
+        );
 
         expect(room.timeline.map((event) => event.event_id)).toEqual(["$9"]);
     });
@@ -93,10 +104,17 @@ describe("mergeRoomData", () => {
     it("takes the names and counts as the server last gave them", () => {
         let room = mergeRoomData(
             undefined,
-            { initial: true, required_state: [], timeline: [], name: "A", notification_count: 3, bump_stamp: 5 },
+            update({
+                initial: true,
+                required_state: [],
+                timeline: [],
+                name: "A",
+                notification_count: 3,
+                bump_stamp: 5,
+            }),
             keepListState,
         );
-        room = mergeRoomData(room, { required_state: [], timeline: [], notification_count: 0 }, keepListState);
+        room = mergeRoomData(room, update({ required_state: [], timeline: [], notification_count: 0 }), keepListState);
 
         expect([room.name, room.notification_count, room.bump_stamp]).toEqual(["A", 0, 5]);
     });

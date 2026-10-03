@@ -41,9 +41,11 @@ export const FIRST_ROOMS = 40;
 /** How long after a change the cache is written: changes come in bursts. */
 const SAVE_DELAY_MS = 3000;
 
-type CachedRoom = Omit<MSC3575RoomData, "required_state" | "timeline"> & {
+type CachedRoom = Partial<Omit<MSC3575RoomData, "required_state" | "timeline">> & {
     required_state: IStateEvent[];
     timeline: (IRoomEvent | IStateEvent)[];
+    /** Sent by servers though not in the SDK's type: the room's avatar, as the list shows it. */
+    avatar?: string;
 };
 
 interface Snapshots {
@@ -62,7 +64,6 @@ const SCALARS = [
     "bump_stamp",
     "is_dm",
     "invite_state",
-    "unread_notifications",
 ] as const;
 
 /**
@@ -82,8 +83,9 @@ export function mergeRoomData(
         room.required_state = kept.required_state;
         room.timeline = kept.timeline;
     }
+    const given = data as unknown as Record<string, unknown>;
     for (const key of SCALARS) {
-        if (data[key] !== undefined) (room as Record<string, unknown>)[key] = data[key];
+        if (given[key] !== undefined) (room as Record<string, unknown>)[key] = given[key];
     }
 
     const state = new Map(room.required_state.map((event) => [`${event.type}\u0000${event.state_key}`, event]));
@@ -110,7 +112,7 @@ export function mergeRoomData(
 
 /** What a cached room is replayed as: complete as far as it goes, with its earlier history to be asked for. */
 function asRoomData(room: CachedRoom): MSC3575RoomData {
-    return { ...room, initial: true, limited: true, num_live: 0, prev_batch: undefined };
+    return { ...room, name: room.name ?? "", initial: true, limited: true, num_live: 0, prev_batch: undefined };
 }
 
 function openDb(): Promise<IDBDatabase> {
