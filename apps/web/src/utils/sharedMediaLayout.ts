@@ -252,8 +252,14 @@ export function scrubberTrackHeight(scroll: {
     top: number;
     /** How much of the scrolling box's bottom is off the screen, e.g. under a phone's keyboard or edge. */
     belowScreen?: number;
+    /**
+     * How far down from the top of the box the floating bars (tabs, selection bar) reach once pinned.
+     * The track hangs from the dock, which sticks below them, so it is that much shorter and never
+     * starts under them - as on Telegram iOS, where the scrubber lives in the space below the bars.
+     */
+    floor?: number;
 }): number {
-    const chromeStillAbove = Math.max(0, scroll.offset - scroll.top);
+    const chromeStillAbove = Math.max(0, scroll.offset - scroll.top, scroll.floor ?? 0);
     return Math.max(0, scroll.viewport - chromeStillAbove - Math.max(0, scroll.belowScreen ?? 0));
 }
 
@@ -273,6 +279,22 @@ function travel(track: number): number {
 /** Where the bar's top goes for a position `at` (0 newest, 1 oldest): always on the track, bar and all. */
 export function scrubberLineTop(at: number, track: number): number {
     return SCRUBBER_INSET + Math.min(1, Math.max(0, at)) * travel(track);
+}
+
+/**
+ * How far down from the top of `box` the floating bars inside it stand once they have stuck.
+ * Taken from each bar's own sticky offset and height rather than from where it is right now, so the
+ * answer is the same whether the reader has scrolled far enough to pin it or not; `gap` is the
+ * breathing room the scrubber keeps below the lowest of them.
+ */
+export function floatingFloor(box: HTMLElement | null, gap = 4): number {
+    if (!box) return 0;
+    let floor = 0;
+    for (const bar of box.querySelectorAll<HTMLElement>("[data-mx-floating]")) {
+        const top = parseFloat(getComputedStyle(bar).top);
+        floor = Math.max(floor, (Number.isFinite(top) ? top : 0) + bar.offsetHeight);
+    }
+    return floor > 0 ? floor + gap : 0;
 }
 
 /** Where the date pill's top goes: centred on the bar, as Telegram lines them up. */

@@ -44,6 +44,7 @@ import {
     anchorAt,
     anchoredTop,
     type ScrollAnchor,
+    floatingFloor,
     scrubberDragAt,
     scrubberLineTop,
     scrubberPillTop,
@@ -502,7 +503,7 @@ function SelectionBar({
     const mayRedact = events.every((ev) => room.currentState.maySendRedactionForEvent(ev, userId));
     const remove = (): Promise<void> => removeAll(client, room, events, selection.clear);
     return (
-        <div className="mx_SharedMedia_selectionBar" role="toolbar">
+        <div className="mx_SharedMedia_selectionBar" role="toolbar" data-mx-floating>
             <AccessibleButton
                 className="mx_SharedMedia_selectionAction"
                 onClick={selection.clear}
@@ -1030,7 +1031,7 @@ function useGridLayout(
      * has to span the whole of what scrolls, tabs and header included, or it reaches the end of its
      * track before the list reaches its end. `offset` is where the column starts inside that.
      */
-    scroll: { top: number; viewport: number; content: number; offset: number; belowScreen?: number };
+    scroll: { top: number; viewport: number; content: number; offset: number; belowScreen?: number; floor?: number };
     seek: (top: number) => void;
     /** Hides the native scrollbar, for as long as the scrubber is standing in for it. */
     setScrubbed: (on: boolean) => void;
@@ -1043,6 +1044,7 @@ function useGridLayout(
         content: number;
         offset: number;
         belowScreen?: number;
+        floor?: number;
     }>({ top: 0, viewport: 0, content: 0, offset: 0 });
 
     // Measured before the first paint: the column's width sets every row's height, so measuring
@@ -1074,6 +1076,7 @@ function useGridLayout(
                 content: box.scrollHeight,
                 offset: Math.max(0, offset),
                 belowScreen: Math.max(0, Math.round(boxRect.bottom - screen)),
+                floor: floatingFloor(box),
             });
         };
         measure();
@@ -1091,6 +1094,17 @@ function useGridLayout(
             UIStore.instance.off(UI_EVENTS.Resize, measure);
         };
     }, []);
+
+    /*
+     * The bars that float over the top of the box come and go without the box or the column changing
+     * size (the selection bar replaces the header the moment something is ticked), so nothing above
+     * is told. Read again after every render, and kept only when it differs.
+     */
+    // oxlint-disable-next-line react-hooks/exhaustive-deps -- after every render, on purpose; it settles at once
+    useLayoutEffect(() => {
+        const floor = floatingFloor(scrollParentOf(ref.current));
+        setScroll((prev) => (prev.floor === floor || (prev.floor === undefined && !floor) ? prev : { ...prev, floor }));
+    });
 
     const cell = width ? (width - GRID_GAP * (GRID_COLUMNS - 1)) / GRID_COLUMNS : 0;
     /*
@@ -1184,7 +1198,7 @@ function DateScrubber({
     onPickMonth,
 }: {
     rows: MediaRow[];
-    scroll: { top: number; viewport: number; content: number; offset: number; belowScreen?: number };
+    scroll: { top: number; viewport: number; content: number; offset: number; belowScreen?: number; floor?: number };
     seek: (top: number) => void;
     /**
      * What the whole history holds per month, from the server's index. With this the bar addresses
@@ -1465,7 +1479,11 @@ function MediaGrid({
          * there it stops floating and becomes a bar in the flow. This block is neither flex nor
          * clipping, which is what the float and the stickiness each need.
          */
-        <div className="mx_SharedMedia_column">
+        <div
+            className="mx_SharedMedia_column"
+            // Where the floating bars end, so what floats beside the column keeps clear of them.
+            style={{ "--SharedMedia-floor": `${scroll.floor ?? 0}px` } as React.CSSProperties}
+        >
             {/*
              * A dock with no height, pinned to the top of the scroll: the track hangs from it. Floated,
              * the track was a box as tall as the screen, and the grid - which clips its corners, and so
@@ -1952,6 +1970,7 @@ export default function SharedMediaPanel({ room, onClose }: Props): JSX.Element 
                     className={classNames("mx_SharedMedia_tabsRow", {
                         mx_SharedMedia_tabsRow_stuck: stuck,
                     })}
+                    data-mx-floating
                 >
                     <Tabs active={tab} onChange={setTab} />
                 </div>

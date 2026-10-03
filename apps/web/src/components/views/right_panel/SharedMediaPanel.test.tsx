@@ -16,6 +16,7 @@ import { type MatrixClient, MatrixEvent, Room } from "matrix-js-sdk/src/matrix";
 import MatrixClientContext from "../../../contexts/MatrixClientContext";
 import { SharedMediaPane, thumbSizeFor } from "./SharedMediaPanel";
 import { SharedMediaLoader } from "../../../utils/sharedMedia";
+import { floatingFloor } from "../../../utils/sharedMediaLayout";
 import UIStore, { UI_EVENTS } from "../../../stores/UIStore";
 import { fetchRoomStats, type RoomStats } from "../../../utils/chatHistory";
 
@@ -332,6 +333,27 @@ describe("<SharedMediaPane />", () => {
         });
     });
 
+    describe("the floating bars", () => {
+        it("finds where the bars end from their own sticky offset and height", () => {
+            const box = document.createElement("div");
+            document.body.append(box);
+            const bar = (top: string, height: number): void => {
+                const el = document.createElement("div");
+                el.setAttribute("data-mx-floating", "");
+                el.style.top = top;
+                Object.defineProperty(el, "offsetHeight", { value: height });
+                box.append(el);
+            };
+            expect(floatingFloor(box)).toBe(0);
+            bar("8px", 40);
+            bar("56px", 40);
+            // The lowest bar's bottom, and a little room under it.
+            expect(floatingFloor(box)).toBe(100);
+            expect(floatingFloor(null)).toBe(0);
+            box.remove();
+        });
+    });
+
     describe("right-clicking an item", () => {
         it("offers what the selection bar offers, for that one message", async () => {
             renderTab("media", [image("$i1", "a.jpg"), image("$i2", "b.jpg")]);
@@ -444,6 +466,31 @@ describe("<SharedMediaPane />", () => {
             box.width = 300;
             act(() => observers.forEach((cb) => cb()));
             expect(src()).toContain("/160");
+        });
+
+        it("hangs the scrubber below a floating bar instead of under it", async () => {
+            const before = UIStore.instance.windowHeight;
+            vi.spyOn(HTMLElement.prototype, "offsetHeight", "get").mockImplementation(() => 40);
+            try {
+                UIStore.instance.windowHeight = 1000;
+                room.addLiveEvents([image("$i1", "a.jpg")], { addToState: true });
+                const loader = new SharedMediaLoader(client, room);
+                render(
+                    <MatrixClientContext.Provider value={client}>
+                        <div style={{ overflowY: "auto" }}>
+                            <div data-mx-floating style={{ top: "56px" }} />
+                            <SharedMediaPane loader={loader} tab="media" />
+                        </div>
+                    </MatrixClientContext.Provider>,
+                );
+                await flushPromises();
+                const dock = document.querySelector<HTMLElement>(".mx_SharedMedia_column")!;
+                // The bar ends 96px down, and the track keeps 4px clear of it.
+                expect(dock.style.getPropertyValue("--SharedMedia-floor")).toBe("100px");
+                expect(document.querySelector<HTMLElement>(".mx_SharedMedia_scrubber")!.style.height).toBe("900px");
+            } finally {
+                UIStore.instance.windowHeight = before;
+            }
         });
 
         it("shortens the scrubber's track when the window gets shorter, though the box is the same size", async () => {
