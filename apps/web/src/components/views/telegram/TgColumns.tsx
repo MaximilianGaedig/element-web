@@ -35,7 +35,6 @@ import React, {
 } from "react";
 
 import { _t } from "../../../languageHandler";
-import { useSettingValue } from "../../../hooks/useSettings";
 import type ResizeNotifier from "../../../utils/ResizeNotifier";
 import {
     createLeftPreferencePersister,
@@ -103,12 +102,6 @@ function closeInfo(): void {
 
 /** The attribute on <html> that lets overlays (dialogs, menus) follow the tier. */
 export const SCREEN_ATTRIBUTE = "data-tg-screen";
-
-/** The attribute on <html> while something is being scrolled; the glass drops its blur meanwhile. */
-export const SCROLLING_ATTRIBUTE = "data-scrolling";
-
-/** How long after the last scroll event the blur comes back. */
-const SCROLL_SETTLE_MS = 160;
 
 export function TgColumns({
     spacePanel,
@@ -268,28 +261,14 @@ export function TgColumns({
 
     // The appearance settings themselves are written by AppearanceAttributes, which the logged-in
     // view mounts whatever layout it draws — they are changes to the standard view, not to this one.
-    const glass = useSettingValue("glassEffects");
 
-    // A blurred panel forces everything moving beneath it to be drawn again each frame, which is
-    // most of the cost of a scroll. So the blur pauses while anything scrolls and returns once it
-    // settles: the panels look the same at rest, which is when anyone looks at them.
-    useEffect(() => {
-        if (!glass) return;
-        const root = document.documentElement;
-        let settle: ReturnType<typeof setTimeout> | undefined;
-        const onScroll = (): void => {
-            root.setAttribute(SCROLLING_ATTRIBUTE, "true");
-            clearTimeout(settle);
-            settle = setTimeout(() => root.removeAttribute(SCROLLING_ATTRIBUTE), SCROLL_SETTLE_MS);
-        };
-        // Capture: scrolls happen inside panels, and they don't bubble.
-        window.addEventListener("scroll", onScroll, { capture: true, passive: true });
-        return () => {
-            window.removeEventListener("scroll", onScroll, { capture: true });
-            clearTimeout(settle);
-            root.removeAttribute(SCROLLING_ATTRIBUTE);
-        };
-    }, [glass]);
+    /*
+     * The blur stays on while things scroll. It used to pause, by an attribute on <html> that redefined
+     * the glass variables - and every element inherits those, so setting it and clearing it 160 ms after
+     * the scroll restyled the whole page twice per scroll and per chat switch: measured in the desktop
+     * app, ~85 ms of style work for a scroll there and back, against ~50 without it. That is more
+     * than the blur saves, and it was paid in hitches at the start and the end of each scroll.
+     */
 
     const navigation = useMemo<TgNavigation>(() => ({ handheld, goBack }), [handheld, goBack]);
 

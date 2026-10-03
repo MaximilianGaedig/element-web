@@ -49,6 +49,18 @@ describe("TgColumns", () => {
         setViewport(initialWidth, initialHeight);
     });
 
+    // Marking the whole page while something scrolls restyled every element twice per scroll.
+    it("leaves the page alone while something scrolls", () => {
+        renderColumns();
+        const observer = new MutationObserver(() => {});
+        observer.observe(document.documentElement, { attributes: true });
+
+        document.body.dispatchEvent(new Event("scroll"));
+
+        expect(observer.takeRecords()).toEqual([]);
+        observer.disconnect();
+    });
+
     it("renders the docked layout with tweb's default width at 1440×900", () => {
         setViewport(1440, 900);
         const { container } = renderColumns();
