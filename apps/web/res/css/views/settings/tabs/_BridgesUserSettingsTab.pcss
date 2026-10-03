@@ -46,6 +46,39 @@ Please see LICENSE files in the repository root for full details.
     }
 }
 
+/* Above the networks that can still be connected. */
+.mx_BridgesTab_heading {
+    margin: 1.5rem 0 0.75rem;
+    font: var(--cpd-font-body-sm-semibold);
+    color: var(--cpd-color-text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+}
+
+/* A row with nothing to open: not a disclosure, so no pointer over the whole of it. */
+.mx_BridgeCard--connect .mx_BridgeCard_summary {
+    cursor: default;
+}
+
+.mx_BridgeCard_connect {
+    all: unset;
+    box-sizing: border-box;
+    flex: 0 0 auto;
+    min-height: 2.25rem;
+    padding: 0 1rem;
+    border-radius: 1.125rem;
+    background: var(--tg-primary-color);
+    color: var(--cpd-color-text-on-solid-primary, #fff);
+    font: var(--cpd-font-body-sm-semibold);
+    line-height: 2.25rem;
+    cursor: pointer;
+
+    &:focus-visible {
+        outline: 2px solid var(--cpd-color-border-focused);
+        outline-offset: 2px;
+    }
+}
+
 .mx_BridgeCard_summary {
     display: flex;
     align-items: center;

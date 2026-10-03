@@ -62,10 +62,16 @@ describe("<BridgesUserSettingsTab />", () => {
         vi.spyOn(bridgeLogins, "bridgesWithoutLoginState").mockReturnValue([]);
     });
 
+    let wellKnown: Record<string, unknown> = {};
+    beforeEach(() => {
+        wellKnown = {};
+    });
+
     const open = (...logins: BridgeLogin[]) => {
         vi.spyOn(bridgeLogins, "bridgeLoginsIn").mockReturnValue(logins);
         const client = stubClient();
         vi.spyOn(client, "getProfileInfo").mockResolvedValue({});
+        client.getClientWellKnown = () => wellKnown;
         return render(
             <MatrixClientContext.Provider value={client}>
                 <BridgesUserSettingsTab />
@@ -112,5 +118,52 @@ describe("<BridgesUserSettingsTab />", () => {
         props.onOpenChat();
 
         expect(dispatched).toHaveBeenCalledWith(expect.objectContaining({ room_id: "!mgmt:example.org" }));
+    });
+
+    describe("networks the server bridges that you have not connected", () => {
+        const WHATSAPP_API = "https://example.org/matrix/mautrix-whatsapp/_matrix/provision";
+        beforeEach(() => {
+            wellKnown = {
+                "im.mxg.bridges": [
+                    { bot: "@telegrambot:example.org", network: "Telegram", provisioning_url: API },
+                    { bot: "@whatsappbot:example.org", network: "WhatsApp", provisioning_url: WHATSAPP_API },
+                ],
+            };
+        });
+
+        it("offers to connect them, and not the ones you have", () => {
+            open(login({ provisioningUrl: API }));
+
+            expect(screen.getByText("Connect a network")).toBeInTheDocument();
+            const connect = screen.getAllByRole("button", { name: "Connect" });
+            expect(connect).toHaveLength(1);
+            expect(screen.getByText("WhatsApp")).toBeInTheDocument();
+        });
+
+        it("connects one by asking its bridge, as for an account that is there", () => {
+            open(login({ provisioningUrl: API }));
+
+            screen.getByRole("button", { name: "Connect" }).click();
+
+            expect(createDialog).toHaveBeenCalledWith(
+                BridgeLoginDialog,
+                expect.objectContaining({ network: "WhatsApp", provisioningUrl: WHATSAPP_API }),
+            );
+        });
+
+        it("offers them in place of 'no bridges yet' when you have none", () => {
+            open();
+
+            expect(screen.queryByText("No bridges yet")).toBeNull();
+            expect(screen.getAllByRole("button", { name: "Connect" })).toHaveLength(2);
+        });
+
+        it("says there are no bridges when the server lists none", () => {
+            wellKnown = {};
+            open();
+
+            expect(screen.getByText("No bridges yet")).toBeInTheDocument();
+            expect(screen.queryByText("Connect a network")).toBeNull();
+        });
     });
 });

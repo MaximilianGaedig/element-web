@@ -6,6 +6,7 @@ Please see LICENSE files in the repository root for full details.
 */
 
 import React, { type JSX, useContext, useEffect, useState } from "react";
+import { ClientEvent, type MatrixClient } from "matrix-js-sdk/src/matrix";
 
 import { _t, _td } from "../../../../../languageHandler";
 import MatrixClientContext from "../../../../../contexts/MatrixClientContext";
@@ -34,6 +35,9 @@ import { DeclaredSettingsControls } from "./DeclaredSettingsControls";
 import Modal from "../../../../../Modal";
 import BridgeLoginDialog from "../../../dialogs/BridgeLoginDialog";
 import { type DeclaredSettings, declaredSettings } from "../../../../../utils/bridge/declaredSettings";
+import { bridgesToConnect, type KnownBridge, knownBridges } from "../../../../../utils/bridge/knownBridges";
+import { findDMForUser } from "../../../../../utils/dm/findDMForUser";
+import createRoom from "../../../../../createRoom";
 
 const number = (n: number): string => n.toLocaleString();
 
@@ -171,6 +175,88 @@ function useBotAvatar(login: BridgeLogin): string | undefined {
 
     const mxc = known ?? fetched;
     return mxc ? (mediaFromMxc(mxc, client).getSquareThumbnailHttp(80) ?? undefined) : undefined;
+}
+
+/** The bridges the server runs, as its well-known lists them; it is fetched after the client starts. */
+function useKnownBridges(): KnownBridge[] {
+    const client = useContext(MatrixClientContext);
+    const [known, setKnown] = useState(() => knownBridges(client));
+    useEffect(() => {
+        const refresh = (): void => setKnown(knownBridges(client));
+        refresh();
+        client.on(ClientEvent.ClientWellKnown, refresh);
+        return (): void => {
+            client.off(ClientEvent.ClientWellKnown, refresh);
+        };
+    }, [client]);
+    return known;
+}
+
+/*
+ * The bridge's chat, where it can be signed in to by typing: the one there is, or a new one. Never
+ * encrypted - a bridge bot reads its commands in the clear.
+ */
+async function openBotChat(client: MatrixClient, bot: string): Promise<void> {
+    const roomId =
+        findDMForUser(client, bot)?.roomId ??
+        (await createRoom(client, { dmUserId: bot, encryption: false, spinner: false, andView: false }));
+    if (roomId) dis.dispatch({ action: Action.ViewRoom, room_id: roomId, metricsTrigger: undefined });
+}
+
+/** A bot's picture, from what the client already knows, else from its profile. */
+function useProfileAvatar(userId: string): string | undefined {
+    const client = useContext(MatrixClientContext);
+    const known = client.getUser(userId)?.avatarUrl || undefined;
+    const [fetched, setFetched] = useState<string>();
+    useEffect(() => {
+        if (known) return;
+        let cancelled = false;
+        client
+            .getProfileInfo(userId)
+            .then((profile) => {
+                if (!cancelled) setFetched(profile.avatar_url);
+            })
+            .catch(() => {});
+        return (): void => {
+            cancelled = true;
+        };
+    }, [client, userId, known]);
+    const mxc = known ?? fetched;
+    return mxc ? (mediaFromMxc(mxc, client).getSquareThumbnailHttp(80) ?? undefined) : undefined;
+}
+
+/** A network the server bridges and you have no account on yet: one row, and connecting it is one tap. */
+function ConnectRow({ bridge }: { bridge: KnownBridge }): JSX.Element {
+    const client = useContext(MatrixClientContext);
+    const avatar = useProfileAvatar(bridge.bot);
+    const connect = (): void => {
+        Modal.createDialog(BridgeLoginDialog, {
+            network: bridge.network,
+            provisioningUrl: bridge.provisioningUrl,
+            onOpenChat: () => void openBotChat(client, bridge.bot),
+        });
+    };
+    return (
+        <div className="mx_BridgeCard mx_BridgeCard--connect">
+            <div className="mx_BridgeCard_summary">
+                <BaseAvatar
+                    className="mx_BridgeCard_avatar"
+                    name={bridge.network}
+                    idName={bridge.network}
+                    url={avatar}
+                    size="40px"
+                    type="round"
+                />
+                <span className="mx_BridgeCard_titles">
+                    <span className="mx_BridgeCard_title">{bridge.network}</span>
+                    <span className="mx_BridgeCard_subtitle">{_t("tg_layout|bridge_connect_hint")}</span>
+                </span>
+                <button type="button" className="mx_BridgeCard_connect" onClick={connect}>
+                    {_t("tg_layout|bridge_connect")}
+                </button>
+            </div>
+        </div>
+    );
 }
 
 /** Everything being imported, across all the bridges: the line that used to be its own page. */
@@ -367,6 +453,7 @@ function BridgeCard({
 export default function BridgesUserSettingsTab(): JSX.Element {
     const { logins, overview } = useBridges();
     const declared = useDeclaredSettings();
+    const toConnect = bridgesToConnect(useKnownBridges(), logins ?? []);
     return (
         <SettingsTab data-testid="mx_BridgesUserSettingsTab">
             <SettingsSection>
@@ -375,7 +462,7 @@ export default function BridgesUserSettingsTab(): JSX.Element {
                         {_t("settings|storage|loading")}
                     </p>
                 )}
-                {logins && logins.length === 0 && (
+                {logins && logins.length === 0 && toConnect.length === 0 && (
                     <div className="mx_BridgesTab_empty">
                         <div className="mx_BridgesTab_emptyTitle">{_t("tg_layout|bridges_empty_title")}</div>
                         <p>{_t("tg_layout|bridges_empty_body")}</p>
@@ -405,6 +492,16 @@ export default function BridgesUserSettingsTab(): JSX.Element {
                                         (d) => d.loginId === login.accountId && d.roomId === login.room.roomId,
                                     )}
                                 />
+                            ))}
+                        </div>
+                    </>
+                )}
+                {logins && toConnect.length > 0 && (
+                    <>
+                        <h3 className="mx_BridgesTab_heading">{_t("tg_layout|bridges_connect_title")}</h3>
+                        <div className="mx_BridgesTab_list">
+                            {toConnect.map((bridge) => (
+                                <ConnectRow key={bridge.bot} bridge={bridge} />
                             ))}
                         </div>
                     </>
