@@ -33,12 +33,25 @@ describe("<EffectsOverlay/>", () => {
     afterEach(() => vi.useRealTimers());
 
     it("should render", () => {
-        const { asFragment } = render(<EffectsOverlay roomWidth={100} />);
+        const { asFragment } = render(<EffectsOverlay getRoomWidth={() => 100} />);
         expect(asFragment()).toMatchSnapshot();
     });
 
+    // Sized to the room all the time, every room kept open for switching held a full-room canvas.
+    it("has no canvas to speak of until an effect plays, then the room's", async () => {
+        const { container } = render(<EffectsOverlay getRoomWidth={() => 100} />);
+        const canvas = container.querySelector("canvas")!;
+        expect([canvas.width, canvas.height]).toEqual([0, 0]);
+
+        dis.dispatch({ action: "effects.confetti" });
+
+        await waitFor(() => expect(isStarted).toBe(true));
+        expect(canvas.width).toBe(100);
+        expect(canvas.height).toBeGreaterThan(0);
+    });
+
     it("should start the confetti effect", async () => {
-        render(<EffectsOverlay roomWidth={100} />);
+        render(<EffectsOverlay getRoomWidth={() => 100} />);
         dis.dispatch({ action: "effects.confetti" });
         await waitFor(() => expect(isStarted).toBe(true));
     });
@@ -48,7 +61,7 @@ describe("<EffectsOverlay/>", () => {
         const date = new Date("2024-09-02");
         vi.setSystemTime(date);
 
-        render(<EffectsOverlay roomWidth={100} />);
+        render(<EffectsOverlay getRoomWidth={() => 100} />);
         dis.dispatch({ action: "effects.confetti", event: { getTs: () => eventDate.getTime() } });
         await waitFor(() => expect(isStarted).toBe(true));
     });

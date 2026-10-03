@@ -1133,6 +1133,9 @@ export class RoomView extends React.Component<IRoomProps, IRoomState> {
         window.addEventListener("beforeunload", this.onPageUnload);
     }
 
+    /** The room's width, for an effect played over it: read then, not on every render. */
+    private getRoomWidth = (): number => this.roomView.current?.offsetWidth ?? 0;
+
     public shouldComponentUpdate(nextProps: IRoomProps, nextState: IRoomState): boolean {
         const hasPropsDiff = objectHasDiff(this.props, nextProps);
 
@@ -2887,9 +2890,7 @@ export class RoomView extends React.Component<IRoomProps, IRoomState> {
                     onFocus={this.onFocus}
                     tabIndex={-1}
                 >
-                    {showChatEffects && this.roomView.current && (
-                        <EffectsOverlay roomWidth={this.roomView.current.offsetWidth} />
-                    )}
+                    {showChatEffects && this.roomView.current && <EffectsOverlay getRoomWidth={this.getRoomWidth} />}
                     <ErrorBoundary>
                         <MainSplit
                             panel={rightPanel}
