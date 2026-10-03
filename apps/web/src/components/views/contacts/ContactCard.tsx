@@ -57,7 +57,7 @@ import { type SharedRoom } from "../../../utils/contacts/shared";
 import { type Call } from "../../../utils/contacts/calls";
 import { type Week, type WeekSource } from "../../../utils/contacts/activity";
 import { ActivityWeek } from "./ActivityWeek";
-import { CallMark, readDuration, timeOfDay } from "./CallMark";
+import { CallMark, callDetail, callTooltip, timeOfDay } from "./CallMark";
 import BaseAvatar from "../avatars/BaseAvatar";
 import { mediaFromMxc } from "../../../customisations/Media";
 
@@ -272,17 +272,12 @@ function CardCallRow({
           : call.outcome === "declined"
             ? _t("contacts|call_declined")
             : _t("contacts|call_incoming");
-    const detail = [
-        call.seconds !== undefined ? readDuration(call.seconds) : undefined,
-        call.group ? _t("contacts|call_group") : undefined,
-        showNetwork ? call.network : undefined,
-    ]
-        .filter(Boolean)
-        .join(" · ");
+    const detail = [...callDetail(call), showNetwork ? call.network : undefined].filter(Boolean).join(" · ");
     return (
         <button
             type="button"
             className={`mx_Contacts_row mx_ContactCard_call${missed ? " mx_Contacts_row_missed" : ""}`}
+            title={callTooltip(call)}
             onClick={onOpen}
             disabled={!onOpen}
         >

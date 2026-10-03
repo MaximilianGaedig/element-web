@@ -18,6 +18,11 @@ Please see LICENSE files in the repository root for full details.
  * (tuwunel's media index, kind `calls`), the whole history then comes from there in one request
  * (`indexedCallHistory`), with what the loaded timelines know about each call kept.
  *
+ * A group call is one entry per call, not per person who joined it: Element Call writes a notification and
+ * a membership for every member who joins, so reading each as a call listed one call a dozen times. Those
+ * events are grouped into sessions (see `sessionsIn`) and each session is one entry that knows who took part,
+ * when it ended and whether it is still going.
+ *
  * Both shapes of call are read, because both exist here: a Matrix call (`m.call.invite` and friends, what
  * Element and the bridges' own call bridging use) and a bridge's notice about a call on the network, which
  * carries a structured marker rather than only words (see BeeperActionMessage in actionMessage.ts) - a notice
@@ -71,18 +76,46 @@ export interface Call {
     group: boolean;
     /** What to put on the row: the group's name for a group call, the person's for a call with one. */
     title: string;
+    /** When the last person left, for a MatrixRTC call whose events say so. Never set while it is ongoing. */
+    endTs?: number;
+    /** Whether somebody is still in it, so the row can offer to join rather than to call back. */
+    ongoing?: boolean;
+    /** Whether the reader took part, which is what separates a call they were in from one they heard about. */
+    joined?: boolean;
+    /** Everyone who took part, in the order they first showed up; only MatrixRTC calls say. */
+    participants?: CallParticipant[];
+}
+
+/** One person in a call. */
+export interface CallParticipant {
+    userId: string;
+    name: string;
+    avatarUrl?: string;
+    /** Whether this is the reader, who is said as "you" rather than by name. */
+    you: boolean;
 }
 
 /** How far back into each chat is worth reading: the recent end, which is what a call list is. */
 const DEEPEST = 500;
 
-/** Whether this event is a call starting, in any of the three shapes calls take here. */
+/**
+ * Whether this event is a call starting, in either of the shapes a call is read one event at a time.
+ * MatrixRTC calls are not here: one of their events says a person joined, not that a call began (see
+ * `isRtcEvent`).
+ */
 function startsCall(event: MatrixEvent): boolean {
     // The bridge's own marker rather than its words: "Incoming call" is only English.
+    return event.getType() === EventType.CallInvite || getActionMessage(event)?.type === "call";
+}
+
+/** The events a MatrixRTC call is made of: its ring, and each member's joining, refreshing and leaving. */
+function isRtcEvent(event: MatrixEvent): boolean {
+    const type = event.getType();
     return (
-        event.getType() === EventType.CallInvite ||
-        event.getType() === EventType.RTCNotification ||
-        getActionMessage(event)?.type === "call"
+        type === EventType.RTCNotification ||
+        type === EventType.RTCMembership ||
+        type === EventType.GroupCallMemberPrefix ||
+        type === EventType.RTCDecline
     );
 }
 
@@ -96,7 +129,7 @@ function hasCallEventNear(events: readonly MatrixEvent[], at: number): boolean {
         for (let i = at + step; i >= 0 && i < events.length; i += step) {
             const other = events[i];
             if (Math.abs(other.getTs() - ts) > SAME_CALL_MS) break;
-            if (startsCall(other) && !getActionMessage(other)) return true;
+            if ((startsCall(other) || isRtcEvent(other)) && !getActionMessage(other)) return true;
         }
     }
     return false;
@@ -164,24 +197,7 @@ function readCall(room: Room, events: readonly MatrixEvent[], at: number, ctx: R
         if (startsCall(later)) break;
     }
 
-    /*
-     * A group call is joined rather than answered, and declined out loud: MatrixRTC records the
-     * reader's own membership when they join and an `rtc.decline` when they turn it down, so those
-     * are what "answered" and "declined" mean for one.
-     */
-    let declined = false;
-    let joined = false;
-    if (event.getType() === EventType.RTCNotification) {
-        for (let then = at + 1; then < events.length; then++) {
-            const later = events[then];
-            if (startsCall(later)) break;
-            if (later.getSender() !== me) continue;
-            if (later.getType() === EventType.RTCDecline) declined = true;
-            if (later.getType() === EventType.RTCMembership) joined = true;
-        }
-    }
-
-    const answered = !!answer || joined;
+    const answered = !!answer;
     return {
         eventId: event.getId()!,
         roomId: room.roomId,
@@ -192,11 +208,179 @@ function readCall(room: Room, events: readonly MatrixEvent[], at: number, ctx: R
         ts: event.getTs(),
         outgoing: userId === me,
         video: !!event.getContent().offer?.sdp?.includes("m=video") || getActionMessage(event)?.call_type === "video",
-        outcome: declined ? "declined" : outcomeOf(hangup, answered),
+        outcome: outcomeOf(hangup, answered),
         group,
         // A line the bridge had to send as its bot names nobody: the chat is who it was with.
         title: group || fromBot ? room.name : (member?.rawDisplayName ?? userId),
         seconds: answer && hangup ? Math.max(0, Math.round((hangup.getTs() - answer.getTs()) / 1000)) : undefined,
+        joined: answered,
+    };
+}
+
+/**
+ * How long a room has to stay empty for the next join to be a different call.
+ *
+ * A call ends when the last person leaves, but people drop and rejoin: a flaky connection, a switched
+ * device, the one who left to fetch someone. Those are the same call, so a join this soon after the room
+ * emptied continues it. Longer than that, somebody is starting something new.
+ */
+export const SESSION_GAP_MS = 15 * 60 * 1000;
+
+/**
+ * How long a membership counts when its own event does not say, and so how long a call can look ongoing
+ * after a client died without writing its leave. Clients refresh a membership well inside this.
+ */
+const MEMBERSHIP_LIFETIME_MS = 4 * 60 * 60 * 1000;
+
+/** Whether a membership event is somebody being in the call, as opposed to the empty content that leaves it. */
+function isJoin(event: MatrixEvent): boolean {
+    const content = event.getContent();
+    if (Array.isArray(content.memberships)) return content.memberships.length > 0;
+    return Object.keys(content).length > 0;
+}
+
+/** A group of RTC events that is one call. */
+interface Session {
+    first: MatrixEvent;
+    /** Who is in it right now, by membership (one per device), and until when that membership is good. */
+    present: Map<string, number>;
+    /** Who took part, by user, in the order they first appeared. */
+    participants: Map<string, true>;
+    lastActivity: number;
+    /** Whether anybody other than the reader rang the reader, by notification. */
+    rang: boolean;
+    joined: boolean;
+    declined: boolean;
+    video: boolean;
+}
+
+/**
+ * The MatrixRTC calls in one room, oldest first, from its events oldest first.
+ *
+ * One call is one run of events in the room, ended by the room being empty - everyone's membership left
+ * or lapsed - for longer than SESSION_GAP_MS. A notification, a join, a refresh and a leave all belong to
+ * the run they fall in; a notification with no memberships at all (a ring nobody joined, or a room whose
+ * membership events were not loaded) is a run of its own that ends SESSION_GAP_MS after its last event.
+ */
+function sessionsIn(room: Room, events: readonly MatrixEvent[], ctx: RoomContext, now: number): Call[] {
+    const calls: Call[] = [];
+    let cur: Session | undefined;
+
+    /** Drops the memberships that ran out by `t`: nobody wrote their leave, so they left when they expired. */
+    const lapse = (s: Session, t: number): void => {
+        for (const [key, until] of s.present) {
+            if (until > t) continue;
+            s.present.delete(key);
+            s.lastActivity = Math.max(s.lastActivity, until);
+        }
+    };
+    const close = (s: Session, ongoing: boolean): void => {
+        calls.push(toCall(room, s, ctx, ongoing));
+    };
+
+    for (const event of events) {
+        if (event.isRedacted()) continue;
+        const t = event.getTs();
+        if (cur) {
+            lapse(cur, t);
+            if (cur.present.size === 0 && t - cur.lastActivity > SESSION_GAP_MS) {
+                close(cur, false);
+                cur = undefined;
+            }
+        }
+        const type = event.getType();
+        // A decline answers a ring; with no call for it to answer it is not the start of one.
+        if (!cur && type === EventType.RTCDecline) continue;
+        cur ??= {
+            first: event,
+            present: new Map(),
+            participants: new Map(),
+            lastActivity: t,
+            rang: false,
+            joined: false,
+            declined: false,
+            video: false,
+        };
+        const sender = event.getSender() ?? "";
+        const content = event.getContent();
+        if (content["m.call.intent"] === "video") cur.video = true;
+
+        if (type === EventType.RTCDecline) {
+            if (sender === ctx.me) cur.declined = true;
+            continue;
+        }
+        cur.lastActivity = Math.max(cur.lastActivity, t);
+        cur.participants.set(sender, true);
+        if (type === EventType.RTCNotification) {
+            const mentions = content["m.mentions"];
+            const toMe = !mentions || mentions.room || mentions.user_ids?.includes(ctx.me);
+            if (sender !== ctx.me && toMe) cur.rang = true;
+            continue;
+        }
+        // A membership: state_key is per device, so one person on two devices is two memberships but one participant.
+        const key = event.getStateKey() ?? sender;
+        if (isJoin(event)) {
+            const expires = typeof content.expires === "number" ? content.expires : MEMBERSHIP_LIFETIME_MS;
+            cur.present.set(key, t + expires);
+            if (sender === ctx.me) cur.joined = true;
+        } else {
+            cur.present.delete(key);
+        }
+    }
+    if (cur) {
+        lapse(cur, now);
+        close(cur, cur.present.size > 0);
+    }
+    return calls;
+}
+
+function toCall(room: Room, s: Session, ctx: RoomContext, ongoing: boolean): Call {
+    const { me, network, group, bots } = ctx;
+    const event = s.first;
+    const userId = event.getSender() ?? "";
+    const fromBot = bots.has(userId);
+    const starter = fromBot ? null : room.getMember(userId);
+    const outgoing = userId === me;
+    const end = ongoing ? undefined : s.lastActivity;
+    const start = event.getTs();
+
+    const participants: CallParticipant[] = [...s.participants.keys()]
+        .filter((id) => !bots.has(id))
+        .map((id) => {
+            const member = room.getMember(id);
+            return {
+                userId: id,
+                name: member?.rawDisplayName ?? id,
+                avatarUrl: member?.getMxcAvatarUrl() ?? undefined,
+                you: id === me,
+            };
+        });
+
+    // Missed is "it rang and I was not in it": a call in a big room nobody rang me for is just one that happened.
+    let outcome: CallOutcome = "unknown";
+    if (s.declined) outcome = "declined";
+    else if (s.joined) outcome = "answered";
+    else if (!ongoing && s.rang) outcome = "missed";
+
+    return {
+        eventId: event.getId()!,
+        roomId: room.roomId,
+        userId,
+        name: fromBot ? room.name : (starter?.rawDisplayName ?? userId),
+        avatarUrl: starter?.getMxcAvatarUrl() ?? undefined,
+        network,
+        ts: start,
+        outgoing,
+        video: s.video,
+        outcome,
+        group,
+        title: group || fromBot ? room.name : (starter?.rawDisplayName ?? userId),
+        // Nothing is known of how long it ran from a single event: the start is also the end.
+        seconds: end !== undefined && end > start ? Math.round((end - start) / 1000) : undefined,
+        endTs: end,
+        ongoing,
+        joined: s.joined,
+        participants,
     };
 }
 
@@ -205,7 +389,7 @@ function callsIn(client: MatrixClient, room: Room): Call[] {
     const events = room.getLiveTimeline().getEvents();
     const from = Math.max(0, events.length - DEEPEST);
     const ctx = roomContext(client, room);
-    const calls: Call[] = [];
+    const calls: Call[] = sessionsIn(room, events.slice(from).filter(isRtcEvent), ctx, Date.now());
 
     for (let at = events.length - 1; at >= from; at--) {
         const event = events[at];
@@ -217,7 +401,7 @@ function callsIn(client: MatrixClient, room: Room): Call[] {
         if (getActionMessage(event) && hasCallEventNear(events, at)) continue;
         calls.push(readCall(room, events, at, ctx));
     }
-    return calls;
+    return calls.sort((a, b) => b.ts - a.ts);
 }
 
 /** Every call the client can see, newest first. */
@@ -270,11 +454,33 @@ export async function indexedCallHistory(
             // Oldest first, as a timeline is, so a bridge's line can be matched to the call beside it.
             const events = [...found].sort((a, b) => a.getTs() - b.getTs());
             const ctx = roomContext(client, room);
+            const covered = (event: MatrixEvent): boolean =>
+                [...loaded.values()].some(
+                    (call) =>
+                        call.roomId === roomId &&
+                        call.participants &&
+                        event.getTs() >= call.ts - SESSION_GAP_MS &&
+                        event.getTs() <= (call.endTs ?? Date.now()) + SESSION_GAP_MS,
+                );
+            // The index lists a call's events one by one, so they are grouped as a timeline's are - except
+            // those a loaded call already accounts for, which would otherwise come back as a second entry.
+            calls.push(
+                ...sessionsIn(
+                    room,
+                    events.filter((event) => isRtcEvent(event) && !covered(event)),
+                    ctx,
+                    Date.now(),
+                ),
+            );
             events.forEach((event, at) => {
+                if (isRtcEvent(event)) return;
                 if (event.isRedacted() || (getActionMessage(event) && hasCallEventNear(events, at))) return;
                 calls.push(loaded.get(event.getId()!) ?? readCall(room, [event], 0, ctx));
             });
         }
+        // Loaded group calls come with the index's: the index only knows the events it was asked about.
+        const seen = new Set(calls.map((c) => c.eventId));
+        for (const call of loaded.values()) if (call.participants && !seen.has(call.eventId)) calls.push(call);
         return calls.sort((a, b) => b.ts - a.ts).slice(0, limit);
     } catch {
         return undefined;
