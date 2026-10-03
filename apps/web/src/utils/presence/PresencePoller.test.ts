@@ -65,9 +65,7 @@ describe("PresencePoller", () => {
         vi.useFakeTimers();
         setSlidingSyncActive(true);
         visibility = "visible";
-        vi.spyOn(SettingsStore, "getValue").mockImplementation(
-            () => false as any,
-        );
+        vi.spyOn(SettingsStore, "getValue").mockImplementation(() => false as any);
         SdkConfig.put({ enable_presence_by_hs_url: { [HS]: true } });
         vi.spyOn(document, "visibilityState", "get").mockImplementation(() => visibility);
         vi.spyOn(DMRoomMap, "shared").mockReturnValue({
