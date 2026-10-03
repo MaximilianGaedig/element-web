@@ -39,13 +39,9 @@ const state = (type: string, stateKey = "", content: object = {}): IStateEvent =
     content,
 });
 const keepListState = (event: IStateEvent): boolean => ROOM_LIST_STATE_TYPES.includes(event.type);
-/** A room update with only the fields a test is about. */
-const update = (fields: Partial<MSC3575RoomData>): MSC3575RoomData => ({
-    name: "",
-    required_state: [],
-    timeline: [],
-    ...fields,
-});
+/** A room update with only the fields a test is about: as the server sends them, without a name unless it changed. */
+const update = (fields: Partial<MSC3575RoomData>): MSC3575RoomData =>
+    ({ required_state: [], timeline: [], ...fields }) as MSC3575RoomData;
 
 describe("mergeRoomData", () => {
     it("keeps the state the chat list reads, replaced by type and key, and nothing else", () => {
