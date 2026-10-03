@@ -13,6 +13,7 @@ import { act, fireEvent, render, screen } from "test-utils-rtl";
 
 import UIStore from "../../../stores/UIStore";
 import ResizeNotifier from "../../../utils/ResizeNotifier";
+import SettingsStore from "../../../settings/SettingsStore";
 import { TgColumns } from "./TgColumns";
 import { TgBackButton } from "./TgNavigation";
 import dis from "../../../dispatcher/dispatcher";
@@ -51,6 +52,16 @@ describe("TgColumns", () => {
 
     // Marking the whole page while something scrolls restyled every element twice per scroll.
     it("leaves the page alone while something scrolls", () => {
+        // With the glass on, which is when the blur used to be paused
+        const getValue = SettingsStore.getValue;
+        vi.spyOn(SettingsStore, "getValue").mockImplementation(((name: string, ...rest: unknown[]) =>
+            name === "glassEffects"
+                ? true
+                : (getValue as (...a: unknown[]) => unknown).call(
+                      SettingsStore,
+                      name,
+                      ...rest,
+                  )) as typeof SettingsStore.getValue);
         renderColumns();
         const observer = new MutationObserver(() => {});
         observer.observe(document.documentElement, { attributes: true });
