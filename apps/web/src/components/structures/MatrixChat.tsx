@@ -79,7 +79,6 @@ import DialPadModal from "../views/voip/DialPadModal";
 import { shouldUseLoginForWelcome } from "../../utils/pages";
 import Spinner from "../views/elements/Spinner";
 import QuestionDialog from "../views/dialogs/QuestionDialog";
-import UserSettingsDialog from "../views/dialogs/UserSettingsDialog";
 import CreateRoomDialog from "../views/dialogs/CreateRoomDialog";
 import IncomingSasDialog from "../views/dialogs/IncomingSasDialog";
 import CompleteSecurity from "./auth/CompleteSecurity";
@@ -123,7 +122,10 @@ import RovingSpotlightDialog from "../views/dialogs/spotlight/SpotlightDialog";
 import { findDMForUser } from "../../utils/dm/findDMForUser";
 import { sanitizeHtmlText } from "../../HtmlUtils";
 import { NotificationLevel } from "../../stores/notifications/NotificationLevel";
-import { type UserTab } from "../views/dialogs/UserTab";
+import { UserTab } from "../views/dialogs/UserTab";
+import { type UserSettingsPageProps } from "../views/settings/UserSettingsPage";
+import { roomListPanelView, setRoomListPanelView, subscribeRoomListPanelView } from "../../utils/roomListPanelView";
+import { setUserSettingsSection } from "../../utils/userSettingsSection";
 import { shouldSkipSetupEncryption } from "../../utils/crypto/shouldSkipSetupEncryption";
 import { Filter } from "../views/dialogs/spotlight/Filter";
 import { SessionLockStolenView } from "./auth/SessionLockStolenView";
@@ -188,6 +190,10 @@ interface IState {
     currentRoomId: string | null;
     // If we're trying to just view a user ID (i.e. /user URL), this is it
     currentUserId: string | null;
+    /** Fork: on the settings page, the section asked for (none: the list alone, on a phone). */
+    settingsSection?: UserTab;
+    /** Fork: on the settings page, what the link that opened the section asked it to start with. */
+    settingsProps?: Omit<UserSettingsPageProps, "section">;
     // Parameters used in the registration dance with the IS
     register_client_secret?: string;
     register_session_id?: string;
@@ -241,6 +247,9 @@ export default class MatrixChat extends React.PureComponent<IProps, IState> {
     private sessionLoadStarted = false;
     /** Whether the startup timing has seen the first room view; see {@link componentDidUpdate}. */
     private bootRoomViewSeen = false;
+    /** Fork: the room that was open when settings were, to go back to when they are left. */
+    private roomBeforeSettings: string | null = null;
+    private stopWatchingPanelView?: () => void;
 
     public constructor(props: IProps) {
         super(props);
@@ -476,6 +485,7 @@ export default class MatrixChat extends React.PureComponent<IProps, IState> {
         RoomNotificationStateStore.instance.on(UPDATE_STATUS_INDICATOR, this.onUpdateStatusIndicator);
 
         this.dispatcherRef = dis.register(this.onAction);
+        this.stopWatchingPanelView = subscribeRoomListPanelView(this.onPanelViewChanged);
 
         this.themeWatcher = new ThemeWatcher();
         this.fontWatcher = new FontWatcher();
@@ -525,6 +535,14 @@ export default class MatrixChat extends React.PureComponent<IProps, IState> {
                 reportBootTimings();
             }
         }
+        // Fork: going anywhere else from the settings page takes the column back to the chats with it.
+        if (
+            prevState.page_type === PageType.Settings &&
+            this.state.page_type !== PageType.Settings &&
+            roomListPanelView() === "settings"
+        ) {
+            setRoomListPanelView("rooms");
+        }
         if (this.focusNext === "composer") {
             dis.fire(Action.FocusSendMessageComposer);
             this.focusNext = undefined;
@@ -537,6 +555,7 @@ export default class MatrixChat extends React.PureComponent<IProps, IState> {
         this.stopCollecting?.();
         Lifecycle.stopMatrixClient();
         dis.unregister(this.dispatcherRef);
+        this.stopWatchingPanelView?.();
         this.themeWatcher?.off(ThemeWatcherEvent.Change, setTheme);
         this.themeWatcher?.stop();
         this.fontWatcher?.stop();
@@ -793,16 +812,7 @@ export default class MatrixChat extends React.PureComponent<IProps, IState> {
             }
             case Action.ViewUserSettings: {
                 const tabPayload = payload as OpenToTabPayload;
-                Modal.createDialog(
-                    UserSettingsDialog,
-                    { ...payload.props, initialTabId: tabPayload.initialTabId as UserTab, sdkContext: this.stores },
-                    /*className=*/ undefined,
-                    /*isPriority=*/ false,
-                    /*isStatic=*/ true,
-                );
-
-                // View the welcome or home page if we need something to look at
-                this.viewSomethingBehindModal();
+                this.viewSettings(tabPayload.initialTabId as UserTab | undefined, tabPayload.props);
                 break;
             }
             case Action.CreateRoom:
@@ -1134,6 +1144,48 @@ export default class MatrixChat extends React.PureComponent<IProps, IState> {
         this.setPage(PageType.HomePage);
         this.notifyNewScreen("home");
     }
+
+    /**
+     * Fork: the settings are a page, as a room is - a section of them beside the column's list of them - not
+     * a dialog over whatever was open. Every way into them comes through here (Action.ViewUserSettings), so
+     * there is one place they are.
+     */
+    private viewSettings(section?: UserTab, props?: Omit<UserSettingsPageProps, "section">): void {
+        // They need an account to be the settings of: signed out, or still setting up, there is nothing to show.
+        if (this.state.view !== Views.LOGGED_IN) {
+            logger.warn("Ignoring a request to open the settings outside the logged-in view");
+            return;
+        }
+        if (this.state.page_type !== PageType.Settings) this.roomBeforeSettings = this.state.currentRoomId;
+        const known = section && Object.values(UserTab).includes(section) ? section : undefined;
+        this.setStateForNewView({
+            view: Views.LOGGED_IN,
+            currentRoomId: null,
+            settingsSection: known,
+            settingsProps: props,
+        });
+        this.setPage(PageType.Settings);
+        setUserSettingsSection(known);
+        setRoomListPanelView("settings");
+        this.notifyNewScreen(known ? `settings/${known}` : "settings");
+    }
+
+    /**
+     * Fork: the column has moved off the settings (its bar, its back button), so the page beside it does
+     * too: back to the room that was open before them, or the chats' own page. Not on a phone, where the
+     * list is the screen and a room put back would slide over it unasked.
+     */
+    private onPanelViewChanged = (): void => {
+        if (roomListPanelView() === "settings" || this.state.page_type !== PageType.Settings) return;
+        const roomId = this.roomBeforeSettings;
+        this.roomBeforeSettings = null;
+        const handheld = document.documentElement.dataset.tgScreen === "mobile";
+        if (roomId && !handheld && MatrixClientPeg.get()?.getRoom(roomId)) {
+            dis.dispatch<ViewRoomPayload>({ action: Action.ViewRoom, room_id: roomId, metricsTrigger: undefined });
+        } else {
+            dis.dispatch({ action: Action.ViewHomePage });
+        }
+    };
 
     private viewUser(userId: string, subAction: string): void {
         // Wait for the first sync so that `getRoom` gives us a room object if it's
@@ -1937,8 +1989,12 @@ export default class MatrixChat extends React.PureComponent<IProps, IState> {
             if (!this.state.currentRoomId && !this.state.currentUserId && !this.isLoggedInViewPageDisplayed()) {
                 this.viewHome();
             }
-        } else if (screen === "settings") {
-            dis.fire(Action.ViewUserSettings);
+        } else if (screen === "settings" || screen.startsWith("settings/")) {
+            // #/settings/<section> opens that section; #/settings alone, the list (or the first, beside it).
+            dis.dispatch<OpenToTabPayload>({
+                action: Action.ViewUserSettings,
+                initialTabId: screen.slice("settings/".length) || undefined,
+            });
         } else if (screen === "welcome") {
             dis.dispatch({
                 action: "view_welcome_page",

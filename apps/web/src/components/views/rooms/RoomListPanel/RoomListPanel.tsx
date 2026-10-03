@@ -16,6 +16,7 @@ import { HistoryStatusMini } from "../../telegram/TgHistoryChip";
 import { RoomListView } from "./RoomListView";
 import { RoomListPill } from "./RoomListPill";
 import { ContactsView } from "../../contacts/ContactsView";
+import { UserSettingsList } from "../../settings/UserSettingsList";
 import { setRoomListPanelView, useRoomListPanelView } from "../../../../utils/roomListPanelView";
 import { _t } from "../../../../languageHandler";
 import { getKeyBindingsManager } from "../../../../KeyBindingsManager";
@@ -84,7 +85,10 @@ export const RoomListPanel: React.FC = () => {
             onBlur={onBlur}
             onKeyDown={onKeyDown}
         >
-            {panelView !== "rooms" ? (
+            {panelView === "settings" ? (
+                /* The sections; the one chosen is the page beside this column (MatrixChat.viewSettings). */
+                <UserSettingsList />
+            ) : panelView !== "rooms" ? (
                 /* In place of the list, not over it: one column, one thing in it. */
                 <ContactsView
                     tab={panelView === "calls" ? "calls" : "people"}
@@ -126,7 +130,7 @@ export const RoomListPanel: React.FC = () => {
                 </>
             )}
             {/*
-             * Over whichever of the three is showing, because it is what moves between them: kept out of
+             * Over whichever of the four is showing, because it is what moves between them: kept out of
              * the branches so it does not unmount and remount - and so the list is never without it.
              */}
             <RoomListPill canSearch={displayRoomSearch} />

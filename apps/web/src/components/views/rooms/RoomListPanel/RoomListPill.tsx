@@ -10,14 +10,14 @@ Please see LICENSE files in the repository root for full details.
  *
  * A row of controls above the list costs that row in every chat, permanently, on the screen with the least
  * of it to spare; a pill floats and the list scrolls under it. It is also where the switch between the
- * chats, the people and the calls belongs: those are three views of one column, so one control moves
- * between them and none of them needs a strip of its own underneath.
+ * chats, the people, the calls and the settings belongs: those are four views of one column, so one control
+ * moves between them and none of them needs a strip of its own underneath.
  *
  * Search sits apart from the pill as the microphone sits apart from the composer: a round island of the
  * same height at the start of the row, because it is a different kind of control from the three places the
  * pill moves between. Over people, a + at the other end adds somebody, where iOS keeps its compose button.
- * What it searches depends on the view. Over the chats it opens the search everything else in the app
- * uses (the Ctrl+K dialog), which already covers rooms, people and messages. Over people and calls it
+ * What it searches depends on the view. Over the chats and the settings it opens the search everything else
+ * in the app uses (the Ctrl+K dialog), which already covers rooms, people and messages. Over people and calls it
  * searches that list in place: the pill gives up its width and the button grows into a field, so it reads
  * as the same control doing something else rather than one control vanishing and another appearing.
  */
@@ -26,6 +26,7 @@ import React, { type JSX, type ComponentType, type SVGAttributes, useEffect, use
 import ChatIcon from "@vector-im/compound-design-tokens/assets/web/icons/chat";
 import UserProfileIcon from "@vector-im/compound-design-tokens/assets/web/icons/user-profile";
 import VoiceCallIcon from "@vector-im/compound-design-tokens/assets/web/icons/voice-call";
+import SettingsIcon from "@vector-im/compound-design-tokens/assets/web/icons/settings";
 import SearchIcon from "@vector-im/compound-design-tokens/assets/web/icons/search";
 import CloseIcon from "@vector-im/compound-design-tokens/assets/web/icons/close";
 import PlusIcon from "@vector-im/compound-design-tokens/assets/web/icons/plus";
@@ -110,6 +111,16 @@ export function RoomListPill({ canSearch = true }: { canSearch?: boolean }): JSX
     const shownActions = actions ?? lastActions.current;
     const go = (next: RoomListPanelView) => (): void => setRoomListPanelView(next);
     /*
+     * The settings are a page as well as a view of this column, so they are opened as a page is, and
+     * MatrixChat turns the column to them (MatrixChat.viewSettings). Pressed again while open, nothing: on
+     * a desktop it would throw away the section being read for the first one.
+     */
+    const openSettings = (): void => {
+        if (view !== "settings") defaultDispatcher.dispatch({ action: Action.ViewUserSettings });
+    };
+    /* People and calls are searched in place; the chats and the settings by the app's own search. */
+    const searchesInPlace = view === "contacts" || view === "calls";
+    /*
      * The mark on the current entry travels to it, as the shared media strip's does: a selection that
      * blinks from one entry to another says two things happened, where one thing moved.
      */
@@ -123,7 +134,7 @@ export function RoomListPill({ canSearch = true }: { canSearch?: boolean }): JSX
 
     const placeholder = view === "calls" ? _t("contacts|search_calls") : _t("contacts|search_people");
     const onSearch = (): void => {
-        if (view === "rooms") defaultDispatcher.fire(Action.OpenSpotlight);
+        if (!searchesInPlace) defaultDispatcher.fire(Action.OpenSpotlight);
         else setSearchOpen(!open);
     };
 
@@ -145,14 +156,14 @@ export function RoomListPill({ canSearch = true }: { canSearch?: boolean }): JSX
                         id="room-list-search-button"
                         className="mx_RoomListPill_islandButton"
                         aria-label={_t("action|search")}
-                        aria-expanded={view === "rooms" ? undefined : open}
+                        aria-expanded={searchesInPlace ? open : undefined}
                         // Open, it is the field's own magnifier: pressing it again goes back to the field.
                         onClick={open ? () => field.current?.focus() : onSearch}
                         tabIndex={open ? -1 : 0}
                     >
                         <SearchIcon width="22" height="22" aria-hidden />
                     </button>
-                    {view !== "rooms" && (
+                    {searchesInPlace && (
                         <input
                             ref={field}
                             type="search"
@@ -204,6 +215,13 @@ export function RoomListPill({ canSearch = true }: { canSearch?: boolean }): JSX
                     current={view === "calls"}
                     onClick={go("calls")}
                     innerRef={itemRef("calls")}
+                />
+                <Entry
+                    Icon={SettingsIcon}
+                    label={_t("common|settings")}
+                    current={view === "settings"}
+                    onClick={openSettings}
+                    innerRef={itemRef("settings")}
                 />
             </nav>
 

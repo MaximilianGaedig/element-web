@@ -252,7 +252,6 @@ html[data-tg-screen="mobile"] {
     }
 
     /* Settings: a tall drawer whose section list is a strip of tabs above the section. */
-    .mx_UserSettingsDialog,
     .mx_RoomSettingsDialog,
     .mx_SpaceSettingsDialog,
     .mx_SpacePreferencesDialog {
@@ -335,5 +334,83 @@ html[data-tg-screen="mobile"] {
             padding-bottom: var(--tg-safe-bottom, 0px);
             animation: mx_TgDrawer_in 0.26s cubic-bezier(0.2, 0.8, 0.2, 1) both;
         }
+    }
+
+    /*
+     * The user's settings on a phone: the column's list of sections is the screen, and a section slides over
+     * it as a chat does (TgColumns), under a header with the way back. Telegram iOS's settings: plain rows with
+     * hairlines and a chevron, nothing marked as "current" on a list you have yet to choose from - the section
+     * chosen is the screen in front.
+     */
+    .mx_UserSettingsList_sections {
+        padding-inline: 0;
+    }
+
+    .mx_UserSettingsList_section {
+        min-height: 3.25rem;
+        padding: 0.5rem 2.5rem 0.5rem 1.25rem;
+        border-radius: 0;
+        font: var(--cpd-font-body-lg-regular);
+
+        &[aria-current="page"] {
+            background: none;
+
+            > svg {
+                color: var(--cpd-color-icon-secondary);
+            }
+        }
+
+        &::before {
+            content: "›";
+            position: absolute;
+            inset-inline-end: 1.25rem;
+            color: var(--cpd-color-icon-secondary);
+            font-size: 1.5rem;
+        }
+
+        /* The alert dot sits before the chevron rather than on it. */
+        &[data-alert]::after {
+            margin-inline-end: 0.25rem;
+        }
+    }
+
+    /* A hairline between rows, starting where the words do, as iOS and the room settings' list draw it. */
+    .mx_UserSettingsList_sections > li + li {
+        position: relative;
+
+        &::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            inset-inline: 3.75rem 0;
+            border-top: 1px solid var(--cpd-color-border-disabled);
+        }
+    }
+
+    .mx_UserSettingsPage_header {
+        gap: var(--cpd-space-1x);
+        /* Clear of the notch: the page runs to the top of the screen, as a chat does. */
+        padding: var(--tg-safe-top, 0px) var(--cpd-space-2x) 0;
+        min-height: calc(56px + var(--tg-safe-top, 0px));
+
+        .mx_TgBackButton {
+            flex: 0 0 auto;
+        }
+    }
+
+    .mx_UserSettingsPage_title {
+        font: var(--cpd-font-body-lg-semibold);
+    }
+
+    .mx_UserSettingsPage_body {
+        padding: var(--cpd-space-4x) var(--cpd-space-4x) calc(var(--cpd-space-8x) + var(--tg-safe-bottom, 0px));
+
+        > .mx_SettingsTab {
+            max-width: none;
+        }
+    }
+
+    .mx_UserSettingsPage_toastContainer {
+        bottom: calc(var(--cpd-space-6x) + var(--tg-safe-bottom, 0px));
     }
 }

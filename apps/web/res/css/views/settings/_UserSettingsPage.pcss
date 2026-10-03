@@ -1,0 +1,168 @@
+/*
+Copyright 2019-2024 New Vector Ltd.
+
+SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only OR LicenseRef-Element-Commercial
+Please see LICENSE files in the repository root for full details.
+*/
+
+/*
+ * The user's settings as a place rather than a dialog: the column lists the sections (UserSettingsList)
+ * and the page beside it is the chosen one (UserSettingsPage). The sections' own contents are Element's,
+ * untouched; only what holds them is here. On a phone each is the whole screen in turn (_TgHandheld.pcss).
+ */
+
+/* ---- The list, in the column ---------------------------------------------------------------------- */
+
+.mx_UserSettingsList {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+}
+
+/* Back at the start, then the name: the column is not the chats, and says what it is instead. */
+.mx_UserSettingsList_header {
+    display: flex;
+    align-items: center;
+    gap: var(--cpd-space-2x);
+    padding: var(--cpd-space-2x) var(--cpd-space-4x);
+}
+
+.mx_UserSettingsList_title {
+    margin: 0;
+    font: var(--cpd-font-heading-sm-semibold);
+    color: var(--cpd-color-text-primary);
+}
+
+.mx_UserSettingsList_sections {
+    flex: 1;
+    min-height: 0;
+    margin: 0;
+    padding: 0 var(--cpd-space-2x);
+    /* The last row can be scrolled clear of the bar floating over the column's foot. */
+    padding-bottom: var(--mx-room-list-toast-bottom, 6rem);
+    overflow-y: auto;
+    list-style: none;
+}
+
+/* The rows of a menu, as Element's own: an icon in the secondary colour, the name, a rounded highlight. */
+.mx_UserSettingsList_section {
+    all: unset;
+    box-sizing: border-box;
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: var(--cpd-space-4x);
+    width: 100%;
+    min-height: 44px;
+    padding: var(--cpd-space-2x) var(--cpd-space-3x);
+    border-radius: var(--cpd-space-3x);
+    font: var(--cpd-font-body-md-medium);
+    color: var(--cpd-color-text-primary);
+    cursor: pointer;
+
+    > svg {
+        flex: 0 0 auto;
+        color: var(--cpd-color-icon-secondary);
+    }
+
+    > span {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    /* A finger has no hover: on a touch screen the highlight would stay on after the tap. */
+    @media (hover: hover) {
+        &:hover {
+            background: var(--cpd-color-bg-action-tertiary-hovered);
+        }
+    }
+
+    &:focus-visible {
+        outline: 2px solid var(--cpd-color-border-focused);
+        outline-offset: -2px;
+    }
+
+    /* The section open beside the list, as the open chat is marked in the chat list. */
+    &[aria-current="page"] {
+        background: var(--cpd-color-bg-action-secondary-pressed);
+
+        > svg {
+            color: var(--cpd-color-icon-primary);
+        }
+    }
+
+    /* Recovery not set up: the dot the settings dialog put on its Encryption tab. */
+    &[data-alert]::after {
+        content: "";
+        width: 8px;
+        height: 8px;
+        margin-inline-start: auto;
+        border-radius: 50%;
+        background-color: var(--cpd-color-icon-critical-primary);
+    }
+}
+
+/* ---- The page, beside it -------------------------------------------------------------------------- */
+
+.mx_UserSettingsPage {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+    background: var(--cpd-color-bg-canvas-default);
+}
+
+/* In place of a chat's header, at its height: the section's name, and on a phone the way back. */
+.mx_UserSettingsPage_header {
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    gap: var(--cpd-space-2x);
+    min-height: 56px;
+    padding: 0 var(--cpd-space-6x);
+    border-bottom: 1px solid var(--cpd-color-separator-primary);
+    box-sizing: border-box;
+}
+
+.mx_UserSettingsPage_title {
+    margin: 0;
+    overflow: hidden;
+    font: var(--cpd-font-heading-sm-semibold);
+    color: var(--cpd-color-text-primary);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.mx_UserSettingsPage_body {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    padding: var(--cpd-space-6x) var(--cpd-space-8x) var(--cpd-space-16x);
+
+    /*
+     * A readable measure in a pane that can be the width of a monitor, as the dialog was 980px at most: the
+     * section is centred in it rather than strung across, or stuck to the list with a void beside it.
+     */
+    > .mx_SettingsTab {
+        box-sizing: border-box;
+        max-width: 720px;
+        margin-inline: auto;
+    }
+}
+
+.mx_UserSettingsPage_toastContainer {
+    position: absolute;
+    bottom: var(--cpd-space-10x);
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    pointer-events: none;
+
+    > * {
+        pointer-events: auto;
+    }
+}

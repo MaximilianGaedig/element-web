@@ -2511,7 +2511,7 @@
             "leave_room": "Leave room"
         },
         "notification_options": "Notification options",
-        "pill_label": "Chats, people and calls",
+        "pill_label": "Chats, people, calls and settings",
         "section": {
             "chats": "Chats",
             "favourites": "Favourites",
@@ -2821,7 +2821,6 @@
             "brand_version": "%(brand)s version:",
             "clear_cache_reload": "Clear cache and reload",
             "crypto_version": "Crypto version:",
-            "dialog_title": "<strong>Settings:</strong> Help & About",
             "help_link": "For help with using %(brand)s, click <a>here</a>.",
             "homeserver": "Homeserver is <code>%(homeserverUrl)s</code>",
             "identity_server": "Identity server is <code>%(identityServerUrl)s</code>",
@@ -2831,7 +2830,6 @@
     },
     "settings": {
         "account": {
-            "dialog_title": "<strong>Settings:</strong> Account",
             "title": "Account"
         },
         "activityIsUnread": "Consider all new activity as an unread message",
@@ -2846,7 +2844,6 @@
             "custom_font_description": "Set the name of a font installed on your system & %(brand)s will attempt to use it.",
             "custom_font_name": "System font name",
             "custom_font_size": "Use custom size",
-            "dialog_title": "<strong>Settings:</strong> Appearance",
             "font_size": "Font size",
             "font_size_default": "%(fontSize)s (default)",
             "high_contrast": "High contrast",
@@ -2921,7 +2918,6 @@
             "device_not_verified_button": "Verify this device",
             "device_not_verified_description": "You need to verify this device in order to view your encryption settings.",
             "device_not_verified_title": "Device not verified",
-            "dialog_title": "<strong>Settings:</strong> Encryption",
             "key_storage": {
                 "allow_key_storage": "Allow key storage",
                 "description": "This will allow you to view your chat history on any new devices and is required for backup of chats and digital identity. <a>Learn more</a>",
@@ -3101,14 +3097,7 @@
             "phrase_strong_enough": "Great! This passphrase looks strong enough"
         },
         "keyboard": {
-            "dialog_title": "<strong>Settings:</strong> Keyboard",
             "title": "Keyboard"
-        },
-        "labs": {
-            "dialog_title": "<strong>Settings:</strong> Labs"
-        },
-        "labs_mjolnir": {
-            "dialog_title": "<strong>Settings:</strong> Ignored Users"
         },
         "media_preview": {
             "hide_avatars": "Hide avatars of room and inviter",
@@ -3127,7 +3116,6 @@
             "default_setting_description": "This setting will be applied by default to all your rooms.",
             "default_setting_section": "I want to be notified for (Default Setting)",
             "desktop_notification_message_preview": "Show message preview in desktop notification",
-            "dialog_title": "<strong>Settings:</strong> Notifications",
             "email_description": "Receive an email summary of missed notifications",
             "email_section": "Email summary",
             "email_select": "Select which emails you want to send summaries to. Manage your emails in <button>General</button>.",
@@ -3189,7 +3177,6 @@
             "compact_modern": "Use a more compact 'Modern' layout",
             "composer_heading": "Composer",
             "default_timezone": "Browser default (%(timezone)s)",
-            "dialog_title": "<strong>Settings:</strong> Preferences",
             "enable_content_protection": "Enable content protection",
             "enable_hardware_acceleration": "Enable hardware acceleration",
             "enable_tray_icon": "Show tray icon and minimise window to it on close",
@@ -3233,7 +3220,6 @@
             "bulk_options_section": "Bulk options",
             "dehydrated_device_description": "The offline device feature allows you to receive encrypted messages even when you are not logged in to any devices",
             "dehydrated_device_enabled": "Offline device enabled",
-            "dialog_title": "<strong>Settings:</strong> Security & Privacy",
             "e2ee_default_disabled_warning": "Your server admin has disabled end-to-end encryption by default in private rooms & Direct Messages.",
             "enable_message_search": "Enable message search in encrypted rooms",
             "encryption_section": "Encryption",
@@ -3297,7 +3283,6 @@
             "device_unverified_description_current": "Verify your current session for enhanced secure messaging.",
             "device_verified_description": "This session is ready for secure messaging.",
             "device_verified_description_current": "Your current session is ready for secure messaging.",
-            "dialog_title": "<strong>Settings:</strong> Sessions",
             "error_pusher_state": "Failed to set pusher state",
             "error_set_name": "Failed to set session name",
             "filter_all": "All",
@@ -3385,7 +3370,6 @@
         "show_typing_notifications": "Show typing notifications",
         "showbold": "Show all activity in the room list (dots or number of unread messages)",
         "sidebar": {
-            "dialog_title": "<strong>Settings:</strong> Sidebar",
             "metaspaces_home_all_rooms": "Show all rooms",
             "metaspaces_home_all_rooms_description": "Show all your rooms in Home, even if they're in a space.",
             "metaspaces_home_description": "Home is useful for getting an overview of everything.",
@@ -3414,7 +3398,6 @@
             "chat_on_demand": "%(size)s fetched when opened",
             "chats_heading": "Chats using the most space",
             "database": "Messages and indexes",
-            "dialog_title": "<strong>Storage</strong>",
             "loading": "Measuring…",
             "media": "Pictures, videos and files",
             "media_files": "Media files",
@@ -3441,7 +3424,6 @@
             "audio_output": "Audio Output",
             "audio_output_empty": "No Audio Outputs detected",
             "auto_gain_control": "Automatic gain control",
-            "dialog_title": "<strong>Settings:</strong> Voice & Video",
             "echo_cancellation": "Echo cancellation",
             "echo_cancellation_description": "Removes echo from your microphone input during calls. This setting also applies to Element Call.",
             "enable_fallback_ice_server": "Allow fallback call assist server (%(server)s)",
@@ -3710,7 +3692,6 @@
     },
     "tg_layout": {
         "activity_busiest": "most active %(day)s around %(hour)s",
-        "activity_dialog_title": "<strong>Activity</strong>",
         "activity_hours": "Per hour of the day",
         "activity_months": "Per month (latest 5 years)",
         "activity_none": "No messages have been counted yet. Counting runs in the background and this fills in as it goes.",
@@ -3750,7 +3731,6 @@
         "bridge_unreported_body": "%(network)s doesn't say whether it is logged in. If its chats stop updating, open its chat and log in again.",
         "bridge_unreported_hint": "Doesn't report its status",
         "bridges_connect_title": "Connect a network",
-        "bridges_dialog_title": "<strong>Bridges</strong>",
         "bridges_empty_body": "When a bridge connects your account from another network (Telegram, WhatsApp, Signal, Messenger…), it appears here with its status.",
         "bridges_empty_title": "No bridges yet",
         "bridges_not_reporting": {

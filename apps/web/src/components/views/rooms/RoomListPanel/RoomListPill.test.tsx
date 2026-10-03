@@ -31,8 +31,8 @@ afterEach(() => {
 describe("RoomListPill", () => {
     it("names every view it can move between, rather than only drawing an icon for it", () => {
         render(<RoomListPill />);
-        expect(screen.getByRole("navigation", { name: "Chats, people and calls" })).toBeInTheDocument();
-        for (const name of ["Messages", "People", "Calls", "Search"]) {
+        expect(screen.getByRole("navigation", { name: "Chats, people, calls and settings" })).toBeInTheDocument();
+        for (const name of ["Messages", "People", "Calls", "Settings", "Search"]) {
             expect(screen.getByRole("button", { name })).toBeInTheDocument();
         }
     });
@@ -132,6 +132,40 @@ describe("RoomListPill", () => {
         act(() => setBarActions(undefined));
         expect(document.querySelector(".mx_RoomListPill_find")).not.toHaveAttribute("inert");
         expect(document.querySelector(".mx_RoomListPill_action_end")).toHaveAttribute("data-hidden");
+    });
+
+    /*
+     * The settings are a page as well as a view of the column: the bar opens them as a page is opened, and
+     * MatrixChat turns the column to them, so a link to them and the bar arrive at the same place.
+     */
+    it("opens the settings as a page, beside Calls", async () => {
+        const dispatch = vi.spyOn(defaultDispatcher, "dispatch");
+        render(<RoomListPill />);
+        const entries = [...document.querySelectorAll(".mx_RoomListPill_entry")].map((el) => el.textContent);
+        expect(entries.slice(-2)).toEqual(["Calls", "Settings"]);
+
+        await userEvent.click(screen.getByRole("button", { name: "Settings" }));
+        expect(dispatch).toHaveBeenCalledWith({ action: Action.ViewUserSettings });
+    });
+
+    it("marks Settings while they are open, and does not reopen them from the start", async () => {
+        const dispatch = vi.spyOn(defaultDispatcher, "dispatch");
+        setRoomListPanelView("settings");
+        render(<RoomListPill />);
+        expect(screen.getByRole("button", { name: "Settings" })).toHaveAttribute("aria-current", "page");
+
+        await userEvent.click(screen.getByRole("button", { name: "Settings" }));
+        expect(dispatch).not.toHaveBeenCalledWith({ action: Action.ViewUserSettings });
+    });
+
+    /* There is nothing in the list of sections to filter: search there is the app's own, as over the chats. */
+    it("opens the app's search over the settings", async () => {
+        const fire = vi.spyOn(defaultDispatcher, "fire");
+        setRoomListPanelView("settings");
+        render(<RoomListPill />);
+        await userEvent.click(screen.getByRole("button", { name: "Search" }));
+        expect(fire).toHaveBeenCalledWith(Action.OpenSpotlight);
+        expect(screen.queryByRole("searchbox")).toBeNull();
     });
 
     it("can leave search out entirely", () => {

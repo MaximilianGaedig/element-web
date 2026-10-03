@@ -6,9 +6,9 @@ Please see LICENSE files in the repository root for full details.
 */
 
 /*
- * The handheld bar of a settings page: a back button (to the user menu's drawer, which lists the sections),
- * the section's name and a close button. Hidden on a desktop, where the settings keep their side-by-side
- * layout (see _TgSheets.pcss).
+ * The handheld bar of a settings dialog's page: a back button (to the dialog's own list of sections), the
+ * section's name and a close button. Hidden on a desktop, where the settings keep their side-by-side layout
+ * (see _TgSheets.pcss). The user's own settings are not a dialog, and have the page header of their own.
  */
 
 import React, { type JSX } from "react";
@@ -26,10 +26,7 @@ export function SettingsNavBar({
     title: React.ReactNode;
     onBack: () => void;
     onClose: () => void;
-    /**
-     * "list" is the first screen of a settings dialog that carries its own list of sections, where there
-     * is nothing to go back to. The user settings have no such screen: their list is the user menu.
-     */
+    /** "list" is the first screen of a settings dialog, its list of sections, where there is nothing to go back to. */
     page?: "list" | "page";
 }): JSX.Element {
     return (
