@@ -13,16 +13,20 @@ Please see LICENSE files in the repository root for full details.
  * costs nothing to use and is what runs on the desktop. Safari - so the phone, where a photographed QR
  * code is most likely to turn up - has none, so a reader is loaded there: zxing's, as WebAssembly served
  * from this origin like the text engine, so it works offline and nothing about the picture leaves the
- * device. It is loaded the first time a picture is read on such a browser and not before.
+ * device. It is loaded the first time a picture is read on such a browser and not before, in a worker
+ * that is ended a minute after the last read (READER_IDLE_MS): its memory grows to fit the largest
+ * picture and never shrinks, and on the page it held ~21 MB for the rest of the session. Brave on Linux
+ * has no reader of its own either, so the desktop paid for it too.
  *
  * What a code says is turned into something to do - open the link, join the network, copy the number -
  * by `actionOf`, and never acted on by itself.
  */
 
 import { logger } from "matrix-js-sdk/src/logger";
-import type * as ZXing from "zxing-wasm/reader";
 
 import { LruCache } from "../LruCache";
+import { WorkerManager } from "../../WorkerManager";
+import type { Request, Response } from "../../workers/barcode.worker";
 
 /** A code found in a picture, and where it sits, as a fraction of the picture's own size. */
 export interface FoundBarcode {
@@ -59,22 +63,39 @@ const nativeDetector = (): NativeDetector | undefined => {
     return Detector ? new Detector() : undefined;
 };
 
-let zxing: Promise<typeof ZXing> | undefined;
+/** How long zxing's worker is kept after the last read: a chat's pictures arrive seconds apart. */
+export const READER_IDLE_MS = 60_000;
 
-/** zxing's reader, from this origin, loaded once and kept. */
-async function getZxing(): Promise<typeof ZXing> {
-    zxing ??= (async () => {
-        const module = await import("zxing-wasm/reader");
-        module.prepareZXingModule({
-            // Served by us (see the `barcode` pattern in webpack.config.ts), not fetched from a CDN:
-            // the app works offline, and a picture is nobody else's business.
-            // Absolute for the same reason the text engine's paths are: a relative one resolves against
-            // whatever the loader's own URL happens to be.
-            overrides: { locateFile: (file: string) => new URL(`barcode/${file}`, document.baseURI).href },
-        });
-        return module;
-    })();
-    return zxing;
+let reader: { worker: Worker; manager: WorkerManager<Request, Response> } | undefined;
+let reading = 0;
+let idleTimer: ReturnType<typeof setTimeout> | undefined;
+
+/** Whether zxing's reader is running, for the memory report. */
+export function barcodeReaderRunning(): boolean {
+    return reader !== undefined;
+}
+
+/** zxing's reader, in its worker, for one read; it is ended once reads have stopped for a while. */
+async function readWithZxing(picture: Blob): Promise<NonNullable<Response["codes"]>> {
+    reading++;
+    clearTimeout(idleTimer);
+    try {
+        if (!reader) {
+            const { default: factory } = await import("../../workers/barcodeWorkerFactory");
+            const worker = factory();
+            reader = { worker, manager: new WorkerManager<Request, Response>(worker) };
+        }
+        const { codes, error } = await reader.manager.call({ picture, base: document.baseURI });
+        if (error) throw new Error(error);
+        return codes ?? [];
+    } finally {
+        if (--reading === 0) {
+            idleTimer = setTimeout(() => {
+                reader?.worker.terminate();
+                reader = undefined;
+            }, READER_IDLE_MS);
+        }
+    }
 }
 
 /**
@@ -111,23 +132,8 @@ export async function readBarcodes(
             }
         }
 
-        const { readBarcodes: read } = await getZxing();
-        const found = await read(picture, { tryHarder: true });
-        return found
-            .filter((code) => code.isValid && code.text)
-            .map((code) => {
-                const { topLeft, bottomRight } = code.position;
-                return {
-                    text: code.text,
-                    format: code.format.toLowerCase(),
-                    ...place({
-                        x: topLeft.x,
-                        y: topLeft.y,
-                        width: bottomRight.x - topLeft.x,
-                        height: bottomRight.y - topLeft.y,
-                    }),
-                };
-            });
+        const found = await readWithZxing(picture);
+        return found.map(({ text, format, ...box }) => ({ text, format, ...place(box) }));
     } catch (error) {
         logger.warn("Could not read the codes in an image", error);
         return [];
