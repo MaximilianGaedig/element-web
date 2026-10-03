@@ -833,11 +833,19 @@
         "call_group": "Group call",
         "call_how": "Call with",
         "call_incoming": "Incoming",
+        "call_join": "Join",
+        "call_join_voice": "Join call",
         "call_missed": "Missed",
+        "call_ongoing": "Ongoing",
         "call_outgoing": "Outgoing",
+        "call_people_more": {
+            "one": "%(names)s and %(count)s other",
+            "other": "%(names)s and %(count)s others"
+        },
         "call_unknown": "Not in contacts",
         "call_video_on": "Video call on %(network)s",
         "call_voice_on": "Voice call on %(network)s",
+        "call_you": "You",
         "caller_info": "Show %(name)s",
         "calls": "Calls",
         "cards_found": {
