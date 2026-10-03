@@ -11,6 +11,7 @@ import {
     RoomEvent,
     EventType,
     MatrixEventEvent,
+    RelationType,
     NotificationCountType,
     ReceiptType,
     LOCAL_PAGINATION_PREFIX,
@@ -336,6 +337,31 @@ export class RoomTimelineViewModel
      */
     private unreadMessageCount = 0;
 
+    /**
+     * Messages that mention the reader and have not been seen, by event ID, with the time they were
+     * sent: Telegram's "@" button. Filled once when the room is first loaded (from what was sent after
+     * the reader's read position) and by the messages arriving after that; emptied as the reader
+     * brings them on screen, or taps through them ({@link onJumpToUnreadMention}).
+     */
+    private unreadMentions = new Map<string, number>();
+
+    /**
+     * The reader's own messages somebody else has reacted to since the reader last read, and which
+     * they have not seen since: Telegram's heart button. Keyed by the message reacted to, with the
+     * reaction events behind it (so redacting the last one takes the message off again) and the time
+     * the message was sent (they are visited oldest first).
+     */
+    private unreadReactions = new Map<string, { ts: number; reactions: Set<string> }>();
+
+    /** Whether {@link scanUnread} has run: what was unread on entry is looked for once, not per load. */
+    private scannedUnread = false;
+
+    /**
+     * Events that could not be sorted into either of the above because they are encrypted and have
+     * not decrypted yet. Looked at again when they do ({@link onEventDecrypted}).
+     */
+    private undecryptedUnread = new Set<string>();
+
     private static readonly SCROLL_STATE_KEY_PREFIX = "timeline_scroll_";
 
     private static readScrollTarget(roomId: string): string | null {
@@ -380,6 +406,8 @@ export class RoomTimelineViewModel
             canJumpToReadMarker: false,
             numUnreadMessages: 0,
             hasHighlights: false,
+            unreadMentions: 0,
+            unreadReactions: 0,
         });
 
         this.opts = opts;
@@ -453,6 +481,12 @@ export class RoomTimelineViewModel
             MatrixEventEvent.Decrypted,
             this.onEventDecrypted as (...args: unknown[]) => void,
         );
+        // A mention or a reaction that is taken back is no longer something to jump to.
+        this.disposables.trackListener(
+            this.opts.room,
+            RoomEvent.Redaction,
+            this.onRoomRedaction as (...args: unknown[]) => void,
+        );
         // Sending, failing and being replaced by the remote echo all arrive here rather than
         // through RoomEvent.Timeline, which never sees a pending event.
         this.disposables.trackListener(this.opts.room, RoomEvent.LocalEchoUpdated, this.onLocalEchoUpdated);
@@ -521,6 +555,10 @@ export class RoomTimelineViewModel
         if (this.isDisposed) return;
 
         debug(`[TimelineVM][onRoomTimeline] live event ${event.getId()} (${event.getType()})`);
+        // Before the paginate below: reactions never get a row, so they do not need it, and the
+        // buttons should not wait for the list.
+        this.noteUnreadCandidate(event, true);
+        this.publishUnreadCounts();
         // Extend the window by one so the new message is inside it, then rebuild.
         void this.timelineWindow
             .paginate(Direction.Forward, 1, false)
@@ -560,6 +598,12 @@ export class RoomTimelineViewModel
      */
     private onEventDecrypted = (event: MatrixEvent): void => {
         if (this.isDisposed) return;
+        // A mention or a reaction that could not be read when it arrived.
+        const id = event.getId();
+        if (id && this.undecryptedUnread.delete(id)) {
+            this.noteUnreadCandidate(event, true);
+            this.publishUnreadCounts();
+        }
         if (!this.timelineWindow.getEvents().includes(event)) return;
 
         if (this.decryptDebounceTimer !== null) clearTimeout(this.decryptDebounceTimer);
@@ -784,6 +828,7 @@ export class RoomTimelineViewModel
             // Snapshot the read-marker for the duration of this session. Must run
             // BEFORE buildItems so it sees the frozen value.
             this.freezeReadMarkerForSession();
+            this.scanUnread();
             const items = this.buildItems();
             debug(`[TimelineVM] load() done — ${windowEvents.length} events → ${items.length} items after filtering`);
 
@@ -829,6 +874,7 @@ export class RoomTimelineViewModel
                 pendingAnchor,
                 highlightedEventId: target.kind === "permalink" ? target.eventId : null,
                 canJumpToReadMarker: this.computeCanJumpToReadMarker(items),
+                ...this.unreadCounts(),
             });
 
             // If all events in the initial window were filtered (items empty) but more
@@ -1051,6 +1097,10 @@ export class RoomTimelineViewModel
             }
         }
 
+        // What is on screen has been seen: the mentions and reactions in it are no longer news. Not by
+        // a room behind another one, whose rows are laid out but not looked at.
+        if (this.active) this.markSeen(items, startIndex, readableEndIndex);
+
         // Recompute canJumpToReadMarker when the visible range moves.
         if (this.visibleStartArrayIndex !== prevStartArrayIndex || this.visibleEndArrayIndex !== prevEndArrayIndex) {
             const canJumpToReadMarker = this.computeCanJumpToReadMarker(items);
@@ -1208,6 +1258,176 @@ export class RoomTimelineViewModel
                 this.mergeSnapshot({ numUnreadMessages: 0, hasHighlights: false }, "jump-to-live-empty");
             }
         }
+    };
+
+    /** Telegram's "@" button: the oldest message that mentions the reader and has not been seen. */
+    public onJumpToUnreadMention = (scrollNow: ImmediateScroll): void => {
+        const target = this.takeOldest(
+            [...this.unreadMentions].map(([id, ts]) => ({ id, ts })),
+            (id) => this.unreadMentions.delete(id),
+        );
+        if (target) this.jumpToUnread(target, scrollNow, "onJumpToUnreadMention");
+    };
+
+    /** The heart button: the oldest of the reader's messages with a reaction they have not seen. */
+    public onJumpToUnreadReaction = (scrollNow: ImmediateScroll): void => {
+        const target = this.takeOldest(
+            [...this.unreadReactions].map(([id, { ts }]) => ({ id, ts })),
+            (id) => this.unreadReactions.delete(id),
+        );
+        if (target) this.jumpToUnread(target, scrollNow, "onJumpToUnreadReaction");
+    };
+
+    /**
+     * Pick the oldest of `entries` and take it out with `remove`: going to it is seeing it, so the next
+     * tap goes on to the one after rather than back to the same message. The counts follow.
+     */
+    private takeOldest(entries: { id: string; ts: number }[], remove: (id: string) => boolean): string | undefined {
+        let oldest: { id: string; ts: number } | undefined;
+        for (const entry of entries) {
+            if (!oldest || entry.ts < oldest.ts) oldest = entry;
+        }
+        if (!oldest) return undefined;
+        remove(oldest.id);
+        this.publishUnreadCounts();
+        return oldest.id;
+    }
+
+    /** Scroll to `eventId` where it is loaded, as {@link onJumpToReadMarker} does, and load it where it is not. */
+    private jumpToUnread(eventId: string, scrollNow: ImmediateScroll, from: string): void {
+        if (this.snapshot.current.items.some((item) => item.key === eventId)) {
+            debug(`[TimelineVM] ${from} — in window, scrolling now key=${eventId}`);
+            scrollNow({ targetKey: eventId, align: "center" });
+        } else {
+            // pendingAnchor gets set inside load() and drives the post-load scroll.
+            debug(`[TimelineVM] ${from} — not in window, reloading at ${eventId}`);
+            void this.load({ kind: "permalink", eventId });
+        }
+    }
+
+    private unreadCounts(): Pick<TimelineViewSnapshot, "unreadMentions" | "unreadReactions"> {
+        return { unreadMentions: this.unreadMentions.size, unreadReactions: this.unreadReactions.size };
+    }
+
+    private publishUnreadCounts(): void {
+        this.mergeSnapshot(this.unreadCounts(), "unread-targets");
+    }
+
+    /**
+     * Look for what was unread when the room was opened: the mentions of the reader, and the reactions to
+     * their messages, among what was sent after the place they had read to. The later of the read
+     * receipt and the FullyRead marker is that place (another device may have read on); with neither,
+     * or one further back than what is held, all of what is held counts.
+     *
+     * The server's count of unread highlights has the last word on mentions: where it says there are
+     * none, a message that merely looks like a mention (a rule evaluated again for old messages, say)
+     * does not get a button; where it says fewer than we found, the newest of them are the unread ones.
+     */
+    private scanUnread(): void {
+        if (this.scannedUnread) return;
+        this.scannedUnread = true;
+
+        const room = this.opts.room;
+        const events = room.getLiveTimeline().getEvents();
+        const readUpTo = [room.getEventReadUpTo(this.opts.client.getSafeUserId()), this.readMarkerEventId].map((id) =>
+            id ? events.findIndex((event) => event.getId() === id) : -1,
+        );
+        const after = Math.max(...readUpTo) + 1;
+
+        for (const event of events.slice(after)) this.noteUnreadCandidate(event, false);
+
+        const highlights = room.getUnreadNotificationCount(NotificationCountType.Highlight) ?? 0;
+        if (this.unreadMentions.size > highlights) {
+            const newest = [...this.unreadMentions].sort((a, b) => b[1] - a[1]).slice(0, highlights);
+            this.unreadMentions = new Map(newest);
+        }
+    }
+
+    /**
+     * Sort one event into the mentions or the reactions to look at, if it is one. `live` is whether it
+     * has just arrived, in which case what the reader is looking at already is not news to them.
+     */
+    private noteUnreadCandidate(event: MatrixEvent, live: boolean): void {
+        const id = event.getId();
+        if (!id || event.isRedacted()) return;
+        const me = this.opts.client.getSafeUserId();
+        if (event.getSender() === me) return;
+
+        if (
+            event.getWireType() === EventType.RoomMessageEncrypted &&
+            !event.isDecryptionFailure() &&
+            event.getClearContent() === null
+        ) {
+            // What it is is not known yet.
+            this.undecryptedUnread.add(id);
+            return;
+        }
+
+        if (event.getType() === EventType.Reaction) {
+            const targetId = event.getRelation()?.event_id;
+            const target = targetId ? this.opts.room.findEventById(targetId) : undefined;
+            if (!targetId || target?.getSender() !== me) return;
+            if (live && this.isOnScreen(targetId)) return;
+            const entry = this.unreadReactions.get(targetId) ?? { ts: target.getTs(), reactions: new Set<string>() };
+            entry.reactions.add(id);
+            this.unreadReactions.set(targetId, entry);
+            return;
+        }
+
+        // An edit of a message is not a message; the original is what mentions (or does not).
+        if (event.isRelation(RelationType.Replace)) return;
+        if (!this.mentionsReader(event)) return;
+        if (!this.shouldIncludeEvent(event, !!SettingsStore.getValue("showHiddenEventsInTimeline"))) return;
+        // Arriving while the reader is at the bottom of the room it is open in, it is read as it comes.
+        if (live && this.active && this.isAtBottom && this.snapshot.current.atLiveEnd) return;
+        this.unreadMentions.set(id, event.getTs());
+    }
+
+    /** Whether an event is for the reader by name: a highlight under their push rules, or an `m.mentions` of them or of the room. */
+    private mentionsReader(event: MatrixEvent): boolean {
+        if (this.opts.client.getPushActionsForEvent(event)?.tweaks?.highlight) return true;
+        const mentions = event.getContent()["m.mentions"];
+        return (
+            !!mentions && (mentions.room === true || !!mentions.user_ids?.includes(this.opts.client.getSafeUserId()))
+        );
+    }
+
+    /** Whether a row is where the reader is looking now. */
+    private isOnScreen(eventId: string): boolean {
+        if (!this.active) return false;
+        const items = this.snapshot.current.items;
+        for (let i = this.visibleStartArrayIndex; i <= this.visibleEndArrayIndex; i++) {
+            if (items[i]?.key === eventId) return true;
+        }
+        return false;
+    }
+
+    /** What is in rows `startIndex` to `endIndex` has been seen: it is no longer unread. */
+    private markSeen(items: TimelineItem[], startIndex: number, endIndex: number): void {
+        if (this.unreadMentions.size === 0 && this.unreadReactions.size === 0) return;
+        let changed = false;
+        for (let i = Math.max(0, startIndex); i <= endIndex && i < items.length; i++) {
+            const item = items[i];
+            if (item.kind !== "event") continue;
+            changed = this.unreadMentions.delete(item.key) || changed;
+            changed = this.unreadReactions.delete(item.key) || changed;
+        }
+        if (changed) this.publishUnreadCounts();
+    }
+
+    /** A redaction: of a mention, which is then not worth going to, or of a reaction. */
+    private onRoomRedaction = (event: MatrixEvent): void => {
+        if (this.isDisposed) return;
+        const redacted = event.getAssociatedId();
+        if (!redacted) return;
+        let changed = this.unreadMentions.delete(redacted);
+        for (const [targetId, entry] of this.unreadReactions) {
+            if (entry.reactions.delete(redacted) && entry.reactions.size === 0) {
+                this.unreadReactions.delete(targetId);
+                changed = true;
+            }
+        }
+        if (changed) this.publishUnreadCounts();
     };
 
     /**

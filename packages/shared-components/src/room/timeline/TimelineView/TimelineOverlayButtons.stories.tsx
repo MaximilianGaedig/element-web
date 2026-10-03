@@ -26,6 +26,8 @@ const TimelineOverlayButtonsWrapper = ({
     onJumpToReadMarker,
     onMarkAllAsRead,
     onJumpToLive,
+    onJumpToUnreadMention,
+    onJumpToUnreadReaction,
     scrollNow,
     ...snapshot
 }: OverlayStoryProps): JSX.Element => {
@@ -38,6 +40,8 @@ const TimelineOverlayButtonsWrapper = ({
         onJumpToReadMarker,
         onMarkAllAsRead,
         onJumpToLive,
+        onJumpToUnreadMention,
+        onJumpToUnreadReaction,
     };
     return <TimelineOverlayButtons snapshot={snapshot} vm={vm} scrollNow={scrollNow} />;
 };
@@ -56,6 +60,8 @@ const meta = {
         canJumpToReadMarker: false,
         numUnreadMessages: 0,
         hasHighlights: false,
+        unreadMentions: 0,
+        unreadReactions: 0,
         // Actions.
         onStartReached: fn(),
         onEndReached: fn(),
@@ -65,6 +71,8 @@ const meta = {
         onJumpToReadMarker: fn(),
         onMarkAllAsRead: fn(),
         onJumpToLive: fn(),
+        onJumpToUnreadMention: fn(),
+        onJumpToUnreadReaction: fn(),
         scrollNow: fn(),
     },
     // The overlay absolutely fills its positioned parent; give it a sized box to sit in.
@@ -101,4 +109,14 @@ export const UnreadMarkerAbove: Story = {
 /** Read marker sits below the viewport: scroll-down + mark-as-read bar. */
 export const UnreadMarkerBelow: Story = {
     args: { atLiveEnd: true, isAtBottom: true, canJumpToReadMarker: "below" },
+};
+
+/** Unread mentions: the "@" button above jump-to-bottom, with its count. */
+export const UnreadMentions: Story = {
+    args: { unreadMentions: 3, numUnreadMessages: 12 },
+};
+
+/** Everything at once, as Telegram iOS stacks it: scroll down, mentions, reactions. */
+export const MentionsAndReactions: Story = {
+    args: { unreadMentions: 2, unreadReactions: 5, numUnreadMessages: 12, hasHighlights: true },
 };

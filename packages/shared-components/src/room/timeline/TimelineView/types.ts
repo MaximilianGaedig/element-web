@@ -145,6 +145,20 @@ export interface TimelineViewSnapshot {
      * "Jump to bottom" button.
      */
     hasHighlights: boolean;
+
+    /**
+     * How many messages that mention the reader they have not yet seen: Telegram's "@" button and its
+     * badge. Counted as messages, not as people asking, and it falls as the reader brings them on
+     * screen. The button is offered only while this is above zero.
+     */
+    unreadMentions: number;
+
+    /**
+     * How many of the reader's own messages have been reacted to, by somebody else, since the reader
+     * last read the chat and have not been seen since: Telegram's heart button and its badge.
+     * Counted as messages, so two reactions to one message are one.
+     */
+    unreadReactions: number;
 }
 
 export interface TimelineViewActions {
@@ -196,6 +210,16 @@ export interface TimelineViewActions {
      * `pendingAnchor` after the load.
      */
     onJumpToLive(scrollNow: ImmediateScroll): void;
+
+    /**
+     * Scroll to the oldest message that mentions the reader and has not been seen, and count it as
+     * seen, so the next call goes to the one after it (Telegram's "@" button). Same contract as
+     * {@link onJumpToReadMarker}: `scrollNow` when the message is loaded, else a load at it.
+     */
+    onJumpToUnreadMention(scrollNow: ImmediateScroll): void;
+
+    /** The same for the oldest of the reader's messages with a reaction they have not seen (the heart button). */
+    onJumpToUnreadReaction(scrollNow: ImmediateScroll): void;
 }
 
 export type TimelineViewModel = ViewModel<TimelineViewSnapshot, TimelineViewActions>;
