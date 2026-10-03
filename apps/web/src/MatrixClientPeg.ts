@@ -323,7 +323,7 @@ class MatrixClientPegClass implements IMatrixClientPeg {
             SlidingSyncManager.serverSupportsSlidingSync = true;
             const slidingSync = await SlidingSyncManager.instance.setup(this.matrixClient);
             if (slidingSync) {
-                const cache = new SlidingSyncCacheStore(this.matrixClient.getSafeUserId(), ROOM_LIST_STATE_TYPES);
+                const cache = new SlidingSyncCacheStore(this.matrixClient.getSafeUserId());
                 cache.record(slidingSync, this.matrixClient);
                 opts.slidingSync = slidingSync;
                 opts.slidingSyncCache = cache;

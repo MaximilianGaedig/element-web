@@ -29,7 +29,13 @@ import {
 } from "matrix-js-sdk/src/matrix";
 import { KnownMembership } from "matrix-js-sdk/src/types";
 import { logger } from "matrix-js-sdk/src/logger";
-import { type MSC3575RoomData, type SlidingSync, SlidingSyncEvent } from "matrix-js-sdk/src/sliding-sync";
+import {
+    type MSC3575RoomData,
+    type MSC3575SlidingSyncResponse,
+    type SlidingSync,
+    SlidingSyncEvent,
+    SlidingSyncState,
+} from "matrix-js-sdk/src/sliding-sync";
 
 const DB_NAME = "mx-sliding-sync-cache";
 const STORE = "snapshots";
@@ -193,12 +199,10 @@ export class SlidingSyncCacheStore implements SlidingSyncCache {
     private readonly globalAccountData = new Map<string, { type: string; content: object }>();
     private saveTimer?: ReturnType<typeof setTimeout>;
     private loadedRest?: Promise<Record<string, MSC3575RoomData> | null>;
+    /** The `pos` of the last response taken in whole (see SlidingSyncSnapshot.pos). */
+    private pos?: string;
 
-    public constructor(
-        private readonly userId: string,
-        /** The state types the chat list reads (ROOM_LIST_STATE_TYPES). */
-        private readonly listStateTypes: readonly string[],
-    ) {}
+    public constructor(private readonly userId: string) {}
 
     private key(part: "first" | "rest"): string {
         return `${this.userId}:${part}`;
@@ -213,6 +217,9 @@ export class SlidingSyncCacheStore implements SlidingSyncCache {
         for (const [roomId, data] of Object.entries(first?.rooms ?? {})) {
             this.rooms.set(roomId, data);
         }
+        // Carried over until the live sync gets further: a session that never reaches the server writes the
+        // next one what it was given, from the same position.
+        this.pos = first?.pos;
         // Kept until the live sync sends its own: a session that never reaches the server must not write
         // the next one a cache without them.
         for (const event of first?.accountData.global ?? []) {
@@ -236,11 +243,15 @@ export class SlidingSyncCacheStore implements SlidingSyncCache {
         const onRoomData = (roomId: string, data: MSC3575RoomData): void => {
             const heroes = new Set((data.heroes ?? []).map((hero) => hero.user_id));
             const senders = new Set((data.timeline ?? []).map((event) => event.sender));
+            // All of a room's state but its members: the connection carries on from the cache, and the
+            // server does not send again what it has sent, so a topic or pinned messages dropped here would
+            // stay missing. Members are the bulk (an encrypted room is subscribed to with all of them), and
+            // are loaded again when needed: in full before anything is encrypted, and for the member list.
             const keepState = (event: IStateEvent): boolean =>
-                event.type === EventType.RoomMember
-                    ? event.state_key === this.userId || heroes.has(event.state_key) || senders.has(event.state_key)
-                    : this.listStateTypes.includes(event.type) ||
-                      this.listStateTypes.some((type) => type.endsWith(".") && event.type.startsWith(type));
+                event.type !== EventType.RoomMember ||
+                event.state_key === this.userId ||
+                heroes.has(event.state_key) ||
+                senders.has(event.state_key);
             this.rooms.set(roomId, mergeRoomData(this.rooms.get(roomId), data, keepState));
             this.scheduleSave(client);
         };
@@ -255,16 +266,25 @@ export class SlidingSyncCacheStore implements SlidingSyncCache {
                 this.scheduleSave(client);
             }
         };
+        // Where the connection has got to, once a response has been taken in whole: the next session
+        // carries on from it, and is sent only what changed since.
+        const onLifecycle = (state: SlidingSyncState, response: MSC3575SlidingSyncResponse | null): void => {
+            if (state !== SlidingSyncState.Complete || !response?.pos) return;
+            this.pos = response.pos;
+            this.scheduleSave(client);
+        };
         const onHide = (): void => {
             if (document.visibilityState === "hidden") void this.save(client);
         };
         slidingSync.on(SlidingSyncEvent.RoomData, onRoomData);
+        slidingSync.on(SlidingSyncEvent.Lifecycle, onLifecycle);
         client.on(ClientEvent.AccountData, onAccountData);
         client.on(RoomEvent.AccountData, onRoomAccountData);
         client.on(RoomEvent.MyMembership, onMembership);
         document.addEventListener("visibilitychange", onHide);
         return (): void => {
             slidingSync.off(SlidingSyncEvent.RoomData, onRoomData);
+            slidingSync.off(SlidingSyncEvent.Lifecycle, onLifecycle);
             client.off(ClientEvent.AccountData, onAccountData);
             client.off(RoomEvent.AccountData, onRoomAccountData);
             client.off(RoomEvent.MyMembership, onMembership);
@@ -308,6 +328,7 @@ export class SlidingSyncCacheStore implements SlidingSyncCache {
                 [this.key("first")]: {
                     rooms: first,
                     accountData: { global, rooms: roomAccountData },
+                    pos: this.pos,
                 } satisfies SlidingSyncSnapshot,
                 [this.key("rest")]: rest,
             });

@@ -10,7 +10,12 @@ Please see LICENSE files in the repository root for full details.
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { EventEmitter } from "node:events";
 import type { IRoomEvent, IStateEvent, MatrixClient } from "matrix-js-sdk/src/matrix";
-import { type MSC3575RoomData, type SlidingSync, SlidingSyncEvent } from "matrix-js-sdk/src/sliding-sync";
+import {
+    type MSC3575RoomData,
+    type SlidingSync,
+    SlidingSyncEvent,
+    SlidingSyncState,
+} from "matrix-js-sdk/src/sliding-sync";
 import { IDBFactory } from "fake-indexeddb";
 
 import {
@@ -148,7 +153,7 @@ describe("SlidingSyncCacheStore", () => {
     };
 
     it("hands the next session the most recent rooms first, the favourites with them, and the rest after", async () => {
-        const store = new SlidingSyncCacheStore(ME, ROOM_LIST_STATE_TYPES);
+        const store = new SlidingSyncCacheStore(ME);
         const sync = new FakeSlidingSync();
         store.record(sync as unknown as SlidingSync, client);
         const count = FIRST_ROOMS + 10;
@@ -160,7 +165,7 @@ describe("SlidingSyncCacheStore", () => {
         client.emit("accountData" as any, { getType: () => "m.direct", getContent: () => ({ [ME]: [] }) });
         await store.save(client);
 
-        const next = new SlidingSyncCacheStore(ME, ROOM_LIST_STATE_TYPES);
+        const next = new SlidingSyncCacheStore(ME);
         const first = await next.loadFirst();
         const rest = await next.loadRest();
 
@@ -175,7 +180,7 @@ describe("SlidingSyncCacheStore", () => {
     });
 
     it("forgets a room that has been left", async () => {
-        const store = new SlidingSyncCacheStore(ME, ROOM_LIST_STATE_TYPES);
+        const store = new SlidingSyncCacheStore(ME);
         const sync = new FakeSlidingSync();
         store.record(sync as unknown as SlidingSync, client);
         rooms.set("!gone:example.org", { roomId: "!gone:example.org", accountData: new Map(), tags: {} });
@@ -183,22 +188,57 @@ describe("SlidingSyncCacheStore", () => {
         client.emit("Room.myMembership" as any, { roomId: "!gone:example.org" }, "leave");
         await store.save(client);
 
-        const next = new SlidingSyncCacheStore(ME, ROOM_LIST_STATE_TYPES);
+        const next = new SlidingSyncCacheStore(ME);
         expect(Object.keys((await next.loadFirst())?.rooms ?? {})).toEqual([]);
     });
 
+    // The connection carries on from the cache, and the server does not send again what it sent before.
+    it("hands the next session the position of the last response taken in whole", async () => {
+        const store = new SlidingSyncCacheStore(ME);
+        const sync = new FakeSlidingSync();
+        store.record(sync as unknown as SlidingSync, client);
+        sync.emit(SlidingSyncEvent.Lifecycle, SlidingSyncState.RequestFinished, { pos: "9" });
+        sync.emit(SlidingSyncEvent.Lifecycle, SlidingSyncState.Complete, { pos: "8" });
+        await store.save(client);
+
+        expect((await new SlidingSyncCacheStore(ME).loadFirst())?.pos).toBe("8");
+    });
+
+    it("keeps every kind of a room's state but members it does not need", async () => {
+        const store = new SlidingSyncCacheStore(ME);
+        const sync = new FakeSlidingSync();
+        store.record(sync as unknown as SlidingSync, client);
+        rooms.set("!r:example.org", { roomId: "!r:example.org", accountData: new Map(), tags: {} });
+        describeRoom(sync, "!r:example.org", {
+            required_state: [
+                state("m.room.topic"),
+                state("m.room.pinned_events"),
+                state("m.room.member", ME),
+                state("m.room.member", "@other:x"),
+            ],
+        });
+        await store.save(client);
+
+        const kept = (await new SlidingSyncCacheStore(ME).loadFirst())!.rooms["!r:example.org"].required_state;
+        expect(kept.map((event) => `${event.type}|${event.state_key}`).sort()).toEqual([
+            `m.room.member|${ME}`,
+            "m.room.pinned_events|",
+            "m.room.topic|",
+        ]);
+    });
+
     it("keeps the cached account data when the session never reaches the server", async () => {
-        const store = new SlidingSyncCacheStore(ME, ROOM_LIST_STATE_TYPES);
+        const store = new SlidingSyncCacheStore(ME);
         const sync = new FakeSlidingSync();
         store.record(sync as unknown as SlidingSync, client);
         client.emit("accountData" as any, { getType: () => "m.push_rules", getContent: () => ({ global: {} }) });
         await store.save(client);
 
-        const offline = new SlidingSyncCacheStore(ME, ROOM_LIST_STATE_TYPES);
+        const offline = new SlidingSyncCacheStore(ME);
         await offline.loadFirst();
         await offline.save(client);
 
-        const next = new SlidingSyncCacheStore(ME, ROOM_LIST_STATE_TYPES);
+        const next = new SlidingSyncCacheStore(ME);
         expect((await next.loadFirst())?.accountData.global).toEqual([
             { type: "m.push_rules", content: { global: {} } },
         ]);
