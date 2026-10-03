@@ -5,10 +5,10 @@ SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only OR LicenseRef-Element-Com
 Please see LICENSE files in the repository root for full details.
 */
 
-import React, { type JSX, useCallback, useContext, useEffect, useRef, useState } from "react";
+import React, { type JSX, useCallback, useEffect, useRef, useState } from "react";
 
 import { _t } from "../../../languageHandler";
-import MatrixClientContext from "../../../contexts/MatrixClientContext";
+import { MatrixClientPeg } from "../../../MatrixClientPeg";
 import BaseDialog from "./BaseDialog";
 import DialogButtons from "../elements/DialogButtons";
 import Field from "../elements/Field";
@@ -57,7 +57,8 @@ export default function BridgeLoginDialog({
     onOpenChat,
     onFinished,
 }: Props): JSX.Element {
-    const client = useContext(MatrixClientContext);
+    // A dialog is shown in a root of its own, outside the app's client context: from there it is null.
+    const [client] = useState(() => MatrixClientPeg.safeGet());
     const [flows, setFlows] = useState<LoginFlow[] | null>(null);
     const [step, setStep] = useState<LoginStep | null>(null);
     const [values, setValues] = useState<Record<string, string>>({});

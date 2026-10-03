@@ -13,8 +13,8 @@ import { render, screen, waitFor } from "test-utils-rtl";
 import userEvent from "@testing-library/user-event";
 import { stubClient } from "test-utils";
 
+import { MatrixClientPeg } from "../../../MatrixClientPeg";
 import BridgeLoginDialog from "./BridgeLoginDialog";
-import MatrixClientContext from "../../../contexts/MatrixClientContext";
 import * as loginFlow from "../../../utils/bridge/loginFlow";
 import { type LoginStep } from "../../../utils/bridge/loginFlow";
 
@@ -52,18 +52,28 @@ describe("<BridgeLoginDialog />", () => {
         cancel.mockResolvedValue();
     });
 
-    const open = (again?: string) =>
-        render(
-            <MatrixClientContext.Provider value={stubClient()}>
-                <BridgeLoginDialog
-                    network="Telegram"
-                    provisioningUrl={API}
-                    again={again}
-                    onOpenChat={onOpenChat}
-                    onFinished={onFinished}
-                />
-            </MatrixClientContext.Provider>,
+    // As Modal shows it: in a root of its own, outside the app's client context.
+    const open = (again?: string) => {
+        stubClient();
+        return render(
+            <BridgeLoginDialog
+                network="Telegram"
+                provisioningUrl={API}
+                again={again}
+                onOpenChat={onOpenChat}
+                onFinished={onFinished}
+            />,
         );
+    };
+
+    it("asks the bridge as the signed-in user, though a dialog is outside the app's client context", async () => {
+        flows.mockResolvedValue([{ id: "qr", name: "QR code", description: "" }]);
+        start.mockResolvedValue(DONE);
+        open();
+
+        await waitFor(() => expect(flows).toHaveBeenCalled());
+        expect(flows.mock.calls[0][0]).toBe(MatrixClientPeg.safeGet());
+    });
 
     it("offers the bridge's ways to sign in, and walks the one chosen to the end", async () => {
         flows.mockResolvedValue([
