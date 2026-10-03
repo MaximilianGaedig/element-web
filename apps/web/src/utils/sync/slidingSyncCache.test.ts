@@ -71,14 +71,16 @@ describe("mergeRoomData", () => {
             update({ initial: true, required_state: [], timeline: [message("$1"), message("$2")] }),
             keepListState,
         );
+        // $2 again, and then more than are kept.
+        const ids = Array.from({ length: CACHED_TIMELINE + 2 }, (_, i) => `$${i + 2}`);
         room = mergeRoomData(
             room,
-            update({ required_state: [], timeline: ["$2", "$3", "$4", "$5", "$6", "$7"].map((id) => message(id)) }),
+            update({ required_state: [], timeline: ids.map((id) => message(id)) }),
             keepListState,
         );
 
-        expect(room.timeline.map((event) => event.event_id)).toEqual(["$3", "$4", "$5", "$6", "$7"]);
-        expect(room.timeline).toHaveLength(CACHED_TIMELINE);
+        expect(room.timeline.map((event) => event.event_id)).toEqual(ids.slice(-CACHED_TIMELINE));
+        expect(new Set(room.timeline.map((event) => event.event_id)).size).toBe(CACHED_TIMELINE);
     });
 
     // Kept side by side, the two would hide whatever was said in between.

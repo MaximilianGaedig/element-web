@@ -171,6 +171,9 @@ function createRoomReceiptAction(matrixClient: MatrixClient, event: MatrixEvent,
  * live timeline.
  * @property {boolean} isLiveUnfilteredRoomTimelineEvent whether the
  * event was attached to a timeline in the set of unfiltered timelines.
+ * @property {boolean} addedToLiveEnd whether the event was added to the end of the room's live
+ * timeline: the room's latest events, though they may come from a cache or a sync's initial batch,
+ * which `isLiveEvent` does not count.
  * @property {Room} room the Room whose tags changed.
  */
 export interface IRoomTimelineActionPayload extends Pick<ActionPayload, "action"> {
@@ -179,6 +182,7 @@ export interface IRoomTimelineActionPayload extends Pick<ActionPayload, "action"
     room: Room | null;
     isLiveEvent?: boolean;
     isLiveUnfilteredRoomTimelineEvent: boolean;
+    addedToLiveEnd: boolean;
 }
 
 /**
@@ -214,7 +218,7 @@ export interface IRoomStateEventsActionPayload extends Pick<ActionPayload, "acti
  * @param {EventTimeline} data.timeline the timeline being altered.
  * @returns {IRoomTimelineActionPayload} an action of type `MatrixActions.Room.timeline`.
  */
-function createRoomTimelineAction(
+export function createRoomTimelineAction(
     matrixClient: MatrixClient,
     timelineEvent: MatrixEvent,
     room: Room | null,
@@ -227,6 +231,7 @@ function createRoomTimelineAction(
         event: timelineEvent,
         isLiveEvent: data.liveEvent,
         isLiveUnfilteredRoomTimelineEvent: data.timeline.getTimelineSet() === room?.getUnfilteredTimelineSet(),
+        addedToLiveEnd: !toStartOfTimeline && !removed && !!room && data.timeline === room.getLiveTimeline(),
         room,
     };
 }
