@@ -179,6 +179,7 @@ html[data-floating-bars] .mx_RoomView_body {
         margin: 0 auto;
         background-color: var(--tg-glass-background);
         backdrop-filter: var(--tg-glass-backdrop);
+        box-shadow: var(--tg-glass-border), var(--tg-topbar-box-shadow);
     }
 
     > .mx_MessageComposer {
@@ -272,7 +273,8 @@ html[data-floating-bars] .mx_RoomView_body {
         padding-bottom: calc(var(--tg-composer-block, 0px) + 8px);
     }
 
-    .mx_JumpToBottomButton {
+    .mx_JumpToBottomButton:not(.mx_JumpButton),
+    .mx_TimelineJumpStack {
         bottom: calc(var(--tg-composer-block, 0px) + 0.5rem);
     }
 

@@ -51,6 +51,14 @@ Please see LICENSE files in the repository root for full details.
     --tg-glass-background: color-mix(in srgb, var(--tg-surface-color) 50%, transparent);
     --tg-glass-backdrop: blur(24px) saturate(180%);
     /*
+     * The hairline round every glass surface: a light rim where the glass catches the light, which keeps
+     * its edge visible over a busy timeline. A layer of box-shadow (listed first, so it is on top of the
+     * element's own drop shadow) rather than a border, so it takes up no room and nothing moves. Tuned
+     * here, once, for all of them.
+     */
+    --tg-glass-border-color: color-mix(in srgb, white 70%, transparent);
+    --tg-glass-border: inset 0 0 0 0.5px var(--tg-glass-border-color);
+    /*
      * The screen's unsafe edges (notch/status bar, home indicator): viewport-fit=cover draws under them,
      * which a home-screen app (PWA) does. The keyboard covers the bottom one, so it's 0 while that's up.
      */
@@ -74,6 +82,12 @@ Please see LICENSE files in the repository root for full details.
     /* Inside the overlay container: the viewer covers the panel if both are up. */
     --mx-z-overlay-picker: 1;
     --mx-z-overlay-viewer: 2;
+}
+
+/* Dark glass is rimmed more faintly: white at the strength it has on a light surface would glare. */
+.cpd-theme-dark,
+.cpd-theme-dark-hc {
+    --tg-glass-border-color: color-mix(in srgb, white 20%, transparent);
 }
 
 #mx_TgOverlay_Container {
@@ -148,4 +162,6 @@ html[data-low-power] [class*="cpd-theme-"],
 html[data-no-glass] [class*="cpd-theme-"] {
     --tg-glass-background: var(--tg-surface-color);
     --tg-glass-backdrop: none;
+    /* Solid, the bar has its edge from its own fill and shadow: no rim. */
+    --tg-glass-border: 0 0 transparent;
 }

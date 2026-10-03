@@ -23,6 +23,8 @@ const baseSnapshot: TimelineViewSnapshot = {
     canJumpToReadMarker: false,
     numUnreadMessages: 0,
     hasHighlights: false,
+    unreadMentions: 0,
+    unreadReactions: 0,
 };
 
 function eventItems(count: number, offset = 0): TimelineItem[] {
@@ -43,6 +45,8 @@ type Actions = {
     onJumpToReadMarker: ReturnType<typeof vi.fn>;
     onMarkAllAsRead: ReturnType<typeof vi.fn>;
     onJumpToLive: ReturnType<typeof vi.fn>;
+    onJumpToUnreadMention: ReturnType<typeof vi.fn>;
+    onJumpToUnreadReaction: ReturnType<typeof vi.fn>;
 };
 
 interface FakeVm {
@@ -64,6 +68,8 @@ function makeFakeVm(initial: Partial<TimelineViewSnapshot> = {}): FakeVm {
         onJumpToReadMarker: vi.fn(),
         onMarkAllAsRead: vi.fn(),
         onJumpToLive: vi.fn(),
+        onJumpToUnreadMention: vi.fn(),
+        onJumpToUnreadReaction: vi.fn(),
     };
     // vi.fn() carries a constructable signature that trips assignability to the
     // ViewModel's action method types, so cast the assembled object.

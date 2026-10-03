@@ -84,6 +84,8 @@ const { vmState } = vi.hoisted(() => ({
                 canJumpToReadMarker: false,
                 numUnreadMessages: 0,
                 hasHighlights: false,
+                unreadMentions: 0,
+                unreadReactions: 0,
             };
         },
     },

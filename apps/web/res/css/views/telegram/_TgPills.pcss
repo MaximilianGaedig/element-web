@@ -33,7 +33,7 @@ html[data-floating-bars] .mx_RoomHeader {
     border-radius: var(--tg-border-radius-big);
     background-color: var(--tg-glass-background);
     backdrop-filter: var(--tg-glass-backdrop);
-    box-shadow: var(--tg-topbar-box-shadow);
+    box-shadow: var(--tg-glass-border), var(--tg-topbar-box-shadow);
     flex: 0 0 auto;
     transition:
         transform var(--tg-transition-standard-in),
@@ -89,7 +89,7 @@ html[data-floating-bars] .mx_RoomView_body {
         border-radius: var(--tg-border-radius-big);
         background-color: var(--tg-glass-background);
         backdrop-filter: var(--tg-glass-backdrop);
-        box-shadow: var(--tg-chat-input-box-shadow);
+        box-shadow: var(--tg-glass-border), var(--tg-chat-input-box-shadow);
     }
 
     /*
@@ -132,7 +132,7 @@ html[data-floating-bars] .mx_RoomView_body {
         border-radius: 50%;
         background-color: var(--tg-glass-background);
         backdrop-filter: var(--tg-glass-backdrop);
-        box-shadow: var(--tg-chat-input-box-shadow);
+        box-shadow: var(--tg-glass-border), var(--tg-chat-input-box-shadow);
         transition:
             width var(--tg-composer-motion),
             margin var(--tg-composer-motion),
@@ -375,48 +375,70 @@ html[data-chat-columns] {
     --tg-chat-width: 696px;
 }
 
-/* .bubbles-go-down: a round 3rem button in the corner above the composer. */
+/*
+ * .bubbles-go-down: round 3rem buttons in the corner above the composer, stacked as in Telegram iOS: scroll
+ * down at the bottom, the unread mentions and the unread reactions above it, 0.5rem apart.
+ */
 html[data-floating-bars] {
-    .mx_JumpToBottomButton {
+    /* The old timeline's lone button positions itself; in the new timeline's stack, the stack does. */
+    .mx_JumpToBottomButton:not(.mx_JumpButton) {
         width: var(--tg-chat-input-height);
         height: var(--tg-chat-input-height);
         bottom: 0.5rem;
     }
 
+    .mx_TimelineJumpStack {
+        --mx-jump-gap: 0.5rem;
+
+        bottom: 0.5rem;
+    }
+
+    /* Through variables: a button that is away sets its own height (to nothing), which must still win. */
+    .mx_JumpButton {
+        --mx-jump-item-width: var(--tg-chat-input-height);
+        --mx-jump-item-height: var(--tg-chat-input-height);
+    }
+
+    /*
+     * The icon is centred by the button's flex box and nothing else. It used to carry 12px of padding as
+     * well as a size of its own from two other stylesheets, which the cascade decided between in an order
+     * that was not the same everywhere, so the glyph sat off-centre in its circle. One size, no padding,
+     * and the same for every button.
+     */
     .mx_JumpToBottomButton_scrollDown,
+    .mx_JumpButton_button,
     .mx_TopUnreadMessagesBar_scrollUp {
         width: var(--tg-chat-input-height);
         height: var(--tg-chat-input-height);
+        /* The browser's own padding would push a centred icon off to one side. */
+        padding: 0;
         border: none;
         border-radius: 50%;
         /* Glass like the header and composer islands. */
         background-color: var(--tg-glass-background);
         backdrop-filter: var(--tg-glass-backdrop);
-        box-shadow: var(--tg-chat-input-box-shadow);
+        box-shadow: var(--tg-glass-border), var(--tg-chat-input-box-shadow);
         transition: background-color var(--tg-layer-transition);
-
-        svg {
-            color: var(--tg-secondary-text-color);
-        }
 
         &:hover {
             background-color: color-mix(in srgb, var(--cpd-color-bg-subtle-primary) 70%, transparent);
         }
-    }
 
-    .mx_JumpToBottomButton_scrollDown svg {
-        padding: 12px;
-    }
-
-    .mx_TopUnreadMessagesBar_scrollUp svg {
-        width: 100%;
-        height: 100%;
-        padding: 12px;
-        box-sizing: border-box;
+        svg {
+            display: block;
+            flex: none;
+            box-sizing: content-box;
+            width: 1.5rem;
+            height: 1.5rem;
+            padding: 0;
+            margin: 0;
+            color: var(--tg-secondary-text-color);
+        }
     }
 
     /* .bubbles-corner-button .badge */
-    .mx_JumpToBottomButton_badge {
+    .mx_JumpToBottomButton_badge,
+    .mx_JumpButton_badge {
         position: absolute;
         top: -0.25rem;
         inset-inline-end: -0.25rem;
@@ -447,7 +469,7 @@ html[data-floating-bars] {
         border: none;
         background-color: var(--tg-glass-background);
         backdrop-filter: var(--tg-glass-backdrop);
-        box-shadow: var(--tg-chat-input-box-shadow);
+        box-shadow: var(--tg-glass-border), var(--tg-chat-input-box-shadow);
     }
 }
 
