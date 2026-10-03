@@ -9,6 +9,7 @@ import { Direction, LOCAL_PAGINATION_PREFIX, type MatrixClient, type Room } from
 import { logger } from "matrix-js-sdk/src/logger";
 
 import { roomsAhead } from "./roomsAhead";
+import { SlidingSyncManager } from "../../SlidingSyncManager";
 
 /*
  * Getting a room ready before it is opened.
@@ -96,6 +97,9 @@ export function wantsWarmup(client: MatrixClient, room: Room): boolean {
  *     room the pointer has since left.
  */
 export async function warmUpRoom(client: MatrixClient, room: Room, mayAskServer: () => boolean): Promise<void> {
+    // With sliding sync a room the list shows has only its latest message and the list's state: the
+    // subscription opening it would make is made now, so that it has its history and members when opened.
+    if (SlidingSyncManager.instance.slidingSync) await SlidingSyncManager.instance.setRoomVisible(room.roomId);
     await client.loadStoredRoomState?.(room.roomId);
 
     const live = room.getLiveTimeline();

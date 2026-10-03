@@ -53,25 +53,15 @@ import { sleep } from "matrix-js-sdk/src/utils";
 
 import { BACKFILL_EVENT_TYPE } from "./utils/chatHistory";
 import { BRIDGE_LOGIN_EVENT_TYPE } from "./utils/bridgeLogins";
+import { roomListRequiredState } from "./utils/sync/roomListState";
 
 // how long to long poll for
 const SLIDING_SYNC_TIMEOUT_MS = 20 * 1000;
 
-// The state events we will get for every single room/space/old room/etc
+// The state events we will get for every single room/space/old room/etc: everything the chat list reads,
+// from the same list the other way of syncing keeps (utils/sync/roomListState), so that the two cannot drift.
 // This list is only augmented when a direct room subscription is made. (e.g you view a room)
-const REQUIRED_STATE_LIST = [
-    [EventType.RoomJoinRules, ""], // the public icon on the room list
-    [EventType.RoomAvatar, ""], // any room avatar
-    [EventType.RoomCanonicalAlias, ""], // for room name calculations
-    [EventType.RoomTombstone, ""], // lets JS SDK hide rooms which are dead
-    [EventType.RoomEncryption, ""], // lets rooms be configured for E2EE correctly
-    [EventType.RoomCreate, ""], // for isSpaceRoom checks
-    [EventType.SpaceChild, MSC3575_WILDCARD], // all space children
-    [EventType.SpaceParent, MSC3575_WILDCARD], // all space parents
-    [EventType.RoomMember, MSC3575_STATE_KEY_ME], // lets the client calculate that we are in fact in the room
-    [BACKFILL_EVENT_TYPE, ""], // how much of a bridged chat's history is imported (chat details, header, dashboard)
-    [BRIDGE_LOGIN_EVENT_TYPE, MSC3575_WILDCARD], // whether each bridge is connected as your account
-];
+const REQUIRED_STATE_LIST = roomListRequiredState();
 
 // the things to fetch when a user clicks on a room
 const DEFAULT_ROOM_SUBSCRIPTION_INFO = {
@@ -227,14 +217,7 @@ export class SlidingSyncManager {
                 ranges: [[0, 20]],
                 sort: ["by_notification_level", "by_recency"],
                 timeline_limit: 1, // most recent message display: though this seems to only be needed for favourites?
-                required_state: [
-                    [EventType.RoomJoinRules, ""], // the public icon on the room list
-                    [EventType.RoomAvatar, ""], // any room avatar
-                    [EventType.RoomTombstone, ""], // lets JS SDK hide rooms which are dead
-                    [EventType.RoomEncryption, ""], // lets rooms be configured for E2EE correctly
-                    [EventType.RoomCreate, ""], // for isSpaceRoom checks
-                    [EventType.RoomMember, MSC3575_STATE_KEY_ME], // lets the client calculate that we are in fact in the room
-                ],
+                required_state: REQUIRED_STATE_LIST,
                 include_old_rooms: {
                     timeline_limit: 0,
                     required_state: [

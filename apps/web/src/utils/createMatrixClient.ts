@@ -153,7 +153,7 @@ export function createClientWithCreds(creds: IMatrixClientCreds, oauthClientId?:
         roomNameGenerator,
     };
 
-    const newCli = createMatrixClient(opts);
+    const newCli = createMatrixClient(opts, { slidingSync: slidingSyncExpected(creds.homeserverUrl) });
     newCli.setGuest(Boolean(creds.guest));
 
     const notifTimelineSet = new EventTimelineSet(undefined, {
@@ -176,12 +176,16 @@ export function createClientWithCreds(creds: IMatrixClientCreds, oauthClientId?:
  *
  * @returns {MatrixClient} the newly-created MatrixClient
  */
-export function createMatrixClient(opts: ICreateClientOpts): MatrixClient {
+export function createMatrixClient(opts: ICreateClientOpts, { slidingSync = false } = {}): MatrixClient {
     const storeOpts: Partial<ICreateClientOpts> = {
         useAuthorizationHeader: true,
     };
 
-    if (indexedDB && localStorage) {
+    if (slidingSync && localStorage) {
+        // Sliding sync keeps its own cache of what to show at startup (utils/sync/slidingSyncCache); the
+        // stored /sync is the other sync's, and loading it would only hold a second copy of the account.
+        storeOpts.store = new MemoryStore({ localStorage });
+    } else if (indexedDB && localStorage) {
         storeOpts.store = new IndexedDBStore({
             indexedDB: indexedDB,
             dbName: "riot-web-sync",
@@ -206,4 +210,29 @@ export function createMatrixClient(opts: ICreateClientOpts): MatrixClient {
         ...storeOpts,
         ...opts,
     });
+}
+
+/** Where it is remembered whether a homeserver had sliding sync, for choosing the store before asking it. */
+const SLIDING_SYNC_SUPPORT_KEY = "mx_sliding_sync_support";
+
+/**
+ * Whether this session will use sliding sync: it is on, and the homeserver had it last time (or has not been
+ * asked yet). Decided before the client exists, because the store depends on it; MatrixClientPeg asks the
+ * server and remembers the answer with {@link rememberSlidingSyncSupport}.
+ */
+export function slidingSyncExpected(homeserverUrl: string): boolean {
+    if (!SettingsStore.getValue("feature_simplified_sliding_sync")) return false;
+    try {
+        return localStorage.getItem(`${SLIDING_SYNC_SUPPORT_KEY}:${homeserverUrl}`) !== "false";
+    } catch {
+        return true;
+    }
+}
+
+export function rememberSlidingSyncSupport(homeserverUrl: string, supported: boolean): void {
+    try {
+        localStorage.setItem(`${SLIDING_SYNC_SUPPORT_KEY}:${homeserverUrl}`, String(supported));
+    } catch {
+        // Asked again next time.
+    }
 }

@@ -11,7 +11,7 @@ import { describe, it, expect } from "vitest";
 import { EventType, MatrixEvent, Room, SyncAccumulator, type ISyncResponse } from "matrix-js-sdk/src/matrix";
 import { stubClient } from "test-utils";
 
-import { ROOM_LIST_STATE_TYPES } from "./MatrixClientPeg";
+import { ROOM_LIST_STATE_TYPES } from "./utils/sync/roomListState";
 
 const ROOM_ID = "!dm:example.org";
 const ME = "@me:example.org";

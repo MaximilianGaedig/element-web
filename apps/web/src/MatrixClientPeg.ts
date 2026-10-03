@@ -11,14 +11,10 @@ Please see LICENSE files in the repository root for full details.
 
 import { BACKFILL_EVENT_TYPE } from "./utils/chatHistory";
 import { BRIDGE_LOGIN_EVENT_TYPE } from "./utils/bridgeLogins";
-import {
-    EventType,
-    type IStartClientOpts,
-    type MatrixClient,
-    MemoryStore,
-    PendingEventOrdering,
-    UNSTABLE_ELEMENT_FUNCTIONAL_USERS,
-} from "matrix-js-sdk/src/matrix";
+import { ROOM_LIST_STATE_TYPES } from "./utils/sync/roomListState";
+import { forgetLegacySyncStore, SlidingSyncCacheStore } from "./utils/sync/slidingSyncCache";
+import { rememberSlidingSyncSupport } from "./utils/createMatrixClient";
+import { type IStartClientOpts, type MatrixClient, MemoryStore, PendingEventOrdering } from "matrix-js-sdk/src/matrix";
 import * as utils from "matrix-js-sdk/src/utils";
 import { logger } from "matrix-js-sdk/src/logger";
 import type { X509ClientInitOpts } from "@element-hq/element-web-module-api";
@@ -314,10 +310,24 @@ class MatrixClientPegClass implements IMatrixClientPeg {
             throw new UserFriendlyError("sliding_sync_legacy_no_longer_supported");
         }
 
-        // If the user has enabled the labs feature for sliding sync, set it up
-        // otherwise check if the feature is supported
-        if (SettingsStore.getValue("feature_simplified_sliding_sync")) {
-            opts.slidingSync = await SlidingSyncManager.instance.setup(this.matrixClient);
+        // Sliding sync where the server has it (it is the default); the other sync where it has not. With it,
+        // the last session's rooms are shown at once from what it kept (utils/sync/slidingSyncCache), and
+        // the trimmed replay of the stored /sync, which is for the other, is not used.
+        const slidingSyncWanted = SettingsStore.getValue("feature_simplified_sliding_sync");
+        const slidingSyncSupported =
+            slidingSyncWanted && (await SlidingSyncManager.instance.nativeSlidingSyncSupport(this.matrixClient));
+        if (slidingSyncWanted) rememberSlidingSyncSupport(this.matrixClient.baseUrl, slidingSyncSupported);
+        if (slidingSyncSupported) {
+            SlidingSyncManager.serverSupportsSlidingSync = true;
+            const slidingSync = await SlidingSyncManager.instance.setup(this.matrixClient);
+            if (slidingSync) {
+                const cache = new SlidingSyncCacheStore(this.matrixClient.getSafeUserId(), ROOM_LIST_STATE_TYPES);
+                cache.record(slidingSync, this.matrixClient);
+                opts.slidingSync = slidingSync;
+                opts.slidingSyncCache = cache;
+                delete opts.savedSyncTrim;
+                void forgetLegacySyncStore();
+            }
         } else {
             void SlidingSyncManager.instance.checkSupport(this.matrixClient);
         }
@@ -406,42 +416,6 @@ function markSavedSyncLoaded(client: MatrixClient): void {
         return saved;
     };
 }
-
-/**
- * The state every room keeps in memory, for the room list, spaces, calls, notifications and encryption.
- * Everything else (members beyond the ones shown, topics, sticker packs, bridge features, …) is read from
- * the store when the room is opened: MatrixClient.loadStoredRoomState.
- */
-/** @knipignore exported for the test */
-export const ROOM_LIST_STATE_TYPES: string[] = [
-    EventType.RoomCreate,
-    EventType.RoomName,
-    EventType.RoomAvatar,
-    EventType.RoomCanonicalAlias,
-    EventType.RoomEncryption,
-    EventType.RoomTombstone,
-    EventType.RoomJoinRules,
-    EventType.RoomPowerLevels,
-    EventType.SpaceChild,
-    EventType.SpaceParent,
-    EventType.GroupCallPrefix,
-    EventType.GroupCallMemberPrefix,
-    EventType.RTCMembership,
-    "org.matrix.msc3946.room_predecessor",
-    "im.vector.modular.widgets",
-    // Bridge info: the room list's network badges and bridged-DM detection
-    "m.bridge",
-    "uk.half-shot.bridge",
-    // Who in the room is not a person (the bridge bot, your own ghost). A trimmed room keeps the member
-    // events of whoever sent its last events, and a bridge bot sends delivery statuses after each of
-    // your messages: without this the chat counts as three people, and gets no name or picture from
-    // the one you are talking to.
-    UNSTABLE_ELEMENT_FUNCTIONAL_USERS.name,
-    // Bridge status: history import per chat, and whether each bridge is connected. These are written
-    // once and not repeated, so a sync that omits them would leave the chat list and dashboard blind.
-    BACKFILL_EVENT_TYPE,
-    BRIDGE_LOGIN_EVENT_TYPE,
-];
 
 /**
  * State a bridge rewrites as things change, which is only ever read as the room's current state. Keeping

@@ -602,7 +602,9 @@ export const SETTINGS: Settings = {
         displayName: _td("labs|sliding_sync"),
         description: _td("labs|sliding_sync_description"),
         shouldWarn: true,
-        default: false,
+        // On: the room list asks only for what it shows, and startup shows the last session's rooms from
+        // a cache of its own (utils/sync/slidingSyncCache). Servers without it get the other sync.
+        default: true,
         controller: new SlidingSyncController(),
     },
     "feature_element_call_video_rooms": {

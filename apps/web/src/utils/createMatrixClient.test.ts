@@ -11,7 +11,8 @@ import { vi, describe, beforeEach, it, expect } from "vitest";
 import { type MatrixClient, RoomNameType } from "matrix-js-sdk/src/matrix";
 import { mockPlatformPeg } from "test-utils";
 
-import { createClientWithCreds } from "./createMatrixClient";
+import { createClientWithCreds, rememberSlidingSyncSupport, slidingSyncExpected } from "./createMatrixClient";
+import SettingsStore from "../settings/SettingsStore";
 import PlatformPeg from "../PlatformPeg";
 
 describe("createMatrixClient", () => {
@@ -28,6 +29,37 @@ describe("createMatrixClient", () => {
             homeserverUrl: "https://test.dummy",
             userId: "@user:test.dummy",
             accessToken: "access_token",
+        });
+    });
+
+    // Sliding sync keeps its own cache; loading the other sync's stored /sync would hold the account twice.
+    describe("the store", () => {
+        it("is kept in memory under sliding sync, and in IndexedDB otherwise", async () => {
+            // The module reads both when it is loaded
+            vi.resetModules();
+            vi.stubGlobal("indexedDB", {});
+            Object.defineProperty(window, "indexedDB", { value: {}, configurable: true });
+            const fresh = await import("./createMatrixClient");
+            // ...with the store classes of the copy of the SDK it was loaded with
+            const sdk = await import("matrix-js-sdk/src/matrix");
+
+            expect(fresh.createMatrixClient({ baseUrl: "" }, { slidingSync: true }).store).toBeInstanceOf(
+                sdk.MemoryStore,
+            );
+            expect(fresh.createMatrixClient({ baseUrl: "" }).store).toBeInstanceOf(sdk.IndexedDBStore);
+            Object.defineProperty(window, "indexedDB", { value: undefined, configurable: true });
+        });
+
+        it("expects sliding sync where it is on, unless the server was found without it", () => {
+            vi.spyOn(SettingsStore, "getValue").mockReturnValue(true);
+            window.localStorage.removeItem("mx_sliding_sync_support:https://test.dummy");
+            expect(slidingSyncExpected("https://test.dummy")).toBe(true);
+            rememberSlidingSyncSupport("https://test.dummy", false);
+            expect(slidingSyncExpected("https://test.dummy")).toBe(false);
+            rememberSlidingSyncSupport("https://test.dummy", true);
+            vi.mocked(SettingsStore.getValue).mockReturnValue(false);
+            expect(slidingSyncExpected("https://test.dummy")).toBe(false);
+            vi.mocked(SettingsStore.getValue).mockRestore();
         });
     });
 
