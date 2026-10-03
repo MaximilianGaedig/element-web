@@ -14,7 +14,7 @@ Please see LICENSE files in the repository root for full details.
 import { type MatrixClient, type MatrixEvent, type Room } from "matrix-js-sdk/src/matrix";
 
 import { getTelegramSendState, type TelegramSendState } from "./telegramTime";
-import { isReadByOthers } from "./readByOthers";
+import { isAcceptedByBridge, isReadByOthers } from "./readByOthers";
 import { failedSendsFor } from "../room/failedSends";
 import { MessageSendStatusStore } from "../bridge/messageSendStatus";
 import { getBridgeBots } from "../bridge/bridgeInfo";
@@ -44,5 +44,10 @@ export function getPreviewSendState(
      */
     if (state !== "sent" || bridgeStatus || getBridgeBots(room).size === 0) return state;
     const health = bridgeHealthOf(client, room);
-    return getTelegramSendState({ ...input, bridgeDown: health === "disconnected" || health === "problem" });
+    return getTelegramSendState({
+        ...input,
+        bridgeDown: health === "disconnected" || health === "problem",
+        // Bridges say a message reached their network with their bot's receipt, not a status.
+        bridgeAccepted: isAcceptedByBridge(room, event),
+    });
 }
