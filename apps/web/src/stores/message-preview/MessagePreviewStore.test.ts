@@ -21,12 +21,14 @@ import {
     PendingEventOrdering,
     RelationType,
     Room,
+    RoomEvent,
 } from "matrix-js-sdk/src/matrix";
 import { mkEvent, mkMessage, mkReaction, setupAsyncStoreWithClient, stubClient } from "test-utils";
 import { mkThread } from "test-utils/threads";
 
 import { MessagePreviewStore } from ".";
 import { DefaultTagID } from "../room-list-v3/skip-list/tag";
+import { createRoomTimelineAction } from "../../actions/MatrixActionCreators";
 
 describe("MessagePreviewStore", () => {
     let client: Mocked<MatrixClient>;
@@ -87,6 +89,43 @@ describe("MessagePreviewStore", () => {
         store = MessagePreviewStore.testInstance();
         await store.start();
         await setupAsyncStoreWithClient(store, client);
+    });
+
+    it("follows a room's latest events when sliding sync gives them as not live", async () => {
+        // The chat list asks before the room's first events have come: there is no preview yet.
+        expect(await store.getPreviewForRoom(room, DefaultTagID.Untagged)).toBeNull();
+
+        room.on(RoomEvent.Timeline, (event, eventRoom, toStartOfTimeline, removed, data) => {
+            // @ts-ignore private access
+            void store.onAction(
+                createRoomTimelineAction(client, event, eventRoom!, !!toStartOfTimeline, removed, data),
+            );
+        });
+        const message = mkMessage({ user: "@sender:server", event: true, room: room.roomId, msg: "Hello" });
+        // How sliding sync adds a room's events, all but the few that have only just been sent.
+        await room.addLiveEvents([message], { fromCache: true, addToState: false });
+        await new Promise((resolve) => setTimeout(resolve));
+
+        expect((await store.getPreviewForRoom(room, DefaultTagID.Untagged))?.text).toBe("@sender:server: Hello");
+    });
+
+    it("does not take an earlier event, paginated in, for the preview", async () => {
+        const latest = mkMessage({ user: "@sender:server", event: true, room: room.roomId, msg: "Latest" });
+        await addEvent(store, room, latest, false);
+        expect((await store.getPreviewForRoom(room, DefaultTagID.Untagged))?.text).toBe("@sender:server: Latest");
+
+        const earlier = mkMessage({ user: "@sender:server", event: true, room: room.roomId, msg: "Earlier", ts: 1 });
+        room.addEventsToTimeline([earlier], true, false, room.getLiveTimeline());
+        // @ts-ignore private access
+        const spy = vi.spyOn(store, "generatePreview");
+        // @ts-ignore private access
+        await store.onAction(
+            createRoomTimelineAction(client, earlier, room, true, false, {
+                liveEvent: false,
+                timeline: room.getLiveTimeline(),
+            }),
+        );
+        expect(spy).not.toHaveBeenCalled();
     });
 
     it("should ignore edits for events other than the latest one", async () => {

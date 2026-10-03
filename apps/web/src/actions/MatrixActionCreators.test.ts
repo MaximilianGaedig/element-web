@@ -35,7 +35,11 @@ describe("MatrixActionCreators", () => {
     let delivered: string[];
     let dispatcherRef: string;
 
-    const room = { roomId: "!room:server", getUnfilteredTimelineSet: () => timelineSet };
+    const room = {
+        roomId: "!room:server",
+        getUnfilteredTimelineSet: () => timelineSet,
+        getLiveTimeline: () => timelineData.timeline,
+    };
     const timelineSet = {};
     const event = { getRoomId: () => room.roomId, getType: () => "m.room.message", getContent: () => ({}) };
     const timelineData = { liveEvent: false, timeline: { getTimelineSet: () => timelineSet } };

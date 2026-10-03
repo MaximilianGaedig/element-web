@@ -225,7 +225,14 @@ export class MessagePreviewStore extends AsyncStoreWithClient<EmptyObject> {
         if (payload.action === "MatrixActions.Room.timeline" || payload.action === "MatrixActions.Event.decrypted") {
             const event = payload.event; // TODO: Type out the dispatcher
             const roomId = event.getRoomId();
-            const isHistoricalEvent = payload.hasOwnProperty("isLiveEvent") && !payload.isLiveEvent;
+            // Whether it can be the room's latest event: sliding sync gives each room's first events, and the
+            // cache its last ones, as not live, and the preview must follow them all the same. Decryptions
+            // say neither, and are always looked at.
+            const isHistoricalEvent =
+                payload.action === "MatrixActions.Room.timeline" &&
+                !payload.addedToLiveEnd &&
+                payload.hasOwnProperty("isLiveEvent") &&
+                !payload.isLiveEvent;
 
             if (!roomId || !this.previews.has(roomId) || isHistoricalEvent) return;
 
