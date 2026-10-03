@@ -570,4 +570,22 @@ describe("<TimelineView />", () => {
             if (rendered) expect(rendered.parentElement!).not.toHaveClass(styles.stickyDateVisible);
         });
     });
+    // History is asked for while the reader is still a couple of screens away from the top of what is
+    // loaded, so it is there when they arrive rather than loading once they have hit the end.
+    it("asks for earlier history before the reader reaches the top", async () => {
+        const { vm, actions } = makeFakeVm({ items: eventItems(150) });
+        render(
+            <div style={{ height: 600, width: 320 }}>
+                <TimelineView vm={vm} renderItem={renderItem} />
+            </div>,
+        );
+        const scroller = screen.getByTestId("timeline-scroller");
+        await waitFor(() => expect(actions.onAnchorReached).toHaveBeenCalled(), { timeout: 5000 });
+        // At the end, far from the top: nothing asked.
+        expect(actions.onStartReached).not.toHaveBeenCalled();
+
+        // Under two screens (1200px) from it, though the first row is still far from being drawn.
+        await scrollTo(scroller, 1100);
+        await waitFor(() => expect(actions.onStartReached).toHaveBeenCalled());
+    });
 });

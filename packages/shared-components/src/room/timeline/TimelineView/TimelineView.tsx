@@ -67,6 +67,8 @@ const ESTIMATED_ITEM_HEIGHT = 48;
 const OVERSCAN = 16;
 /** px from the list bottom still counted as "at the bottom". */
 const AT_BOTTOM_THRESHOLD_PX = 4;
+/** How many screens' height from the start of what is loaded the earlier history is asked for. */
+const PREFETCH_SCREENS = 2;
 /**
  * How long we are willing to keep the timeline hidden on first load, in milliseconds.
  *
@@ -344,14 +346,21 @@ export function TimelineView({
             stickyPinnedRef.current = pinned;
             updateStickyDate();
 
-            // Have we reached either end of the loaded messages? True once the very first or
-            // very last row is among those being rendered, which tells the view model it may
-            // need to load more history in that direction.
+            // Are we near either end of the loaded messages? The start is asked for well before the
+            // reader gets there - within PREFETCH_SCREENS of it - so the history is in place by the
+            // time they scroll up to it, as in Telegram, rather than loading once they have hit the
+            // top. Either end also counts once its very row is among those rendered.
             const renderedItems = v.getVirtualItems();
             const firstRenderedIndex = renderedItems.length ? renderedItems[0].index : -1;
             const lastRenderedIndex = renderedItems.length ? renderedItems[renderedItems.length - 1].index : -1;
-            if (firstRenderedIndex === 0) {
-                const token = `${itemCount}:${visibleRange ? visibleRange.startIndex : 0}`;
+            const prefetch = viewportHeight * PREFETCH_SCREENS;
+            const nearStart = firstRenderedIndex === 0 || (viewportHeight > 0 && scrollOffset < prefetch);
+            if (nearStart) {
+                // Once per page loaded: scrolling about within reach of the end asks only once.
+                const token =
+                    firstRenderedIndex === 0
+                        ? `${itemCount}:${visibleRange ? visibleRange.startIndex : 0}`
+                        : `${itemCount}`;
                 if (startEdgeTokenRef.current !== token) {
                     startEdgeTokenRef.current = token;
                     vm.onStartReached();
