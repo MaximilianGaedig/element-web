@@ -10,7 +10,7 @@ Please see LICENSE files in the repository root for full details.
 
 import "fake-indexeddb/auto";
 
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 
 import { idbDelete, idbLoad, idbSave } from "./StorageAccess";
 
@@ -46,5 +46,18 @@ describe("StorageAccess", () => {
         await expect(() => idbSave(NONEXISTENT_TABLE, "whatever", "value")).rejects.toThrow();
         await expect(() => idbLoad(NONEXISTENT_TABLE, "whatever")).rejects.toThrow();
         await expect(() => idbDelete(NONEXISTENT_TABLE, "whatever")).rejects.toThrow();
+    });
+
+    // The service worker kept a connection the browser had closed, and could never read the access token again:
+    // every legacy media URL went out unauthenticated (403).
+    it("opens the database again when its connection has been closed under it", async () => {
+        await idbSave("account", "k", "v");
+        const transaction = vi.spyOn(IDBDatabase.prototype, "transaction").mockImplementationOnce(() => {
+            throw new DOMException("The database connection is closing.", "InvalidStateError");
+        });
+
+        await expect(idbLoad("account", "k")).resolves.toBe("v");
+        expect(transaction).toHaveBeenCalledTimes(2);
+        transaction.mockRestore();
     });
 });

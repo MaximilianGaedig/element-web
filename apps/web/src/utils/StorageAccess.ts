@@ -34,7 +34,20 @@ async function idbInit(): Promise<void> {
         const request = getIDBFactory()!.open("matrix-react-sdk", 1);
         request.onerror = reject;
         request.onsuccess = (): void => {
-            resolve(request.result);
+            const db = request.result;
+            // A connection the browser closes (or another context asks to be let go of, to delete or upgrade the
+            // database) is not ours to keep: forget it, and the next call opens a new one. Kept, every later
+            // transaction failed with "the database connection is closing" - in the service worker, for good,
+            // so it could no longer read the access token and every image went out unauthenticated (403).
+            const forget = (): void => {
+                if (idb === db) idb = null;
+            };
+            db.onclose = forget;
+            db.onversionchange = (): void => {
+                forget();
+                db.close();
+            };
+            resolve(db);
         };
         request.onupgradeneeded = (): void => {
             const db = request.result;
@@ -52,8 +65,17 @@ async function idbTransaction(
     if (!idb) {
         await idbInit();
     }
+    let txn: IDBTransaction;
+    try {
+        txn = idb!.transaction([table], mode);
+    } catch (e) {
+        // Closed under us without saying so: open it again, once.
+        if (!(e instanceof DOMException && e.name === "InvalidStateError")) throw e;
+        idb = null;
+        await idbInit();
+        txn = idb!.transaction([table], mode);
+    }
     return new Promise((resolve, reject) => {
-        const txn = idb!.transaction([table], mode);
         txn.onerror = reject;
 
         const objectStore = txn.objectStore(table);
