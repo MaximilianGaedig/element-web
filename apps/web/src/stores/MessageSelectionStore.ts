@@ -105,6 +105,13 @@ export class MessageSelectionStore extends EventEmitter {
         this.emit(UPDATE_EVENT);
     }
 
+    /** Makes the room's selection exactly these messages (a drag across rows sets it as it goes). */
+    public setSelection(roomId: string, eventIds: Iterable<string>): void {
+        if (!this.selections.has(roomId)) return;
+        this.selections.set(roomId, new Set(eventIds));
+        this.emit(UPDATE_EVENT);
+    }
+
     public clearSelection(roomId: string): void {
         this.selections.get(roomId)?.clear();
         this.emit(UPDATE_EVENT);

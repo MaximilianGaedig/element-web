@@ -32,6 +32,7 @@ import type { IReadReceiptPosition } from "../views/rooms/ReadReceiptMarker";
 import { receiptsByShownEvent } from "../../utils/telegram/receiptsByEvent";
 import { useEventEmitter, useTypedEventEmitter } from "../../hooks/useEventEmitter";
 import { MessageSelectionStore } from "../../stores/MessageSelectionStore";
+import { selectableEventIds } from "../../utils/messageSelection";
 import { UPDATE_EVENT } from "../../stores/AsyncStore";
 import { isOneToOneRoom, bubbleTimelineEnabled, telegramTicksShown } from "../../utils/telegram/telegramLayout";
 import MemberAvatar from "../views/avatars/MemberAvatar";
@@ -123,6 +124,87 @@ const CHROME_GAP = 8;
 /** Bubbles drawn where more history is being fetched, and over a chat that is slow to open. */
 const LOADING_ROW_BUBBLES = 4;
 const OPENING_BUBBLES = 20;
+
+/**
+ * Picking by dragging across messages, as Telegram Desktop and Web K do: while messages are being picked,
+ * pressing on one and moving over others takes in every message between, and the first one decides
+ * whether the drag ticks or unticks them. A press without moving is still a click, which toggles one
+ * (EventTile). Touch keeps its drags for scrolling.
+ */
+export function useDragSelect(
+    panelRef: React.RefObject<HTMLElement | null>,
+    room: Room,
+    client: MatrixClient,
+    selecting: boolean,
+): void {
+    useEffect(() => {
+        const el = panelRef.current;
+        if (!el || !selecting) return;
+        const store = MessageSelectionStore.instance;
+        let drag: {
+            startId: string;
+            tick: boolean;
+            base: Set<string>;
+            x: number;
+            y: number;
+            moved: boolean;
+            order: string[];
+        } | null = null;
+        const tileId = (target: EventTarget | null): string | undefined =>
+            (target as HTMLElement | null)?.closest?.<HTMLElement>("[data-event-id]")?.dataset.eventId;
+
+        const onDown = (ev: PointerEvent): void => {
+            if (ev.button !== 0 || ev.pointerType === "touch") return;
+            const id = tileId(ev.target);
+            if (!id) return;
+            drag = {
+                startId: id,
+                tick: !store.isSelected(room.roomId, id),
+                base: new Set(store.getSelectedIds(room.roomId)),
+                x: ev.clientX,
+                y: ev.clientY,
+                moved: false,
+                order: selectableEventIds(room, client),
+            };
+        };
+        const onMove = (ev: PointerEvent): void => {
+            if (!drag) return;
+            if (!drag.moved && Math.hypot(ev.clientX - drag.x, ev.clientY - drag.y) < 6) return;
+            drag.moved = true;
+            const id = tileId(document.elementFromPoint(ev.clientX, ev.clientY));
+            const from = drag.order.indexOf(drag.startId);
+            const to = id ? drag.order.indexOf(id) : -1;
+            if (from < 0 || to < 0) return;
+            const next = new Set(drag.base);
+            for (const rangeId of drag.order.slice(Math.min(from, to), Math.max(from, to) + 1)) {
+                if (drag.tick) next.add(rangeId);
+                else next.delete(rangeId);
+            }
+            store.setSelection(room.roomId, next);
+        };
+        const onUp = (): void => {
+            if (drag?.moved) {
+                // The click that ends a drag is not a tap on the row it ended over.
+                const swallow = (ev: MouseEvent): void => {
+                    ev.stopPropagation();
+                    ev.preventDefault();
+                };
+                window.addEventListener("click", swallow, { capture: true, once: true });
+                window.setTimeout(() => window.removeEventListener("click", swallow, { capture: true }), 0);
+                if (store.getCount(room.roomId) === 0) store.exitSelectionMode(room.roomId);
+            }
+            drag = null;
+        };
+        el.addEventListener("pointerdown", onDown);
+        window.addEventListener("pointermove", onMove);
+        window.addEventListener("pointerup", onUp);
+        return () => {
+            el.removeEventListener("pointerdown", onDown);
+            window.removeEventListener("pointermove", onMove);
+            window.removeEventListener("pointerup", onUp);
+        };
+    }, [panelRef, room, client, selecting]);
+}
 
 /** Draws one timeline row. Kept outside the component so it isn't redefined per render. */
 function renderTimelineItem(item: TimelineItem, ctx: RenderItemContext): ReactNode {
@@ -442,6 +524,8 @@ export function NewTimelinePanel({
         // selectionVersion stands for the store, which changes without anything else here doing so.
         [room.roomId, selectionVersion], // eslint-disable-line react-hooks/exhaustive-deps
     );
+
+    useDragSelect(panelRef, room, client, selecting);
 
     const renderItem = useCallback(
         (item: TimelineItem): ReactNode =>

@@ -46,18 +46,38 @@ function messageText(ev: MatrixEvent): string | undefined {
  * are left out.
  */
 export function selectionAsText(room: Room, events: MatrixEvent[]): string {
-    const withText = events
+    const lines = selectionLines(room, events);
+    if (lines.length === 1) return lines[0].text;
+    return lines.map(({ when, name, text }) => `[${when}] ${name}: ${text}`).join("\n");
+}
+
+/** The same as {@link selectionAsText}, as HTML: for pasting where formatting is kept (mail, documents). */
+export function selectionAsHtml(room: Room, events: MatrixEvent[]): string {
+    const lines = selectionLines(room, events);
+    const html = (text: string): string => escapeHtml(text).replace(/\n/g, "<br>");
+    if (lines.length === 1) return html(lines[0].text);
+    return lines
+        .map(({ when, name, text }) => `<p><b>${html(name)}</b> <i>[${html(when)}]</i><br>${html(text)}</p>`)
+        .join("");
+}
+
+function escapeHtml(text: string): string {
+    return text.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
+}
+
+/** The selected messages that have text, oldest first, with when and by whom. */
+function selectionLines(room: Room, events: MatrixEvent[]): { when: string; name: string; text: string }[] {
+    const locale = getUserLanguage();
+    return events
         .map((ev) => ({ ev, text: messageText(ev) }))
         .filter((entry): entry is { ev: MatrixEvent; text: string } => !!entry.text)
-        .sort((a, b) => a.ev.getTs() - b.ev.getTs());
-    if (withText.length === 1) return withText[0].text;
-    const locale = getUserLanguage();
-    return withText
+        .sort((a, b) => a.ev.getTs() - b.ev.getTs())
         .map(({ ev, text }) => {
-            const when = new Date(ev.getTs()).toLocaleString(locale, { dateStyle: "short", timeStyle: "short" });
             const sender = ev.getSender() ?? "";
-            const name = room.getMember(sender)?.name ?? sender;
-            return `[${when}] ${name}: ${text}`;
-        })
-        .join("\n");
+            return {
+                when: new Date(ev.getTs()).toLocaleString(locale, { dateStyle: "short", timeStyle: "short" }),
+                name: room.getMember(sender)?.name ?? sender,
+                text,
+            };
+        });
 }

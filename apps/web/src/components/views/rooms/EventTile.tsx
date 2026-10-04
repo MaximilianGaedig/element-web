@@ -452,6 +452,7 @@ export class UnwrappedEventTile extends React.Component<EventTileProps, IState> 
         const room = client.getRoom(this.props.mxEvent.getRoomId());
         room?.on(ThreadEvent.New, this.onNewThread);
         this.bindSelectionListeners();
+        this.syncSelectionSemantics();
         this.bindTelegramGestures();
     }
 
@@ -471,7 +472,8 @@ export class UnwrappedEventTile extends React.Component<EventTileProps, IState> 
         if (isAppleTouch()) {
             detachers.push(
                 attachLongPress(el, ({ x, y }) => {
-                    if (this.props.editState || this.props.isSelecting) return;
+                    if (this.props.isSelecting) return this.toggleSelected();
+                    if (this.props.editState) return;
                     this.setState((prevState) => ({
                         interaction: eventTileOpenContextMenu(prevState.interaction, {
                             position: { left: x, top: y, bottom: y },
@@ -551,6 +553,7 @@ export class UnwrappedEventTile extends React.Component<EventTileProps, IState> 
 
     public componentDidUpdate(_prevProps: Readonly<EventTileProps>, prevState: Readonly<IState>): void {
         this.bindSelectionListeners();
+        this.syncSelectionSemantics();
         this.bindTelegramGestures();
         // Some overlays, such as portalled tooltips, can interrupt the normal mouseleave path.
         // While hover is active, verify it against the browser's real :hover state on mouse movement.
@@ -759,6 +762,22 @@ export class UnwrappedEventTile extends React.Component<EventTileProps, IState> 
         this.selectionRoot = root;
     }
 
+    /**
+     * While messages are being picked the whole row is the control, as in Signal: announced as a checkbox
+     * that is ticked or not. Set on the element itself, as the shared tile view takes no role from here.
+     */
+    private syncSelectionSemantics(): void {
+        const root = this.selectionRoot;
+        if (!root) return;
+        if (this.props.isSelecting) {
+            root.setAttribute("role", "checkbox");
+            root.setAttribute("aria-checked", String(!!this.props.isSelected));
+        } else if (root.getAttribute("role") === "checkbox") {
+            root.removeAttribute("role");
+            root.removeAttribute("aria-checked");
+        }
+    }
+
     private unbindSelectionListeners(): void {
         this.selectionRoot?.removeEventListener("click", this.onSelectionToggle);
         this.selectionRoot?.removeEventListener("mousedown", this.onRootMouseDown);
@@ -927,8 +946,19 @@ export class UnwrappedEventTile extends React.Component<EventTileProps, IState> 
     };
 
     private readonly onContextMenu = (ev: React.MouseEvent): void => {
+        // While picking, a hold (or a right-click) ticks the message, as a tap does: the bar has the actions.
+        if (this.props.isSelecting) {
+            ev.preventDefault();
+            this.toggleSelected();
+            return;
+        }
         this.showContextMenu(ev);
     };
+
+    private toggleSelected(): void {
+        if (!isSelectableEvent(this.props.mxEvent, MatrixClientPeg.safeGet())) return;
+        MessageSelectionStore.instance.toggleSelection(this.props.mxEvent.getRoomId()!, this.props.mxEvent.getId()!);
+    }
 
     private readonly onTimestampContextMenu = (ev: React.MouseEvent): void => {
         this.showContextMenu(ev, this.props.permalinkCreator?.forEvent(this.props.mxEvent.getId()!));
@@ -1451,6 +1481,7 @@ export class UnwrappedEventTile extends React.Component<EventTileProps, IState> 
                     ...eventTileRenderState.classNames,
                     root: classNames(eventTileRenderState.classNames.root, {
                         mx_EventTile_selecting: this.props.isSelecting,
+                        mx_EventTile_picked: this.props.isSelecting && this.props.isSelected,
                         mx_EventTile_disappeared: isDisappeared(this.props.mxEvent),
                         // Telegram-style bubbles (res/css/views/telegram/_TelegramMessages.pcss).
                         mx_EventTile_tgTime: telegramTime,

@@ -11,7 +11,7 @@ import { describe, expect, it } from "vitest";
 import { EventStatus, MatrixEvent, Room } from "matrix-js-sdk/src/matrix";
 import { stubClient } from "test-utils";
 
-import { isSelectableEvent, selectionAsText } from "./messageSelection";
+import { isSelectableEvent, selectionAsHtml, selectionAsText } from "./messageSelection";
 
 const ROOM = "!r:x";
 
@@ -55,6 +55,17 @@ describe("selectionAsText", () => {
         });
 
         expect(selectionAsText(room, [call, message("$a", "@ada:x", "only this", 1)])).toBe("only this");
+    });
+});
+
+describe("selectionAsHtml", () => {
+    const client = stubClient();
+    const room = new Room(ROOM, client, client.getSafeUserId());
+
+    it("gives each message a paragraph, its text escaped", () => {
+        const html = selectionAsHtml(room, [message("$a", "@ada:x", "1 < 2", 1), message("$b", "@bob:x", "ok", 2)]);
+
+        expect(html).toMatch(/^<p><b>@ada:x<\/b> <i>\[.+\]<\/i><br>1 &#60; 2<\/p><p><b>@bob:x<\/b>/);
     });
 });
 

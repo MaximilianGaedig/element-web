@@ -39,6 +39,8 @@ describe("BulkActionsBar", () => {
     const renderBar = () => render(<BulkActionsBar room={room} permalinkCreator={{} as RoomPermalinkCreator} />);
 
     // Only the clipboard is mocked per test: restoring every mock would undo stubClient's logged-in client too.
+    // Without ClipboardItem the bar copies through copyPlaintext, which is what these tests watch.
+    vi.stubGlobal("ClipboardItem", undefined);
     const copy = vi.spyOn(strings, "copyPlaintext");
     afterEach(() => {
         act(() => MessageSelectionStore.instance.exitSelectionMode(ROOM));
@@ -56,6 +58,15 @@ describe("BulkActionsBar", () => {
         expect(copy).toHaveBeenCalledWith("first");
         expect(await screen.findByRole("button", { name: "Copied!" })).toBeInTheDocument();
         expect(MessageSelectionStore.instance.isSelecting(ROOM)).toBe(true);
+    });
+
+    it("lets go of them all when the count is tapped", () => {
+        MessageSelectionStore.instance.enterSelectionMode(ROOM, "$a");
+        renderBar();
+
+        fireEvent.click(screen.getByRole("button", { name: "1 message selected" }));
+
+        expect(MessageSelectionStore.instance.isSelecting(ROOM)).toBe(false);
     });
 
     it("takes in every loaded message on Ctrl+A, copies them on Ctrl+C, and ends on Escape", () => {

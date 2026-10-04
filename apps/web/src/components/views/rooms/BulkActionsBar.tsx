@@ -24,11 +24,29 @@ import { type RoomPermalinkCreator } from "../../../utils/permalinks/Permalinks"
 import QuestionDialog from "../dialogs/QuestionDialog";
 import Modal from "../../../Modal";
 import { copyPlaintext } from "../../../utils/strings";
-import { selectableEventIds, selectionAsText } from "../../../utils/messageSelection";
+import { selectableEventIds, selectionAsHtml, selectionAsText } from "../../../utils/messageSelection";
 
 interface IProps {
     room: Room;
     permalinkCreator: RoomPermalinkCreator;
+}
+
+/** Puts the selection on the clipboard as text and as HTML, or as text alone where the browser can't. */
+async function copySelection(text: string, html: string): Promise<boolean> {
+    if (typeof ClipboardItem !== "undefined" && navigator.clipboard?.write) {
+        try {
+            await navigator.clipboard.write([
+                new ClipboardItem({
+                    "text/plain": new Blob([text], { type: "text/plain" }),
+                    "text/html": new Blob([html], { type: "text/html" }),
+                }),
+            ]);
+            return true;
+        } catch {
+            // Not allowed here (permissions, an older browser): the text alone below.
+        }
+    }
+    return copyPlaintext(text);
 }
 
 const BulkActionsBar: React.FC<IProps> = ({ room, permalinkCreator }) => {
@@ -46,7 +64,7 @@ const BulkActionsBar: React.FC<IProps> = ({ room, permalinkCreator }) => {
             .filter((ev): ev is MatrixEvent => !!ev);
         const text = selectionAsText(room, events);
         if (!text) return;
-        void copyPlaintext(text).then((ok) => {
+        void copySelection(text, selectionAsHtml(room, events)).then((ok) => {
             if (!ok) return;
             setCopied(true);
             window.setTimeout(() => setCopied(false), 1500);
@@ -141,7 +159,10 @@ const BulkActionsBar: React.FC<IProps> = ({ room, permalinkCreator }) => {
 
     return (
         <div className="mx_BulkActionsBar mx_MessageComposer mx_MessageComposer_wrapper">
-            <div className="mx_BulkActionsBar_count">{_t("timeline|messages_selected", { count })}</div>
+            {/* Tapping the count lets go of them all, as in Telegram. */}
+            <AccessibleButton className="mx_BulkActionsBar_count" onClick={onCancel} kind="link_inline">
+                {_t("timeline|messages_selected", { count })}
+            </AccessibleButton>
             <div className="mx_BulkActionsBar_actions">
                 <AccessibleButton className="mx_BulkActionsBar_action" onClick={onCopy} kind="primary_outline">
                     <CopyIcon className="mx_Icon_16" />

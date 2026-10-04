@@ -41,6 +41,33 @@ $left-gutter: 64px;
     /* Fork: message selection mode (bulk delete/forward) */
     &.mx_EventTile_selecting {
         user-select: none;
+        cursor: pointer;
+
+        /* What is inside a message does nothing while picking (Telegram and Signal make it inert): a click
+           anywhere on the row ticks it, rather than opening a link or a photo. The checkbox stays live. */
+        .mx_EventTile_line,
+        .mx_EventTile_avatar,
+        .mx_ReactionsRow,
+        .mx_DisambiguatedProfile,
+        .mx_EventTile_msgOption {
+            pointer-events: none;
+        }
+    }
+
+    /* A picked message: the whole row is marked, not only its checkbox. */
+    &.mx_EventTile_picked {
+        background-color: color-mix(in srgb, var(--cpd-color-bg-accent-rest) 12%, transparent);
+    }
+
+    /* Who sent it, when, the reactions and the avatar are never part of copied text: a drag over several
+       messages copies what they said. */
+    .mx_DisambiguatedProfile,
+    .mx_MessageTimestamp,
+    .mx_TelegramTime,
+    .mx_ReactionsRow,
+    .mx_EventTile_avatar,
+    .mx_ReadReceiptGroup {
+        user-select: none;
     }
 
     .mx_EventTile_selectionCheckbox {
