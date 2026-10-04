@@ -243,7 +243,7 @@ describe("SlidingSyncManager", () => {
 
         /* Every start grew the lists from ten again, one request at a time, a second each for 700 chats. */
         it("keeps each list's size once they are whole, and the next session starts each list there", async () => {
-            vi.mocked(slidingSync.getListData).mockReturnValue({ joinedCount: 704, roomIndexToRoomId: {} });
+            vi.mocked(slidingSync.getListData).mockReturnValue({ joinedCount: 704 });
             vi.mocked(slidingSync.getListParams).mockReturnValue({ ranges: [[0, 710]] } as any);
             await (manager as any).startSpidering(slidingSync, 50, 1);
 
