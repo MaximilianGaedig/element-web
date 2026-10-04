@@ -35,6 +35,14 @@ jobs:
               with:
                   install: true
 
+            # GitHub expressions cannot slice a string, so the 7-character head sha is cut in a step.
+            - name: Short sha of the pull request head
+              id: head
+              if: github.event_name == 'pull_request'
+              env:
+                  HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+              run: echo "short=${HEAD_SHA::7}" >> "$GITHUB_OUTPUT"
+
             - name: Docker meta
               id: meta
               uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6
@@ -46,7 +54,7 @@ jobs:
                       type=ref,event=tag
                       type=sha,prefix=,enable=${{ github.event_name != 'pull_request' }}
                       type=raw,value=pr-${{ github.event.pull_request.number }},enable=${{ github.event_name == 'pull_request' }}
-                      type=raw,value=pr-${{ github.event.pull_request.number }}-${{ substr(github.event.pull_request.head.sha, 0, 7) }},enable=${{ github.event_name == 'pull_request' }}
+                      type=raw,value=pr-${{ github.event.pull_request.number }}-${{ steps.head.outputs.short }},enable=${{ github.event_name == 'pull_request' }}
                   flavor: |
                       latest=${{ (contains(github.ref_name, '-rc.') || github.event_name == 'pull_request') && 'false' || 'auto' }}
 
