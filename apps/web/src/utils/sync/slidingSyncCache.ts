@@ -37,6 +37,8 @@ import {
     SlidingSyncState,
 } from "matrix-js-sdk/src/sliding-sync";
 
+import { PREVIEW_FIELD, setServerPreview } from "./serverPreviews";
+
 const DB_NAME = "mx-sliding-sync-cache";
 const STORE = "snapshots";
 
@@ -56,6 +58,8 @@ type CachedRoom = Partial<Omit<MSC3575RoomData, "required_state" | "timeline">> 
     timeline: (IRoomEvent | IStateEvent)[];
     /** Sent by servers though not in the SDK's type: the room's avatar, as the list shows it. */
     avatar?: string;
+    /** The room's newest message, for the chat list, as the server last sent it (serverPreviews.ts). */
+    [PREVIEW_FIELD]?: IRoomEvent;
 };
 
 interface Snapshots {
@@ -74,6 +78,7 @@ const SCALARS = [
     "bump_stamp",
     "is_dm",
     "invite_state",
+    PREVIEW_FIELD,
 ] as const;
 
 /**
@@ -206,8 +211,19 @@ export class SlidingSyncCacheStore implements SlidingSyncCache {
     private loadedRest?: Promise<Record<string, MSC3575RoomData> | null>;
     /** The `pos` of the last response taken in whole (see SlidingSyncSnapshot.pos). */
     private pos?: string;
+    /** Set once recording starts: what server previews are made into events with. */
+    private client?: MatrixClient;
 
     public constructor(private readonly userId: string) {}
+
+    /** Hands the chat list the previews the server sent with these rooms. */
+    private showPreviews(rooms: Record<string, MSC3575RoomData> | undefined): void {
+        if (!this.client) return;
+        for (const [roomId, data] of Object.entries(rooms ?? {})) {
+            const preview = (data as CachedRoom)[PREVIEW_FIELD];
+            if (preview) setServerPreview(this.client, roomId, preview);
+        }
+    }
 
     private key(part: "first" | "rest"): string {
         return `${this.userId}:${part}`;
@@ -222,6 +238,7 @@ export class SlidingSyncCacheStore implements SlidingSyncCache {
         for (const [roomId, data] of Object.entries(first?.rooms ?? {})) {
             this.rooms.set(roomId, data);
         }
+        this.showPreviews(first?.rooms);
         // Carried over until the live sync gets further: a session that never reaches the server writes the
         // next one what it was given, from the same position.
         this.pos = first?.pos;
@@ -238,6 +255,7 @@ export class SlidingSyncCacheStore implements SlidingSyncCache {
         for (const [roomId, data] of Object.entries(rest ?? {})) {
             if (!this.rooms.has(roomId)) this.rooms.set(roomId, data);
         }
+        this.showPreviews(rest ?? undefined);
         return rest;
     }
 
@@ -245,7 +263,10 @@ export class SlidingSyncCacheStore implements SlidingSyncCache {
 
     /** Starts keeping what sliding sync and the client say from now on. */
     public record(slidingSync: SlidingSync, client: MatrixClient): () => void {
+        this.client = client;
         const onRoomData = (roomId: string, data: MSC3575RoomData): void => {
+            const preview = (data as CachedRoom)[PREVIEW_FIELD];
+            if (preview) setServerPreview(client, roomId, preview);
             const heroes = new Set((data.heroes ?? []).map((hero) => hero.user_id));
             const senders = new Set((data.timeline ?? []).map((event) => event.sender));
             // All of a room's state but its members: the connection carries on from the cache, and the

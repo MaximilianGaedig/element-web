@@ -30,6 +30,7 @@ import { ReactionEventPreview } from "./previews/ReactionEventPreview";
 import { UPDATE_EVENT } from "../AsyncStore";
 import { type Preview } from "./previews";
 import shouldHideEvent from "../../shouldHideEvent";
+import { onServerPreviewChanged, serverPreviewFor } from "../../utils/sync/serverPreviews";
 
 // Emitted event for when a room's preview has changed. First argument will the room for which
 // the change happened.
@@ -155,6 +156,12 @@ export class MessagePreviewStore extends AsyncStoreWithClient<EmptyObject> {
         events.sort((a: MatrixEvent, b: MatrixEvent) => {
             return a.getTs() - b.getTs();
         });
+        // Fork: the room's newest message as the server sent it, for when its events give no preview - the
+        // lists ask for one event per room from a server that sends it (utils/sync/serverPreviews).
+        const serverPreview = serverPreviewFor(room.roomId);
+        if (serverPreview && !events.some((event) => event.getId() === serverPreview.getId())) {
+            events.unshift(serverPreview);
+        }
 
         if (!events) return; // should only happen in tests
 
@@ -245,15 +252,26 @@ export class MessagePreviewStore extends AsyncStoreWithClient<EmptyObject> {
         }
     }
 
+    private stopServerPreviews?: () => void;
+
     protected async onReady(): Promise<void> {
         if (!this.matrixClient) return;
         this.matrixClient.on(RoomEvent.LocalEchoUpdated, this.onLocalEchoUpdated);
+        this.stopServerPreviews = onServerPreviewChanged(this.onServerPreview);
     }
 
     protected async onNotReady(): Promise<void> {
+        this.stopServerPreviews?.();
+        this.stopServerPreviews = undefined;
         if (!this.matrixClient) return;
         this.matrixClient.off(RoomEvent.LocalEchoUpdated, this.onLocalEchoUpdated);
     }
+
+    private onServerPreview = async (roomId: string): Promise<void> => {
+        const room = this.matrixClient?.getRoom(roomId);
+        if (!room || !this.previews.has(roomId)) return;
+        await this.generatePreview(room, TAG_ANY);
+    };
 
     protected onLocalEchoUpdated = async (ev: MatrixEvent, room: Room): Promise<void> => {
         if (!this.previews.has(room.roomId)) return;

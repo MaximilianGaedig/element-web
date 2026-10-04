@@ -16,14 +16,16 @@ import {
     M_POLL_KIND_DISCLOSED,
     M_POLL_START,
     M_TEXT,
+    type IRoomEvent,
     type MatrixClient,
-    type MatrixEvent,
+    MatrixEvent,
     PendingEventOrdering,
     RelationType,
     Room,
     RoomEvent,
 } from "matrix-js-sdk/src/matrix";
 import { mkEvent, mkMessage, mkReaction, setupAsyncStoreWithClient, stubClient } from "test-utils";
+import { clearServerPreviews, setServerPreview } from "../../utils/sync/serverPreviews";
 import { mkThread } from "test-utils/threads";
 
 import { MessagePreviewStore } from ".";
@@ -86,6 +88,7 @@ describe("MessagePreviewStore", () => {
         });
         vi.mocked(client.getRoom).mockReturnValue(room);
 
+        clearServerPreviews();
         store = MessagePreviewStore.testInstance();
         await store.start();
         await setupAsyncStoreWithClient(store, client);
@@ -107,6 +110,37 @@ describe("MessagePreviewStore", () => {
         await new Promise((resolve) => setTimeout(resolve));
 
         expect((await store.getPreviewForRoom(room, DefaultTagID.Untagged))?.text).toBe("@sender:server: Hello");
+    });
+
+    // With one event per room, a bridged chat's only event is often its last message's delivery status
+    // (MEO-119): the chat list shows the newest message the server sent with the room instead.
+    it("falls back to the message the server sent with the room when the room's events give no preview", async () => {
+        const status = mkEvent({
+            event: true,
+            type: "com.beeper.message_send_status",
+            room: room.roomId,
+            user: "@bot:server",
+            content: { status: "SUCCESS" },
+        });
+        await addEvent(store, room, status, false);
+        expect(await store.getPreviewForRoom(room, DefaultTagID.Untagged)).toBeNull();
+
+        const raw = mkMessage({ user: "@sender:server", event: true, room: room.roomId, msg: "From the server" })
+            .event as IRoomEvent;
+        setServerPreview(client, room.roomId, raw);
+        await new Promise((resolve) => setTimeout(resolve));
+
+        expect((await store.getPreviewForRoom(room, DefaultTagID.Untagged))?.text).toBe(
+            "@sender:server: From the server",
+        );
+
+        // A message in the room's own events is newer, and wins.
+        await addEvent(
+            store,
+            room,
+            mkMessage({ user: "@sender:server", event: true, room: room.roomId, msg: "Newer" }),
+        );
+        expect((await store.getPreviewForRoom(room, DefaultTagID.Untagged))?.text).toBe("@sender:server: Newer");
     });
 
     it("does not take an earlier event, paginated in, for the preview", async () => {
