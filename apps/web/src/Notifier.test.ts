@@ -8,6 +8,7 @@ Please see LICENSE files in the repository root for full details.
 
 // @vitest-environment happy-dom
 
+import { readStaleNotifications } from "./utils/sync/staleNotifications";
 import {
     describe,
     it,
@@ -138,6 +139,7 @@ describe("Notifier", () => {
         mockClient = getMockClientWithEventEmitter({
             ...mockClientMethodsUser(userId),
             isGuest: vi.fn().mockReturnValue(false),
+            getSyncState: vi.fn().mockReturnValue(SyncState.Syncing),
             getAccountData: vi.fn().mockImplementation((eventType) => accountDataStore[eventType]),
             setAccountData: vi.fn().mockImplementation((eventType, content) => {
                 accountDataStore[eventType] = content
@@ -263,6 +265,41 @@ describe("Notifier", () => {
 
             expect(MockPlatform.displayNotification).not.toHaveBeenCalled();
             expect(MockPlatform.loudNotification).not.toHaveBeenCalled();
+        });
+
+        it("does not create notifications for an event marked live that was sent months ago", () => {
+            const old = new MatrixEvent({
+                event_id: "$old",
+                sender: "@alice:server.org",
+                type: "m.room.message",
+                room_id: roomId,
+                origin_server_ts: Date.now() - 309 * 24 * 60 * 60 * 1000,
+                content: { body: "hey @bob" },
+            });
+            localStorage.removeItem("mx_stale_notifications");
+
+            mockClient!.emit(ClientEvent.Sync, SyncState.Syncing, null);
+            emitLiveEvent(old);
+
+            expect(MockPlatform.displayNotification).not.toHaveBeenCalled();
+            expect(MockPlatform.loudNotification).not.toHaveBeenCalled();
+            // and the skip is kept, for finding out how it came to be live
+            expect(readStaleNotifications()).toMatchObject([{ eventId: "$old", ageDays: 309 }]);
+        });
+
+        it("still notifies for a recent event with a timestamp", () => {
+            const recent = new MatrixEvent({
+                sender: "@alice:server.org",
+                type: "m.room.message",
+                room_id: roomId,
+                origin_server_ts: Date.now() - 60_000,
+                content: { body: "hey" },
+            });
+
+            mockClient!.emit(ClientEvent.Sync, SyncState.Syncing, null);
+            emitLiveEvent(recent);
+
+            expect(MockPlatform.displayNotification).toHaveBeenCalled();
         });
 
         it("does not create notifications for rooms which cannot be obtained via client.getRoom", () => {

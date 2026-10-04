@@ -47,6 +47,7 @@ import { getIncomingCallToastKey, getNotificationEventSendTs, IncomingCallToast 
 import ToastStore from "./stores/ToastStore";
 import { stripPlainReply } from "./utils/Reply";
 import { BackgroundAudio } from "./audio/BackgroundAudio";
+import { isStaleForNotification, recordStaleNotification } from "./utils/sync/staleNotifications";
 import { type MatrixDispatcher } from "./dispatcher/dispatcher.ts";
 
 /*
@@ -519,6 +520,11 @@ export default class Notifier extends TypedEventEmitter<keyof EmittedEvents, Emi
         if (!data.liveEvent || !!toStartOfTimeline) return; // only notify for new things, not old.
         if (!this.isSyncing) return; // don't alert for any messages initially
         if (ev.getSender() === this.sdkContext.client.getUserId()) return;
+        if (isStaleForNotification(ev)) {
+            // Marked live, but sent long ago (MEO-105): history delivered late, not news.
+            recordStaleNotification(ev, this.sdkContext.client.getSyncState() ?? undefined);
+            return;
+        }
         if (data.timeline.getTimelineSet().threadListType !== null) return; // Ignore events on the thread list generated timelines
 
         void this.sdkContext.client.decryptEventIfNeeded(ev);

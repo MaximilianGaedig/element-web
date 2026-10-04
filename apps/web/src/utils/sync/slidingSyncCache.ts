@@ -37,6 +37,8 @@ import {
     SlidingSyncState,
 } from "matrix-js-sdk/src/sliding-sync";
 
+import { noteRoomData } from "./staleNotifications";
+
 const DB_NAME = "mx-sliding-sync-cache";
 const STORE = "snapshots";
 
@@ -246,6 +248,7 @@ export class SlidingSyncCacheStore implements SlidingSyncCache {
     /** Starts keeping what sliding sync and the client say from now on. */
     public record(slidingSync: SlidingSync, client: MatrixClient): () => void {
         const onRoomData = (roomId: string, data: MSC3575RoomData): void => {
+            noteRoomData(roomId, data);
             const heroes = new Set((data.heroes ?? []).map((hero) => hero.user_id));
             const senders = new Set((data.timeline ?? []).map((event) => event.sender));
             // All of a room's state but its members: the connection carries on from the cache, and the
