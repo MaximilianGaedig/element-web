@@ -226,7 +226,9 @@ describe("Spotlight messages", () => {
         render(<SpotlightDialog initialFilter={Filter.Messages} onFinished={vi.fn()} />);
         await settle();
 
-        expect(screen.getByText("Type to search the messages in all your chats")).toBeInTheDocument();
+        expect(
+            screen.getByText("Type to search the messages in all your chats, or pick a kind to list them all"),
+        ).toBeInTheDocument();
         expect(eventSearch).not.toHaveBeenCalled();
     });
 
@@ -471,6 +473,92 @@ describe("Spotlight messages", () => {
             await settle();
 
             expect(details(DM_ID)).toHaveTextContent(/^@ada · Telegram$/);
+        });
+    });
+
+    describe("listing a kind with nothing typed", () => {
+        function raw(id: string, roomId: string, msgtype: string, body: string, ts = Date.now()): any {
+            return {
+                event_id: id,
+                type: "m.room.message",
+                sender: "@alice:example.com",
+                origin_server_ts: ts,
+                content: { msgtype, body },
+                room_id: roomId,
+            };
+        }
+
+        it("lists every message of the chosen kind from every chat, and pages on as the list ends", async () => {
+            let reachEnd: (() => void) | undefined;
+            vi.stubGlobal(
+                "IntersectionObserver",
+                class {
+                    public constructor(callback: IntersectionObserverCallback) {
+                        reachEnd = () => callback([{ isIntersecting: true } as IntersectionObserverEntry], this as any);
+                    }
+                    public observe(): void {}
+                    public disconnect(): void {}
+                },
+            );
+            vi.mocked(client.doesServerSupportUnstableFeature).mockImplementation(
+                async (feature) => feature === "im.mxg.media_index",
+            );
+            const request = vi.fn().mockImplementation(async (_method, _path, params: Record<string, string>) =>
+                params.from
+                    ? { chunk: [raw("$old", DM_ID, "m.video", "clip.mp4")], rooms: [DM_ID] }
+                    : {
+                          chunk: [raw("$p1", GROUP_ID, "m.image", "a.png"), raw("$p2", DM_ID, "m.image", "b.png")],
+                          rooms: [GROUP_ID, DM_ID],
+                          end: "next",
+                      },
+            );
+            client.http = { authedRequest: request } as any;
+            try {
+                render(<SpotlightDialog initialFilter={Filter.Messages} onFinished={vi.fn()} />);
+                await settle();
+                expect(screen.getByText(/pick a kind to list them all/)).toBeInTheDocument();
+
+                fireEvent.click(screen.getByRole("button", { name: "Media" }));
+                await settle();
+
+                expect(request).toHaveBeenCalledWith("GET", "/media", { kind: "media", limit: "50" }, undefined, {
+                    prefix: "/_matrix/client/unstable/im.mxg.media_index",
+                });
+                expect(document.getElementById("mx_SpotlightDialog_button_message_$p1")).toBeInTheDocument();
+                expect(document.getElementById("mx_SpotlightDialog_button_message_$p2")).toBeInTheDocument();
+                expect(eventSearch).not.toHaveBeenCalled();
+
+                // Where and when still narrow the list.
+                fireEvent.click(screen.getByRole("button", { name: "Direct" }));
+                expect(document.getElementById("mx_SpotlightDialog_button_message_$p1")).not.toBeInTheDocument();
+                fireEvent.click(screen.getByRole("button", { name: "Direct" }));
+
+                act(() => reachEnd!());
+                await settle();
+                expect(request).toHaveBeenLastCalledWith(
+                    "GET",
+                    "/media",
+                    { kind: "media", limit: "50", from: "next" },
+                    undefined,
+                    expect.anything(),
+                );
+                expect(document.getElementById("mx_SpotlightDialog_button_message_$old")).toBeInTheDocument();
+            } finally {
+                vi.unstubAllGlobals();
+            }
+        });
+
+        it("keeps the hint where the server keeps no index to list from", async () => {
+            const request = vi.fn();
+            client.http = { authedRequest: request } as any;
+            render(<SpotlightDialog initialFilter={Filter.Messages} onFinished={vi.fn()} />);
+            await settle();
+
+            fireEvent.click(screen.getByRole("button", { name: "Media" }));
+            await settle();
+
+            expect(request).not.toHaveBeenCalled();
+            expect(screen.getByText(/pick a kind to list them all/)).toBeInTheDocument();
         });
     });
 });

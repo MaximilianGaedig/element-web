@@ -778,19 +778,22 @@ const SpotlightDialog: React.FC<IProps> = ({ initialText = "", initialFilter = n
     let content: JSX.Element;
     if (filter === Filter.Messages) {
         // The whole view is the Messages group: nothing else is looked for, so nothing else is offered.
-        content = trimmedQuery ? (
-            <MessageResults search={messageSearch} term={trimmedQuery} onOpen={(hit) => openMessage(hit)} />
-        ) : (
-            <>
-                {recentMessageSearchesSection()}
-                <SpotlightEmptyState
-                    className="mx_SpotlightDialog_messagesHint"
-                    icon={<ChatIcon />}
-                    title={_t("spotlight_dialog|messages_hint_title")}
-                    description={_t("spotlight_dialog|messages_hint")}
-                />
-            </>
-        );
+        // With nothing typed, a kind chip lists every message of that kind (useMessageSearch).
+        const listingKind = messageFilter.kind !== "any" && (messageSearch.loading || messageSearch.browsing);
+        content =
+            trimmedQuery || listingKind ? (
+                <MessageResults search={messageSearch} term={trimmedQuery} onOpen={(hit) => openMessage(hit)} />
+            ) : (
+                <>
+                    {recentMessageSearchesSection()}
+                    <SpotlightEmptyState
+                        className="mx_SpotlightDialog_messagesHint"
+                        icon={<ChatIcon />}
+                        title={_t("spotlight_dialog|messages_hint_title")}
+                        description={_t("spotlight_dialog|messages_hint")}
+                    />
+                </>
+            );
     } else if (trimmedQuery || filter !== null) {
         const resultMapper = (result: Result): JSX.Element => {
             if (isRoomResult(result)) {

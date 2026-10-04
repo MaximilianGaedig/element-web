@@ -13,21 +13,63 @@ Please see LICENSE files in the repository root for full details.
  * answered as a list of hits instead of a timeline. Pages come as the list is scrolled to its end, and the
  * chips on top (messageFilters.ts) are applied to each page as it arrives: when they leave a page nearly
  * empty the next one is fetched at once, so a narrow filter does not look like the end of the results.
+ *
+ * With nothing typed and a kind chosen (Media, Links, Files, Music, Voice) there are no words to match, so
+ * the list is every message of that kind in every chat, newest first, as Telegram's global search shows
+ * it. That comes from the homeserver's media index (tuwunel `GET /im.mxg.media_index/media`), which keeps
+ * one list per kind across all the rooms a user is in; a server without it lists nothing, and encrypted
+ * rooms are not in it because the server cannot read them.
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { type ISearchResults, type MatrixClient, type MatrixEvent, type Room } from "matrix-js-sdk/src/matrix";
+import {
+    type IRoomEvent,
+    type ISearchResults,
+    type MatrixClient,
+    type MatrixEvent,
+    Method,
+    type Room,
+} from "matrix-js-sdk/src/matrix";
 import { logger } from "matrix-js-sdk/src/logger";
 
 import eventSearch, { searchPagination } from "../../../../Searching";
 import DMRoomMap from "../../../../utils/DMRoomMap";
-import { isFiltering, matchesMessageFilter, type MessageFilter } from "./messageFilters";
+import { isFiltering, matchesMessageFilter, type MessageFilter, type MessageKind } from "./messageFilters";
 
 /** Typing pauses this long before a search is sent: every keystroke is a request to the server otherwise. */
 const SEARCH_DEBOUNCE_MS = 300;
 /** A filter that leaves fewer than this on screen asks for more, up to MAX_AUTO_PAGES times. */
 const MIN_SHOWN = 8;
 const MAX_AUTO_PAGES = 8;
+
+/** The homeserver's index of each kind of message across all of a user's rooms (tuwunel `media_all.rs`). */
+const MEDIA_INDEX_FEATURE = "im.mxg.media_index";
+const MEDIA_INDEX_PREFIX = "/_matrix/client/unstable/im.mxg.media_index";
+const BROWSE_PAGE = 50;
+
+/** What has been listed of one kind with nothing typed, newest first, and where the next page starts. */
+interface Browsed {
+    hits: { event: MatrixEvent; roomId: string }[];
+    end?: string;
+}
+
+/** One page of every message of a kind, from every room at once. */
+async function browsePage(client: MatrixClient, kind: MessageKind, from?: string): Promise<Browsed> {
+    const res = await client.http.authedRequest<{ chunk: IRoomEvent[]; rooms: string[]; end?: string }>(
+        Method.Get,
+        "/media",
+        { kind, limit: String(BROWSE_PAGE), ...(from ? { from } : {}) },
+        undefined,
+        { prefix: MEDIA_INDEX_PREFIX },
+    );
+    const mapper = client.getEventMapper();
+    const hits: Browsed["hits"] = [];
+    res.chunk.forEach((raw, i) => {
+        const roomId = res.rooms[i];
+        if (roomId) hits.push({ event: mapper({ ...raw, room_id: roomId }), roomId });
+    });
+    return { hits, end: res.end };
+}
 
 export interface MessageHit {
     event: MatrixEvent;
@@ -46,14 +88,15 @@ export interface MessageSearch {
     failed: boolean;
     /** How many messages matched in all, as the server or index counted them; absent until it says. */
     count?: number;
+    /** Listing every message of the chosen kind, with nothing typed: the server can and was asked to. */
+    browsing: boolean;
     loadMore(this: void): void;
 }
 
-function toHits(client: MatrixClient, results: ISearchResults, filter: MessageFilter): MessageHit[] {
+function toHits(client: MatrixClient, events: MatrixEvent[], filter: MessageFilter): MessageHit[] {
     const hits: MessageHit[] = [];
     const seen = new Set<string>();
-    for (const result of results.results) {
-        const event = result.context.getEvent();
+    for (const event of events) {
         const id = event.getId();
         const room = client.getRoom(event.getRoomId());
         // A hit in a room this client does not know cannot be opened or named, so it is not offered.
@@ -82,18 +125,44 @@ export function useMessageSearch(
     const [loading, setLoading] = useState(false);
     const [loadingMore, setLoadingMore] = useState(false);
     const [failed, setFailed] = useState(false);
+    const [browsed, setBrowsed] = useState<Browsed | null>(null);
     const pages = useRef(0);
     const stale = useRef(0);
+    const trimmed = term.trim();
+    // The kind to list everything of, when nothing is typed; with words typed the kind only narrows.
+    const browseKind = enabled && !trimmed ? filter.kind : "any";
 
     useEffect(() => {
-        const trimmed = term.trim();
         const token = ++stale.current;
         pages.current = 0;
         setResults(null);
+        setBrowsed(null);
         setFailed(false);
         setLoadingMore(false);
-        if (!enabled || !trimmed) {
+        if (!enabled || (!trimmed && browseKind === "any")) {
             setLoading(false);
+            return;
+        }
+        if (!trimmed) {
+            setLoading(true);
+            void (async (): Promise<void> => {
+                try {
+                    if (!(await client.doesServerSupportUnstableFeature(MEDIA_INDEX_FEATURE))) {
+                        if (token === stale.current) setLoading(false);
+                        return;
+                    }
+                    const page = await browsePage(client, browseKind);
+                    if (token !== stale.current) return;
+                    setBrowsed(page);
+                    setLoading(false);
+                } catch (error) {
+                    if (token !== stale.current) return;
+                    logger.warn("Listing messages by kind failed", error);
+                    setBrowsed({ hits: [] });
+                    setFailed(true);
+                    setLoading(false);
+                }
+            })();
             return;
         }
         setLoading(true);
@@ -118,18 +187,55 @@ export function useMessageSearch(
             clearTimeout(timer);
             abort.abort();
         };
-    }, [client, term, enabled]);
+    }, [client, trimmed, enabled, browseKind]);
 
     const hits = useMemo(
-        () => (results ? toHits(client, results, filter) : []),
+        () => {
+            if (browsed) {
+                // The server already chose the kind, by rules of its own (a link in a caption, say); only
+                // where and when are left to narrow by.
+                return toHits(
+                    client,
+                    browsed.hits.map((hit) => hit.event),
+                    { ...filter, kind: "any" },
+                );
+            }
+            return results
+                ? toHits(
+                      client,
+                      results.results.map((result) => result.context.getEvent()),
+                      filter,
+                  )
+                : [];
+        },
         // `version` stands for the pages the SDK appended to `results` itself.
         // oxlint-disable-next-line react-hooks/exhaustive-deps
-        [client, results, filter, version],
+        [client, results, browsed, filter, version],
     );
 
-    const hasMore = !!results?.next_batch;
+    const hasMore = browsed ? !!browsed.end : !!results?.next_batch;
     const loadMore = useCallback((): void => {
-        if (!results?.next_batch || loadingMore) return;
+        if (loadingMore) return;
+        if (browsed) {
+            if (!browsed.end || browseKind === "any") return;
+            const token = stale.current;
+            setLoadingMore(true);
+            pages.current++;
+            browsePage(client, browseKind, browsed.end).then(
+                (page) => {
+                    if (token !== stale.current) return;
+                    setBrowsed({ hits: [...browsed.hits, ...page.hits], end: page.end });
+                    setLoadingMore(false);
+                },
+                (error) => {
+                    if (token !== stale.current) return;
+                    logger.warn("Listing more messages by kind failed", error);
+                    setLoadingMore(false);
+                },
+            );
+            return;
+        }
+        if (!results?.next_batch) return;
         const token = stale.current;
         setLoadingMore(true);
         pages.current++;
@@ -145,7 +251,7 @@ export function useMessageSearch(
                 setLoadingMore(false);
             },
         );
-    }, [client, results, loadingMore]);
+    }, [client, results, browsed, browseKind, loadingMore]);
 
     // A filter that hides most of a page must not look like the end: keep asking while there is more.
     useEffect(() => {
@@ -161,6 +267,7 @@ export function useMessageSearch(
         hasMore,
         failed,
         count: results?.count,
+        browsing: !!browsed,
         loadMore,
     };
 }

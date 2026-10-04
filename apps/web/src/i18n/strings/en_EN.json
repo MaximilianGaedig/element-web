@@ -3691,7 +3691,7 @@
             "other": "%(count)s messages found"
         },
         "messages_failed": "Could not search messages. Try again in a moment.",
-        "messages_hint": "Type to search the messages in all your chats",
+        "messages_hint": "Type to search the messages in all your chats, or pick a kind to list them all",
         "messages_hint_title": "Search your messages",
         "messages_label": "Messages",
         "messages_none": "No messages found",
