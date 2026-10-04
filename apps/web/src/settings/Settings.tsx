@@ -32,7 +32,7 @@ import UIFeatureController from "./controllers/UIFeatureController";
 import { UIFeature } from "./UIFeature";
 import { Layout } from "./enums/Layout";
 import { TokenizerMode } from "./enums/TokenizerMode";
-import ReducedMotionController from "./controllers/ReducedMotionController";
+import LowPowerController from "./controllers/LowPowerController";
 import IncompatibleController from "./controllers/IncompatibleController";
 import { ImageSize } from "./enums/ImageSize";
 import { MetaSpace } from "../stores/spaces";
@@ -276,6 +276,7 @@ export interface Settings {
     "handheldSheets": IBaseSetting<boolean>;
     "chatProfilePanel": IBaseSetting<boolean>;
     "mobileMessagePadding": IBaseSetting<"telegram-ios" | "telegram-web" | "element">;
+    "lowPowerMode": IBaseSetting<"auto" | "on" | "off">;
     "readReceiptsStyle": IBaseSetting<"avatars" | "ticks">;
     "bubbleTail": IBaseSetting<"none" | "telegram" | "imessage">;
     "enableSyntaxHighlightLanguageDetection": IBaseSetting<boolean>;
@@ -903,11 +904,13 @@ export const SETTINGS: Settings = {
         supportedLevels: LEVELS_ACCOUNT_SETTINGS,
         displayName: _td("settings|autoplay_gifs"),
         default: false,
+        controller: new LowPowerController(),
     },
     "autoplayVideo": {
         supportedLevels: LEVELS_ACCOUNT_SETTINGS,
         displayName: _td("settings|autoplay_videos"),
         default: false,
+        controller: new LowPowerController(),
     },
     "groupConsecutiveImages": {
         supportedLevels: LEVELS_ACCOUNT_SETTINGS,
@@ -975,6 +978,21 @@ export const SETTINGS: Settings = {
             { value: "telegram-ios", label: _td("settings|mobile_message_padding_ios") },
             { value: "telegram-web", label: _td("settings|mobile_message_padding_web") },
             { value: "element", label: _td("settings|mobile_message_padding_default") },
+        ],
+    },
+    /*
+     * Doing less when the device is short of power (utils/lowPower). Per device: a phone on its last
+     * fifth and the desktop it is charging beside are not the same case.
+     */
+    "lowPowerMode": {
+        supportedLevels: [SettingLevel.DEVICE],
+        displayName: _td("settings|low_power"),
+        description: _td("settings|low_power_description"),
+        default: "auto",
+        options: [
+            { value: "auto", label: _td("settings|low_power_auto") },
+            { value: "on", label: _td("settings|low_power_on") },
+            { value: "off", label: _td("settings|low_power_off") },
         ],
     },
     "bubbleTail": {
@@ -1449,7 +1467,8 @@ export const SETTINGS: Settings = {
         supportedLevels: LEVELS_ROOM_SETTINGS_WITH_ROOM,
         displayName: _td("settings|show_chat_effects"),
         default: true,
-        controller: new ReducedMotionController(),
+        // Off for a reader who prefers reduced motion, as before, and while power is being saved.
+        controller: new LowPowerController(true),
     },
     "Performance.addSendMessageTimingMetadata": {
         supportedLevels: [SettingLevel.CONFIG],

@@ -124,6 +124,11 @@ export default class AppearanceUserSettingsTab extends React.Component<EmptyObje
                             />
                             <SettingsFlag name="glassEffects" level={SettingLevel.ACCOUNT} />
                             <SettingsDropdown
+                                settingKey="lowPowerMode"
+                                label={_t("settings|low_power")}
+                                level={SettingLevel.DEVICE}
+                            />
+                            <SettingsDropdown
                                 settingKey="bubbleTail"
                                 label={_t("settings|bubble_tail")}
                                 level={SettingLevel.ACCOUNT}
