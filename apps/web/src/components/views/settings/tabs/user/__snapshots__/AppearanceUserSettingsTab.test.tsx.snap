@@ -1020,6 +1020,44 @@ exports[`AppearanceUserSettingsTab > should render 1`] = `
                     </div>
                   </div>
                 </div>
+                <div
+                  class="_inline-field"
+                >
+                  <div
+                    class="_inline-field-control"
+                  >
+                    <div
+                      class="_container"
+                    >
+                      <input
+                        checked=""
+                        class="_input"
+                        id="mx_SettingsFlag_yrA2ohjWVJIP"
+                        role="switch"
+                        type="checkbox"
+                      />
+                      <div
+                        class="_ui"
+                      />
+                    </div>
+                  </div>
+                  <div
+                    class="_inline-field-body"
+                  >
+                    <label
+                      class="_label"
+                      for="mx_SettingsFlag_yrA2ohjWVJIP"
+                    >
+                      Show who has read others' messages in the chat list
+                    </label>
+                    <span
+                      class="_message _help-message"
+                      id="radix-react-use-id-20"
+                    >
+                      In a group, when the last message is someone else's and you have read it, the chat list shows the avatars of the others who have read it. It is always shown on your own messages.
+                    </span>
+                  </div>
+                </div>
               </form>
             </div>
           </div>
