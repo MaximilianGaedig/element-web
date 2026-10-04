@@ -19,7 +19,7 @@ import {
 
 import { useUserStatus } from "./useUserStatus";
 import SettingsStore from "../settings/SettingsStore";
-import { userStatusTextWithinMaxLength } from "../utils/userStatus";
+import { clearUserStatusCache, userStatusTextWithinMaxLength } from "../utils/userStatus";
 
 const userId = "@alice:example.com";
 
@@ -51,6 +51,7 @@ describe("userStatusTextWithinMaxLength", () => {
 
 describe("useUserStatus", () => {
     beforeEach(() => {
+        clearUserStatusCache(client);
         vi.spyOn(SettingsStore, "getValue").mockImplementation((name): any => {
             if (name === "feature_user_status") return true;
         });

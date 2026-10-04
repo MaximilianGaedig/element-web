@@ -34,7 +34,7 @@ export function useUserStatus(userId?: string): UserStatus | undefined {
             return;
         }
 
-        setUserStatus(await fetchUserStatus(matrixClient, userId));
+        setUserStatus(await fetchUserStatus(matrixClient, userId, { fresh: true }));
     });
     useEffect(() => {
         (async () => {

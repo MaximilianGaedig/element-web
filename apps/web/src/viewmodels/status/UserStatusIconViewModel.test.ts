@@ -13,6 +13,7 @@ import { vi, describe, it, expect, beforeEach, afterEach, type MockedObject } fr
 import { getMockClientWithEventEmitter, mockClientMethodsServer, mockClientMethodsUser } from "test-utils";
 
 import { UserStatusIconViewModel } from "./UserStatusIconViewModel";
+import { clearUserStatusCache } from "../../utils/userStatus";
 import SettingsStore from "../../settings/SettingsStore";
 
 const userId = "@alice:example.com";
@@ -31,6 +32,7 @@ describe("UserStatusIconViewModel", () => {
             doesServerSupportExtendedProfiles: vi.fn().mockResolvedValue(true),
             getExtendedProfileProperty: vi.fn().mockResolvedValue(undefined),
         });
+        clearUserStatusCache(client);
     });
 
     afterEach(() => {

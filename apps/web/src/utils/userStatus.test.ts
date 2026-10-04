@@ -56,6 +56,23 @@ describe("userStatus utils", () => {
             client.doesServerSupportExtendedProfiles = vi.fn();
         });
 
+        /* Every row and card asked again each time it was drawn: 478 requests for 21 people in 11 minutes. */
+        it("asks the server once for someone, a status nobody set included, and not at all offline", async () => {
+            vi.mocked(client.doesServerSupportExtendedProfiles).mockResolvedValue(true);
+            vi.mocked(client.getExtendedProfileProperty).mockRejectedValue(
+                new MatrixError({ errcode: "M_NOT_FOUND", error: "none" }, 404),
+            );
+
+            await fetchUserStatus(client, "@bob:example.com");
+            await fetchUserStatus(client, "@bob:example.com");
+            expect(client.getExtendedProfileProperty).toHaveBeenCalledTimes(2); // status and call, once
+
+            const offline = vi.spyOn(navigator, "onLine", "get").mockReturnValue(false);
+            await fetchUserStatus(client, "@carol:example.com");
+            expect(client.getExtendedProfileProperty).toHaveBeenCalledTimes(2);
+            offline.mockRestore();
+        });
+
         it("returns undefined if the server does not support extended profiles", async () => {
             vi.mocked(client.doesServerSupportExtendedProfiles).mockResolvedValue(false);
 

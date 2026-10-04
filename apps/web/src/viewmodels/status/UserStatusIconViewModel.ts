@@ -49,7 +49,7 @@ export class UserStatusIconViewModel extends BaseViewModel<UserStatusIconViewSna
 
     private onUserProfileUpdate = async (syncedUserId: string): Promise<void> => {
         if (syncedUserId !== this.props.userId) return;
-        const status = await fetchUserStatus(this.props.matrixClient, this.props.userId);
+        const status = await fetchUserStatus(this.props.matrixClient, this.props.userId, { fresh: true });
         this.snapshot.merge({ status });
     };
 }

@@ -96,13 +96,65 @@ function userStatusFromProfile(userStatus: unknown, callStatus: unknown): UserSt
  * @param client The Matrix client to fetch the status with.
  * @param userId The ID of the user whose status is being fetched.
  */
-export async function fetchUserStatus(client: MatrixClient, userId: string): Promise<UserStatus | undefined> {
+export async function fetchUserStatus(
+    client: MatrixClient,
+    userId: string,
+    { fresh = false }: { fresh?: boolean } = {},
+): Promise<UserStatus | undefined> {
+    const statusCache = cacheFor(client);
+    const key = userId;
+    const cached = statusCache.get(key);
+    const offline = typeof navigator !== "undefined" && navigator.onLine === false;
+    if (cached && (offline || (!fresh && Date.now() < cached.until))) return cached.value;
+    if (offline) return undefined;
+    const value = fetchUserStatusUncached(client, userId).then(({ status, failed }) => {
+        // Kept for a while either way, a status nobody set (a 404) included: rows asked again every time they
+        // were drawn. A lookup that failed is tried again sooner.
+        const entry = statusCache.get(key);
+        if (entry?.value === value) entry.until = Date.now() + (failed ? STATUS_RETRY_MS : STATUS_TTL_MS);
+        return status;
+    });
+    // Until it answers, others asking share this request.
+    statusCache.set(key, { value, until: Number.POSITIVE_INFINITY });
+    return value;
+}
+
+/**
+ * Statuses fetched, per client and user. Every chat-list row and card asked the server for its person's
+ * status and call (two requests) each time it was drawn: 478 requests for 21 people in 11 minutes, half of
+ * them 404s for people with no status, and the rest while offline.
+ */
+const statusCaches = new WeakMap<
+    MatrixClient,
+    Map<string, { value: Promise<UserStatus | undefined>; until: number }>
+>();
+function cacheFor(client: MatrixClient): Map<string, { value: Promise<UserStatus | undefined>; until: number }> {
+    let cache = statusCaches.get(client);
+    if (!cache) {
+        cache = new Map();
+        statusCaches.set(client, cache);
+    }
+    return cache;
+}
+const STATUS_TTL_MS = 5 * 60_000;
+const STATUS_RETRY_MS = 30_000;
+
+/** Forgets the statuses fetched with this client, so the next ask goes to the server (tests sharing a client). */
+export function clearUserStatusCache(client: MatrixClient): void {
+    statusCaches.delete(client);
+}
+
+async function fetchUserStatusUncached(
+    client: MatrixClient,
+    userId: string,
+): Promise<{ status: UserStatus | undefined; failed: boolean }> {
     if ((await client.doesServerSupportExtendedProfiles()) === false) {
-        return undefined;
+        return { status: undefined, failed: false };
     }
 
     let rawUserStatus: unknown;
     let rawCallStatus: unknown;
+    let failed = false;
 
     try {
         // nb. one of these may be redundant since one takes precedence over the other, but the two
@@ -112,6 +164,7 @@ export async function fetchUserStatus(client: MatrixClient, userId: string): Pro
     } catch (ex) {
         if (!(ex instanceof MatrixError && ex.errcode === "M_NOT_FOUND")) {
             logger.warn(`Failed to get user status for ${userId}`, ex);
+            failed = true;
         }
     }
 
@@ -120,9 +173,10 @@ export async function fetchUserStatus(client: MatrixClient, userId: string): Pro
     } catch (ex) {
         if (!(ex instanceof MatrixError && ex.errcode === "M_NOT_FOUND")) {
             logger.warn(`Failed to get call status for ${userId}`, ex);
+            failed = true;
         }
     }
-    return userStatusFromProfile(rawUserStatus, rawCallStatus);
+    return { status: userStatusFromProfile(rawUserStatus, rawCallStatus), failed };
 }
 
 /**
@@ -132,6 +186,7 @@ export async function fetchUserStatus(client: MatrixClient, userId: string): Pro
  * @param userStatus The user status to set.
  */
 export function setUserStatus(client: MatrixClient, userStatus: UserStatus): Promise<void> {
+    cacheFor(client).delete(client.getSafeUserId());
     return client.setExtendedProfileProperty("org.matrix.msc4426.status", {
         emoji: userStatus.emoji,
         text: userStatus.text,

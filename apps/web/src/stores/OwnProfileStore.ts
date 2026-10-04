@@ -202,7 +202,7 @@ export class OwnProfileStore extends AsyncStoreWithClient<IState> {
         if (!this.matrixClient) return;
         if (!SettingsStore.getValue("feature_user_status")) return;
 
-        const userStatus = await fetchUserStatus(this.matrixClient, this.matrixClient.getSafeUserId());
+        const userStatus = await fetchUserStatus(this.matrixClient, this.matrixClient.getSafeUserId(), { fresh: true });
         await this.updateState({ userStatus });
     };
 

@@ -13,6 +13,7 @@ import { ClientEvent, type MatrixClient, MatrixError, RoomStateEvent } from "mat
 import { mkEvent, stubClient } from "test-utils";
 
 import { OwnProfileStore } from "./OwnProfileStore";
+import { clearUserStatusCache } from "../utils/userStatus";
 import { UPDATE_EVENT } from "./AsyncStore";
 import SettingsStore from "../settings/SettingsStore";
 
@@ -106,6 +107,7 @@ describe("OwnProfileStore", () => {
 
     describe("userStatus", () => {
         beforeEach(() => {
+            clearUserStatusCache(client);
             client.getProfileInfo.mockResolvedValue({});
         });
 

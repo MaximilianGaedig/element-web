@@ -397,7 +397,7 @@ export class RoomListItemViewModel
     private onUserProfileUpdate: ClientEventHandlerMap[ClientEvent.UserProfileUpdate] = async (userId) => {
         if (userId !== this.dmUserId || !SettingsStore.getValue("feature_user_status")) return;
         this.snapshot.merge({
-            userStatus: await fetchUserStatus(this.props.client, this.dmUserId),
+            userStatus: await fetchUserStatus(this.props.client, this.dmUserId, { fresh: true }),
         });
     };
 
