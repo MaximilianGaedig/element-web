@@ -277,6 +277,7 @@ export interface Settings {
     "chatProfilePanel": IBaseSetting<boolean>;
     "mobileMessagePadding": IBaseSetting<"telegram-ios" | "telegram-web" | "element">;
     "readReceiptsStyle": IBaseSetting<"avatars" | "ticks">;
+    "roomListReadersOnOthers": IBaseSetting<boolean>;
     "bubbleTail": IBaseSetting<"none" | "telegram" | "imessage">;
     "enableSyntaxHighlightLanguageDetection": IBaseSetting<boolean>;
     "expandCodeByDefault": IBaseSetting<boolean>;
@@ -987,6 +988,12 @@ export const SETTINGS: Settings = {
             { value: "imessage", label: _td("settings|bubble_tail_imessage") },
             { value: "none", label: _td("settings|bubble_tail_none") },
         ],
+    },
+    "roomListReadersOnOthers": {
+        supportedLevels: LEVELS_ACCOUNT_SETTINGS,
+        displayName: _td("settings|room_list_readers_on_others"),
+        description: _td("settings|room_list_readers_on_others_description"),
+        default: true,
     },
     "readReceiptsStyle": {
         supportedLevels: LEVELS_ACCOUNT_SETTINGS,

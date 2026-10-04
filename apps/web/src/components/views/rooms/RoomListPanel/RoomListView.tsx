@@ -76,8 +76,8 @@ export function RoomListView(): JSX.Element {
     // Fork: our last message's ticks, the same glyphs as on the message in the timeline - or, in a group that
     // some but not all have read, the avatars of the ones who have (getPreviewReaders).
     const renderSendState = useCallback(
-        (state: RoomListItemSendState, readers: string[] | undefined, room: SharedRoom): ReactNode => {
-            if (!readers?.length || !(room instanceof Room)) return <TelegramSendStatusIcon state={state} />;
+        (state: RoomListItemSendState | undefined, readers: string[] | undefined, room: SharedRoom): ReactNode => {
+            if (!readers?.length || !(room instanceof Room)) return state && <TelegramSendStatusIcon state={state} />;
             return (
                 <span className="mx_RoomListReaders" aria-label={_t("room|read_by_count", { count: readers.length })}>
                     {readers.map((userId) => {

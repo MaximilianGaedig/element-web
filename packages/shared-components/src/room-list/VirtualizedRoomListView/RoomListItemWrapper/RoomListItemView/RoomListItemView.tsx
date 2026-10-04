@@ -187,7 +187,11 @@ export interface RoomListItemViewProps extends Omit<React.HTMLAttributes<HTMLBut
     /** Optional function to render the room path (e.g. space breadcrumbs) */
     renderRoomPath?: (room: Room) => ReactNode;
     /** Fork: optional function to render the previewed message's delivery state (its ticks) */
-    renderSendState?: (state: RoomListItemSendState, readers: string[] | undefined, room: Room) => ReactNode;
+    renderSendState?: (
+        state: RoomListItemSendState | undefined,
+        readers: string[] | undefined,
+        room: Room,
+    ) => ReactNode;
     /** Whether this item is the source of an active drag operation */
     isDragSource?: boolean;
     ref?: Ref<Element>;

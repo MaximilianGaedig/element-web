@@ -745,10 +745,18 @@ describe("RoomListItemViewModel", () => {
             vi.spyOn(MatrixClientPeg, "get").mockReturnValue(matrixClient);
         });
 
-        /** Show `event` as the room's message preview, with the preview setting on. */
-        const previewOf = (event: MatrixEvent): void => {
+        /** The "roomListReadersOnOthers" setting, as `previewOf` last set it or a test turned it. */
+        let readersOnOthers = false;
+
+        /**
+         * Show `event` as the room's message preview, with the preview setting on, and with who has read
+         * somebody else's message on or off.
+         */
+        const previewOf = (event: MatrixEvent, readersOnOthersSetting = false): void => {
+            readersOnOthers = readersOnOthersSetting;
             vi.spyOn(SettingsStore, "getValue").mockImplementation((setting) => {
                 if (setting === "RoomList.showMessagePreview") return true;
+                if (setting === "roomListReadersOnOthers") return readersOnOthers;
                 if (setting === "RoomList.OrderedCustomSections") return [];
                 if (setting === "RoomList.CustomSectionData") return {};
                 return false;
@@ -880,6 +888,93 @@ describe("RoomListItemViewModel", () => {
                 for (const userId of others) receipt(userId, "$msg");
                 expect(viewModel.getSnapshot().messagePreviewReaders).toBeUndefined();
                 expect(ticks()).toBe("read");
+            });
+        });
+
+        // Somebody else's last message has no ticks; once we have read it, a group shows who else has.
+        describe("on somebody else's message in a group", () => {
+            const others = ["@alice:server", "@bob:server", "@carol:server"];
+            const readers = (): string[] | undefined => viewModel.getSnapshot().messagePreviewReaders;
+
+            beforeEach(() => {
+                vi.spyOn(room, "getJoinedMembers").mockReturnValue(
+                    [me, ...others].map((userId) => ({ userId }) as never),
+                );
+            });
+
+            const open = async (readersOnOthers = true): Promise<void> => {
+                previewOf(message("@alice:server"), readersOnOthers);
+                viewModel = new RoomListItemViewModel({ room, client: matrixClient });
+                await flushPromises();
+            };
+
+            it("shows who else has read it, with no ticks", async () => {
+                await open();
+                receipt(me, "$msg");
+                expect(readers()).toBeUndefined();
+
+                receipt("@bob:server", "$msg");
+                expect(readers()).toEqual(["@bob:server"]);
+                expect(ticks()).toBeUndefined();
+            });
+
+            it("leaves out the sender, whose own receipt is on it", async () => {
+                await open();
+                receipt(me, "$msg");
+                receipt("@alice:server", "$msg");
+                expect(readers()).toBeUndefined();
+
+                receipt("@carol:server", "$msg");
+                expect(readers()).toEqual(["@carol:server"]);
+            });
+
+            it("shows nothing until we have read it ourselves", async () => {
+                await open();
+                receipt("@bob:server", "$msg");
+                expect(readers()).toBeUndefined();
+
+                receipt(me, "$msg");
+                expect(readers()).toEqual(["@bob:server"]);
+            });
+
+            it("keeps showing them once everyone has read it, unlike our own message", async () => {
+                await open();
+                for (const userId of [me, ...others]) receipt(userId, "$msg");
+                expect(readers()?.sort()).toEqual(["@bob:server", "@carol:server"]);
+            });
+
+            it("does not count the bridge bot's receipt", async () => {
+                state("m.bridge", { bridgebot: "@bot:server" }, "telegram");
+                await open();
+                receipt(me, "$msg");
+                receipt("@bot:server", "$msg");
+                expect(readers()).toBeUndefined();
+            });
+
+            it("shows nothing in a chat with one other person", async () => {
+                vi.spyOn(room, "getJoinedMembers").mockReturnValue(
+                    [me, "@alice:server"].map((userId) => ({ userId }) as never),
+                );
+                await open();
+                receipt(me, "$msg");
+                receipt("@alice:server", "$msg");
+                expect(readers()).toBeUndefined();
+            });
+
+            it("shows nothing with the setting off, and follows it being turned on", async () => {
+                let turnedOn: CallbackFn<"roomListReadersOnOthers"> = () => {};
+                vi.spyOn(SettingsStore, "watchSetting").mockImplementation((setting, _room, callback) => {
+                    if (setting === "roomListReadersOnOthers") turnedOn = callback;
+                    return "watcher-id";
+                });
+                await open(false);
+                receipt(me, "$msg");
+                receipt("@bob:server", "$msg");
+                expect(readers()).toBeUndefined();
+
+                readersOnOthers = true;
+                turnedOn("roomListReadersOnOthers", null, null as any, true, true);
+                expect(readers()).toEqual(["@bob:server"]);
             });
         });
 

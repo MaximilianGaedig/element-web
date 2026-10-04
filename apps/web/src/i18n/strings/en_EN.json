@@ -3228,6 +3228,8 @@
             "show_space_path_inline": "After room name",
             "show_space_path_under": "Under title"
         },
+        "room_list_readers_on_others": "Show who has read others' messages in the chat list",
+        "room_list_readers_on_others_description": "In a group, when the last message is someone else's and you have read it, the chat list shows the avatars of the others who have read it. It is always shown on your own messages.",
         "security": {
             "analytics_description": "Share anonymous data to help us identify issues. Nothing personal. No third parties.",
             "bulk_options_accept_all_invites": "Accept all %(invitedRooms)s invites",
