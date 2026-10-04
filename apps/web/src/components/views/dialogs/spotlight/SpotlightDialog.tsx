@@ -18,6 +18,7 @@ import {
     RoomType,
 } from "matrix-js-sdk/src/matrix";
 import { KnownMembership } from "matrix-js-sdk/src/types";
+import classNames from "classnames";
 import React, {
     type ChangeEvent,
     type JSX,
@@ -98,6 +99,10 @@ import { useFeatureEnabled } from "../../../../hooks/useSettings";
 import { filterBoolean } from "../../../../utils/arrays";
 import { transformSearchTerm } from "../../../../utils/SearchInput";
 import { Filter } from "./Filter";
+import { MessageFilterChips, MessageResults } from "./MessageResults";
+import { NO_MESSAGE_FILTER, type MessageFilter } from "./messageFilters";
+import { type MessageHit, useMessageSearch } from "./useMessageSearch";
+import { ScreenSize, useScreenSize } from "../../../../utils/telegram/tgLayout/mediaSizes";
 
 const MAX_RECENT_SEARCHES = 10;
 const SECTION_LIMIT = 50; // only show 50 results per section for performance reasons
@@ -138,6 +143,8 @@ function filterToLabel(filter: Filter): string {
             return _t("spotlight_dialog|public_rooms_label");
         case Filter.PublicSpaces:
             return _t("spotlight_dialog|public_spaces_label");
+        case Filter.Messages:
+            return _t("spotlight_dialog|messages_label");
     }
 }
 
@@ -149,6 +156,8 @@ function filterToIcon(filter: Filter): JSX.Element {
             return <RoomIcon />;
         case Filter.PublicSpaces:
             return <SpaceIcon />;
+        case Filter.Messages:
+            return <ChatIcon />;
     }
 }
 
@@ -324,6 +333,8 @@ const SpotlightDialog: React.FC<IProps> = ({ initialText = "", initialFilter = n
     const scrollContainerRef = useRef<HTMLDivElement>(null);
     const cli = MatrixClientPeg.safeGet();
     const rovingContext = useContext(RovingTabIndexContext);
+    /* On a handheld this is the whole screen, not a window over the chat list: see the chrome below. */
+    const handheld = useScreenSize() === ScreenSize.mobile;
     const [query, _setQuery] = useState(initialText);
     const [recentSearches, clearRecentSearches] = useRecentSearches();
     const [filter, setFilterInternal] = useState<Filter | null>(initialFilter);
@@ -332,6 +343,7 @@ const SpotlightDialog: React.FC<IProps> = ({ initialText = "", initialFilter = n
         inputRef.current?.focus();
         scrollContainerRef.current?.scrollTo?.({ top: 0 });
     }, []);
+    const [messageFilter, setMessageFilter] = useState<MessageFilter>(NO_MESSAGE_FILTER);
     const memberComparator = useMemo(() => {
         const activityScores = buildActivityScores(cli);
         const memberScores = buildMemberScores(cli);
@@ -392,6 +404,18 @@ const SpotlightDialog: React.FC<IProps> = ({ initialText = "", initialFilter = n
      * Signal, WhatsApp or Messenger contact you have never messaged is findable by name too.
      */
     const lookingForPeople = filter === Filter.People || filter === null;
+    /*
+     * What was said is looked up the same way: alongside the chats and people in the unfiltered view (a few
+     * hits, "Show all" for the rest) and as the whole view under the Messages filter. Only the whole view
+     * has the chips to apply, so the preview is not narrowed by a filter that is not on screen.
+     */
+    const lookingForMessages = filter === null || filter === Filter.Messages;
+    const messageSearch = useMessageSearch(
+        cli,
+        trimmedQuery,
+        lookingForMessages,
+        filter === Filter.Messages ? messageFilter : NO_MESSAGE_FILTER,
+    );
     useDebouncedCallback(lookingForPeople, searchPeople, searchParams);
     useDebouncedCallback(lookingForPeople, searchProfileInfo, searchParams);
     useDebouncedCallback(lookingForPeople, searchNetworks, searchParams);
@@ -564,7 +588,7 @@ const SpotlightDialog: React.FC<IProps> = ({ initialText = "", initialFilter = n
         _setQuery(newQuery);
     };
     useEffect(() => {
-        setTimeout(() => {
+        const timer = setTimeout(() => {
             const node = rovingContext.state.nodes[0];
             if (node) {
                 rovingContext.dispatch({
@@ -576,14 +600,18 @@ const SpotlightDialog: React.FC<IProps> = ({ initialText = "", initialFilter = n
                 });
             }
         });
+        return () => clearTimeout(timer);
         // we intentionally ignore changes to the rovingContext for the purpose of this hook
-        // we only want to reset the focus whenever the results or filters change
+        // we only want to reset the focus whenever the results or filters change (the messages are results too:
+        // when they land, the entry first in the list may be a different one)
         // oxlint-disable-next-line react-hooks/exhaustive-deps
-    }, [results, filter]);
+    }, [results, filter, messageSearch.loading, messageSearch.hits.length]);
 
     const viewRoom = (
         room: {
             roomId: string;
+            /** The message to open the chat at, for a hit in the Messages group. */
+            eventId?: string;
             roomAlias?: string;
             autoJoin?: boolean;
             shouldPeek?: boolean;
@@ -612,6 +640,8 @@ const SpotlightDialog: React.FC<IProps> = ({ initialText = "", initialFilter = n
             metricsTrigger: "WebUnifiedSearch",
             metricsViaKeyboard: viaKeyboard,
             room_id: room.roomId,
+            event_id: room.eventId,
+            highlighted: room.eventId ? true : undefined,
             room_alias: room.roomAlias,
             auto_join: room.autoJoin && !canAskToJoin(room.joinRule),
             should_peek: room.shouldPeek,
@@ -626,7 +656,8 @@ const SpotlightDialog: React.FC<IProps> = ({ initialText = "", initialFilter = n
     };
 
     let otherSearchesSection: JSX.Element | undefined;
-    if (trimmedQuery || (filter !== Filter.PublicRooms && filter !== Filter.PublicSpaces)) {
+    // On a handheld the same filters are the chips under the field, so the list of them is not repeated.
+    if (!handheld && (trimmedQuery || (filter !== Filter.PublicRooms && filter !== Filter.PublicSpaces))) {
         otherSearchesSection = (
             <div
                 className="mx_SpotlightDialog_section mx_SpotlightDialog_otherSearches"
@@ -666,13 +697,7 @@ const SpotlightDialog: React.FC<IProps> = ({ initialText = "", initialFilter = n
                     {filter === null && (
                         <Option
                             id="mx_SpotlightDialog_button_searchMessages"
-                            onClick={() => {
-                                defaultDispatcher.dispatch({
-                                    action: Action.FocusMessageSearch,
-                                    initialText: trimmedQuery,
-                                });
-                                onFinished();
-                            }}
+                            onClick={() => setFilter(Filter.Messages)}
                         >
                             <ChatIcon />
                             {_t("spotlight_dialog|messages_label")}
@@ -683,8 +708,26 @@ const SpotlightDialog: React.FC<IProps> = ({ initialText = "", initialFilter = n
         );
     }
 
+    const openMessage = (hit: MessageHit, ev?: { type: string }): void => {
+        viewRoom({ roomId: hit.room.roomId, eventId: hit.event.getId() }, true, ev?.type !== "click");
+    };
+
     let content: JSX.Element;
-    if (trimmedQuery || filter !== null) {
+    if (filter === Filter.Messages) {
+        // The whole view is the Messages group: nothing else is looked for, so nothing else is offered.
+        content = (
+            <>
+                <MessageFilterChips filter={messageFilter} onChange={setMessageFilter} />
+                {trimmedQuery ? (
+                    <MessageResults search={messageSearch} term={trimmedQuery} onOpen={(hit) => openMessage(hit)} />
+                ) : (
+                    <p className="mx_SpotlightDialog_messagesNote mx_SpotlightDialog_messagesHint">
+                        {_t("spotlight_dialog|messages_hint")}
+                    </p>
+                )}
+            </>
+        );
+    } else if (trimmedQuery || filter !== null) {
         const resultMapper = (result: Result): JSX.Element => {
             if (isRoomResult(result)) {
                 const notification = RoomNotificationStateStore.instance.getRoomState(result.room);
@@ -1092,13 +1135,28 @@ const SpotlightDialog: React.FC<IProps> = ({ initialText = "", initialFilter = n
             !!results[Section.PublicRoomsAndSpaces].length ||
             !!spaceResults.length ||
             !!joinRoomSection;
-        if (trimmedQuery && !hasResults) {
+        // Messages that matched are results too: "No results" over them would be a lie.
+        const messagesPending = filter === null && (messageSearch.loading || messageSearch.hits.length > 0);
+        if (trimmedQuery && !hasResults && !messagesPending) {
             noResultsSection = (
                 <div className="mx_SpotlightDialog_section mx_SpotlightDialog_results" role="group">
                     <Option id="mx_SpotlightDialog_button_noResults" onClick={null}>
                         {_t("spotlight_dialog|no_results")}
                     </Option>
                 </div>
+            );
+        }
+
+        let messagesSection: JSX.Element | undefined;
+        if (trimmedQuery && filter === null) {
+            messagesSection = (
+                <MessageResults
+                    preview
+                    search={messageSearch}
+                    term={trimmedQuery}
+                    onOpen={(hit) => openMessage(hit)}
+                    onShowAll={() => setFilter(Filter.Messages)}
+                />
             );
         }
 
@@ -1110,6 +1168,7 @@ const SpotlightDialog: React.FC<IProps> = ({ initialText = "", initialFilter = n
                 {roomsSection}
                 {spacesSection}
                 {spaceRoomsSection}
+                {messagesSection}
                 {publicRoomsSection}
                 {joinRoomSection}
                 {hiddenResultsSection}
@@ -1332,7 +1391,7 @@ const SpotlightDialog: React.FC<IProps> = ({ initialText = "", initialFilter = n
             </div>
 
             <BaseDialog
-                className="mx_SpotlightDialog"
+                className={classNames("mx_SpotlightDialog", { mx_SpotlightDialog_handheld: handheld })}
                 onFinished={onFinished}
                 hasCancel={false}
                 onKeyDown={onDialogKeyDown}
@@ -1340,7 +1399,7 @@ const SpotlightDialog: React.FC<IProps> = ({ initialText = "", initialFilter = n
                 aria-label={_t("spotlight_dialog|search_dialog")}
             >
                 <div className="mx_SpotlightDialog_searchBox mx_textinput">
-                    {filter !== null && (
+                    {!handheld && filter !== null && (
                         <div className="mx_SpotlightDialog_filter">
                             {filterToIcon(filter)}
                             <span>{filterToLabel(filter)}</span>
@@ -1364,7 +1423,10 @@ const SpotlightDialog: React.FC<IProps> = ({ initialText = "", initialFilter = n
                         autoCapitalize="off"
                         autoCorrect="off"
                         spellCheck="false"
-                        placeholder={_t("action|search")}
+                        placeholder={
+                            filter === Filter.Messages ? _t("spotlight_dialog|search_messages") : _t("action|search")
+                        }
+                        enterKeyHint="search"
                         value={query}
                         onChange={setQuery}
                         onKeyDown={onKeyDown}
@@ -1376,7 +1438,42 @@ const SpotlightDialog: React.FC<IProps> = ({ initialText = "", initialFilter = n
                     {(publicRoomsLoading || peopleLoading || networkPeopleLoading || profileLoading) && (
                         <Spinner size={24} />
                     )}
+                    {handheld && (
+                        <AccessibleButton
+                            className="mx_SpotlightDialog_cancel"
+                            onClick={onFinished}
+                            aria-label={_t("action|cancel")}
+                        >
+                            {_t("action|cancel")}
+                        </AccessibleButton>
+                    )}
                 </div>
+
+                {handheld && (
+                    <div className="mx_SpotlightDialog_tabs" role="group" aria-label={_t("spotlight_dialog|filters")}>
+                        {[
+                            { value: null, label: _t("spotlight_dialog|all") },
+                            { value: Filter.People, label: filterToLabel(Filter.People) },
+                            { value: Filter.Messages, label: filterToLabel(Filter.Messages) },
+                            { value: Filter.PublicRooms, label: filterToLabel(Filter.PublicRooms) },
+                            ...(supportsSpaceFiltering
+                                ? [{ value: Filter.PublicSpaces, label: filterToLabel(Filter.PublicSpaces) }]
+                                : []),
+                        ].map(({ value, label }) => (
+                            <button
+                                key={label}
+                                type="button"
+                                className={classNames("mx_SpotlightDialog_chip", {
+                                    mx_SpotlightDialog_chip_on: value === filter,
+                                })}
+                                aria-pressed={value === filter}
+                                onClick={() => setFilter(value)}
+                            >
+                                {label}
+                            </button>
+                        ))}
+                    </div>
+                )}
 
                 <div
                     ref={scrollContainerRef}

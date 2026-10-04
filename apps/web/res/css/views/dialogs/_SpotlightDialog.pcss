@@ -454,3 +454,262 @@ Please see LICENSE files in the repository root for full details.
         }
     }
 }
+
+/* ---- Messages group and its filter chips ---------------------------------------------------------------- */
+
+.mx_SpotlightDialog.mx_SpotlightDialog {
+    .mx_SpotlightDialog_chip {
+        flex: none;
+        min-height: 32px;
+        padding: 0 var(--cpd-space-3x);
+        border: 1px solid var(--cpd-color-border-interactive-secondary);
+        border-radius: 16px;
+        background: transparent;
+        color: var(--cpd-color-text-primary);
+        font: inherit;
+        font-size: $font-13px;
+        white-space: nowrap;
+        cursor: pointer;
+
+        &.mx_SpotlightDialog_chip_on {
+            border-color: transparent;
+            background: var(--cpd-color-bg-accent-rest);
+            color: var(--cpd-color-text-on-solid-primary);
+        }
+    }
+
+    .mx_SpotlightDialog_chipRow {
+        display: flex;
+        gap: var(--cpd-space-2x);
+        overflow-x: auto;
+        scrollbar-width: none;
+        padding: var(--cpd-space-1x) var(--cpd-space-4x);
+
+        &::-webkit-scrollbar {
+            display: none;
+        }
+    }
+
+    .mx_SpotlightDialog_tabs {
+        display: flex;
+        gap: var(--cpd-space-2x);
+        overflow-x: auto;
+        scrollbar-width: none;
+        padding: var(--cpd-space-2x) var(--cpd-space-4x);
+        border-bottom: 1px solid $system;
+
+        &::-webkit-scrollbar {
+            display: none;
+        }
+    }
+
+    .mx_SpotlightDialog_cancel {
+        flex: none;
+        margin-left: var(--cpd-space-3x);
+        color: var(--cpd-color-text-action-accent);
+        font-size: $font-15px;
+    }
+
+    .mx_SpotlightDialog_messagesNote {
+        margin: var(--cpd-space-4x);
+        color: $secondary-content;
+        font-size: $font-13px;
+        text-align: center;
+    }
+
+    .mx_SpotlightDialog_message {
+        gap: var(--cpd-space-3x);
+
+        > .mx_BaseAvatar {
+            flex: none;
+        }
+
+        .mx_SpotlightDialog_message_text {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .mx_SpotlightDialog_message_head {
+            display: flex;
+            align-items: baseline;
+            gap: var(--cpd-space-2x);
+        }
+
+        .mx_SpotlightDialog_message_room {
+            flex: 1;
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            font-weight: var(--cpd-font-weight-semibold);
+        }
+
+        .mx_SpotlightDialog_message_date {
+            flex: none;
+            color: $secondary-content;
+            font-size: $font-12px;
+        }
+
+        .mx_SpotlightDialog_message_line {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            color: $secondary-content;
+            font-size: $font-13px;
+            line-height: $font-20px;
+
+            .mx_SpotlightDialog_message_sender {
+                color: $primary-content;
+            }
+
+            mark {
+                background: none;
+                color: var(--cpd-color-text-action-accent);
+                font-weight: var(--cpd-font-weight-semibold);
+            }
+        }
+    }
+
+    .mx_SpotlightDialog_messageSkeleton {
+        display: flex;
+        align-items: center;
+        gap: var(--cpd-space-3x);
+        padding: 6px var(--cpd-space-1x);
+        list-style: none;
+
+        .mx_SpotlightDialog_skeletonAvatar {
+            flex: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+        }
+
+        .mx_SpotlightDialog_skeletonLines {
+            display: flex;
+            flex: 1;
+            flex-direction: column;
+            gap: var(--cpd-space-2x);
+
+            > span {
+                height: 10px;
+                border-radius: 5px;
+
+                &:first-child {
+                    width: 40%;
+                }
+            }
+        }
+
+        .mx_SpotlightDialog_skeletonAvatar,
+        .mx_SpotlightDialog_skeletonLines > span {
+            background: $quinary-content;
+            animation: mx_SpotlightDialog_pulse 1.2s ease-in-out infinite;
+        }
+    }
+
+    .mx_SpotlightDialog_messagesEnd {
+        min-height: 1px;
+    }
+}
+
+@keyframes mx_SpotlightDialog_pulse {
+    50% {
+        opacity: 0.45;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .mx_SpotlightDialog .mx_SpotlightDialog_messageSkeleton * {
+        animation: none;
+    }
+}
+
+/*
+ * On a handheld the search is a screen of its own, as Telegram's is: the field and Cancel at the top under the
+ * notch, the filter tabs under it, the groups scrolling below with their headings held at the top, and the
+ * list clear of the home indicator. The window the desktop gets (a 60%-high rounded box with a keyboard hint
+ * above it) and the drawer the other dialogs become there are both dropped.
+ */
+html[data-tg-screen="mobile"] {
+    .mx_SpotlightDialog_wrapper {
+        .mx_Dialog_border {
+            display: contents !important;
+        }
+
+        .mx_Dialog {
+            width: 100% !important;
+            max-width: none;
+            height: 100dvh !important;
+            border-radius: 0 !important;
+            padding-top: var(--tg-safe-top, 0px);
+            box-sizing: border-box;
+            background-color: var(--cpd-color-bg-canvas-default);
+        }
+
+        #mx_SpotlightDialog_keyboardPrompt {
+            display: none;
+        }
+    }
+
+    .mx_SpotlightDialog_handheld {
+        .mx_SpotlightDialog_searchBox {
+            align-items: center;
+            border-radius: 0;
+            padding: var(--cpd-space-2x) var(--cpd-space-4x);
+
+            > input {
+                height: 44px;
+                font-size: 1rem;
+            }
+        }
+
+        .mx_SpotlightDialog_enterPrompt,
+        .mx_SpotlightDialog_option--endAdornment kbd {
+            display: none !important;
+        }
+
+        #mx_SpotlightDialog_content {
+            padding: 0;
+            padding-bottom: var(--tg-safe-bottom, 0px);
+            overscroll-behavior: contain;
+
+            .mx_SpotlightDialog_section {
+                padding: 0 var(--cpd-space-2x);
+
+                /* Held at the top while its group scrolls, over the rows that pass under it. */
+                > h4,
+                > .mx_SpotlightDialog_sectionHeader {
+                    position: sticky;
+                    top: 0;
+                    z-index: 1;
+                    margin: 0;
+                    padding: var(--cpd-space-2x) var(--cpd-space-2x);
+                    background: var(--cpd-color-bg-canvas-default);
+                }
+
+                & + .mx_SpotlightDialog_section {
+                    margin-top: var(--cpd-space-2x);
+                }
+            }
+
+            .mx_SpotlightDialog_option {
+                min-height: 56px;
+                padding: var(--cpd-space-2x);
+                border-radius: 12px;
+            }
+
+            .mx_SpotlightDialog_recentlyViewed {
+                > div {
+                    overflow-x: auto;
+                    scrollbar-width: none;
+                    padding-bottom: var(--cpd-space-1x);
+                }
+
+                .mx_SpotlightDialog_option {
+                    min-height: 0;
+                    width: 72px;
+                    height: auto;
+                    min-width: 72px;
+                }
+            }
+        }
+    }
+}
