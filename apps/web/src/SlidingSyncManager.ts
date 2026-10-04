@@ -53,7 +53,7 @@ import { sleep } from "matrix-js-sdk/src/utils";
 
 import { BACKFILL_EVENT_TYPE } from "./utils/chatHistory";
 import { BRIDGE_LOGIN_EVENT_TYPE } from "./utils/bridgeLogins";
-import { roomListRequiredState } from "./utils/sync/roomListState";
+import { OPEN_ROOM_STATE, roomListRequiredState } from "./utils/sync/roomListState";
 
 // how long to long poll for
 const SLIDING_SYNC_TIMEOUT_MS = 20 * 1000;
@@ -80,6 +80,7 @@ const UNENCRYPTED_SUBSCRIPTION = {
         [EventType.RoomMember, MSC3575_STATE_KEY_LAZY], // ...and lazy load the rest.
         [BACKFILL_EVENT_TYPE, ""],
         [BRIDGE_LOGIN_EVENT_TYPE, MSC3575_WILDCARD],
+        ...OPEN_ROOM_STATE,
     ],
     ...DEFAULT_ROOM_SUBSCRIPTION_INFO,
 };
@@ -89,6 +90,9 @@ const UNENCRYPTED_SUBSCRIPTION = {
 const ENCRYPTED_SUBSCRIPTION = {
     required_state: [
         [MSC3575_WILDCARD, MSC3575_WILDCARD], // all events
+        // ...on servers that take a "*" event type: the rest, by type, for those that do not (see OPEN_ROOM_STATE).
+        [EventType.RoomMember, MSC3575_WILDCARD],
+        ...OPEN_ROOM_STATE,
     ],
     ...DEFAULT_ROOM_SUBSCRIPTION_INFO,
 };
