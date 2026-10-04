@@ -31,6 +31,7 @@ import { _t } from "../languageHandler";
 import { formatList } from "./FormattingUtils";
 import { persistTokens } from "./tokens/tokens.ts";
 import { createSendScheduler } from "./room/sendRetry.ts";
+import { cachedTimelineBefore } from "./history/localHistory";
 
 const localStorage = window.localStorage;
 
@@ -184,7 +185,10 @@ export function createMatrixClient(opts: ICreateClientOpts, { slidingSync = fals
     if (slidingSync && localStorage) {
         // Sliding sync keeps its own cache of what to show at startup (utils/sync/slidingSyncCache); the
         // stored /sync is the other sync's, and loading it would only hold a second copy of the account.
-        storeOpts.store = new MemoryStore({ localStorage });
+        // Paging back through what Element has already seen is answered from the message database, offline too.
+        storeOpts.store = Object.assign(new MemoryStore({ localStorage }), {
+            getCachedTimelineBefore: cachedTimelineBefore,
+        });
     } else if (indexedDB && localStorage) {
         storeOpts.store = new IndexedDBStore({
             indexedDB: indexedDB,

@@ -12,7 +12,9 @@ Please see LICENSE files in the repository root for full details.
  */
 
 import {
+    type EventTimeline,
     type IRoomEvent,
+    type IRoomTimelineData,
     type MatrixClient,
     type MatrixEvent,
     MatrixEventEvent,
@@ -22,6 +24,7 @@ import {
 
 import { sharedMediaTab } from "../sharedMedia";
 import { forgetEvents, storeEvents, type StoredEvent } from "./db";
+import { cachedTimelineBefore, isRoomHistory, recordTimelines } from "./localHistory";
 
 /** Messages are written in batches, so a burst of sync or a backfill page is one write. */
 const FLUSH_MS = 1000;
@@ -44,6 +47,8 @@ class HistoryIndexer {
     private client?: MatrixClient;
     private pending = new Map<string, StoredEvent>();
     private removed: string[] = [];
+    /** Room timelines that changed since the last write: where their events sit is recorded with them. */
+    private timelines = new Set<EventTimeline>();
     private timer?: ReturnType<typeof setTimeout>;
 
     public start(client: MatrixClient): void {
@@ -62,6 +67,7 @@ class HistoryIndexer {
         clearTimeout(this.timer);
         this.timer = undefined;
         this.pending.clear();
+        this.timelines.clear();
     }
 
     /** Writes these messages, e.g. a page the backfill just fetched. */
@@ -69,13 +75,20 @@ class HistoryIndexer {
         for (const event of events) this.queue(event);
     }
 
-    private onTimeline = (event: MatrixEvent, _room: Room | undefined, _toStart?: boolean, removed?: boolean): void => {
+    private onTimeline = (
+        event: MatrixEvent,
+        room: Room | undefined,
+        _toStart?: boolean,
+        removed?: boolean,
+        data?: IRoomTimelineData,
+    ): void => {
         if (removed) {
             const id = event.getId();
             if (id) this.removed.push(id);
             this.schedule();
             return;
         }
+        if (isRoomHistory(room, data?.timeline)) this.timelines.add(data.timeline);
         this.queue(event);
     };
 
@@ -102,10 +115,14 @@ class HistoryIndexer {
         this.timer = undefined;
         const events = [...this.pending.values()];
         const removed = this.removed;
+        const timelines = this.timelines;
         this.pending.clear();
         this.removed = [];
+        this.timelines = new Set();
         await storeEvents(events);
         await forgetEvents(removed);
+        // After the events: what is recorded about them points at stored events.
+        await recordTimelines(timelines, this.client?.store.getCachedTimelineBefore === cachedTimelineBefore);
     }
 }
 
