@@ -1193,6 +1193,14 @@ export class RoomTimelineViewModel
         const event = this.timelineWindow.getEvents().find((e) => e.getId() === eventId);
         if (!event) return;
 
+        // Nor behind where the reader's receipt already is, as after jumping up to a mention or a reaction:
+        // the receipt would move back, and the server takes any receipt as reading the whole room and
+        // clears its counts, so a room half read showed as read.
+        if (this.opts.room.hasUserReadEvent(this.opts.client.getSafeUserId(), eventId)) {
+            this.lastSentReceiptEventId = eventId;
+            return;
+        }
+
         // Don't rewind — only advance if this event is newer than the last receipted one.
         if (this.lastSentReceiptEventId) {
             const lastSentEvent = this.timelineWindow

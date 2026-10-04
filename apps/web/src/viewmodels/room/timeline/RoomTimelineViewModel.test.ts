@@ -1414,6 +1414,23 @@ describe("RoomTimelineViewModel", () => {
             expect(vi.mocked(client.sendReadReceipt).mock.calls[0][0]?.getId()).toBe("$b");
         });
 
+        /*
+         * Jumping up to a mention or a reaction put the receipt back on an older message, and the server takes
+         * any receipt as reading the room: its counts went to zero over a room still half unread.
+         */
+        it("sends nothing for a message the reader's receipt is already past", async () => {
+            seedTimeline([makeMessage("$a", { user: "@other:x" }), makeMessage("$b", { user: "@other:x" })]);
+            vi.spyOn(room, "hasUserReadEvent").mockImplementation((_user, id) => id === "$a");
+            const vm = await createStartedViewModel();
+            vm.onAnchorReached();
+            const items = vm.getSnapshot().items;
+
+            vm.onVisibleRangeChanged(0, indexOfKey(items, "$a"));
+            await new Promise((r) => setTimeout(r, 400));
+
+            expect(client.sendReadReceipt).not.toHaveBeenCalled();
+        });
+
         it("sends nothing while no message's end is on screen", async () => {
             seedTimeline([makeMessage("$a"), makeMessage("$b")]);
             const vm = await createStartedViewModel();
