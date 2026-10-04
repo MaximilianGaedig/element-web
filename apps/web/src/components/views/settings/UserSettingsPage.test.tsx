@@ -10,7 +10,7 @@ Please see LICENSE files in the repository root for full details.
 
 import React, { type ReactElement } from "react";
 import { vi, describe, it, expect, beforeEach, afterEach, type MockedObject } from "vitest";
-import { render, screen } from "test-utils-rtl";
+import { act, fireEvent, render, screen, within } from "test-utils-rtl";
 import userEvent from "@testing-library/user-event";
 import { type MatrixClient } from "matrix-js-sdk/src/matrix";
 import {
@@ -33,6 +33,10 @@ import UserSettingsPage, { type UserSettingsPageProps } from "./UserSettingsPage
 import { UIFeature } from "../../../settings/UIFeature";
 import { TgNavigationContext } from "../telegram/TgNavigation";
 import { roomListPanelView, setRoomListPanelView } from "../../../utils/roomListPanelView";
+import { onSettingsFocusRequest } from "../../../utils/settingsFocus";
+import { setUserSettingsSection } from "../../../utils/userSettingsSection";
+import defaultDispatcher from "../../../dispatcher/dispatcher";
+import { Action } from "../../../dispatcher/actions";
 
 mockPlatformPeg({
     supportsSpellCheckSettings: vi.fn().mockReturnValue(false),
@@ -205,6 +209,88 @@ describe("<UserSettingsPage />", () => {
             expect(title()).toEqual("Help & About");
             expect(screen.getByRole("button", { name: "Back" })).toBeInTheDocument();
         });
+
+        /* The column with the bar is behind the section: without its own, there would be no way to the chats. */
+        it("keeps the navigation bar available with a section open, as on the list", async () => {
+            setRoomListPanelView("settings");
+            renderPage({ section: UserTab.Help }, true);
+            const bar = screen.getByRole("navigation", { name: "Chats, people, calls and settings" });
+            for (const name of ["Messages", "People", "Calls", "Settings"]) {
+                expect(within(bar).getByRole("button", { name })).toBeInTheDocument();
+            }
+            expect(within(bar).getByRole("button", { name: "Settings" })).toHaveAttribute("aria-current", "page");
+            await userEvent.click(within(bar).getByRole("button", { name: "Calls" }));
+            expect(roomListPanelView()).toBe("calls");
+        });
+
+        it("has the settings button go to the list of sections from a section", async () => {
+            const dispatch = vi.spyOn(defaultDispatcher, "dispatch");
+            setRoomListPanelView("settings");
+            act(() => setUserSettingsSection(UserTab.Help));
+            renderPage({ section: UserTab.Help }, true);
+            await userEvent.click(screen.getByRole("button", { name: "Settings" }));
+            expect(dispatch).toHaveBeenCalledWith({ action: Action.ViewUserSettings });
+            act(() => setUserSettingsSection(undefined));
+        });
+
+        it("has no navigation bar beside the list on a desktop, where the column has it", () => {
+            renderPage({ section: UserTab.Help }, false);
+            expect(screen.queryByRole("navigation")).toBeNull();
+        });
+    });
+
+    describe("keyboard", () => {
+        it("moves the focus to the section's name when one opens", () => {
+            renderPage({ section: UserTab.Help });
+            expect(screen.getByRole("heading", { name: "Help & About" })).toHaveFocus();
+        });
+
+        it("gives the focus back to the list's row for the section on Escape", async () => {
+            const asked = vi.fn();
+            const stop = onSettingsFocusRequest(asked);
+            renderPage({ section: UserTab.Help });
+            await userEvent.keyboard("{Escape}");
+            expect(asked).toHaveBeenCalledWith(UserTab.Help);
+            stop();
+        });
+
+        it("also goes back a screen on a phone", async () => {
+            const goBack = vi.fn();
+            render(
+                <TgNavigationContext.Provider value={{ handheld: true, goBack }}>
+                    <UserSettingsPage section={UserTab.Help} />
+                </TgNavigationContext.Provider>,
+                clientAndSDKContextRenderOptions(mockClient, sdkContext),
+            );
+            await userEvent.keyboard("{Escape}");
+            expect(goBack).toHaveBeenCalledTimes(1);
+        });
+
+        it("leaves Escape to a control that has already used it", () => {
+            const asked = vi.fn();
+            // Whatever an earlier test left unclaimed is taken first, and is not what is being asked.
+            const stop = onSettingsFocusRequest(asked);
+            asked.mockClear();
+            renderPage({ section: UserTab.Help });
+            const heading = screen.getByRole("heading", { name: "Help & About" });
+            // Something under the page that used the key, as a menu closing itself does.
+            heading.addEventListener("keydown", (event) => event.preventDefault());
+            fireEvent.keyDown(heading, { key: "Escape" });
+            expect(asked).not.toHaveBeenCalled();
+            stop();
+        });
+    });
+
+    /* Switching to the chats and back unmounts the page: where it was scrolled is what comes back. */
+    it("scrolls a section back to where it was left", () => {
+        const first = renderPage({ section: UserTab.Help });
+        const body = (): HTMLElement => document.querySelector(".mx_UserSettingsPage_body")!;
+        body().scrollTop = 120;
+        fireEvent.scroll(body());
+        first.unmount();
+
+        renderPage({ section: UserTab.Help });
+        expect(body().scrollTop).toBe(120);
     });
 
     /* "Close the settings", from inside a section (the account, once it is deactivated), leaves them. */

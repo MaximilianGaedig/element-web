@@ -18,7 +18,7 @@ Please see LICENSE files in the repository root for full details.
  */
 
 import { Toast } from "@vector-im/compound-web";
-import React, { type JSX } from "react";
+import React, { type JSX, type KeyboardEvent, useEffect, useLayoutEffect, useRef } from "react";
 import { ToastContext, useActiveToast } from "@element-hq/web-shared-components";
 
 import ErrorBoundary from "../elements/ErrorBoundary";
@@ -44,6 +44,10 @@ import { PosthogScreenTracker } from "../../../PosthogTrackers";
 import { resolveUserSettingsSection, useUserSettingsSections } from "./userSettingsSections";
 import { setRoomListPanelView } from "../../../utils/roomListPanelView";
 import { TgBackButton, useTgNavigation } from "../telegram/TgNavigation";
+import { RoomListPill } from "../rooms/RoomListPanel/RoomListPill";
+import { revealSetting } from "./revealSetting";
+import { requestSettingsFocus } from "../../../utils/settingsFocus";
+import { rememberSectionScroll, sectionScroll } from "../../../utils/userSettingsSection";
 
 export interface UserSettingsPageProps {
     /** The section asked for; the first one there is when it is not given, or not there in this setup. */
@@ -56,6 +60,8 @@ export interface UserSettingsPageProps {
     showMsc4108QrCode?: boolean;
     /** The Account section's status control starts in custom status mode, ready to type into. */
     startCustomStatus?: boolean;
+    /** The label of a setting to scroll to and flash, from a search (settingsSearch.ts). */
+    highlight?: string;
     /** The initial state of the Encryption section; "loading" when not given. */
     initialEncryptionState?: State;
 }
@@ -105,25 +111,81 @@ function SectionBody({ id, props }: { id: UserTab; props: UserSettingsPageProps 
 }
 
 export default function UserSettingsPage(props: UserSettingsPageProps): JSX.Element | null {
-    const { handheld } = useTgNavigation();
+    const { handheld, goBack } = useTgNavigation();
     const section = resolveUserSettingsSection(useUserSettingsSections(), props.section);
     const [activeToast, toastRack] = useActiveToast();
+    const body = useRef<HTMLDivElement>(null);
+    const heading = useRef<HTMLHeadingElement>(null);
+
+    /*
+     * A section that has just opened has the focus: its name, where a screen reader starts reading it and
+     * the next Tab is into its first control. Not the first control itself, which may be a destructive one.
+     */
+    useEffect(() => {
+        if (props.section) heading.current?.focus({ preventScroll: true });
+    }, [props.section]);
+
+    // Back to where it was scrolled when the section was last open (left for another view, or another section).
+    useLayoutEffect(() => {
+        const element = body.current;
+        if (!element || props.highlight || typeof ResizeObserver === "undefined") return;
+        element.scrollTop = sectionScroll(section.id);
+        // Sections that load before they draw are not tall enough yet: once more as they grow.
+        const observer = new ResizeObserver(() => {
+            if (element.scrollTop === 0) element.scrollTop = sectionScroll(section.id);
+        });
+        const timer = setTimeout(() => observer.disconnect(), 1500);
+        if (element.firstElementChild) observer.observe(element.firstElementChild);
+        return () => {
+            clearTimeout(timer);
+            observer.disconnect();
+        };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [section.id]);
+
+    /*
+     * Escape is the way back to the section's list - on a phone the screen before this one - with the focus
+     * on the row that opened it. Left to whatever has it first: a menu or field that uses Escape itself
+     * has already handled it.
+     */
+    const onKeyDown = (event: KeyboardEvent): void => {
+        if (event.key !== "Escape" || event.defaultPrevented) return;
+        event.preventDefault();
+        if (handheld) goBack?.();
+        requestSettingsFocus(section.id);
+    };
+
+    // A search led here: once the section has drawn (it may be loading), show where the setting is.
+    useEffect(() => {
+        if (!props.highlight || !body.current) return;
+        return revealSetting(body.current, props.highlight);
+    }, [props.highlight, section.id]);
 
     // On a phone, until a section is chosen, the list is the whole screen and there is no page to show.
     if (handheld && !props.section) return null;
 
     return (
         <ToastContext.Provider value={toastRack}>
-            <section className="mx_UserSettingsPage" aria-labelledby="mx_UserSettingsPage_title">
+            <section className="mx_UserSettingsPage" aria-labelledby="mx_UserSettingsPage_title" onKeyDown={onKeyDown}>
                 {section.screenName && <PosthogScreenTracker screenName={section.screenName} />}
                 <header className="mx_UserSettingsPage_header">
                     {/* On a phone, back to the list of sections, as a chat's header goes back to the chats. */}
                     <TgBackButton />
-                    <h1 id="mx_UserSettingsPage_title" className="mx_UserSettingsPage_title">
+                    <h1
+                        ref={heading}
+                        id="mx_UserSettingsPage_title"
+                        className="mx_UserSettingsPage_title"
+                        tabIndex={-1}
+                    >
                         {_t(section.label)}
                     </h1>
                 </header>
-                <div className="mx_UserSettingsPage_body" data-section={section.id}>
+                <div
+                    ref={body}
+                    className="mx_UserSettingsPage_body"
+                    onScroll={(event) => rememberSectionScroll(section.id, event.currentTarget.scrollTop)}
+                    data-section={section.id}
+                >
                     {/*
                      * A section that fails is replaced by the error, in its place: the list and the other
                      * sections stay reachable. Keyed, as the sections share this place on screen and a failed
@@ -134,6 +196,8 @@ export default function UserSettingsPage(props: UserSettingsPageProps): JSX.Elem
                     </ErrorBoundary>
                 </div>
                 <div className="mx_UserSettingsPage_toastContainer">{activeToast && <Toast>{activeToast}</Toast>}</div>
+                {/* The column is out of sight behind the section on a phone, and with it the way to the rest. */}
+                {handheld && <RoomListPill />}
             </section>
         </ToastContext.Provider>
     );

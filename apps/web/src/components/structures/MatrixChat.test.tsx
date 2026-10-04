@@ -77,7 +77,7 @@ import { SetupEncryptionStore } from "../../stores/SetupEncryptionStore.ts";
 import { ShareFormat } from "../../dispatcher/payloads/SharePayload.ts";
 import { clearStorage } from "../../Lifecycle";
 import { roomListPanelView, setRoomListPanelView } from "../../utils/roomListPanelView";
-import { userSettingsSection } from "../../utils/userSettingsSection";
+import { setUserSettingsSection, userSettingsSection } from "../../utils/userSettingsSection";
 import { SDKContextClass } from "../../contexts/SDKContextClass";
 import { type QrLoginCredentials } from "../../components/views/auth/LoginWithQR.tsx";
 import { storeAuthContext } from "../../utils/oauth/persistOAuthSettings.ts";
@@ -907,7 +907,11 @@ describe("<MatrixChat />", () => {
             });
 
             describe("the settings", () => {
-                afterEach(() => setRoomListPanelView("rooms"));
+                afterEach(() => {
+                    setRoomListPanelView("rooms");
+                    // Where they were left is remembered: not into the next test.
+                    setUserSettingsSection(undefined);
+                });
 
                 /* One place for the settings: a page beside the column's list of them, never a dialog. */
                 it("opens the device settings as the settings page, on the sessions", async () => {
@@ -924,6 +928,34 @@ describe("<MatrixChat />", () => {
                         `settings/${UserTab.SessionManager}`,
                         false,
                     );
+                });
+
+                /* Away to the chats and back: the settings are where they were left, not at the first section. */
+                it("reopens the section that was open when the settings are come back to", async () => {
+                    await getComponentAndWaitForReady();
+                    act(() =>
+                        defaultDispatcher.dispatch({ action: Action.ViewUserSettings, initialTabId: UserTab.Help }),
+                    );
+                    await screen.findByRole("heading", { name: `Settings page: ${UserTab.Help}` });
+
+                    act(() => setRoomListPanelView("rooms"));
+                    await waitFor(() => expect(screen.queryByText(/Settings page/)).toBeNull());
+
+                    act(() => defaultDispatcher.dispatch({ action: Action.ViewUserSettings }));
+                    await screen.findByRole("heading", { name: `Settings page: ${UserTab.Help}` });
+                    expect(userSettingsSection()).toBe(UserTab.Help);
+                });
+
+                it("goes to the list, not the remembered section, when already in the settings and asked for it", async () => {
+                    await getComponentAndWaitForReady();
+                    act(() =>
+                        defaultDispatcher.dispatch({ action: Action.ViewUserSettings, initialTabId: UserTab.Help }),
+                    );
+                    await screen.findByRole("heading", { name: `Settings page: ${UserTab.Help}` });
+
+                    act(() => defaultDispatcher.dispatch({ action: Action.ViewUserSettings }));
+                    await screen.findByRole("heading", { name: "Settings page: first" });
+                    expect(userSettingsSection()).toBeUndefined();
                 });
 
                 it("opens the settings with no section asked for at #/settings", async () => {

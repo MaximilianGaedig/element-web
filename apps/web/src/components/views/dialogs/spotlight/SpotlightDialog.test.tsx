@@ -183,6 +183,56 @@ describe("Spotlight Dialog", () => {
         vi.mocked(mockedClient.getVisibleRooms).mockReturnValue([testRoom, testLocalRoom, testDM]);
     });
 
+    describe("searching for settings", () => {
+        it("shows a Settings group with the settings and sections that match", async () => {
+            render(<SpotlightDialog initialText="timestamps" onFinished={() => null} />);
+            vi.advanceTimersByTime(200);
+            await flushPromisesWithFakeTimers();
+
+            const group = screen.getByRole("group", { name: "Settings" });
+            expect(group.textContent).toContain("Always show message timestamps");
+            expect(group.textContent).toContain("Preferences");
+        });
+
+        it("opens the section, to the setting, when one is chosen, and closes", async () => {
+            const dispatch = vi.spyOn(defaultDispatcher, "dispatch");
+            const onFinished = vi.fn();
+            render(<SpotlightDialog initialText="always show timestamps" onFinished={onFinished} />);
+            vi.advanceTimersByTime(200);
+            await flushPromisesWithFakeTimers();
+
+            fireEvent.click(screen.getByText("Always show message timestamps"));
+            expect(dispatch).toHaveBeenCalledWith({
+                action: Action.ViewUserSettings,
+                initialTabId: "USER_PREFERENCES_TAB",
+                props: { highlight: "Always show message timestamps" },
+            });
+            expect(onFinished).toHaveBeenCalled();
+        });
+
+        it("opens a section on its own when its name is what matched", async () => {
+            const dispatch = vi.spyOn(defaultDispatcher, "dispatch");
+            render(<SpotlightDialog initialText="appearance" onFinished={() => null} />);
+            vi.advanceTimersByTime(200);
+            await flushPromisesWithFakeTimers();
+
+            const group = screen.getByRole("group", { name: "Settings" });
+            fireEvent.click(group.querySelector("li")!);
+            expect(dispatch).toHaveBeenCalledWith({
+                action: Action.ViewUserSettings,
+                initialTabId: "USER_APPEARANCE_TAB",
+                props: undefined,
+            });
+        });
+
+        it("offers no settings while a filter narrows the search to people or rooms", async () => {
+            render(<SpotlightDialog initialText="timestamps" initialFilter={Filter.People} onFinished={() => null} />);
+            vi.advanceTimersByTime(200);
+            await flushPromisesWithFakeTimers();
+            expect(screen.queryByRole("group", { name: "Settings" })).toBeNull();
+        });
+    });
+
     it("should not fall into a filter when the query matches nothing", async () => {
         render(<SpotlightDialog initialText="zzzznothingmatchesthis" onFinished={() => null} />);
 

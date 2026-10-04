@@ -34,6 +34,35 @@ Please see LICENSE files in the repository root for full details.
     color: var(--cpd-color-text-primary);
 }
 
+/* In place of the chats' search, which the settings do not have: the same field, at the head of the list. */
+.mx_UserSettingsList_search {
+    display: flex;
+    align-items: center;
+    gap: var(--cpd-space-2x);
+    margin: 0 var(--cpd-space-4x) var(--cpd-space-2x);
+    padding: 0 var(--cpd-space-3x);
+    min-height: 40px;
+    border-radius: var(--cpd-space-5x);
+    background: var(--cpd-color-bg-subtle-secondary);
+    color: var(--cpd-color-icon-secondary);
+
+    &:focus-within {
+        outline: 2px solid var(--cpd-color-border-focused);
+    }
+
+    > input {
+        all: unset;
+        flex: 1;
+        min-width: 0;
+        font: var(--cpd-font-body-md-regular);
+        color: var(--cpd-color-text-primary);
+
+        &::placeholder {
+            color: var(--cpd-color-text-secondary);
+        }
+    }
+}
+
 .mx_UserSettingsList_sections {
     flex: 1;
     min-height: 0;
@@ -85,9 +114,16 @@ Please see LICENSE files in the repository root for full details.
         outline-offset: -2px;
     }
 
-    /* The section open beside the list, as the open chat is marked in the chat list. */
-    &[aria-current="page"] {
-        background: var(--cpd-color-bg-action-secondary-pressed);
+    /*
+     * The section open beside the list, marked as the open chat is in the chat list: its selected
+     * background (a step past the hover one, which is what keeps the two apart) and the accent bar at the
+     * start. After the hover rule, so a selected row stays selected under the pointer, as the chat's does.
+     */
+    &[aria-selected="true"] {
+        background:
+            linear-gradient(var(--cpd-color-bg-accent-rest), var(--cpd-color-bg-accent-rest)) left center / 4px 70%
+                no-repeat,
+            var(--cpd-color-bg-action-tertiary-selected);
 
         > svg {
             color: var(--cpd-color-icon-primary);
@@ -105,9 +141,49 @@ Please see LICENSE files in the repository root for full details.
     }
 }
 
+/* Read out, not seen: the count of what a search found. */
+.mx_UserSettingsList_status {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+}
+
+/* A result is the setting's name with the section it is in under it. */
+.mx_UserSettingsList_result {
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 0;
+
+    > .mx_UserSettingsList_resultSection {
+        font: var(--cpd-font-body-sm-regular);
+        color: var(--cpd-color-text-secondary);
+    }
+}
+
+.mx_UserSettingsList_empty {
+    padding: var(--cpd-space-4x);
+    font: var(--cpd-font-body-md-regular);
+    color: var(--cpd-color-text-secondary);
+    text-align: center;
+}
+
 /* ---- The page, beside it -------------------------------------------------------------------------- */
 
 .mx_UserSettingsPage {
+    /*
+     * The column's sizes for the navigation a phone shows over the foot of the page (RoomListPill), so the
+     * body can be kept clear of it as the lists are (_RoomListPanel.pcss declares them for the column).
+     */
+    --mx-room-list-pill-height: 64px;
+    --mx-room-list-bar-bottom: max(var(--cpd-space-4x), calc(var(--tg-safe-bottom, 0px) - var(--cpd-space-2x)));
+    --mx-room-list-toast-bottom: calc(
+        var(--mx-room-list-bar-bottom) + var(--mx-room-list-pill-height) + var(--cpd-space-2x)
+    );
+
     position: relative;
     display: flex;
     flex-direction: column;
@@ -130,6 +206,16 @@ Please see LICENSE files in the repository root for full details.
 
 .mx_UserSettingsPage_title {
     margin: 0;
+
+    /* Where the focus goes when a section opens: it is not a control, so it needs no ring of its own. */
+    &:focus {
+        outline: none;
+    }
+    &:focus-visible {
+        outline: 2px solid var(--cpd-color-border-focused);
+        outline-offset: 2px;
+    }
+
     overflow: hidden;
     font: var(--cpd-font-heading-sm-semibold);
     color: var(--cpd-color-text-primary);
@@ -152,6 +238,21 @@ Please see LICENSE files in the repository root for full details.
         max-width: 720px;
         margin-inline: auto;
     }
+}
+
+/* The setting a search led to, shown once where it is; reduced motion gets the colour without the fade. */
+@keyframes mx_UserSettingsPage_found {
+    from {
+        background-color: var(--cpd-color-bg-accent-rest);
+    }
+    to {
+        background-color: transparent;
+    }
+}
+
+.mx_UserSettingsPage_found {
+    border-radius: var(--cpd-space-2x);
+    animation: mx_UserSettingsPage_found 1.6s ease-out;
 }
 
 .mx_UserSettingsPage_toastContainer {
