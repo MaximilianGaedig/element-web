@@ -408,6 +408,10 @@ html[data-floating-bars] {
     .mx_JumpToBottomButton_scrollDown,
     .mx_JumpButton_button,
     .mx_TopUnreadMessagesBar_scrollUp {
+        /* Element's own stylesheet makes the down button a block, which put its icon at the left edge. */
+        display: flex;
+        align-items: center;
+        justify-content: center;
         width: var(--tg-chat-input-height);
         height: var(--tg-chat-input-height);
         /* The browser's own padding would push a centred icon off to one side. */
