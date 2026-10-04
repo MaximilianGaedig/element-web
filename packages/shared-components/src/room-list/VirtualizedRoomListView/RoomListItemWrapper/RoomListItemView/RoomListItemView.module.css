@@ -167,7 +167,7 @@
     color: var(--cpd-color-text-primary);
 }
 
-/* Fork: the name, then the last message's ticks at the end of the line. */
+/* Fork: the name, then the time of the room's last activity at the end of the line. */
 .nameLine {
     display: flex;
     align-items: center;
