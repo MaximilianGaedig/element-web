@@ -241,6 +241,21 @@ describe("SlidingSyncManager", () => {
             expect(slidingSync.setListRanges).toHaveBeenCalledWith("untagged", [[0, 20]]);
         });
 
+        /* Every start grew the lists from ten again, one request at a time, a second each for 700 chats. */
+        it("keeps each list's size once they are whole, and the next session starts each list there", async () => {
+            vi.mocked(slidingSync.getListData).mockReturnValue({ joinedCount: 704, roomIndexToRoomId: {} });
+            vi.mocked(slidingSync.getListParams).mockReturnValue({ ranges: [[0, 710]] } as any);
+            await (manager as any).startSpidering(slidingSync, 50, 1);
+
+            slidingSync.emit(SlidingSyncEvent.Lifecycle, SlidingSyncState.Complete, null, undefined);
+
+            expect(slidingSync.setListRanges).not.toHaveBeenCalled();
+            const next = new SlidingSyncManager();
+            (next as any).configure(client, "invalid");
+            expect(next.slidingSync!.getListParams("untagged")?.ranges).toEqual([[0, 704]]);
+            localStorage.clear();
+        });
+
         it("handles accounts with zero rooms", async () => {
             const gapMs = 1;
             const batchSize = 10;

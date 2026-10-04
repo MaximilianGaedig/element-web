@@ -169,6 +169,37 @@ const sssLists: Record<string, MSC3575List> = {
     },
 };
 
+/**
+ * Each list's size when the last session had them all, kept for the next one. The lists grow 50 rooms per
+ * request (startSpidering), one request after another, and every start went through that again: four
+ * round trips of about a second each for 700 chats, with the rooms that come back in each re-sent in
+ * full whenever the connection resumes from a position the server has moved past, so the chat list kept
+ * filling in for seconds after showing what was cached. Starting each list at the size it had asks for
+ * all of it in the first request.
+ */
+function listSizesKey(userId: string): string {
+    return `mx_sss_list_sizes:${userId}`;
+}
+
+function readListSizes(userId: string | null): Record<string, number> {
+    if (!userId) return {};
+    try {
+        const sizes = JSON.parse(localStorage.getItem(listSizesKey(userId)) ?? "{}");
+        return sizes && typeof sizes === "object" ? sizes : {};
+    } catch {
+        return {};
+    }
+}
+
+function writeListSizes(userId: string | null, sizes: Record<string, number>): void {
+    if (!userId) return;
+    try {
+        localStorage.setItem(listSizesKey(userId), JSON.stringify(sizes));
+    } catch {
+        // Storage full or unavailable: the next session grows the lists step by step, as before.
+    }
+}
+
 export type PartialSlidingSyncRequest = {
     filters?: MSC3575Filter;
     sort?: string[];
@@ -201,8 +232,11 @@ export class SlidingSyncManager {
         this.client = client;
         // create the set of lists we will use.
         const lists = new Map();
+        const sizes = readListSizes(client.getUserId());
         for (const listName in sssLists) {
-            lists.set(listName, sssLists[listName]);
+            const list = sssLists[listName];
+            const upper = Math.max(list.ranges[0][1], sizes[listName] ?? 0);
+            lists.set(listName, { ...list, ranges: [[0, upper]] });
         }
         // by default use the encrypted subscription as that gets everything, which is a safer
         // default than potentially missing member events.
@@ -327,7 +361,9 @@ export class SlidingSyncManager {
         // copy the initial set of list names and ranges, we'll keep this map updated.
         const listToUpperBound = new Map(
             Object.keys(sssLists).map((listName) => {
-                return [listName, sssLists[listName].ranges[0][1]];
+                // Where configure started it: further out than the default when the last session's size is known.
+                const upper = slidingSync.getListParams(listName)?.ranges[0][1] ?? sssLists[listName].ranges[0][1];
+                return [listName, upper];
             }),
         );
         console.log("startSpidering:", listToUpperBound);
@@ -357,8 +393,10 @@ export class SlidingSyncManager {
 
             // for all lists with total counts > range => increase the range
             let hasSetRanges = false;
+            const sizes: Record<string, number> = {};
             listToUpperBound.forEach((currentUpperBound, listName) => {
                 const totalCount = slidingSync.getListData(listName)?.joinedCount || 0;
+                sizes[listName] = totalCount;
                 if (currentUpperBound < totalCount) {
                     // increment the upper bound
                     const newUpperBound = currentUpperBound + batchSize;
@@ -371,8 +409,9 @@ export class SlidingSyncManager {
                 }
             });
             if (!hasSetRanges) {
-                // finish spidering
+                // finish spidering, and keep how big each list is for the next session to start at
                 slidingSync.off(SlidingSyncEvent.Lifecycle, lifecycle);
+                writeListSizes(this.client?.getUserId() ?? null, sizes);
             }
         };
         slidingSync.on(SlidingSyncEvent.Lifecycle, lifecycle);
