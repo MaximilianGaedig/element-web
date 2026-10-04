@@ -1466,6 +1466,47 @@ describe("RoomTimelineViewModel", () => {
             expect(client.sendReadReceipt).not.toHaveBeenCalled();
         });
 
+        /* A chat whose only events are hidden kept its unread count for ever: nothing drawn was ever receipted. */
+        it("reads a chat with nothing to show up to its newest event", async () => {
+            const hidden = (id: string): MatrixEvent =>
+                new MatrixEvent({
+                    type: "im.mxg.backfill",
+                    state_key: "",
+                    event_id: id,
+                    sender: "@bridge:example.org",
+                    room_id: ROOM_ID,
+                    origin_server_ts: 1,
+                    content: {},
+                });
+            seedTimeline([hidden("$h1"), hidden("$h2")]);
+            const vm = new RoomTimelineViewModel({ client, room });
+            vms.push(vm);
+            vm.start();
+
+            await vi.waitFor(() => expect(client.sendReadReceipt).toHaveBeenCalled(), { timeout: 2000 });
+            expect(vi.mocked(client.sendReadReceipt).mock.calls[0][0]?.getId()).toBe("$h2");
+        });
+
+        it("at the end of the room, reads past the hidden events after the last message", async () => {
+            const status = new MatrixEvent({
+                type: "com.beeper.message_send_status",
+                event_id: "$status",
+                sender: "@bridge:example.org",
+                room_id: ROOM_ID,
+                origin_server_ts: 3,
+                content: {},
+            });
+            seedTimeline([makeMessage("$a"), makeMessage("$b"), status]);
+            const vm = await createStartedViewModel();
+            vm.onAnchorReached();
+
+            vm.onAtBottomStateChange(true);
+            vm.onVisibleRangeChanged(0, vm.getSnapshot().items.length - 1);
+
+            await flushReceiptDebounce();
+            expect(vi.mocked(client.sendReadReceipt).mock.calls.at(-1)?.[0]?.getId()).toBe("$status");
+        });
+
         it("sends nothing while no message's end is on screen", async () => {
             seedTimeline([makeMessage("$a"), makeMessage("$b")]);
             const vm = await createStartedViewModel();

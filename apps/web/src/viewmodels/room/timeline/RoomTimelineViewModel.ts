@@ -585,6 +585,8 @@ export class RoomTimelineViewModel
                     hasHighlights: this.opts.room.getUnreadNotificationCount(NotificationCountType.Highlight) > 0,
                     canJumpToReadMarker: this.computeCanJumpToReadMarker(items),
                 });
+                // Read where it arrived, even if it is not drawn (receiptTarget).
+                if ((this.isAtBottom || this.snapshot.current.isEmpty) && atLiveEnd) this.scheduleReceipt();
             })
             .catch((err) => {
                 logger.warn(`[TimelineVM][onRoomTimeline] forward paginate failed`, err);
@@ -897,6 +899,8 @@ export class RoomTimelineViewModel
                 canJumpToReadMarker: this.computeCanJumpToReadMarker(items),
                 ...this.unreadCounts(),
             });
+            // Opening a chat with nothing to show reads it (receiptTarget).
+            if (this.snapshot.current.isEmpty) this.scheduleReceipt();
 
             // If all events in the initial window were filtered (items empty) but more
             // content exists ahead, the view won't fire onEndReached on an empty list.
@@ -1089,6 +1093,7 @@ export class RoomTimelineViewModel
 
     public onAtBottomStateChange = (atBottom: boolean): void => {
         this.isAtBottom = atBottom;
+        if (atBottom) this.scheduleReceipt();
         if (this.active) this.readingHistory = !atBottom;
         this.mergeSnapshot(
             {
@@ -1162,13 +1167,35 @@ export class RoomTimelineViewModel
             this.mergeSnapshot({ numUnreadMessages }, "unread-below");
         }
 
-        // Debounce sending a read receipt for the last visible event.
+        this.scheduleReceipt();
+    };
+
+    /** Debounces sending a read receipt for what has been read (see {@link receiptTarget}). */
+    private scheduleReceipt(): void {
         if (this.readReceiptDebounceTimer !== null) clearTimeout(this.readReceiptDebounceTimer);
         this.readReceiptDebounceTimer = setTimeout(() => {
             this.readReceiptDebounceTimer = null;
             this.sendAutoReadReceipt();
         }, READ_RECEIPT_DEBOUNCE_MS);
-    };
+    }
+
+    /**
+     * Where the receipt goes: the last message read on screen - or, with the reader at the end of the room,
+     * the room's newest event, drawn or not. Events the timeline hides (a bridge's status, joins, an invite)
+     * can count as unread on the server, and with the receipt never going past the last message drawn they
+     * stayed unread for good: a chat with nothing to show at all kept its unread count in the chat list.
+     */
+    private receiptTarget(): string | null {
+        const atEnd = this.snapshot.current.atLiveEnd && (this.isAtBottom || !!this.snapshot.current.isEmpty);
+        if (atEnd) {
+            const events = this.opts.room.getLiveTimeline().getEvents();
+            for (let i = events.length - 1; i >= 0; i--) {
+                const id = events[i].getId();
+                if (id && !isLocalEchoId(id) && events[i].status === null) return id;
+            }
+        }
+        return this.readableEventId;
+    }
 
     /**
      * Sends a read receipt for the last visible event, debounced from `onVisibleRangeChanged`.
@@ -1185,7 +1212,7 @@ export class RoomTimelineViewModel
     private sendAutoReadReceipt(): void {
         // Behind the room on screen, nothing in it is being read.
         if (this.isDisposed || !this.active) return;
-        const eventId = this.readableEventId;
+        const eventId = this.receiptTarget();
         if (!eventId || eventId === this.lastSentReceiptEventId) return;
         // Nor is anything read by someone who is not there: a message that arrives while the window
         // is in the background or the reader has walked away is on screen, and unread. It is sent
@@ -1195,7 +1222,8 @@ export class RoomTimelineViewModel
             return;
         }
 
-        const event = this.timelineWindow.getEvents().find((e) => e.getId() === eventId);
+        const event =
+            this.timelineWindow.getEvents().find((e) => e.getId() === eventId) ?? this.opts.room.findEventById(eventId);
         if (!event) return;
 
         // Nor behind where the reader's receipt already is, as after jumping up to a mention or a reaction:
