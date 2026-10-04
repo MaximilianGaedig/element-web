@@ -70,12 +70,22 @@ export function linksOf(timeline: EventTimeline): EventLink[] {
     return links;
 }
 
+/** How many timelines are recorded at a time: a start replays every room's, and the page stays responsive. */
+const RECORD_BATCH = 100;
+
 /**
  * Records where the events of these timelines sit. With `readBack` (the store answers from here), a timeline
  * whose earliest event has stored events before it then pages back from them first.
  */
 export async function recordTimelines(timelines: Iterable<EventTimeline>, readBack: boolean): Promise<void> {
     const all = [...timelines];
+    for (let i = 0; i < all.length; i += RECORD_BATCH) {
+        if (i) await new Promise((resolve) => setTimeout(resolve, 0));
+        await recordBatch(all.slice(i, i + RECORD_BATCH), readBack);
+    }
+}
+
+async function recordBatch(all: EventTimeline[], readBack: boolean): Promise<void> {
     await storeLinks(all.flatMap(linksOf));
     if (!readBack) return;
 
