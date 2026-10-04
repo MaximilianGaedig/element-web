@@ -559,7 +559,12 @@ describe("<LoggedInView />", () => {
             getComponent();
             getServerNoticeRooms.mockClear();
 
-            mockClient.emit(RoomStateEvent.Events, stateEvent(room, EventType.RoomPinnedEvents), room.currentState, null);
+            mockClient.emit(
+                RoomStateEvent.Events,
+                stateEvent(room, EventType.RoomPinnedEvents),
+                room.currentState,
+                null,
+            );
 
             expect(getServerNoticeRooms).toHaveBeenCalled();
         });
