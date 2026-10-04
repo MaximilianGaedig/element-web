@@ -47,6 +47,11 @@ describe("createMatrixClient", () => {
                 sdk.MemoryStore,
             );
             expect(fresh.createMatrixClient({ baseUrl: "" }).store).toBeInstanceOf(sdk.IndexedDBStore);
+            // Under sliding sync, paging back through what was seen before is answered from the message database
+            const { cachedTimelineBefore } = await import("./history/localHistory");
+            expect(fresh.createMatrixClient({ baseUrl: "" }, { slidingSync: true }).store.getCachedTimelineBefore).toBe(
+                cachedTimelineBefore,
+            );
             Object.defineProperty(window, "indexedDB", { value: undefined, configurable: true });
         });
 

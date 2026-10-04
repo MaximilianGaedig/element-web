@@ -28,9 +28,10 @@ import { logger } from "matrix-js-sdk/src/logger";
 import { type SharedMediaTab } from "../sharedMedia";
 
 const DB_NAME = "element-history";
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 const EVENTS = "events";
 const ROOMS = "rooms";
+const LINKS = "links";
 
 export interface StoredEvent {
     eventId: string;
@@ -56,6 +57,22 @@ export interface RoomHistoryState {
     updatedAt: number;
 }
 
+/**
+ * Where an event sits in its room's timeline, as far as Element has seen it (see localHistory.ts). Kept beside
+ * the events rather than in them: an event is written again whenever it decrypts or a page brings it back,
+ * and that must not lose where it was.
+ */
+export interface EventLink {
+    eventId: string;
+    roomId: string;
+    /** The event just before it in the room's timeline. */
+    prevId?: string;
+    /** The server's token for the history before it, when it was the earliest event of a timeline. */
+    backToken?: string;
+    /** Nothing comes before it: it is the room's creation. */
+    atStart?: boolean;
+}
+
 let db: Promise<IDBDatabase> | undefined;
 
 /**
@@ -74,12 +91,15 @@ function open(): Promise<IDBDatabase> {
     if (!available()) return Promise.reject(new Error("IndexedDB is not available in this context"));
     db ??= new Promise((resolve, reject) => {
         const request = indexedDB.open(DB_NAME, DB_VERSION);
-        request.onupgradeneeded = (): void => {
+        request.onupgradeneeded = (event): void => {
             const database = request.result;
-            const events = database.createObjectStore(EVENTS, { keyPath: "eventId" });
-            events.createIndex("room_ts", ["roomId", "ts"]);
-            events.createIndex("room_tab_ts", ["roomId", "tab", "ts"]);
-            database.createObjectStore(ROOMS, { keyPath: "roomId" });
+            if (event.oldVersion < 1) {
+                const events = database.createObjectStore(EVENTS, { keyPath: "eventId" });
+                events.createIndex("room_ts", ["roomId", "ts"]);
+                events.createIndex("room_tab_ts", ["roomId", "tab", "ts"]);
+                database.createObjectStore(ROOMS, { keyPath: "roomId" });
+            }
+            if (event.oldVersion < 2) database.createObjectStore(LINKS, { keyPath: "eventId" });
         };
         request.onsuccess = (): void => {
             request.result.onclose = (): void => (db = undefined);
@@ -166,6 +186,84 @@ async function collect(request: IDBRequest<IDBCursorWithValue | null>, limit: nu
             cursor.continue();
         };
     });
+}
+
+/**
+ * Records where events sit. A link that names the event before it replaces what was known; one that does not
+ * (the earliest event of a timeline) only adds its token to what was already known about that event.
+ */
+export async function storeLinks(links: EventLink[]): Promise<void> {
+    if (!links.length) return;
+    try {
+        const database = await open();
+        const txn = database.transaction(LINKS, "readwrite");
+        const store = txn.objectStore(LINKS);
+        for (const link of links) {
+            if (link.prevId) {
+                store.put(link);
+                continue;
+            }
+            const request = store.get(link.eventId);
+            request.onsuccess = (): void => {
+                const known = request.result as EventLink | undefined;
+                store.put({ ...known, ...link, prevId: known?.prevId });
+            };
+        }
+        await new Promise<void>((resolve, reject) => {
+            txn.oncomplete = (): void => resolve();
+            txn.onerror = (): void => reject(txn.error);
+        });
+    } catch (e) {
+        logger.warn("History: could not record where messages sit", e);
+    }
+}
+
+/** What is known about where these events sit, by event ID (absent where nothing is). */
+export async function getLinks(eventIds: string[]): Promise<Map<string, EventLink>> {
+    const out = new Map<string, EventLink>();
+    if (!eventIds.length) return out;
+    try {
+        const database = await open();
+        const store = database.transaction(LINKS, "readonly").objectStore(LINKS);
+        const links = await Promise.all(eventIds.map((id) => promise<EventLink | undefined>(store.get(id))));
+        for (const link of links) if (link) out.set(link.eventId, link);
+    } catch (e) {
+        logger.warn("History: could not read where messages sit", e);
+    }
+    return out;
+}
+
+/**
+ * The stored events before `eventId` in its room, newest first, following each event to the one before it for
+ * as long as both are stored, up to `limit`. With each event comes what is known about where it sits.
+ */
+export async function storedChainBefore(
+    roomId: string,
+    eventId: string,
+    limit: number,
+): Promise<{ start?: EventLink; chain: Array<{ event: StoredEvent; link?: EventLink }> }> {
+    const chain: Array<{ event: StoredEvent; link?: EventLink }> = [];
+    try {
+        const database = await open();
+        const txn = database.transaction([EVENTS, LINKS], "readonly");
+        const events = txn.objectStore(EVENTS);
+        const links = txn.objectStore(LINKS);
+        const start = await promise<EventLink | undefined>(links.get(eventId));
+        let prevId = start?.prevId;
+        while (prevId && chain.length < limit) {
+            const [event, link] = await Promise.all([
+                promise<StoredEvent | undefined>(events.get(prevId)),
+                promise<EventLink | undefined>(links.get(prevId)),
+            ]);
+            if (!event || event.roomId !== roomId) break;
+            chain.push({ event, link });
+            prevId = link?.prevId;
+        }
+        return { start, chain };
+    } catch (e) {
+        logger.warn("History: could not read stored history", e);
+        return { chain };
+    }
 }
 
 export async function getRoomHistoryState(roomId: string): Promise<RoomHistoryState | undefined> {
