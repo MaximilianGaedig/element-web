@@ -30,7 +30,9 @@ import { useMatrixClientContext } from "../../contexts/MatrixClientContext";
 import { LegacyEventTileAdapter } from "../views/rooms/LegacyEventTileAdapter";
 import type { IReadReceiptPosition } from "../views/rooms/ReadReceiptMarker";
 import { receiptsByShownEvent } from "../../utils/telegram/receiptsByEvent";
-import { useTypedEventEmitter } from "../../hooks/useEventEmitter";
+import { useEventEmitter, useTypedEventEmitter } from "../../hooks/useEventEmitter";
+import { MessageSelectionStore } from "../../stores/MessageSelectionStore";
+import { UPDATE_EVENT } from "../../stores/AsyncStore";
 import { isOneToOneRoom, bubbleTimelineEnabled, telegramTicksShown } from "../../utils/telegram/telegramLayout";
 import MemberAvatar from "../views/avatars/MemberAvatar";
 import PerMessageProfileAvatar from "../views/bridge/PerMessageProfileAvatar";
@@ -104,6 +106,9 @@ interface RenderItemContext {
     /** Where each reader's avatar last was, which the receipts animate from; kept across renders. */
     readReceiptMap: Record<string, IReadReceiptPosition>;
     myUserId: string;
+    /** Messages are being picked; each tile shows whether it is one of them. */
+    selecting: boolean;
+    selected: ReadonlySet<string>;
 }
 
 const NO_RECEIPTS: ReadonlyMap<string, IReadReceiptProps[]> = new Map();
@@ -211,6 +216,8 @@ function renderTimelineItem(item: TimelineItem, ctx: RenderItemContext): ReactNo
                     lastInSection={item.lastInSection}
                     layout={ctx.effectiveLayout}
                     isSelectedEvent={ctx.highlightedId !== null && item.key === ctx.highlightedId}
+                    isSelecting={ctx.selecting}
+                    isSelected={ctx.selected.has(item.key)}
                     // A tile treats any edit state it is given as its own, so
                     // only the message being edited may receive it.
                     editState={ctx.editState?.getEvent().getId() === item.key ? ctx.editState : undefined}
@@ -425,6 +432,17 @@ export function NewTimelinePanel({
         [room.roomId],
     );
 
+    // Messages being picked in this room. The old timeline took this from MessagePanel; without it the
+    // tiles here never knew, so picking showed no ticks and a click on another message did nothing.
+    const [selectionVersion, bumpSelection] = useState(0);
+    useEventEmitter(MessageSelectionStore.instance, UPDATE_EVENT, () => bumpSelection((n) => n + 1));
+    const selecting = MessageSelectionStore.instance.isSelecting(room.roomId);
+    const selected = useMemo(
+        () => new Set(MessageSelectionStore.instance.getSelectedIds(room.roomId)),
+        // selectionVersion stands for the store, which changes without anything else here doing so.
+        [room.roomId, selectionVersion], // eslint-disable-line react-hooks/exhaustive-deps
+    );
+
     const renderItem = useCallback(
         (item: TimelineItem): ReactNode =>
             renderTimelineItem(item, {
@@ -446,6 +464,8 @@ export function NewTimelinePanel({
                 readReceipts,
                 readReceiptMap,
                 myUserId: client.getSafeUserId(),
+                selecting,
+                selected,
             }),
         [
             room,
@@ -466,6 +486,8 @@ export function NewTimelinePanel({
             readReceipts,
             readReceiptMap,
             client,
+            selecting,
+            selected,
         ],
     );
 

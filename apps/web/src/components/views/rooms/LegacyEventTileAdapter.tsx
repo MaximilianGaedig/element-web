@@ -56,6 +56,11 @@ export interface LegacyEventTileAdapterProps {
 
     /** Set only on the message being edited; that tile shows the edit box. */
     editState?: EditorStateTransfer;
+
+    /** Messages are being picked (MessageSelectionStore): a click ticks this one instead of acting on it. */
+    isSelecting?: boolean;
+    /** This message is one of those picked. */
+    isSelected?: boolean;
 }
 
 /**
@@ -95,6 +100,8 @@ export function LegacyEventTileAdapter(props: Readonly<LegacyEventTileAdapterPro
             permalinkCreator={props.permalinkCreator}
             callEventGrouper={props.callEventGrouper}
             editState={props.editState}
+            isSelecting={props.isSelecting}
+            isSelected={props.isSelected}
             compactReplyPreview={true}
         />
     );

@@ -8,13 +8,14 @@ Please see LICENSE files in the repository root for full details.
 // @vitest-environment happy-dom
 
 import React from "react";
-import { render, screen, waitFor } from "test-utils-rtl";
+import { act, render, screen, waitFor } from "test-utils-rtl";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { EventStatus, type MatrixClient, MatrixEvent, PendingEventOrdering, Room } from "matrix-js-sdk/src/matrix";
 import type { TimelineItem } from "@element-hq/web-shared-components";
 import { createTestClient, mkMessage, TestSDKContext } from "test-utils";
 
 import { NewTimelinePanel } from "./NewTimelinePanel";
+import { MessageSelectionStore } from "../../stores/MessageSelectionStore";
 import { Layout } from "../../settings/enums/Layout";
 import EditorStateTransfer from "../../utils/EditorStateTransfer";
 import MatrixClientContext from "../../contexts/MatrixClientContext";
@@ -420,6 +421,18 @@ describe("<NewTimelinePanel />", () => {
 
         expect(vmState.jumps).toEqual([]);
         expect(onEventScrolledIntoView).toHaveBeenCalledWith("$linked");
+    });
+
+    /* The tiles never heard that messages were being picked: no ticks, and clicks did nothing. */
+    it("tells each tile when messages are being picked, and whether it is one of them", () => {
+        withItems([{ key: event.getId()!, kind: "event", continuation: false, lastInSection: true } as TimelineItem]);
+        renderPanel();
+        expect(tileProps.current.at(-1)?.isSelecting).toBe(false);
+
+        act(() => MessageSelectionStore.instance.enterSelectionMode(room.roomId, event.getId()!));
+
+        expect(tileProps.current.at(-1)).toMatchObject({ isSelecting: true, isSelected: true });
+        act(() => MessageSelectionStore.instance.exitSelectionMode(room.roomId));
     });
 
     it("hides the panel without unmounting it", () => {

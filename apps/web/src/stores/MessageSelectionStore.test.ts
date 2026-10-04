@@ -30,6 +30,15 @@ describe("MessageSelectionStore", () => {
         expect(spy).toHaveBeenCalled();
     });
 
+    /* Unticking the last one left the composer hidden behind a bar that was gone. */
+    it("ends selecting when the last picked message is unticked", () => {
+        store.enterSelectionMode(roomId, "$event:1");
+
+        store.toggleSelection(roomId, "$event:1");
+
+        expect(store.isSelecting(roomId)).toBe(false);
+    });
+
     it("should toggle selection", () => {
         store.enterSelectionMode(roomId);
         store.toggleSelection(roomId, "$event:1");

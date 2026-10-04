@@ -79,6 +79,13 @@ export class MessageSelectionStore extends EventEmitter {
 
         if (set.has(eventId)) {
             set.delete(eventId);
+            // Nothing left picked: selecting is over, as in Telegram. The bar is gone at zero, and so was
+            // the composer, which selecting hides.
+            if (set.size === 0) {
+                haptic("selection");
+                this.exitSelectionMode(roomId);
+                return;
+            }
         } else {
             set.add(eventId);
         }

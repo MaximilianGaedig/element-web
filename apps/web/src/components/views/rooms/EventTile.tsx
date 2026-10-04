@@ -77,6 +77,7 @@ import { isAnimatedSticker } from "../../../utils/bridge/animatedMedia";
 import { getPerMessageProfile } from "../../../utils/bridge/perMessageProfile";
 import { isBridgeBotNotice } from "../../../utils/bridge/bridgeCommands";
 import { MessageSelectionStore } from "../../../stores/MessageSelectionStore";
+import { isSelectableEvent, selectableEventIds } from "../../../utils/messageSelection";
 import StyledCheckbox from "../elements/StyledCheckbox";
 import { ActionBarAdapter } from "./EventTile/ActionBarAdapter";
 import { E2eStandardPadlockIcon } from "./EventTile/E2eStandardPadlockIcon";
@@ -779,8 +780,8 @@ export class UnwrappedEventTile extends React.Component<EventTileProps, IState> 
             if (anchorId) {
                 const room = MatrixClientPeg.safeGet().getRoom(roomId);
                 if (room) {
-                    const timelines = room.getUnfilteredTimelineSet().getTimelines();
-                    const ids = timelines.flatMap((t) => t.getEvents()).map((ev) => ev.getId()!);
+                    // Only the messages drawn between the two: reactions, edits and hidden events have no row.
+                    const ids = selectableEventIds(room, MatrixClientPeg.safeGet());
                     const start = ids.indexOf(anchorId);
                     const end = ids.indexOf(eventId);
                     if (start !== -1 && end !== -1) {
@@ -793,7 +794,7 @@ export class UnwrappedEventTile extends React.Component<EventTileProps, IState> 
             }
         }
 
-        if (this.props.isSelecting) {
+        if (this.props.isSelecting && isSelectableEvent(this.props.mxEvent, MatrixClientPeg.safeGet())) {
             MessageSelectionStore.instance.toggleSelection(roomId, eventId);
         }
     };
