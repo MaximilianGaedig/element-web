@@ -32,6 +32,7 @@ import * as StorageManager from "./utils/StorageManager";
 import * as StorageAccess from "./utils/StorageAccess";
 import { clearHistoryDb } from "./utils/history/db";
 import { clearSlidingSyncCache } from "./utils/sync/slidingSyncCache";
+import { clearServerPreviews } from "./utils/sync/serverPreviews";
 import { historyIndexer } from "./utils/history/indexer";
 import SettingsStore from "./settings/SettingsStore";
 import { SettingLevel } from "./settings/SettingLevel";
@@ -1190,6 +1191,7 @@ export async function clearStorage(opts?: { deleteEverything?: boolean }): Promi
     window.sessionStorage?.clear();
     await clearHistoryDb();
     await clearSlidingSyncCache();
+    clearServerPreviews();
 
     // create a temporary client to clear out the persistent stores.
     const cli = createMatrixClient({

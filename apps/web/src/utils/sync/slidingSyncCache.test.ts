@@ -9,7 +9,7 @@ Please see LICENSE files in the repository root for full details.
 
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { EventEmitter } from "node:events";
-import type { IRoomEvent, IStateEvent, MatrixClient } from "matrix-js-sdk/src/matrix";
+import { type IRoomEvent, type IStateEvent, type MatrixClient, MatrixEvent } from "matrix-js-sdk/src/matrix";
 import {
     type MSC3575RoomData,
     type SlidingSync,
@@ -26,6 +26,7 @@ import {
     SlidingSyncCacheStore,
 } from "./slidingSyncCache";
 import { ROOM_LIST_STATE_TYPES } from "./roomListState";
+import { clearServerPreviews, PREVIEW_FIELD, serverPreviewFor } from "./serverPreviews";
 
 const ME = "@me:example.org";
 const message = (id: string, sender = "@bob:example.org"): IRoomEvent => ({
@@ -229,8 +230,11 @@ describe("SlidingSyncCacheStore", () => {
         (globalThis as { indexedDB?: IDBFactory }).indexedDB = new IDBFactory();
         await clearSlidingSyncCache();
         rooms.clear();
+        clearServerPreviews();
         client = Object.assign(new EventEmitter(), {
             getRoom: (roomId: string) => rooms.get(roomId) ?? null,
+            getEventMapper: () => (event: IRoomEvent) => new MatrixEvent(event),
+            decryptEventIfNeeded: async () => {},
         }) as unknown as MatrixClient;
     });
     afterEach(() => {
@@ -266,6 +270,29 @@ describe("SlidingSyncCacheStore", () => {
         expect(first!.accountData.global).toEqual([{ type: "m.direct", content: { [ME]: [] } }]);
         // replayed as complete descriptions, with the history before them to be asked for
         expect(first!.rooms["!r0:example.org"]).toMatchObject({ initial: true, limited: true, prev_batch: undefined });
+    });
+
+    it("keeps the message the server sent for the chat list, and hands it on now and in the next session", async () => {
+        const store = new SlidingSyncCacheStore(ME);
+        const sync = new FakeSlidingSync();
+        store.record(sync as unknown as SlidingSync, client);
+        rooms.set("!r:example.org", { roomId: "!r:example.org", accountData: new Map(), tags: {} });
+        describeRoom(sync, "!r:example.org", {
+            timeline: [message("$status")],
+            [PREVIEW_FIELD]: message("$said"),
+        } as Partial<MSC3575RoomData>);
+
+        expect(serverPreviewFor("!r:example.org")?.getId()).toBe("$said");
+        await store.save(client);
+
+        clearServerPreviews();
+        const next = new SlidingSyncCacheStore(ME);
+        next.record(new FakeSlidingSync() as unknown as SlidingSync, client);
+        const first = await next.loadFirst();
+        expect((first!.rooms["!r:example.org"] as unknown as Record<string, unknown>)[PREVIEW_FIELD]).toMatchObject({
+            event_id: "$said",
+        });
+        expect(serverPreviewFor("!r:example.org")?.getId()).toBe("$said");
     });
 
     it("forgets a room that has been left", async () => {
