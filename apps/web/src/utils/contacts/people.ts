@@ -34,6 +34,7 @@ import { type ContactDetail, type IdentityKey, identityDetails, identityKeys } f
 import DMRoomMap from "../DMRoomMap";
 import { type ContactCard, allCards, cardFor, cardLabel, fullName } from "./card";
 import { cardFromProfile } from "./publish";
+import { type PublishedIdentity } from "./networkHandle";
 
 /** Where links the reader made by hand are kept, so they follow the account and not the browser. */
 export const LINKS_EVENT_TYPE = "im.mxg.contact_links";
@@ -265,6 +266,16 @@ async function accountOfUser(client: MatrixClient, userId: string): Promise<Acco
  */
 export async function networkOfUser(client: MatrixClient, userId: string): Promise<string | undefined> {
     return (await profileFacts(client, userId)).network;
+}
+
+/**
+ * What a ghost's profile says about the account it stands for: which network (its id, `telegram`), its id
+ * there and the identifiers the network published. `network` is absent for a Matrix account of its own.
+ * Cached with the rest of the profile.
+ */
+export async function publishedIdentity(client: MatrixClient, userId: string): Promise<PublishedIdentity> {
+    const { network, remoteId, identifiers } = await profileFacts(client, userId);
+    return { network, remoteId, identifiers };
 }
 
 /** Where mautrix writes what a network knows about a ghost, as MSC4133 extended profile fields. */

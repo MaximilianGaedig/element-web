@@ -420,4 +420,57 @@ describe("Spotlight messages", () => {
             expect(stored["SpotlightSearch.recentSearches"]).toEqual([bobDm.roomId, GROUP_ID, DM_ID]);
         });
     });
+
+    describe("people", () => {
+        beforeEach(() => {
+            client.getExtendedProfile = vi.fn().mockImplementation(async (userId: string) =>
+                userId.startsWith("@telegram_")
+                    ? {
+                          "com.beeper.bridge.network": "telegram",
+                          "com.beeper.bridge.identifiers": ["tel:+48123456789", "telegram:ada"],
+                      }
+                    : userId.startsWith("@whatsapp_")
+                      ? {
+                            "com.beeper.bridge.network": "whatsapp",
+                            "com.beeper.bridge.identifiers": ["tel:+48987654321"],
+                        }
+                      : {},
+            );
+        });
+
+        const details = (userId: string): HTMLElement | null =>
+            document.getElementById(`mx_SpotlightDialog_button_result_${userId}_details`);
+
+        it("shows a bridged person by their handle or number on the network, not their ghost's Matrix ID", async () => {
+            const ghosts = ["@telegram_1001:example.com", "@whatsapp_1002:example.com", "@carol:example.com"].map(
+                (userId) => {
+                    const member = new RoomMember(GROUP_ID, userId);
+                    member.name = member.rawDisplayName = `Ada ${userId.slice(1, 4)}`;
+                    return member;
+                },
+            );
+            vi.mocked(group.getJoinedMembers).mockReturnValue(ghosts);
+            render(<SpotlightDialog initialText="ada" initialFilter={Filter.People} onFinished={vi.fn()} />);
+            await settle();
+
+            expect(details("@telegram_1001:example.com")).toHaveTextContent(/^@ada · Telegram$/);
+            expect(details("@whatsapp_1002:example.com")).toHaveTextContent(/^\+48987654321 · Whatsapp$/);
+            // A Matrix account of its own is known by its Matrix ID.
+            expect(details("@carol:example.com")).toHaveTextContent(/^@carol:example.com$/);
+        });
+
+        it("describes a chat with one bridged person the same way", async () => {
+            vi.spyOn(DMRoomMap, "shared").mockReturnValue({
+                getUserIdForRoomId: (id: string) => (id === DM_ID ? "@telegram_2001:example.com" : undefined),
+            } as unknown as DMRoomMap);
+            const ghost = new RoomMember(DM_ID, "@telegram_2001:example.com");
+            ghost.name = "Ada";
+            vi.mocked(dm.getMembers).mockReturnValue([ghost, new RoomMember(DM_ID, client.getSafeUserId())]);
+            vi.mocked(eventSearch).mockResolvedValue(found([]));
+            render(<SpotlightDialog initialText="alice" onFinished={vi.fn()} />);
+            await settle();
+
+            expect(details(DM_ID)).toHaveTextContent(/^@ada · Telegram$/);
+        });
+    });
 });

@@ -65,6 +65,7 @@ import { useSpaceResults } from "../../../../hooks/useSpaceResults";
 import { useUserDirectory } from "../../../../hooks/useUserDirectory";
 import { useNetworkPeople } from "../../../../hooks/useNetworkPeople";
 import { contextOf } from "../../../../utils/bridge/networkPeople";
+import { getBridgedDmUserId, getBridgeInfo } from "../../../../utils/bridge/bridgeInfo";
 import { getKeyBindingsManager } from "../../../../KeyBindingsManager";
 import { _t } from "../../../../languageHandler";
 import { MatrixClientPeg } from "../../../../MatrixClientPeg";
@@ -105,6 +106,7 @@ import { transformSearchTerm } from "../../../../utils/SearchInput";
 import { Filter } from "./Filter";
 import { PillTabs, type PillTab } from "../../elements/PillTabs";
 import { SpotlightEmptyState } from "./SpotlightEmptyState";
+import { PersonDetails } from "./PersonDetails";
 import { MessageFilterChips, MessageResults } from "./MessageResults";
 import { NO_MESSAGE_FILTER, type MessageFilter } from "./messageFilters";
 import { type MessageHit, useMessageSearch } from "./useMessageSearch";
@@ -318,6 +320,29 @@ const roomAriaUnreadLabel = (room: Room, notification: RoomNotificationState): s
 const canAskToJoin = (joinRule?: JoinRule): boolean => {
     return SettingsStore.getValue("feature_ask_to_join") && JoinRule.Knock === joinRule;
 };
+
+/**
+ * The line under a chat in the results. A chat with one person is that person, so it is described as one
+ * (PersonDetails): a bridged contact by the handle or number their network knows them by, not by the Matrix
+ * ID of their ghost. Any other chat keeps its spaces or address.
+ */
+function RoomDetails({ client, room, id }: { client: MatrixClient; room: Room; id: string }): JSX.Element {
+    // A bridged chat with one person also holds the bridge's bot, which the bridge info says to look past.
+    const dmPartner = DMRoomMap.shared().getUserIdForRoomId(room.roomId);
+    const partner = getBridgedDmUserId(room) ?? (dmPartner && room.getMembers().length <= 2 ? dmPartner : undefined);
+    if (partner && !room.isSpaceRoom()) {
+        return (
+            <PersonDetails
+                client={client}
+                userId={partner}
+                id={id}
+                className="mx_SpotlightDialog_result_details"
+                network={getBridgeInfo(room)?.networkName}
+            />
+        );
+    }
+    return <RoomContextDetails id={id} className="mx_SpotlightDialog_result_details" room={room} />;
+}
 
 interface IDirectoryOpts {
     limit: number;
@@ -701,9 +726,9 @@ const SpotlightDialog: React.FC<IProps> = ({ initialText = "", initialFilter = n
                                     notification={notification}
                                     className="mx_SpotlightDialog_notificationBadge"
                                 />
-                                <RoomContextDetails
+                                <RoomDetails
+                                    client={cli}
                                     id={`mx_SpotlightDialog_button_recentSearch_${room.roomId}_details`}
-                                    className="mx_SpotlightDialog_result_details"
                                     room={room}
                                 />
                             </Option>
@@ -793,9 +818,9 @@ const SpotlightDialog: React.FC<IProps> = ({ initialText = "", initialFilter = n
                             notification={notification}
                             className="mx_SpotlightDialog_notificationBadge"
                         />
-                        <RoomContextDetails
+                        <RoomDetails
+                            client={cli}
                             id={`mx_SpotlightDialog_button_result_${result.room.roomId}_details`}
-                            className="mx_SpotlightDialog_result_details"
                             room={result.room}
                         />
                     </Option>
@@ -828,12 +853,13 @@ const SpotlightDialog: React.FC<IProps> = ({ initialText = "", initialFilter = n
                         >
                             {result.member instanceof RoomMember ? result.member.rawDisplayName : result.member.name}
                         </span>
-                        <div
+                        <PersonDetails
+                            client={cli}
+                            userId={result.member.userId}
                             id={`mx_SpotlightDialog_button_result_${result.member.userId}_details`}
                             className="mx_SpotlightDialog_result_details"
-                        >
-                            {contextOf(result.member) ?? result.member.userId}
-                        </div>
+                            context={contextOf(result.member)}
+                        />
                     </Option>
                 );
             }
