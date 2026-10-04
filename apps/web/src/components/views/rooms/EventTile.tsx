@@ -75,6 +75,7 @@ import { attachLongPress, isAppleTouch } from "../../../utils/telegram/telegramM
 import { isDisappeared } from "../../../utils/bridge/shouldHideBridgeEvent";
 import { isAnimatedSticker } from "../../../utils/bridge/animatedMedia";
 import { getPerMessageProfile } from "../../../utils/bridge/perMessageProfile";
+import { isBridgeBotNotice } from "../../../utils/bridge/bridgeCommands";
 import { MessageSelectionStore } from "../../../stores/MessageSelectionStore";
 import StyledCheckbox from "../elements/StyledCheckbox";
 import { ActionBarAdapter } from "./EventTile/ActionBarAdapter";
@@ -1372,9 +1373,13 @@ export class UnwrappedEventTile extends React.Component<EventTileProps, IState> 
          * .bubble .name). Element's own place for it is a row above the bubble, where a short first
          * message fits beside the name and lands at the far end of the row.
          */
+        const botReply = telegramTime && isBridgeBotNotice(MatrixClientPeg.safeGet(), room, this.props.mxEvent);
         const nameInBubble =
-            telegramTime && !rootState.isOwnEvent && sender ? (
-                <div className="mx_EventTile_tgName">{sender}</div>
+            telegramTime && !rootState.isOwnEvent && (sender || botReply) ? (
+                <div className="mx_EventTile_tgName">
+                    {sender}
+                    {botReply && <span className="mx_EventTile_botBadge">{_t("bridge|bot_badge")}</span>}
+                </div>
             ) : undefined;
 
         // Footer slots.
@@ -1453,6 +1458,7 @@ export class UnwrappedEventTile extends React.Component<EventTileProps, IState> 
                         mx_EventTile_tgOwn: telegramTime && rootState.isOwnEvent,
                         // Has a bubble drawn behind it, so a tail can hang off it (_TgBubbleTail.pcss).
                         mx_EventTile_tgBubble: telegramTime,
+                        mx_EventTile_bridgeBotReply: botReply,
                     }),
                     line: classNames(eventTileRenderState.classNames.line, {
                         mx_EventTile_tgMediaLine: telegramTime && eventTileRenderState.line.media,

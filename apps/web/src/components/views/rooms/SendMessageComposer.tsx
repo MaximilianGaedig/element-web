@@ -139,6 +139,8 @@ interface ISendMessageComposerProps extends MatrixClientProps {
     replyToEvent?: MatrixEvent;
     disabled?: boolean;
     onChange?(model: EditorModel): void;
+    /** Asked with the text before it is sent; false keeps it in the composer (a bridge warning is showing). */
+    confirmSend?(text: string): boolean;
     toggleStickerPickerOpen: () => void;
     urlPreviewVm: MessageComposerUrlPreviewViewModel;
 }
@@ -355,6 +357,7 @@ export class SendMessageComposer extends React.Component<ISendMessageComposerPro
         if (model.isEmpty) {
             return;
         }
+        if (this.props.confirmSend && !this.props.confirmSend(model.contentPlainText)) return;
 
         const posthogEvent: ComposerEvent = {
             eventName: "Composer",

@@ -34,6 +34,13 @@ import { MatrixClientPeg } from "../../../MatrixClientPeg";
 import dis from "../../../dispatcher/dispatcher";
 import { type ActionPayload } from "../../../dispatcher/payloads";
 import PackStickerPicker from "../bridge/PackStickerPicker";
+import BridgeCommandBanner, { bridgeSendTitle } from "../bridge/BridgeCommandBanner";
+import {
+    type BridgeCommandContext,
+    type ComposerTarget,
+    classifyComposerText,
+    getBridgeCommandContext,
+} from "../../../utils/bridge/bridgeCommands";
 import { makeRoomPermalink, type RoomPermalinkCreator } from "../../../utils/permalinks/Permalinks";
 import E2EIcon from "./E2EIcon";
 import SettingsStore from "../../../settings/SettingsStore";
@@ -95,17 +102,20 @@ function TelegramSendButton({
     mode,
     onSend,
     onRecord,
+    sendTitle,
 }: {
     mode: "send" | "record";
     onSend: () => void;
     onRecord: () => void;
+    /** What sending does, where it is not simply "Send message" (a command to a bridge bot). */
+    sendTitle?: string;
 }): JSX.Element {
     const send = mode === "send";
     return (
         <AccessibleButton
             className={classNames("mx_TgSendButton", `mx_TgSendButton_${mode}`)}
             onClick={send ? onSend : onRecord}
-            title={send ? _t("composer|send_button_title") : _t("composer|voice_message_button")}
+            title={send ? (sendTitle ?? _t("composer|send_button_title")) : _t("composer|voice_message_button")}
             data-testid={send ? "sendmessagebtn" : "tgrecordbtn"}
         >
             <span key={mode} className="mx_TgSendButton_icon">
@@ -158,6 +168,10 @@ interface IState {
     initialComposerContent: string;
     /** Composer placeholder requested by a bridged Telegram bot keyboard, if any. */
     bridgePlaceholder?: string;
+    /** The text in the composer, for telling a command to a bridge bot from a message to a person. */
+    bridgeText: string;
+    /** The text whose warning (a command for another bridge, about to be sent as a message) was shown. */
+    bridgeWarnedText?: string;
 }
 
 type WysiwygComposerState = {
@@ -208,6 +222,7 @@ export class MessageComposer extends React.Component<IProps, IState> {
             isWysiwygLabEnabled: isWysiwygLabEnabled,
             isRichTextEnabled: isRichTextEnabled,
             initialComposerContent: initialComposerContent,
+            bridgeText: initialComposerContent,
         };
 
         this.instanceId = instanceCount++;
@@ -427,9 +442,41 @@ export class MessageComposer extends React.Component<IProps, IState> {
         return !this.props.relation && this.context.timelineRenderingType === TimelineRenderingType.Room;
     }
 
+    private get bridgeContext(): BridgeCommandContext | undefined {
+        return getBridgeCommandContext(this.props.mxClient, this.props.room);
+    }
+
+    /** What the composer's text is to the bridge, for the main composer of a bridged chat or bridge room. */
+    private get bridgeTarget(): ComposerTarget {
+        if (!this.isMainRoomComposer || !this.state.bridgeText.trim()) return { kind: "none" };
+        return classifyComposerText(this.props.mxClient, this.props.room, this.state.bridgeText);
+    }
+
+    /**
+     * Whether a message may be sent as it is. A command for another bridge is not blocked, but it would be
+     * sent to the person as text, so the first attempt only shows the warning; sending again sends it.
+     */
+    private confirmBridgeSend = (text: string): boolean => {
+        const target = this.bridgeTarget;
+        if (target.kind !== "wrong-bridge" || this.state.bridgeWarnedText === text) return true;
+        this.setState({ bridgeWarnedText: text });
+        return false;
+    };
+
+    private onSendAnyway = (): void => {
+        this.setState({ bridgeWarnedText: this.state.bridgeText }, () => void this.sendMessage());
+    };
+
     private renderPlaceholderText = (): string => {
         if (this.state.bridgePlaceholder && !this.props.replyToEvent && this.isMainRoomComposer) {
             return this.state.bridgePlaceholder;
+        }
+        // In a bridged chat the placeholder says where the message goes; in a bridge's own room, that it is a command.
+        const bridge = this.bridgeContext;
+        if (bridge && !this.props.replyToEvent && this.isMainRoomComposer) {
+            return bridge.kind === "management"
+                ? _t("bridge|composer_command", { network: bridge.network })
+                : _t("bridge|composer_message_on_network", { name: this.props.room.name, network: bridge.network });
         }
         // tweb's input placeholder is just "Message" (or "Reply" while replying), encrypted or not.
         if (floatingBarsEnabled()) {
@@ -467,6 +514,7 @@ export class MessageComposer extends React.Component<IProps, IState> {
     };
 
     private sendMessage = async (): Promise<void> => {
+        if (!this.state.haveRecording && !this.confirmBridgeSend(this.state.bridgeText)) return;
         // snapshot need to be captured before the composer is cleared
         // otherwise the send message function will think there are no URLs in
         // message and will not attach URL bundles
@@ -506,6 +554,7 @@ export class MessageComposer extends React.Component<IProps, IState> {
         });
         this.setState({
             isComposerEmpty: model.isEmpty,
+            bridgeText: model.contentPlainText,
         });
     };
 
@@ -514,6 +563,7 @@ export class MessageComposer extends React.Component<IProps, IState> {
         this.setState({
             composerContent: content,
             isComposerEmpty: content?.length === 0,
+            bridgeText: content ?? "",
         });
     };
 
@@ -717,6 +767,7 @@ export class MessageComposer extends React.Component<IProps, IState> {
                         relation={this.props.relation}
                         replyToEvent={this.props.replyToEvent}
                         onChange={this.onChange}
+                        confirmSend={this.confirmBridgeSend}
                         disabled={this.state.haveRecording}
                         toggleStickerPickerOpen={this.toggleStickerPickerOpen}
                         urlPreviewVm={this.props.urlPreviewVm}
@@ -793,6 +844,8 @@ export class MessageComposer extends React.Component<IProps, IState> {
             />,
         );
 
+        const bridgeTarget = this.bridgeTarget;
+        const sendTitle = bridgeSendTitle(bridgeTarget, this.props.room.name);
         const showSendButton = canSendMessages && (!this.state.isComposerEmpty || this.state.haveRecording);
         const holding = this.state.voiceHold === "holding";
         const recordingRunning = this.state.haveRecording && !!this.state.recordingRunning;
@@ -850,6 +903,14 @@ export class MessageComposer extends React.Component<IProps, IState> {
                             onPlaceholderChange={this.onBridgePlaceholderChange}
                         />
                     )}
+                    {canSendMessages && this.isMainRoomComposer && (
+                        <BridgeCommandBanner
+                            target={bridgeTarget}
+                            roomName={this.props.room.name}
+                            warned={this.state.bridgeWarnedText === this.state.bridgeText}
+                            onSendAnyway={this.onSendAnyway}
+                        />
+                    )}
                     <ReplyPreview
                         replyToEvent={this.props.replyToEvent}
                         permalinkCreator={this.props.permalinkCreator}
@@ -886,6 +947,7 @@ export class MessageComposer extends React.Component<IProps, IState> {
                                     mode="send"
                                     onSend={this.sendMessage}
                                     onRecord={this.onRecordStartEndClick}
+                                    sendTitle={sendTitle}
                                 />
                             )}
                             {!telegram && showSendButton && (
@@ -893,7 +955,7 @@ export class MessageComposer extends React.Component<IProps, IState> {
                                     key="controls_send"
                                     onClick={this.sendMessage}
                                     title={
-                                        this.state.haveRecording ? _t("composer|send_button_voice_message") : undefined
+                                        this.state.haveRecording ? _t("composer|send_button_voice_message") : sendTitle
                                     }
                                 />
                             )}
@@ -928,6 +990,7 @@ export class MessageComposer extends React.Component<IProps, IState> {
                                     mode="send"
                                     onSend={this.sendMessage}
                                     onRecord={this.onRecordStartEndClick}
+                                    sendTitle={sendTitle}
                                 />
                             </>
                         ) : (

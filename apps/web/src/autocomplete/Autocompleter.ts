@@ -11,6 +11,7 @@ import { type Room } from "matrix-js-sdk/src/matrix";
 import { type UserStatus } from "@element-hq/web-shared-components";
 
 import CommandProvider from "./CommandProvider";
+import BridgeCommandProvider from "./BridgeCommandProvider";
 import RoomProvider from "./RoomProvider";
 import UserProvider from "./UserProvider";
 import EmojiProvider from "./EmojiProvider";
@@ -54,7 +55,15 @@ export interface ICompletion {
     getUserStatus?: () => UserStatus | undefined;
 }
 
-const PROVIDERS = [UserProvider, RoomProvider, EmojiProvider, NotifProvider, CommandProvider, SpaceProvider];
+const PROVIDERS = [
+    UserProvider,
+    RoomProvider,
+    EmojiProvider,
+    NotifProvider,
+    CommandProvider,
+    BridgeCommandProvider,
+    SpaceProvider,
+];
 
 // Providers will get rejected if they take longer than this.
 const PROVIDER_COMPLETION_TIMEOUT = 3000;

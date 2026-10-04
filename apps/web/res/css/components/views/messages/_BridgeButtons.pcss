@@ -67,3 +67,66 @@ Please see LICENSE files in the repository root for full details.
 .mx_BridgeReplyKeyboard_resize .mx_BridgeButtons_button {
     padding-block: var(--cpd-space-1x);
 }
+
+/*
+ * Above the composer: the text is a command for a bridge bot (nobody on the other network sees it), or looks
+ * like a command for another bridge and would go to the person as a message.
+ */
+.mx_BridgeCommandBanner {
+    display: flex;
+    align-items: center;
+    gap: var(--cpd-space-2x);
+    padding: var(--cpd-space-1x) var(--cpd-space-3x);
+    margin-block-end: var(--cpd-space-1x);
+    border-radius: var(--cpd-space-3x);
+    background: var(--cpd-color-bg-subtle-secondary);
+    color: var(--cpd-color-text-secondary);
+    font: var(--cpd-font-body-sm-regular);
+
+    .mx_BridgeCommandBanner_icon {
+        flex: 0 0 auto;
+        color: var(--cpd-color-icon-accent-primary);
+    }
+
+    .mx_BridgeCommandBanner_text {
+        flex: 1 1 auto;
+        min-width: 0;
+    }
+
+    .mx_BridgeCommandBanner_anyway {
+        flex: 0 0 auto;
+        font: var(--cpd-font-body-sm-semibold);
+    }
+}
+
+.mx_BridgeCommandBanner_warning {
+    background: var(--cpd-color-bg-critical-subtle);
+    color: var(--cpd-color-text-critical-primary);
+
+    .mx_BridgeCommandBanner_icon {
+        color: var(--cpd-color-icon-critical-primary);
+    }
+
+    /* Sending was tried once already: the next send goes out as it is. */
+    &.mx_BridgeCommandBanner_warned {
+        outline: 1px solid var(--cpd-color-border-critical-primary);
+    }
+}
+
+/* A bridge bot's answer to a command: its name in the bubble carries a small label saying it is the bridge. */
+.mx_EventTile_botBadge {
+    margin-inline-start: var(--cpd-space-2x);
+    padding: 0 var(--cpd-space-1x);
+    border-radius: var(--cpd-space-1x);
+    background: var(--cpd-color-bg-subtle-secondary);
+    color: var(--cpd-color-text-secondary);
+    font: var(--cpd-font-body-xs-semibold);
+    text-transform: uppercase;
+}
+
+.mx_EventTile_bridgeBotReply {
+    .mx_MNoticeBody {
+        font-style: normal;
+        color: var(--cpd-color-text-primary);
+    }
+}
