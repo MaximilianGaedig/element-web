@@ -399,7 +399,12 @@
         "animated_open_sticker_pack": "Open sticker pack",
         "animated_show_gif": "Show GIF",
         "animated_show_sticker": "Show sticker",
+        "bot_badge": "Bridge",
         "bridged_from": "Bridged from %(description)s",
+        "command_to_bridge": "Command to the %(network)s bridge",
+        "command_to_bridge_not_sent": "Command to the %(network)s bridge — not sent to %(name)s",
+        "composer_command": "Command to the %(network)s bridge",
+        "composer_message_on_network": "Message %(name)s on %(network)s",
         "disappearing_after_read": "Disappears %(duration)s after it's read",
         "disappearing_in": "Disappears in %(duration)s",
         "disappearing_room_after_read": "Disappearing messages: %(duration)s after they're read",
@@ -431,6 +436,8 @@
         "room_type_group": "Group chat",
         "room_type_group_dm": "Group DM",
         "room_type_space": "Space",
+        "send_command_title": "Send command to the %(network)s bridge",
+        "send_relay_title": "Send to %(name)s on %(network)s",
         "send_status_delivered": "Delivered on %(network)s",
         "send_status_failed": "Not delivered to %(network)s",
         "send_status_failed_bridge_unavailable": "Not delivered to %(network)s: the bridge is unavailable",
@@ -533,7 +540,9 @@
         "typing_one": "%(name)s is typing",
         "typing_two": "%(name1)s and %(name2)s are typing",
         "view_once": "View once",
-        "view_once_sent": "Sent to be viewed once on %(network)s. Your copy here stays viewable."
+        "view_once_sent": "Sent to be viewed once on %(network)s. Your copy here stays viewable.",
+        "wrong_bridge_send_anyway": "Send anyway",
+        "wrong_bridge_warning": "This looks like a command for the %(intended)s bridge. Here it would be sent to %(name)s on %(network)s as a message."
     },
     "bug_reporting": {
         "additional_context": "If there is additional context that would help in analysing the issue, such as what you were doing at the time, room IDs, user IDs, etc., please include those things here.",
@@ -732,6 +741,9 @@
     "composer": {
         "autocomplete": {
             "@room_description": "Notify the whole room",
+            "bridge_command_description": "Bridge commands",
+            "bridge_command_list_a11y": "Bridge command Autocomplete",
+            "bridge_prefix_description": "%(network)s bridge commands",
             "command_a11y": "Command Autocomplete",
             "command_description": "Commands",
             "emoji_a11y": "Emoji Autocomplete",
