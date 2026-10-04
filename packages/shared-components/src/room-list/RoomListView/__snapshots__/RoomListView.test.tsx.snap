@@ -130,6 +130,31 @@ exports[`<RoomListView /> > renders Default story 1`] = `
                           >
                             Last message in General
                           </span>
+                          <span
+                            aria-hidden="true"
+                            class="RoomListItemView-module_notificationDecoration"
+                          >
+                            <div
+                              class="Flex-module_flex"
+                              data-testid="notification-decoration"
+                              style="--mx-flex-display: flex; --mx-flex-direction: row; --mx-flex-align: center; --mx-flex-justify: center; --mx-flex-gap: var(--cpd-space-1x); --mx-flex-wrap: nowrap;"
+                            >
+                              <svg
+                                fill="var(--cpd-color-icon-accent-primary)"
+                                height="20px"
+                                viewBox="0 0 24 24"
+                                width="20px"
+                                xmlns="http://www.w3.org/2000/svg"
+                              >
+                                <path
+                                  d="M12 4a8 8 0 1 0 0 16 1 1 0 1 1 0 2C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10v1.5a3.5 3.5 0 0 1-6.396 1.966A5 5 0 1 1 17 12v1.5a1.5 1.5 0 0 0 3 0V12a8 8 0 0 0-8-8m3 8a3 3 0 1 0-6 0 3 3 0 0 0 6 0"
+                                />
+                              </svg>
+                              <div
+                                class="_unread-counter_1147r_8"
+                              />
+                            </div>
+                          </span>
                         </div>
                       </div>
                       <div
@@ -201,31 +226,6 @@ exports[`<RoomListView /> > renders Default story 1`] = `
                           </div>
                         </button>
                       </div>
-                      <div
-                        aria-hidden="true"
-                        class="RoomListItemView-module_notificationDecoration"
-                      >
-                        <div
-                          class="Flex-module_flex"
-                          data-testid="notification-decoration"
-                          style="--mx-flex-display: flex; --mx-flex-direction: row; --mx-flex-align: center; --mx-flex-justify: center; --mx-flex-gap: var(--cpd-space-1x); --mx-flex-wrap: nowrap;"
-                        >
-                          <svg
-                            fill="var(--cpd-color-icon-accent-primary)"
-                            height="20px"
-                            viewBox="0 0 24 24"
-                            width="20px"
-                            xmlns="http://www.w3.org/2000/svg"
-                          >
-                            <path
-                              d="M12 4a8 8 0 1 0 0 16 1 1 0 1 1 0 2C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10v1.5a3.5 3.5 0 0 1-6.396 1.966A5 5 0 1 1 17 12v1.5a1.5 1.5 0 0 0 3 0V12a8 8 0 0 0-8-8m3 8a3 3 0 1 0-6 0 3 3 0 0 0 6 0"
-                            />
-                          </svg>
-                          <div
-                            class="_unread-counter_1147r_8"
-                          />
-                        </div>
-                      </div>
                     </div>
                   </div>
                 </button>
@@ -277,6 +277,17 @@ exports[`<RoomListView /> > renders Default story 1`] = `
                           >
                             Random
                           </div>
+                        </div>
+                        <div
+                          class="_typography_6v6n8_153 _font-body-sm-regular_6v6n8_31 RoomListItemView-module_preview"
+                        >
+                          <span
+                            class="RoomListItemView-module_ellipsis"
+                          />
+                          <span
+                            aria-hidden="true"
+                            class="RoomListItemView-module_notificationDecoration"
+                          />
                         </div>
                       </div>
                       <div
@@ -348,10 +359,6 @@ exports[`<RoomListView /> > renders Default story 1`] = `
                           </div>
                         </button>
                       </div>
-                      <div
-                        aria-hidden="true"
-                        class="RoomListItemView-module_notificationDecoration"
-                      />
                     </div>
                   </div>
                 </button>
@@ -413,6 +420,10 @@ exports[`<RoomListView /> > renders Default story 1`] = `
                           >
                             Last message in Engineering
                           </span>
+                          <span
+                            aria-hidden="true"
+                            class="RoomListItemView-module_notificationDecoration"
+                          />
                         </div>
                       </div>
                       <div
@@ -484,10 +495,6 @@ exports[`<RoomListView /> > renders Default story 1`] = `
                           </div>
                         </button>
                       </div>
-                      <div
-                        aria-hidden="true"
-                        class="RoomListItemView-module_notificationDecoration"
-                      />
                     </div>
                   </div>
                 </button>
@@ -539,6 +546,17 @@ exports[`<RoomListView /> > renders Default story 1`] = `
                           >
                             Design
                           </div>
+                        </div>
+                        <div
+                          class="_typography_6v6n8_153 _font-body-sm-regular_6v6n8_31 RoomListItemView-module_preview"
+                        >
+                          <span
+                            class="RoomListItemView-module_ellipsis"
+                          />
+                          <span
+                            aria-hidden="true"
+                            class="RoomListItemView-module_notificationDecoration"
+                          />
                         </div>
                       </div>
                       <div
@@ -610,10 +628,6 @@ exports[`<RoomListView /> > renders Default story 1`] = `
                           </div>
                         </button>
                       </div>
-                      <div
-                        aria-hidden="true"
-                        class="RoomListItemView-module_notificationDecoration"
-                      />
                     </div>
                   </div>
                 </button>
@@ -675,6 +689,10 @@ exports[`<RoomListView /> > renders Default story 1`] = `
                           >
                             Last message in Product
                           </span>
+                          <span
+                            aria-hidden="true"
+                            class="RoomListItemView-module_notificationDecoration"
+                          />
                         </div>
                       </div>
                       <div
@@ -746,10 +764,6 @@ exports[`<RoomListView /> > renders Default story 1`] = `
                           </div>
                         </button>
                       </div>
-                      <div
-                        aria-hidden="true"
-                        class="RoomListItemView-module_notificationDecoration"
-                      />
                     </div>
                   </div>
                 </button>
@@ -801,6 +815,40 @@ exports[`<RoomListView /> > renders Default story 1`] = `
                           >
                             Marketing
                           </div>
+                        </div>
+                        <div
+                          class="_typography_6v6n8_153 _font-body-sm-regular_6v6n8_31 RoomListItemView-module_preview"
+                        >
+                          <span
+                            class="RoomListItemView-module_ellipsis"
+                          />
+                          <span
+                            aria-hidden="true"
+                            class="RoomListItemView-module_notificationDecoration"
+                          >
+                            <div
+                              class="Flex-module_flex"
+                              data-testid="notification-decoration"
+                              style="--mx-flex-display: flex; --mx-flex-direction: row; --mx-flex-align: center; --mx-flex-justify: center; --mx-flex-gap: var(--cpd-space-1x); --mx-flex-wrap: nowrap;"
+                            >
+                              <svg
+                                fill="var(--cpd-color-icon-accent-primary)"
+                                height="20px"
+                                viewBox="0 0 24 24"
+                                width="20px"
+                                xmlns="http://www.w3.org/2000/svg"
+                              >
+                                <path
+                                  d="M12 4a8 8 0 1 0 0 16 1 1 0 1 1 0 2C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10v1.5a3.5 3.5 0 0 1-6.396 1.966A5 5 0 1 1 17 12v1.5a1.5 1.5 0 0 0 3 0V12a8 8 0 0 0-8-8m3 8a3 3 0 1 0-6 0 3 3 0 0 0 6 0"
+                                />
+                              </svg>
+                              <span
+                                class="_unread-counter_1147r_8"
+                              >
+                                5
+                              </span>
+                            </div>
+                          </span>
                         </div>
                       </div>
                       <div
@@ -872,33 +920,6 @@ exports[`<RoomListView /> > renders Default story 1`] = `
                           </div>
                         </button>
                       </div>
-                      <div
-                        aria-hidden="true"
-                        class="RoomListItemView-module_notificationDecoration"
-                      >
-                        <div
-                          class="Flex-module_flex"
-                          data-testid="notification-decoration"
-                          style="--mx-flex-display: flex; --mx-flex-direction: row; --mx-flex-align: center; --mx-flex-justify: center; --mx-flex-gap: var(--cpd-space-1x); --mx-flex-wrap: nowrap;"
-                        >
-                          <svg
-                            fill="var(--cpd-color-icon-accent-primary)"
-                            height="20px"
-                            viewBox="0 0 24 24"
-                            width="20px"
-                            xmlns="http://www.w3.org/2000/svg"
-                          >
-                            <path
-                              d="M12 4a8 8 0 1 0 0 16 1 1 0 1 1 0 2C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10v1.5a3.5 3.5 0 0 1-6.396 1.966A5 5 0 1 1 17 12v1.5a1.5 1.5 0 0 0 3 0V12a8 8 0 0 0-8-8m3 8a3 3 0 1 0-6 0 3 3 0 0 0 6 0"
-                            />
-                          </svg>
-                          <span
-                            class="_unread-counter_1147r_8"
-                          >
-                            5
-                          </span>
-                        </div>
-                      </div>
                     </div>
                   </div>
                 </button>
@@ -960,6 +981,10 @@ exports[`<RoomListView /> > renders Default story 1`] = `
                           >
                             Last message in Sales
                           </span>
+                          <span
+                            aria-hidden="true"
+                            class="RoomListItemView-module_notificationDecoration"
+                          />
                         </div>
                       </div>
                       <div
@@ -1031,10 +1056,6 @@ exports[`<RoomListView /> > renders Default story 1`] = `
                           </div>
                         </button>
                       </div>
-                      <div
-                        aria-hidden="true"
-                        class="RoomListItemView-module_notificationDecoration"
-                      />
                     </div>
                   </div>
                 </button>
@@ -1086,6 +1107,17 @@ exports[`<RoomListView /> > renders Default story 1`] = `
                           >
                             Support
                           </div>
+                        </div>
+                        <div
+                          class="_typography_6v6n8_153 _font-body-sm-regular_6v6n8_31 RoomListItemView-module_preview"
+                        >
+                          <span
+                            class="RoomListItemView-module_ellipsis"
+                          />
+                          <span
+                            aria-hidden="true"
+                            class="RoomListItemView-module_notificationDecoration"
+                          />
                         </div>
                       </div>
                       <div
@@ -1157,10 +1189,6 @@ exports[`<RoomListView /> > renders Default story 1`] = `
                           </div>
                         </button>
                       </div>
-                      <div
-                        aria-hidden="true"
-                        class="RoomListItemView-module_notificationDecoration"
-                      />
                     </div>
                   </div>
                 </button>
@@ -1222,6 +1250,10 @@ exports[`<RoomListView /> > renders Default story 1`] = `
                           >
                             Last message in Announcements
                           </span>
+                          <span
+                            aria-hidden="true"
+                            class="RoomListItemView-module_notificationDecoration"
+                          />
                         </div>
                       </div>
                       <div
@@ -1293,10 +1325,6 @@ exports[`<RoomListView /> > renders Default story 1`] = `
                           </div>
                         </button>
                       </div>
-                      <div
-                        aria-hidden="true"
-                        class="RoomListItemView-module_notificationDecoration"
-                      />
                     </div>
                   </div>
                 </button>
@@ -1348,6 +1376,17 @@ exports[`<RoomListView /> > renders Default story 1`] = `
                           >
                             Off-topic
                           </div>
+                        </div>
+                        <div
+                          class="_typography_6v6n8_153 _font-body-sm-regular_6v6n8_31 RoomListItemView-module_preview"
+                        >
+                          <span
+                            class="RoomListItemView-module_ellipsis"
+                          />
+                          <span
+                            aria-hidden="true"
+                            class="RoomListItemView-module_notificationDecoration"
+                          />
                         </div>
                       </div>
                       <div
@@ -1419,10 +1458,6 @@ exports[`<RoomListView /> > renders Default story 1`] = `
                           </div>
                         </button>
                       </div>
-                      <div
-                        aria-hidden="true"
-                        class="RoomListItemView-module_notificationDecoration"
-                      />
                     </div>
                   </div>
                 </button>
@@ -1483,6 +1518,33 @@ exports[`<RoomListView /> > renders Default story 1`] = `
                             class="RoomListItemView-module_ellipsis"
                           >
                             Last message in Team Alpha
+                          </span>
+                          <span
+                            aria-hidden="true"
+                            class="RoomListItemView-module_notificationDecoration"
+                          >
+                            <div
+                              class="Flex-module_flex"
+                              data-testid="notification-decoration"
+                              style="--mx-flex-display: flex; --mx-flex-direction: row; --mx-flex-align: center; --mx-flex-justify: center; --mx-flex-gap: var(--cpd-space-1x); --mx-flex-wrap: nowrap;"
+                            >
+                              <svg
+                                fill="var(--cpd-color-icon-accent-primary)"
+                                height="20px"
+                                viewBox="0 0 24 24"
+                                width="20px"
+                                xmlns="http://www.w3.org/2000/svg"
+                              >
+                                <path
+                                  d="M12 4a8 8 0 1 0 0 16 1 1 0 1 1 0 2C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10v1.5a3.5 3.5 0 0 1-6.396 1.966A5 5 0 1 1 17 12v1.5a1.5 1.5 0 0 0 3 0V12a8 8 0 0 0-8-8m3 8a3 3 0 1 0-6 0 3 3 0 0 0 6 0"
+                                />
+                              </svg>
+                              <span
+                                class="_unread-counter_1147r_8"
+                              >
+                                10
+                              </span>
+                            </div>
                           </span>
                         </div>
                       </div>
@@ -1555,33 +1617,6 @@ exports[`<RoomListView /> > renders Default story 1`] = `
                           </div>
                         </button>
                       </div>
-                      <div
-                        aria-hidden="true"
-                        class="RoomListItemView-module_notificationDecoration"
-                      >
-                        <div
-                          class="Flex-module_flex"
-                          data-testid="notification-decoration"
-                          style="--mx-flex-display: flex; --mx-flex-direction: row; --mx-flex-align: center; --mx-flex-justify: center; --mx-flex-gap: var(--cpd-space-1x); --mx-flex-wrap: nowrap;"
-                        >
-                          <svg
-                            fill="var(--cpd-color-icon-accent-primary)"
-                            height="20px"
-                            viewBox="0 0 24 24"
-                            width="20px"
-                            xmlns="http://www.w3.org/2000/svg"
-                          >
-                            <path
-                              d="M12 4a8 8 0 1 0 0 16 1 1 0 1 1 0 2C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10v1.5a3.5 3.5 0 0 1-6.396 1.966A5 5 0 1 1 17 12v1.5a1.5 1.5 0 0 0 3 0V12a8 8 0 0 0-8-8m3 8a3 3 0 1 0-6 0 3 3 0 0 0 6 0"
-                            />
-                          </svg>
-                          <span
-                            class="_unread-counter_1147r_8"
-                          >
-                            10
-                          </span>
-                        </div>
-                      </div>
                     </div>
                   </div>
                 </button>
@@ -1633,6 +1668,17 @@ exports[`<RoomListView /> > renders Default story 1`] = `
                           >
                             Team Beta
                           </div>
+                        </div>
+                        <div
+                          class="_typography_6v6n8_153 _font-body-sm-regular_6v6n8_31 RoomListItemView-module_preview"
+                        >
+                          <span
+                            class="RoomListItemView-module_ellipsis"
+                          />
+                          <span
+                            aria-hidden="true"
+                            class="RoomListItemView-module_notificationDecoration"
+                          />
                         </div>
                       </div>
                       <div
@@ -1704,10 +1750,6 @@ exports[`<RoomListView /> > renders Default story 1`] = `
                           </div>
                         </button>
                       </div>
-                      <div
-                        aria-hidden="true"
-                        class="RoomListItemView-module_notificationDecoration"
-                      />
                     </div>
                   </div>
                 </button>
@@ -1769,6 +1811,10 @@ exports[`<RoomListView /> > renders Default story 1`] = `
                           >
                             Last message in Project X
                           </span>
+                          <span
+                            aria-hidden="true"
+                            class="RoomListItemView-module_notificationDecoration"
+                          />
                         </div>
                       </div>
                       <div
@@ -1840,10 +1886,6 @@ exports[`<RoomListView /> > renders Default story 1`] = `
                           </div>
                         </button>
                       </div>
-                      <div
-                        aria-hidden="true"
-                        class="RoomListItemView-module_notificationDecoration"
-                      />
                     </div>
                   </div>
                 </button>
@@ -1895,6 +1937,17 @@ exports[`<RoomListView /> > renders Default story 1`] = `
                           >
                             Project Y
                           </div>
+                        </div>
+                        <div
+                          class="_typography_6v6n8_153 _font-body-sm-regular_6v6n8_31 RoomListItemView-module_preview"
+                        >
+                          <span
+                            class="RoomListItemView-module_ellipsis"
+                          />
+                          <span
+                            aria-hidden="true"
+                            class="RoomListItemView-module_notificationDecoration"
+                          />
                         </div>
                       </div>
                       <div
@@ -1966,10 +2019,6 @@ exports[`<RoomListView /> > renders Default story 1`] = `
                           </div>
                         </button>
                       </div>
-                      <div
-                        aria-hidden="true"
-                        class="RoomListItemView-module_notificationDecoration"
-                      />
                     </div>
                   </div>
                 </button>
@@ -2031,6 +2080,10 @@ exports[`<RoomListView /> > renders Default story 1`] = `
                           >
                             Last message in Water Cooler
                           </span>
+                          <span
+                            aria-hidden="true"
+                            class="RoomListItemView-module_notificationDecoration"
+                          />
                         </div>
                       </div>
                       <div
@@ -2102,10 +2155,6 @@ exports[`<RoomListView /> > renders Default story 1`] = `
                           </div>
                         </button>
                       </div>
-                      <div
-                        aria-hidden="true"
-                        class="RoomListItemView-module_notificationDecoration"
-                      />
                     </div>
                   </div>
                 </button>
@@ -2157,6 +2206,40 @@ exports[`<RoomListView /> > renders Default story 1`] = `
                           >
                             Feedback
                           </div>
+                        </div>
+                        <div
+                          class="_typography_6v6n8_153 _font-body-sm-regular_6v6n8_31 RoomListItemView-module_preview"
+                        >
+                          <span
+                            class="RoomListItemView-module_ellipsis"
+                          />
+                          <span
+                            aria-hidden="true"
+                            class="RoomListItemView-module_notificationDecoration"
+                          >
+                            <div
+                              class="Flex-module_flex"
+                              data-testid="notification-decoration"
+                              style="--mx-flex-display: flex; --mx-flex-direction: row; --mx-flex-align: center; --mx-flex-justify: center; --mx-flex-gap: var(--cpd-space-1x); --mx-flex-wrap: nowrap;"
+                            >
+                              <svg
+                                fill="var(--cpd-color-icon-accent-primary)"
+                                height="20px"
+                                viewBox="0 0 24 24"
+                                width="20px"
+                                xmlns="http://www.w3.org/2000/svg"
+                              >
+                                <path
+                                  d="M12 4a8 8 0 1 0 0 16 1 1 0 1 1 0 2C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10v1.5a3.5 3.5 0 0 1-6.396 1.966A5 5 0 1 1 17 12v1.5a1.5 1.5 0 0 0 3 0V12a8 8 0 0 0-8-8m3 8a3 3 0 1 0-6 0 3 3 0 0 0 6 0"
+                                />
+                              </svg>
+                              <span
+                                class="_unread-counter_1147r_8"
+                              >
+                                15
+                              </span>
+                            </div>
+                          </span>
                         </div>
                       </div>
                       <div
@@ -2228,33 +2311,6 @@ exports[`<RoomListView /> > renders Default story 1`] = `
                           </div>
                         </button>
                       </div>
-                      <div
-                        aria-hidden="true"
-                        class="RoomListItemView-module_notificationDecoration"
-                      >
-                        <div
-                          class="Flex-module_flex"
-                          data-testid="notification-decoration"
-                          style="--mx-flex-display: flex; --mx-flex-direction: row; --mx-flex-align: center; --mx-flex-justify: center; --mx-flex-gap: var(--cpd-space-1x); --mx-flex-wrap: nowrap;"
-                        >
-                          <svg
-                            fill="var(--cpd-color-icon-accent-primary)"
-                            height="20px"
-                            viewBox="0 0 24 24"
-                            width="20px"
-                            xmlns="http://www.w3.org/2000/svg"
-                          >
-                            <path
-                              d="M12 4a8 8 0 1 0 0 16 1 1 0 1 1 0 2C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10v1.5a3.5 3.5 0 0 1-6.396 1.966A5 5 0 1 1 17 12v1.5a1.5 1.5 0 0 0 3 0V12a8 8 0 0 0-8-8m3 8a3 3 0 1 0-6 0 3 3 0 0 0 6 0"
-                            />
-                          </svg>
-                          <span
-                            class="_unread-counter_1147r_8"
-                          >
-                            15
-                          </span>
-                        </div>
-                      </div>
                     </div>
                   </div>
                 </button>
@@ -2316,6 +2372,10 @@ exports[`<RoomListView /> > renders Default story 1`] = `
                           >
                             Last message in Ideas
                           </span>
+                          <span
+                            aria-hidden="true"
+                            class="RoomListItemView-module_notificationDecoration"
+                          />
                         </div>
                       </div>
                       <div
@@ -2387,10 +2447,6 @@ exports[`<RoomListView /> > renders Default story 1`] = `
                           </div>
                         </button>
                       </div>
-                      <div
-                        aria-hidden="true"
-                        class="RoomListItemView-module_notificationDecoration"
-                      />
                     </div>
                   </div>
                 </button>
@@ -2442,6 +2498,17 @@ exports[`<RoomListView /> > renders Default story 1`] = `
                           >
                             Bugs
                           </div>
+                        </div>
+                        <div
+                          class="_typography_6v6n8_153 _font-body-sm-regular_6v6n8_31 RoomListItemView-module_preview"
+                        >
+                          <span
+                            class="RoomListItemView-module_ellipsis"
+                          />
+                          <span
+                            aria-hidden="true"
+                            class="RoomListItemView-module_notificationDecoration"
+                          />
                         </div>
                       </div>
                       <div
@@ -2513,10 +2580,6 @@ exports[`<RoomListView /> > renders Default story 1`] = `
                           </div>
                         </button>
                       </div>
-                      <div
-                        aria-hidden="true"
-                        class="RoomListItemView-module_notificationDecoration"
-                      />
                     </div>
                   </div>
                 </button>
@@ -2578,6 +2641,10 @@ exports[`<RoomListView /> > renders Default story 1`] = `
                           >
                             Last message in Features
                           </span>
+                          <span
+                            aria-hidden="true"
+                            class="RoomListItemView-module_notificationDecoration"
+                          />
                         </div>
                       </div>
                       <div
@@ -2649,10 +2716,6 @@ exports[`<RoomListView /> > renders Default story 1`] = `
                           </div>
                         </button>
                       </div>
-                      <div
-                        aria-hidden="true"
-                        class="RoomListItemView-module_notificationDecoration"
-                      />
                     </div>
                   </div>
                 </button>
@@ -2704,6 +2767,17 @@ exports[`<RoomListView /> > renders Default story 1`] = `
                           >
                             Releases
                           </div>
+                        </div>
+                        <div
+                          class="_typography_6v6n8_153 _font-body-sm-regular_6v6n8_31 RoomListItemView-module_preview"
+                        >
+                          <span
+                            class="RoomListItemView-module_ellipsis"
+                          />
+                          <span
+                            aria-hidden="true"
+                            class="RoomListItemView-module_notificationDecoration"
+                          />
                         </div>
                       </div>
                       <div
@@ -2775,10 +2849,6 @@ exports[`<RoomListView /> > renders Default story 1`] = `
                           </div>
                         </button>
                       </div>
-                      <div
-                        aria-hidden="true"
-                        class="RoomListItemView-module_notificationDecoration"
-                      />
                     </div>
                   </div>
                 </button>
@@ -3508,6 +3578,31 @@ exports[`<RoomListView /> > renders LargeFlatList story 1`] = `
                           >
                             Last message in General
                           </span>
+                          <span
+                            aria-hidden="true"
+                            class="RoomListItemView-module_notificationDecoration"
+                          >
+                            <div
+                              class="Flex-module_flex"
+                              data-testid="notification-decoration"
+                              style="--mx-flex-display: flex; --mx-flex-direction: row; --mx-flex-align: center; --mx-flex-justify: center; --mx-flex-gap: var(--cpd-space-1x); --mx-flex-wrap: nowrap;"
+                            >
+                              <svg
+                                fill="var(--cpd-color-icon-accent-primary)"
+                                height="20px"
+                                viewBox="0 0 24 24"
+                                width="20px"
+                                xmlns="http://www.w3.org/2000/svg"
+                              >
+                                <path
+                                  d="M12 4a8 8 0 1 0 0 16 1 1 0 1 1 0 2C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10v1.5a3.5 3.5 0 0 1-6.396 1.966A5 5 0 1 1 17 12v1.5a1.5 1.5 0 0 0 3 0V12a8 8 0 0 0-8-8m3 8a3 3 0 1 0-6 0 3 3 0 0 0 6 0"
+                                />
+                              </svg>
+                              <div
+                                class="_unread-counter_1147r_8"
+                              />
+                            </div>
+                          </span>
                         </div>
                       </div>
                       <div
@@ -3579,31 +3674,6 @@ exports[`<RoomListView /> > renders LargeFlatList story 1`] = `
                           </div>
                         </button>
                       </div>
-                      <div
-                        aria-hidden="true"
-                        class="RoomListItemView-module_notificationDecoration"
-                      >
-                        <div
-                          class="Flex-module_flex"
-                          data-testid="notification-decoration"
-                          style="--mx-flex-display: flex; --mx-flex-direction: row; --mx-flex-align: center; --mx-flex-justify: center; --mx-flex-gap: var(--cpd-space-1x); --mx-flex-wrap: nowrap;"
-                        >
-                          <svg
-                            fill="var(--cpd-color-icon-accent-primary)"
-                            height="20px"
-                            viewBox="0 0 24 24"
-                            width="20px"
-                            xmlns="http://www.w3.org/2000/svg"
-                          >
-                            <path
-                              d="M12 4a8 8 0 1 0 0 16 1 1 0 1 1 0 2C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10v1.5a3.5 3.5 0 0 1-6.396 1.966A5 5 0 1 1 17 12v1.5a1.5 1.5 0 0 0 3 0V12a8 8 0 0 0-8-8m3 8a3 3 0 1 0-6 0 3 3 0 0 0 6 0"
-                            />
-                          </svg>
-                          <div
-                            class="_unread-counter_1147r_8"
-                          />
-                        </div>
-                      </div>
                     </div>
                   </div>
                 </button>
@@ -3655,6 +3725,17 @@ exports[`<RoomListView /> > renders LargeFlatList story 1`] = `
                           >
                             Random
                           </div>
+                        </div>
+                        <div
+                          class="_typography_6v6n8_153 _font-body-sm-regular_6v6n8_31 RoomListItemView-module_preview"
+                        >
+                          <span
+                            class="RoomListItemView-module_ellipsis"
+                          />
+                          <span
+                            aria-hidden="true"
+                            class="RoomListItemView-module_notificationDecoration"
+                          />
                         </div>
                       </div>
                       <div
@@ -3726,10 +3807,6 @@ exports[`<RoomListView /> > renders LargeFlatList story 1`] = `
                           </div>
                         </button>
                       </div>
-                      <div
-                        aria-hidden="true"
-                        class="RoomListItemView-module_notificationDecoration"
-                      />
                     </div>
                   </div>
                 </button>
@@ -3791,6 +3868,10 @@ exports[`<RoomListView /> > renders LargeFlatList story 1`] = `
                           >
                             Last message in Engineering
                           </span>
+                          <span
+                            aria-hidden="true"
+                            class="RoomListItemView-module_notificationDecoration"
+                          />
                         </div>
                       </div>
                       <div
@@ -3862,10 +3943,6 @@ exports[`<RoomListView /> > renders LargeFlatList story 1`] = `
                           </div>
                         </button>
                       </div>
-                      <div
-                        aria-hidden="true"
-                        class="RoomListItemView-module_notificationDecoration"
-                      />
                     </div>
                   </div>
                 </button>
@@ -3917,6 +3994,17 @@ exports[`<RoomListView /> > renders LargeFlatList story 1`] = `
                           >
                             Design
                           </div>
+                        </div>
+                        <div
+                          class="_typography_6v6n8_153 _font-body-sm-regular_6v6n8_31 RoomListItemView-module_preview"
+                        >
+                          <span
+                            class="RoomListItemView-module_ellipsis"
+                          />
+                          <span
+                            aria-hidden="true"
+                            class="RoomListItemView-module_notificationDecoration"
+                          />
                         </div>
                       </div>
                       <div
@@ -3988,10 +4076,6 @@ exports[`<RoomListView /> > renders LargeFlatList story 1`] = `
                           </div>
                         </button>
                       </div>
-                      <div
-                        aria-hidden="true"
-                        class="RoomListItemView-module_notificationDecoration"
-                      />
                     </div>
                   </div>
                 </button>
@@ -4053,6 +4137,10 @@ exports[`<RoomListView /> > renders LargeFlatList story 1`] = `
                           >
                             Last message in Product
                           </span>
+                          <span
+                            aria-hidden="true"
+                            class="RoomListItemView-module_notificationDecoration"
+                          />
                         </div>
                       </div>
                       <div
@@ -4124,10 +4212,6 @@ exports[`<RoomListView /> > renders LargeFlatList story 1`] = `
                           </div>
                         </button>
                       </div>
-                      <div
-                        aria-hidden="true"
-                        class="RoomListItemView-module_notificationDecoration"
-                      />
                     </div>
                   </div>
                 </button>
@@ -4179,6 +4263,40 @@ exports[`<RoomListView /> > renders LargeFlatList story 1`] = `
                           >
                             Marketing
                           </div>
+                        </div>
+                        <div
+                          class="_typography_6v6n8_153 _font-body-sm-regular_6v6n8_31 RoomListItemView-module_preview"
+                        >
+                          <span
+                            class="RoomListItemView-module_ellipsis"
+                          />
+                          <span
+                            aria-hidden="true"
+                            class="RoomListItemView-module_notificationDecoration"
+                          >
+                            <div
+                              class="Flex-module_flex"
+                              data-testid="notification-decoration"
+                              style="--mx-flex-display: flex; --mx-flex-direction: row; --mx-flex-align: center; --mx-flex-justify: center; --mx-flex-gap: var(--cpd-space-1x); --mx-flex-wrap: nowrap;"
+                            >
+                              <svg
+                                fill="var(--cpd-color-icon-accent-primary)"
+                                height="20px"
+                                viewBox="0 0 24 24"
+                                width="20px"
+                                xmlns="http://www.w3.org/2000/svg"
+                              >
+                                <path
+                                  d="M12 4a8 8 0 1 0 0 16 1 1 0 1 1 0 2C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10v1.5a3.5 3.5 0 0 1-6.396 1.966A5 5 0 1 1 17 12v1.5a1.5 1.5 0 0 0 3 0V12a8 8 0 0 0-8-8m3 8a3 3 0 1 0-6 0 3 3 0 0 0 6 0"
+                                />
+                              </svg>
+                              <span
+                                class="_unread-counter_1147r_8"
+                              >
+                                5
+                              </span>
+                            </div>
+                          </span>
                         </div>
                       </div>
                       <div
@@ -4250,33 +4368,6 @@ exports[`<RoomListView /> > renders LargeFlatList story 1`] = `
                           </div>
                         </button>
                       </div>
-                      <div
-                        aria-hidden="true"
-                        class="RoomListItemView-module_notificationDecoration"
-                      >
-                        <div
-                          class="Flex-module_flex"
-                          data-testid="notification-decoration"
-                          style="--mx-flex-display: flex; --mx-flex-direction: row; --mx-flex-align: center; --mx-flex-justify: center; --mx-flex-gap: var(--cpd-space-1x); --mx-flex-wrap: nowrap;"
-                        >
-                          <svg
-                            fill="var(--cpd-color-icon-accent-primary)"
-                            height="20px"
-                            viewBox="0 0 24 24"
-                            width="20px"
-                            xmlns="http://www.w3.org/2000/svg"
-                          >
-                            <path
-                              d="M12 4a8 8 0 1 0 0 16 1 1 0 1 1 0 2C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10v1.5a3.5 3.5 0 0 1-6.396 1.966A5 5 0 1 1 17 12v1.5a1.5 1.5 0 0 0 3 0V12a8 8 0 0 0-8-8m3 8a3 3 0 1 0-6 0 3 3 0 0 0 6 0"
-                            />
-                          </svg>
-                          <span
-                            class="_unread-counter_1147r_8"
-                          >
-                            5
-                          </span>
-                        </div>
-                      </div>
                     </div>
                   </div>
                 </button>
@@ -4338,6 +4429,10 @@ exports[`<RoomListView /> > renders LargeFlatList story 1`] = `
                           >
                             Last message in Sales
                           </span>
+                          <span
+                            aria-hidden="true"
+                            class="RoomListItemView-module_notificationDecoration"
+                          />
                         </div>
                       </div>
                       <div
@@ -4409,10 +4504,6 @@ exports[`<RoomListView /> > renders LargeFlatList story 1`] = `
                           </div>
                         </button>
                       </div>
-                      <div
-                        aria-hidden="true"
-                        class="RoomListItemView-module_notificationDecoration"
-                      />
                     </div>
                   </div>
                 </button>
@@ -4464,6 +4555,17 @@ exports[`<RoomListView /> > renders LargeFlatList story 1`] = `
                           >
                             Support
                           </div>
+                        </div>
+                        <div
+                          class="_typography_6v6n8_153 _font-body-sm-regular_6v6n8_31 RoomListItemView-module_preview"
+                        >
+                          <span
+                            class="RoomListItemView-module_ellipsis"
+                          />
+                          <span
+                            aria-hidden="true"
+                            class="RoomListItemView-module_notificationDecoration"
+                          />
                         </div>
                       </div>
                       <div
@@ -4535,10 +4637,6 @@ exports[`<RoomListView /> > renders LargeFlatList story 1`] = `
                           </div>
                         </button>
                       </div>
-                      <div
-                        aria-hidden="true"
-                        class="RoomListItemView-module_notificationDecoration"
-                      />
                     </div>
                   </div>
                 </button>
@@ -4600,6 +4698,10 @@ exports[`<RoomListView /> > renders LargeFlatList story 1`] = `
                           >
                             Last message in Announcements
                           </span>
+                          <span
+                            aria-hidden="true"
+                            class="RoomListItemView-module_notificationDecoration"
+                          />
                         </div>
                       </div>
                       <div
@@ -4671,10 +4773,6 @@ exports[`<RoomListView /> > renders LargeFlatList story 1`] = `
                           </div>
                         </button>
                       </div>
-                      <div
-                        aria-hidden="true"
-                        class="RoomListItemView-module_notificationDecoration"
-                      />
                     </div>
                   </div>
                 </button>
@@ -4726,6 +4824,17 @@ exports[`<RoomListView /> > renders LargeFlatList story 1`] = `
                           >
                             Off-topic
                           </div>
+                        </div>
+                        <div
+                          class="_typography_6v6n8_153 _font-body-sm-regular_6v6n8_31 RoomListItemView-module_preview"
+                        >
+                          <span
+                            class="RoomListItemView-module_ellipsis"
+                          />
+                          <span
+                            aria-hidden="true"
+                            class="RoomListItemView-module_notificationDecoration"
+                          />
                         </div>
                       </div>
                       <div
@@ -4797,10 +4906,6 @@ exports[`<RoomListView /> > renders LargeFlatList story 1`] = `
                           </div>
                         </button>
                       </div>
-                      <div
-                        aria-hidden="true"
-                        class="RoomListItemView-module_notificationDecoration"
-                      />
                     </div>
                   </div>
                 </button>
@@ -4861,6 +4966,33 @@ exports[`<RoomListView /> > renders LargeFlatList story 1`] = `
                             class="RoomListItemView-module_ellipsis"
                           >
                             Last message in Team Alpha
+                          </span>
+                          <span
+                            aria-hidden="true"
+                            class="RoomListItemView-module_notificationDecoration"
+                          >
+                            <div
+                              class="Flex-module_flex"
+                              data-testid="notification-decoration"
+                              style="--mx-flex-display: flex; --mx-flex-direction: row; --mx-flex-align: center; --mx-flex-justify: center; --mx-flex-gap: var(--cpd-space-1x); --mx-flex-wrap: nowrap;"
+                            >
+                              <svg
+                                fill="var(--cpd-color-icon-accent-primary)"
+                                height="20px"
+                                viewBox="0 0 24 24"
+                                width="20px"
+                                xmlns="http://www.w3.org/2000/svg"
+                              >
+                                <path
+                                  d="M12 4a8 8 0 1 0 0 16 1 1 0 1 1 0 2C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10v1.5a3.5 3.5 0 0 1-6.396 1.966A5 5 0 1 1 17 12v1.5a1.5 1.5 0 0 0 3 0V12a8 8 0 0 0-8-8m3 8a3 3 0 1 0-6 0 3 3 0 0 0 6 0"
+                                />
+                              </svg>
+                              <span
+                                class="_unread-counter_1147r_8"
+                              >
+                                10
+                              </span>
+                            </div>
                           </span>
                         </div>
                       </div>
@@ -4933,33 +5065,6 @@ exports[`<RoomListView /> > renders LargeFlatList story 1`] = `
                           </div>
                         </button>
                       </div>
-                      <div
-                        aria-hidden="true"
-                        class="RoomListItemView-module_notificationDecoration"
-                      >
-                        <div
-                          class="Flex-module_flex"
-                          data-testid="notification-decoration"
-                          style="--mx-flex-display: flex; --mx-flex-direction: row; --mx-flex-align: center; --mx-flex-justify: center; --mx-flex-gap: var(--cpd-space-1x); --mx-flex-wrap: nowrap;"
-                        >
-                          <svg
-                            fill="var(--cpd-color-icon-accent-primary)"
-                            height="20px"
-                            viewBox="0 0 24 24"
-                            width="20px"
-                            xmlns="http://www.w3.org/2000/svg"
-                          >
-                            <path
-                              d="M12 4a8 8 0 1 0 0 16 1 1 0 1 1 0 2C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10v1.5a3.5 3.5 0 0 1-6.396 1.966A5 5 0 1 1 17 12v1.5a1.5 1.5 0 0 0 3 0V12a8 8 0 0 0-8-8m3 8a3 3 0 1 0-6 0 3 3 0 0 0 6 0"
-                            />
-                          </svg>
-                          <span
-                            class="_unread-counter_1147r_8"
-                          >
-                            10
-                          </span>
-                        </div>
-                      </div>
                     </div>
                   </div>
                 </button>
@@ -5011,6 +5116,17 @@ exports[`<RoomListView /> > renders LargeFlatList story 1`] = `
                           >
                             Team Beta
                           </div>
+                        </div>
+                        <div
+                          class="_typography_6v6n8_153 _font-body-sm-regular_6v6n8_31 RoomListItemView-module_preview"
+                        >
+                          <span
+                            class="RoomListItemView-module_ellipsis"
+                          />
+                          <span
+                            aria-hidden="true"
+                            class="RoomListItemView-module_notificationDecoration"
+                          />
                         </div>
                       </div>
                       <div
@@ -5082,10 +5198,6 @@ exports[`<RoomListView /> > renders LargeFlatList story 1`] = `
                           </div>
                         </button>
                       </div>
-                      <div
-                        aria-hidden="true"
-                        class="RoomListItemView-module_notificationDecoration"
-                      />
                     </div>
                   </div>
                 </button>
@@ -5147,6 +5259,10 @@ exports[`<RoomListView /> > renders LargeFlatList story 1`] = `
                           >
                             Last message in Project X
                           </span>
+                          <span
+                            aria-hidden="true"
+                            class="RoomListItemView-module_notificationDecoration"
+                          />
                         </div>
                       </div>
                       <div
@@ -5218,10 +5334,6 @@ exports[`<RoomListView /> > renders LargeFlatList story 1`] = `
                           </div>
                         </button>
                       </div>
-                      <div
-                        aria-hidden="true"
-                        class="RoomListItemView-module_notificationDecoration"
-                      />
                     </div>
                   </div>
                 </button>
@@ -5273,6 +5385,17 @@ exports[`<RoomListView /> > renders LargeFlatList story 1`] = `
                           >
                             Project Y
                           </div>
+                        </div>
+                        <div
+                          class="_typography_6v6n8_153 _font-body-sm-regular_6v6n8_31 RoomListItemView-module_preview"
+                        >
+                          <span
+                            class="RoomListItemView-module_ellipsis"
+                          />
+                          <span
+                            aria-hidden="true"
+                            class="RoomListItemView-module_notificationDecoration"
+                          />
                         </div>
                       </div>
                       <div
@@ -5344,10 +5467,6 @@ exports[`<RoomListView /> > renders LargeFlatList story 1`] = `
                           </div>
                         </button>
                       </div>
-                      <div
-                        aria-hidden="true"
-                        class="RoomListItemView-module_notificationDecoration"
-                      />
                     </div>
                   </div>
                 </button>
@@ -5409,6 +5528,10 @@ exports[`<RoomListView /> > renders LargeFlatList story 1`] = `
                           >
                             Last message in Water Cooler
                           </span>
+                          <span
+                            aria-hidden="true"
+                            class="RoomListItemView-module_notificationDecoration"
+                          />
                         </div>
                       </div>
                       <div
@@ -5480,10 +5603,6 @@ exports[`<RoomListView /> > renders LargeFlatList story 1`] = `
                           </div>
                         </button>
                       </div>
-                      <div
-                        aria-hidden="true"
-                        class="RoomListItemView-module_notificationDecoration"
-                      />
                     </div>
                   </div>
                 </button>
@@ -5535,6 +5654,40 @@ exports[`<RoomListView /> > renders LargeFlatList story 1`] = `
                           >
                             Feedback
                           </div>
+                        </div>
+                        <div
+                          class="_typography_6v6n8_153 _font-body-sm-regular_6v6n8_31 RoomListItemView-module_preview"
+                        >
+                          <span
+                            class="RoomListItemView-module_ellipsis"
+                          />
+                          <span
+                            aria-hidden="true"
+                            class="RoomListItemView-module_notificationDecoration"
+                          >
+                            <div
+                              class="Flex-module_flex"
+                              data-testid="notification-decoration"
+                              style="--mx-flex-display: flex; --mx-flex-direction: row; --mx-flex-align: center; --mx-flex-justify: center; --mx-flex-gap: var(--cpd-space-1x); --mx-flex-wrap: nowrap;"
+                            >
+                              <svg
+                                fill="var(--cpd-color-icon-accent-primary)"
+                                height="20px"
+                                viewBox="0 0 24 24"
+                                width="20px"
+                                xmlns="http://www.w3.org/2000/svg"
+                              >
+                                <path
+                                  d="M12 4a8 8 0 1 0 0 16 1 1 0 1 1 0 2C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10v1.5a3.5 3.5 0 0 1-6.396 1.966A5 5 0 1 1 17 12v1.5a1.5 1.5 0 0 0 3 0V12a8 8 0 0 0-8-8m3 8a3 3 0 1 0-6 0 3 3 0 0 0 6 0"
+                                />
+                              </svg>
+                              <span
+                                class="_unread-counter_1147r_8"
+                              >
+                                15
+                              </span>
+                            </div>
+                          </span>
                         </div>
                       </div>
                       <div
@@ -5606,33 +5759,6 @@ exports[`<RoomListView /> > renders LargeFlatList story 1`] = `
                           </div>
                         </button>
                       </div>
-                      <div
-                        aria-hidden="true"
-                        class="RoomListItemView-module_notificationDecoration"
-                      >
-                        <div
-                          class="Flex-module_flex"
-                          data-testid="notification-decoration"
-                          style="--mx-flex-display: flex; --mx-flex-direction: row; --mx-flex-align: center; --mx-flex-justify: center; --mx-flex-gap: var(--cpd-space-1x); --mx-flex-wrap: nowrap;"
-                        >
-                          <svg
-                            fill="var(--cpd-color-icon-accent-primary)"
-                            height="20px"
-                            viewBox="0 0 24 24"
-                            width="20px"
-                            xmlns="http://www.w3.org/2000/svg"
-                          >
-                            <path
-                              d="M12 4a8 8 0 1 0 0 16 1 1 0 1 1 0 2C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10v1.5a3.5 3.5 0 0 1-6.396 1.966A5 5 0 1 1 17 12v1.5a1.5 1.5 0 0 0 3 0V12a8 8 0 0 0-8-8m3 8a3 3 0 1 0-6 0 3 3 0 0 0 6 0"
-                            />
-                          </svg>
-                          <span
-                            class="_unread-counter_1147r_8"
-                          >
-                            15
-                          </span>
-                        </div>
-                      </div>
                     </div>
                   </div>
                 </button>
@@ -5694,6 +5820,10 @@ exports[`<RoomListView /> > renders LargeFlatList story 1`] = `
                           >
                             Last message in Ideas
                           </span>
+                          <span
+                            aria-hidden="true"
+                            class="RoomListItemView-module_notificationDecoration"
+                          />
                         </div>
                       </div>
                       <div
@@ -5765,10 +5895,6 @@ exports[`<RoomListView /> > renders LargeFlatList story 1`] = `
                           </div>
                         </button>
                       </div>
-                      <div
-                        aria-hidden="true"
-                        class="RoomListItemView-module_notificationDecoration"
-                      />
                     </div>
                   </div>
                 </button>
@@ -5820,6 +5946,17 @@ exports[`<RoomListView /> > renders LargeFlatList story 1`] = `
                           >
                             Bugs
                           </div>
+                        </div>
+                        <div
+                          class="_typography_6v6n8_153 _font-body-sm-regular_6v6n8_31 RoomListItemView-module_preview"
+                        >
+                          <span
+                            class="RoomListItemView-module_ellipsis"
+                          />
+                          <span
+                            aria-hidden="true"
+                            class="RoomListItemView-module_notificationDecoration"
+                          />
                         </div>
                       </div>
                       <div
@@ -5891,10 +6028,6 @@ exports[`<RoomListView /> > renders LargeFlatList story 1`] = `
                           </div>
                         </button>
                       </div>
-                      <div
-                        aria-hidden="true"
-                        class="RoomListItemView-module_notificationDecoration"
-                      />
                     </div>
                   </div>
                 </button>
@@ -5956,6 +6089,10 @@ exports[`<RoomListView /> > renders LargeFlatList story 1`] = `
                           >
                             Last message in Features
                           </span>
+                          <span
+                            aria-hidden="true"
+                            class="RoomListItemView-module_notificationDecoration"
+                          />
                         </div>
                       </div>
                       <div
@@ -6027,10 +6164,6 @@ exports[`<RoomListView /> > renders LargeFlatList story 1`] = `
                           </div>
                         </button>
                       </div>
-                      <div
-                        aria-hidden="true"
-                        class="RoomListItemView-module_notificationDecoration"
-                      />
                     </div>
                   </div>
                 </button>
@@ -6082,6 +6215,17 @@ exports[`<RoomListView /> > renders LargeFlatList story 1`] = `
                           >
                             Releases
                           </div>
+                        </div>
+                        <div
+                          class="_typography_6v6n8_153 _font-body-sm-regular_6v6n8_31 RoomListItemView-module_preview"
+                        >
+                          <span
+                            class="RoomListItemView-module_ellipsis"
+                          />
+                          <span
+                            aria-hidden="true"
+                            class="RoomListItemView-module_notificationDecoration"
+                          />
                         </div>
                       </div>
                       <div
@@ -6153,10 +6297,6 @@ exports[`<RoomListView /> > renders LargeFlatList story 1`] = `
                           </div>
                         </button>
                       </div>
-                      <div
-                        aria-hidden="true"
-                        class="RoomListItemView-module_notificationDecoration"
-                      />
                     </div>
                   </div>
                 </button>
@@ -6217,6 +6357,33 @@ exports[`<RoomListView /> > renders LargeFlatList story 1`] = `
                             class="RoomListItemView-module_ellipsis"
                           >
                             Last message in General
+                          </span>
+                          <span
+                            aria-hidden="true"
+                            class="RoomListItemView-module_notificationDecoration"
+                          >
+                            <div
+                              class="Flex-module_flex"
+                              data-testid="notification-decoration"
+                              style="--mx-flex-display: flex; --mx-flex-direction: row; --mx-flex-align: center; --mx-flex-justify: center; --mx-flex-gap: var(--cpd-space-1x); --mx-flex-wrap: nowrap;"
+                            >
+                              <svg
+                                fill="var(--cpd-color-icon-accent-primary)"
+                                height="20px"
+                                viewBox="0 0 24 24"
+                                width="20px"
+                                xmlns="http://www.w3.org/2000/svg"
+                              >
+                                <path
+                                  d="M12 4a8 8 0 1 0 0 16 1 1 0 1 1 0 2C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10v1.5a3.5 3.5 0 0 1-6.396 1.966A5 5 0 1 1 17 12v1.5a1.5 1.5 0 0 0 3 0V12a8 8 0 0 0-8-8m3 8a3 3 0 1 0-6 0 3 3 0 0 0 6 0"
+                                />
+                              </svg>
+                              <span
+                                class="_unread-counter_1147r_8"
+                              >
+                                20
+                              </span>
+                            </div>
                           </span>
                         </div>
                       </div>
@@ -6289,33 +6456,6 @@ exports[`<RoomListView /> > renders LargeFlatList story 1`] = `
                           </div>
                         </button>
                       </div>
-                      <div
-                        aria-hidden="true"
-                        class="RoomListItemView-module_notificationDecoration"
-                      >
-                        <div
-                          class="Flex-module_flex"
-                          data-testid="notification-decoration"
-                          style="--mx-flex-display: flex; --mx-flex-direction: row; --mx-flex-align: center; --mx-flex-justify: center; --mx-flex-gap: var(--cpd-space-1x); --mx-flex-wrap: nowrap;"
-                        >
-                          <svg
-                            fill="var(--cpd-color-icon-accent-primary)"
-                            height="20px"
-                            viewBox="0 0 24 24"
-                            width="20px"
-                            xmlns="http://www.w3.org/2000/svg"
-                          >
-                            <path
-                              d="M12 4a8 8 0 1 0 0 16 1 1 0 1 1 0 2C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10v1.5a3.5 3.5 0 0 1-6.396 1.966A5 5 0 1 1 17 12v1.5a1.5 1.5 0 0 0 3 0V12a8 8 0 0 0-8-8m3 8a3 3 0 1 0-6 0 3 3 0 0 0 6 0"
-                            />
-                          </svg>
-                          <span
-                            class="_unread-counter_1147r_8"
-                          >
-                            20
-                          </span>
-                        </div>
-                      </div>
                     </div>
                   </div>
                 </button>
@@ -6367,6 +6507,17 @@ exports[`<RoomListView /> > renders LargeFlatList story 1`] = `
                           >
                             Random
                           </div>
+                        </div>
+                        <div
+                          class="_typography_6v6n8_153 _font-body-sm-regular_6v6n8_31 RoomListItemView-module_preview"
+                        >
+                          <span
+                            class="RoomListItemView-module_ellipsis"
+                          />
+                          <span
+                            aria-hidden="true"
+                            class="RoomListItemView-module_notificationDecoration"
+                          />
                         </div>
                       </div>
                       <div
@@ -6438,10 +6589,6 @@ exports[`<RoomListView /> > renders LargeFlatList story 1`] = `
                           </div>
                         </button>
                       </div>
-                      <div
-                        aria-hidden="true"
-                        class="RoomListItemView-module_notificationDecoration"
-                      />
                     </div>
                   </div>
                 </button>
@@ -6700,6 +6847,31 @@ exports[`<RoomListView /> > renders LargeSectionList story 1`] = `
                                 >
                                   Last message in General
                                 </span>
+                                <span
+                                  aria-hidden="true"
+                                  class="RoomListItemView-module_notificationDecoration"
+                                >
+                                  <div
+                                    class="Flex-module_flex"
+                                    data-testid="notification-decoration"
+                                    style="--mx-flex-display: flex; --mx-flex-direction: row; --mx-flex-align: center; --mx-flex-justify: center; --mx-flex-gap: var(--cpd-space-1x); --mx-flex-wrap: nowrap;"
+                                  >
+                                    <svg
+                                      fill="var(--cpd-color-icon-accent-primary)"
+                                      height="20px"
+                                      viewBox="0 0 24 24"
+                                      width="20px"
+                                      xmlns="http://www.w3.org/2000/svg"
+                                    >
+                                      <path
+                                        d="M12 4a8 8 0 1 0 0 16 1 1 0 1 1 0 2C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10v1.5a3.5 3.5 0 0 1-6.396 1.966A5 5 0 1 1 17 12v1.5a1.5 1.5 0 0 0 3 0V12a8 8 0 0 0-8-8m3 8a3 3 0 1 0-6 0 3 3 0 0 0 6 0"
+                                      />
+                                    </svg>
+                                    <div
+                                      class="_unread-counter_1147r_8"
+                                    />
+                                  </div>
+                                </span>
                               </div>
                             </div>
                             <div
@@ -6771,31 +6943,6 @@ exports[`<RoomListView /> > renders LargeSectionList story 1`] = `
                                 </div>
                               </button>
                             </div>
-                            <div
-                              aria-hidden="true"
-                              class="RoomListItemView-module_notificationDecoration"
-                            >
-                              <div
-                                class="Flex-module_flex"
-                                data-testid="notification-decoration"
-                                style="--mx-flex-display: flex; --mx-flex-direction: row; --mx-flex-align: center; --mx-flex-justify: center; --mx-flex-gap: var(--cpd-space-1x); --mx-flex-wrap: nowrap;"
-                              >
-                                <svg
-                                  fill="var(--cpd-color-icon-accent-primary)"
-                                  height="20px"
-                                  viewBox="0 0 24 24"
-                                  width="20px"
-                                  xmlns="http://www.w3.org/2000/svg"
-                                >
-                                  <path
-                                    d="M12 4a8 8 0 1 0 0 16 1 1 0 1 1 0 2C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10v1.5a3.5 3.5 0 0 1-6.396 1.966A5 5 0 1 1 17 12v1.5a1.5 1.5 0 0 0 3 0V12a8 8 0 0 0-8-8m3 8a3 3 0 1 0-6 0 3 3 0 0 0 6 0"
-                                  />
-                                </svg>
-                                <div
-                                  class="_unread-counter_1147r_8"
-                                />
-                              </div>
-                            </div>
                           </div>
                         </div>
                       </button>
@@ -6856,6 +7003,17 @@ exports[`<RoomListView /> > renders LargeSectionList story 1`] = `
                                 >
                                   Random
                                 </div>
+                              </div>
+                              <div
+                                class="_typography_6v6n8_153 _font-body-sm-regular_6v6n8_31 RoomListItemView-module_preview"
+                              >
+                                <span
+                                  class="RoomListItemView-module_ellipsis"
+                                />
+                                <span
+                                  aria-hidden="true"
+                                  class="RoomListItemView-module_notificationDecoration"
+                                />
                               </div>
                             </div>
                             <div
@@ -6927,10 +7085,6 @@ exports[`<RoomListView /> > renders LargeSectionList story 1`] = `
                                 </div>
                               </button>
                             </div>
-                            <div
-                              aria-hidden="true"
-                              class="RoomListItemView-module_notificationDecoration"
-                            />
                           </div>
                         </div>
                       </button>
@@ -7001,6 +7155,10 @@ exports[`<RoomListView /> > renders LargeSectionList story 1`] = `
                                 >
                                   Last message in Engineering
                                 </span>
+                                <span
+                                  aria-hidden="true"
+                                  class="RoomListItemView-module_notificationDecoration"
+                                />
                               </div>
                             </div>
                             <div
@@ -7072,10 +7230,6 @@ exports[`<RoomListView /> > renders LargeSectionList story 1`] = `
                                 </div>
                               </button>
                             </div>
-                            <div
-                              aria-hidden="true"
-                              class="RoomListItemView-module_notificationDecoration"
-                            />
                           </div>
                         </div>
                       </button>
@@ -7136,6 +7290,17 @@ exports[`<RoomListView /> > renders LargeSectionList story 1`] = `
                                 >
                                   Design
                                 </div>
+                              </div>
+                              <div
+                                class="_typography_6v6n8_153 _font-body-sm-regular_6v6n8_31 RoomListItemView-module_preview"
+                              >
+                                <span
+                                  class="RoomListItemView-module_ellipsis"
+                                />
+                                <span
+                                  aria-hidden="true"
+                                  class="RoomListItemView-module_notificationDecoration"
+                                />
                               </div>
                             </div>
                             <div
@@ -7207,10 +7372,6 @@ exports[`<RoomListView /> > renders LargeSectionList story 1`] = `
                                 </div>
                               </button>
                             </div>
-                            <div
-                              aria-hidden="true"
-                              class="RoomListItemView-module_notificationDecoration"
-                            />
                           </div>
                         </div>
                       </button>
@@ -7281,6 +7442,10 @@ exports[`<RoomListView /> > renders LargeSectionList story 1`] = `
                                 >
                                   Last message in Product
                                 </span>
+                                <span
+                                  aria-hidden="true"
+                                  class="RoomListItemView-module_notificationDecoration"
+                                />
                               </div>
                             </div>
                             <div
@@ -7352,10 +7517,6 @@ exports[`<RoomListView /> > renders LargeSectionList story 1`] = `
                                 </div>
                               </button>
                             </div>
-                            <div
-                              aria-hidden="true"
-                              class="RoomListItemView-module_notificationDecoration"
-                            />
                           </div>
                         </div>
                       </button>
@@ -7416,6 +7577,40 @@ exports[`<RoomListView /> > renders LargeSectionList story 1`] = `
                                 >
                                   Marketing
                                 </div>
+                              </div>
+                              <div
+                                class="_typography_6v6n8_153 _font-body-sm-regular_6v6n8_31 RoomListItemView-module_preview"
+                              >
+                                <span
+                                  class="RoomListItemView-module_ellipsis"
+                                />
+                                <span
+                                  aria-hidden="true"
+                                  class="RoomListItemView-module_notificationDecoration"
+                                >
+                                  <div
+                                    class="Flex-module_flex"
+                                    data-testid="notification-decoration"
+                                    style="--mx-flex-display: flex; --mx-flex-direction: row; --mx-flex-align: center; --mx-flex-justify: center; --mx-flex-gap: var(--cpd-space-1x); --mx-flex-wrap: nowrap;"
+                                  >
+                                    <svg
+                                      fill="var(--cpd-color-icon-accent-primary)"
+                                      height="20px"
+                                      viewBox="0 0 24 24"
+                                      width="20px"
+                                      xmlns="http://www.w3.org/2000/svg"
+                                    >
+                                      <path
+                                        d="M12 4a8 8 0 1 0 0 16 1 1 0 1 1 0 2C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10v1.5a3.5 3.5 0 0 1-6.396 1.966A5 5 0 1 1 17 12v1.5a1.5 1.5 0 0 0 3 0V12a8 8 0 0 0-8-8m3 8a3 3 0 1 0-6 0 3 3 0 0 0 6 0"
+                                      />
+                                    </svg>
+                                    <span
+                                      class="_unread-counter_1147r_8"
+                                    >
+                                      5
+                                    </span>
+                                  </div>
+                                </span>
                               </div>
                             </div>
                             <div
@@ -7487,33 +7682,6 @@ exports[`<RoomListView /> > renders LargeSectionList story 1`] = `
                                 </div>
                               </button>
                             </div>
-                            <div
-                              aria-hidden="true"
-                              class="RoomListItemView-module_notificationDecoration"
-                            >
-                              <div
-                                class="Flex-module_flex"
-                                data-testid="notification-decoration"
-                                style="--mx-flex-display: flex; --mx-flex-direction: row; --mx-flex-align: center; --mx-flex-justify: center; --mx-flex-gap: var(--cpd-space-1x); --mx-flex-wrap: nowrap;"
-                              >
-                                <svg
-                                  fill="var(--cpd-color-icon-accent-primary)"
-                                  height="20px"
-                                  viewBox="0 0 24 24"
-                                  width="20px"
-                                  xmlns="http://www.w3.org/2000/svg"
-                                >
-                                  <path
-                                    d="M12 4a8 8 0 1 0 0 16 1 1 0 1 1 0 2C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10v1.5a3.5 3.5 0 0 1-6.396 1.966A5 5 0 1 1 17 12v1.5a1.5 1.5 0 0 0 3 0V12a8 8 0 0 0-8-8m3 8a3 3 0 1 0-6 0 3 3 0 0 0 6 0"
-                                  />
-                                </svg>
-                                <span
-                                  class="_unread-counter_1147r_8"
-                                >
-                                  5
-                                </span>
-                              </div>
-                            </div>
                           </div>
                         </div>
                       </button>
@@ -7584,6 +7752,10 @@ exports[`<RoomListView /> > renders LargeSectionList story 1`] = `
                                 >
                                   Last message in Sales
                                 </span>
+                                <span
+                                  aria-hidden="true"
+                                  class="RoomListItemView-module_notificationDecoration"
+                                />
                               </div>
                             </div>
                             <div
@@ -7655,10 +7827,6 @@ exports[`<RoomListView /> > renders LargeSectionList story 1`] = `
                                 </div>
                               </button>
                             </div>
-                            <div
-                              aria-hidden="true"
-                              class="RoomListItemView-module_notificationDecoration"
-                            />
                           </div>
                         </div>
                       </button>
@@ -7719,6 +7887,17 @@ exports[`<RoomListView /> > renders LargeSectionList story 1`] = `
                                 >
                                   Support
                                 </div>
+                              </div>
+                              <div
+                                class="_typography_6v6n8_153 _font-body-sm-regular_6v6n8_31 RoomListItemView-module_preview"
+                              >
+                                <span
+                                  class="RoomListItemView-module_ellipsis"
+                                />
+                                <span
+                                  aria-hidden="true"
+                                  class="RoomListItemView-module_notificationDecoration"
+                                />
                               </div>
                             </div>
                             <div
@@ -7790,10 +7969,6 @@ exports[`<RoomListView /> > renders LargeSectionList story 1`] = `
                                 </div>
                               </button>
                             </div>
-                            <div
-                              aria-hidden="true"
-                              class="RoomListItemView-module_notificationDecoration"
-                            />
                           </div>
                         </div>
                       </button>
@@ -7864,6 +8039,10 @@ exports[`<RoomListView /> > renders LargeSectionList story 1`] = `
                                 >
                                   Last message in Announcements
                                 </span>
+                                <span
+                                  aria-hidden="true"
+                                  class="RoomListItemView-module_notificationDecoration"
+                                />
                               </div>
                             </div>
                             <div
@@ -7935,10 +8114,6 @@ exports[`<RoomListView /> > renders LargeSectionList story 1`] = `
                                 </div>
                               </button>
                             </div>
-                            <div
-                              aria-hidden="true"
-                              class="RoomListItemView-module_notificationDecoration"
-                            />
                           </div>
                         </div>
                       </button>
@@ -7999,6 +8174,17 @@ exports[`<RoomListView /> > renders LargeSectionList story 1`] = `
                                 >
                                   Off-topic
                                 </div>
+                              </div>
+                              <div
+                                class="_typography_6v6n8_153 _font-body-sm-regular_6v6n8_31 RoomListItemView-module_preview"
+                              >
+                                <span
+                                  class="RoomListItemView-module_ellipsis"
+                                />
+                                <span
+                                  aria-hidden="true"
+                                  class="RoomListItemView-module_notificationDecoration"
+                                />
                               </div>
                             </div>
                             <div
@@ -8070,10 +8256,6 @@ exports[`<RoomListView /> > renders LargeSectionList story 1`] = `
                                 </div>
                               </button>
                             </div>
-                            <div
-                              aria-hidden="true"
-                              class="RoomListItemView-module_notificationDecoration"
-                            />
                           </div>
                         </div>
                       </button>
@@ -8143,6 +8325,33 @@ exports[`<RoomListView /> > renders LargeSectionList story 1`] = `
                                   class="RoomListItemView-module_ellipsis"
                                 >
                                   Last message in Team Alpha
+                                </span>
+                                <span
+                                  aria-hidden="true"
+                                  class="RoomListItemView-module_notificationDecoration"
+                                >
+                                  <div
+                                    class="Flex-module_flex"
+                                    data-testid="notification-decoration"
+                                    style="--mx-flex-display: flex; --mx-flex-direction: row; --mx-flex-align: center; --mx-flex-justify: center; --mx-flex-gap: var(--cpd-space-1x); --mx-flex-wrap: nowrap;"
+                                  >
+                                    <svg
+                                      fill="var(--cpd-color-icon-accent-primary)"
+                                      height="20px"
+                                      viewBox="0 0 24 24"
+                                      width="20px"
+                                      xmlns="http://www.w3.org/2000/svg"
+                                    >
+                                      <path
+                                        d="M12 4a8 8 0 1 0 0 16 1 1 0 1 1 0 2C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10v1.5a3.5 3.5 0 0 1-6.396 1.966A5 5 0 1 1 17 12v1.5a1.5 1.5 0 0 0 3 0V12a8 8 0 0 0-8-8m3 8a3 3 0 1 0-6 0 3 3 0 0 0 6 0"
+                                      />
+                                    </svg>
+                                    <span
+                                      class="_unread-counter_1147r_8"
+                                    >
+                                      10
+                                    </span>
+                                  </div>
                                 </span>
                               </div>
                             </div>
@@ -8215,33 +8424,6 @@ exports[`<RoomListView /> > renders LargeSectionList story 1`] = `
                                 </div>
                               </button>
                             </div>
-                            <div
-                              aria-hidden="true"
-                              class="RoomListItemView-module_notificationDecoration"
-                            >
-                              <div
-                                class="Flex-module_flex"
-                                data-testid="notification-decoration"
-                                style="--mx-flex-display: flex; --mx-flex-direction: row; --mx-flex-align: center; --mx-flex-justify: center; --mx-flex-gap: var(--cpd-space-1x); --mx-flex-wrap: nowrap;"
-                              >
-                                <svg
-                                  fill="var(--cpd-color-icon-accent-primary)"
-                                  height="20px"
-                                  viewBox="0 0 24 24"
-                                  width="20px"
-                                  xmlns="http://www.w3.org/2000/svg"
-                                >
-                                  <path
-                                    d="M12 4a8 8 0 1 0 0 16 1 1 0 1 1 0 2C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10v1.5a3.5 3.5 0 0 1-6.396 1.966A5 5 0 1 1 17 12v1.5a1.5 1.5 0 0 0 3 0V12a8 8 0 0 0-8-8m3 8a3 3 0 1 0-6 0 3 3 0 0 0 6 0"
-                                  />
-                                </svg>
-                                <span
-                                  class="_unread-counter_1147r_8"
-                                >
-                                  10
-                                </span>
-                              </div>
-                            </div>
                           </div>
                         </div>
                       </button>
@@ -8302,6 +8484,17 @@ exports[`<RoomListView /> > renders LargeSectionList story 1`] = `
                                 >
                                   Team Beta
                                 </div>
+                              </div>
+                              <div
+                                class="_typography_6v6n8_153 _font-body-sm-regular_6v6n8_31 RoomListItemView-module_preview"
+                              >
+                                <span
+                                  class="RoomListItemView-module_ellipsis"
+                                />
+                                <span
+                                  aria-hidden="true"
+                                  class="RoomListItemView-module_notificationDecoration"
+                                />
                               </div>
                             </div>
                             <div
@@ -8373,10 +8566,6 @@ exports[`<RoomListView /> > renders LargeSectionList story 1`] = `
                                 </div>
                               </button>
                             </div>
-                            <div
-                              aria-hidden="true"
-                              class="RoomListItemView-module_notificationDecoration"
-                            />
                           </div>
                         </div>
                       </button>
@@ -8447,6 +8636,10 @@ exports[`<RoomListView /> > renders LargeSectionList story 1`] = `
                                 >
                                   Last message in Project X
                                 </span>
+                                <span
+                                  aria-hidden="true"
+                                  class="RoomListItemView-module_notificationDecoration"
+                                />
                               </div>
                             </div>
                             <div
@@ -8518,10 +8711,6 @@ exports[`<RoomListView /> > renders LargeSectionList story 1`] = `
                                 </div>
                               </button>
                             </div>
-                            <div
-                              aria-hidden="true"
-                              class="RoomListItemView-module_notificationDecoration"
-                            />
                           </div>
                         </div>
                       </button>
@@ -8582,6 +8771,17 @@ exports[`<RoomListView /> > renders LargeSectionList story 1`] = `
                                 >
                                   Project Y
                                 </div>
+                              </div>
+                              <div
+                                class="_typography_6v6n8_153 _font-body-sm-regular_6v6n8_31 RoomListItemView-module_preview"
+                              >
+                                <span
+                                  class="RoomListItemView-module_ellipsis"
+                                />
+                                <span
+                                  aria-hidden="true"
+                                  class="RoomListItemView-module_notificationDecoration"
+                                />
                               </div>
                             </div>
                             <div
@@ -8653,10 +8853,6 @@ exports[`<RoomListView /> > renders LargeSectionList story 1`] = `
                                 </div>
                               </button>
                             </div>
-                            <div
-                              aria-hidden="true"
-                              class="RoomListItemView-module_notificationDecoration"
-                            />
                           </div>
                         </div>
                       </button>
@@ -8727,6 +8923,10 @@ exports[`<RoomListView /> > renders LargeSectionList story 1`] = `
                                 >
                                   Last message in Water Cooler
                                 </span>
+                                <span
+                                  aria-hidden="true"
+                                  class="RoomListItemView-module_notificationDecoration"
+                                />
                               </div>
                             </div>
                             <div
@@ -8798,10 +8998,6 @@ exports[`<RoomListView /> > renders LargeSectionList story 1`] = `
                                 </div>
                               </button>
                             </div>
-                            <div
-                              aria-hidden="true"
-                              class="RoomListItemView-module_notificationDecoration"
-                            />
                           </div>
                         </div>
                       </button>
@@ -8862,6 +9058,40 @@ exports[`<RoomListView /> > renders LargeSectionList story 1`] = `
                                 >
                                   Feedback
                                 </div>
+                              </div>
+                              <div
+                                class="_typography_6v6n8_153 _font-body-sm-regular_6v6n8_31 RoomListItemView-module_preview"
+                              >
+                                <span
+                                  class="RoomListItemView-module_ellipsis"
+                                />
+                                <span
+                                  aria-hidden="true"
+                                  class="RoomListItemView-module_notificationDecoration"
+                                >
+                                  <div
+                                    class="Flex-module_flex"
+                                    data-testid="notification-decoration"
+                                    style="--mx-flex-display: flex; --mx-flex-direction: row; --mx-flex-align: center; --mx-flex-justify: center; --mx-flex-gap: var(--cpd-space-1x); --mx-flex-wrap: nowrap;"
+                                  >
+                                    <svg
+                                      fill="var(--cpd-color-icon-accent-primary)"
+                                      height="20px"
+                                      viewBox="0 0 24 24"
+                                      width="20px"
+                                      xmlns="http://www.w3.org/2000/svg"
+                                    >
+                                      <path
+                                        d="M12 4a8 8 0 1 0 0 16 1 1 0 1 1 0 2C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10v1.5a3.5 3.5 0 0 1-6.396 1.966A5 5 0 1 1 17 12v1.5a1.5 1.5 0 0 0 3 0V12a8 8 0 0 0-8-8m3 8a3 3 0 1 0-6 0 3 3 0 0 0 6 0"
+                                      />
+                                    </svg>
+                                    <span
+                                      class="_unread-counter_1147r_8"
+                                    >
+                                      15
+                                    </span>
+                                  </div>
+                                </span>
                               </div>
                             </div>
                             <div
@@ -8933,33 +9163,6 @@ exports[`<RoomListView /> > renders LargeSectionList story 1`] = `
                                 </div>
                               </button>
                             </div>
-                            <div
-                              aria-hidden="true"
-                              class="RoomListItemView-module_notificationDecoration"
-                            >
-                              <div
-                                class="Flex-module_flex"
-                                data-testid="notification-decoration"
-                                style="--mx-flex-display: flex; --mx-flex-direction: row; --mx-flex-align: center; --mx-flex-justify: center; --mx-flex-gap: var(--cpd-space-1x); --mx-flex-wrap: nowrap;"
-                              >
-                                <svg
-                                  fill="var(--cpd-color-icon-accent-primary)"
-                                  height="20px"
-                                  viewBox="0 0 24 24"
-                                  width="20px"
-                                  xmlns="http://www.w3.org/2000/svg"
-                                >
-                                  <path
-                                    d="M12 4a8 8 0 1 0 0 16 1 1 0 1 1 0 2C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10v1.5a3.5 3.5 0 0 1-6.396 1.966A5 5 0 1 1 17 12v1.5a1.5 1.5 0 0 0 3 0V12a8 8 0 0 0-8-8m3 8a3 3 0 1 0-6 0 3 3 0 0 0 6 0"
-                                  />
-                                </svg>
-                                <span
-                                  class="_unread-counter_1147r_8"
-                                >
-                                  15
-                                </span>
-                              </div>
-                            </div>
                           </div>
                         </div>
                       </button>
@@ -9030,6 +9233,10 @@ exports[`<RoomListView /> > renders LargeSectionList story 1`] = `
                                 >
                                   Last message in Ideas
                                 </span>
+                                <span
+                                  aria-hidden="true"
+                                  class="RoomListItemView-module_notificationDecoration"
+                                />
                               </div>
                             </div>
                             <div
@@ -9101,10 +9308,6 @@ exports[`<RoomListView /> > renders LargeSectionList story 1`] = `
                                 </div>
                               </button>
                             </div>
-                            <div
-                              aria-hidden="true"
-                              class="RoomListItemView-module_notificationDecoration"
-                            />
                           </div>
                         </div>
                       </button>
@@ -9165,6 +9368,17 @@ exports[`<RoomListView /> > renders LargeSectionList story 1`] = `
                                 >
                                   Bugs
                                 </div>
+                              </div>
+                              <div
+                                class="_typography_6v6n8_153 _font-body-sm-regular_6v6n8_31 RoomListItemView-module_preview"
+                              >
+                                <span
+                                  class="RoomListItemView-module_ellipsis"
+                                />
+                                <span
+                                  aria-hidden="true"
+                                  class="RoomListItemView-module_notificationDecoration"
+                                />
                               </div>
                             </div>
                             <div
@@ -9236,10 +9450,6 @@ exports[`<RoomListView /> > renders LargeSectionList story 1`] = `
                                 </div>
                               </button>
                             </div>
-                            <div
-                              aria-hidden="true"
-                              class="RoomListItemView-module_notificationDecoration"
-                            />
                           </div>
                         </div>
                       </button>
@@ -9310,6 +9520,10 @@ exports[`<RoomListView /> > renders LargeSectionList story 1`] = `
                                 >
                                   Last message in Features
                                 </span>
+                                <span
+                                  aria-hidden="true"
+                                  class="RoomListItemView-module_notificationDecoration"
+                                />
                               </div>
                             </div>
                             <div
@@ -9381,10 +9595,6 @@ exports[`<RoomListView /> > renders LargeSectionList story 1`] = `
                                 </div>
                               </button>
                             </div>
-                            <div
-                              aria-hidden="true"
-                              class="RoomListItemView-module_notificationDecoration"
-                            />
                           </div>
                         </div>
                       </button>
@@ -9445,6 +9655,17 @@ exports[`<RoomListView /> > renders LargeSectionList story 1`] = `
                                 >
                                   Releases
                                 </div>
+                              </div>
+                              <div
+                                class="_typography_6v6n8_153 _font-body-sm-regular_6v6n8_31 RoomListItemView-module_preview"
+                              >
+                                <span
+                                  class="RoomListItemView-module_ellipsis"
+                                />
+                                <span
+                                  aria-hidden="true"
+                                  class="RoomListItemView-module_notificationDecoration"
+                                />
                               </div>
                             </div>
                             <div
@@ -9516,10 +9737,6 @@ exports[`<RoomListView /> > renders LargeSectionList story 1`] = `
                                 </div>
                               </button>
                             </div>
-                            <div
-                              aria-hidden="true"
-                              class="RoomListItemView-module_notificationDecoration"
-                            />
                           </div>
                         </div>
                       </button>
@@ -9589,6 +9806,33 @@ exports[`<RoomListView /> > renders LargeSectionList story 1`] = `
                                   class="RoomListItemView-module_ellipsis"
                                 >
                                   Last message in General
+                                </span>
+                                <span
+                                  aria-hidden="true"
+                                  class="RoomListItemView-module_notificationDecoration"
+                                >
+                                  <div
+                                    class="Flex-module_flex"
+                                    data-testid="notification-decoration"
+                                    style="--mx-flex-display: flex; --mx-flex-direction: row; --mx-flex-align: center; --mx-flex-justify: center; --mx-flex-gap: var(--cpd-space-1x); --mx-flex-wrap: nowrap;"
+                                  >
+                                    <svg
+                                      fill="var(--cpd-color-icon-accent-primary)"
+                                      height="20px"
+                                      viewBox="0 0 24 24"
+                                      width="20px"
+                                      xmlns="http://www.w3.org/2000/svg"
+                                    >
+                                      <path
+                                        d="M12 4a8 8 0 1 0 0 16 1 1 0 1 1 0 2C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10v1.5a3.5 3.5 0 0 1-6.396 1.966A5 5 0 1 1 17 12v1.5a1.5 1.5 0 0 0 3 0V12a8 8 0 0 0-8-8m3 8a3 3 0 1 0-6 0 3 3 0 0 0 6 0"
+                                      />
+                                    </svg>
+                                    <span
+                                      class="_unread-counter_1147r_8"
+                                    >
+                                      20
+                                    </span>
+                                  </div>
                                 </span>
                               </div>
                             </div>
@@ -9660,33 +9904,6 @@ exports[`<RoomListView /> > renders LargeSectionList story 1`] = `
                                   </svg>
                                 </div>
                               </button>
-                            </div>
-                            <div
-                              aria-hidden="true"
-                              class="RoomListItemView-module_notificationDecoration"
-                            >
-                              <div
-                                class="Flex-module_flex"
-                                data-testid="notification-decoration"
-                                style="--mx-flex-display: flex; --mx-flex-direction: row; --mx-flex-align: center; --mx-flex-justify: center; --mx-flex-gap: var(--cpd-space-1x); --mx-flex-wrap: nowrap;"
-                              >
-                                <svg
-                                  fill="var(--cpd-color-icon-accent-primary)"
-                                  height="20px"
-                                  viewBox="0 0 24 24"
-                                  width="20px"
-                                  xmlns="http://www.w3.org/2000/svg"
-                                >
-                                  <path
-                                    d="M12 4a8 8 0 1 0 0 16 1 1 0 1 1 0 2C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10v1.5a3.5 3.5 0 0 1-6.396 1.966A5 5 0 1 1 17 12v1.5a1.5 1.5 0 0 0 3 0V12a8 8 0 0 0-8-8m3 8a3 3 0 1 0-6 0 3 3 0 0 0 6 0"
-                                  />
-                                </svg>
-                                <span
-                                  class="_unread-counter_1147r_8"
-                                >
-                                  20
-                                </span>
-                              </div>
                             </div>
                           </div>
                         </div>
@@ -9899,6 +10116,31 @@ exports[`<RoomListView /> > renders SmallFlatList story 1`] = `
                           >
                             Last message in General
                           </span>
+                          <span
+                            aria-hidden="true"
+                            class="RoomListItemView-module_notificationDecoration"
+                          >
+                            <div
+                              class="Flex-module_flex"
+                              data-testid="notification-decoration"
+                              style="--mx-flex-display: flex; --mx-flex-direction: row; --mx-flex-align: center; --mx-flex-justify: center; --mx-flex-gap: var(--cpd-space-1x); --mx-flex-wrap: nowrap;"
+                            >
+                              <svg
+                                fill="var(--cpd-color-icon-accent-primary)"
+                                height="20px"
+                                viewBox="0 0 24 24"
+                                width="20px"
+                                xmlns="http://www.w3.org/2000/svg"
+                              >
+                                <path
+                                  d="M12 4a8 8 0 1 0 0 16 1 1 0 1 1 0 2C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10v1.5a3.5 3.5 0 0 1-6.396 1.966A5 5 0 1 1 17 12v1.5a1.5 1.5 0 0 0 3 0V12a8 8 0 0 0-8-8m3 8a3 3 0 1 0-6 0 3 3 0 0 0 6 0"
+                                />
+                              </svg>
+                              <div
+                                class="_unread-counter_1147r_8"
+                              />
+                            </div>
+                          </span>
                         </div>
                       </div>
                       <div
@@ -9970,31 +10212,6 @@ exports[`<RoomListView /> > renders SmallFlatList story 1`] = `
                           </div>
                         </button>
                       </div>
-                      <div
-                        aria-hidden="true"
-                        class="RoomListItemView-module_notificationDecoration"
-                      >
-                        <div
-                          class="Flex-module_flex"
-                          data-testid="notification-decoration"
-                          style="--mx-flex-display: flex; --mx-flex-direction: row; --mx-flex-align: center; --mx-flex-justify: center; --mx-flex-gap: var(--cpd-space-1x); --mx-flex-wrap: nowrap;"
-                        >
-                          <svg
-                            fill="var(--cpd-color-icon-accent-primary)"
-                            height="20px"
-                            viewBox="0 0 24 24"
-                            width="20px"
-                            xmlns="http://www.w3.org/2000/svg"
-                          >
-                            <path
-                              d="M12 4a8 8 0 1 0 0 16 1 1 0 1 1 0 2C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10v1.5a3.5 3.5 0 0 1-6.396 1.966A5 5 0 1 1 17 12v1.5a1.5 1.5 0 0 0 3 0V12a8 8 0 0 0-8-8m3 8a3 3 0 1 0-6 0 3 3 0 0 0 6 0"
-                            />
-                          </svg>
-                          <div
-                            class="_unread-counter_1147r_8"
-                          />
-                        </div>
-                      </div>
                     </div>
                   </div>
                 </button>
@@ -10046,6 +10263,17 @@ exports[`<RoomListView /> > renders SmallFlatList story 1`] = `
                           >
                             Random
                           </div>
+                        </div>
+                        <div
+                          class="_typography_6v6n8_153 _font-body-sm-regular_6v6n8_31 RoomListItemView-module_preview"
+                        >
+                          <span
+                            class="RoomListItemView-module_ellipsis"
+                          />
+                          <span
+                            aria-hidden="true"
+                            class="RoomListItemView-module_notificationDecoration"
+                          />
                         </div>
                       </div>
                       <div
@@ -10117,10 +10345,6 @@ exports[`<RoomListView /> > renders SmallFlatList story 1`] = `
                           </div>
                         </button>
                       </div>
-                      <div
-                        aria-hidden="true"
-                        class="RoomListItemView-module_notificationDecoration"
-                      />
                     </div>
                   </div>
                 </button>
@@ -10379,6 +10603,31 @@ exports[`<RoomListView /> > renders SmallSectionList story 1`] = `
                                 >
                                   Last message in General
                                 </span>
+                                <span
+                                  aria-hidden="true"
+                                  class="RoomListItemView-module_notificationDecoration"
+                                >
+                                  <div
+                                    class="Flex-module_flex"
+                                    data-testid="notification-decoration"
+                                    style="--mx-flex-display: flex; --mx-flex-direction: row; --mx-flex-align: center; --mx-flex-justify: center; --mx-flex-gap: var(--cpd-space-1x); --mx-flex-wrap: nowrap;"
+                                  >
+                                    <svg
+                                      fill="var(--cpd-color-icon-accent-primary)"
+                                      height="20px"
+                                      viewBox="0 0 24 24"
+                                      width="20px"
+                                      xmlns="http://www.w3.org/2000/svg"
+                                    >
+                                      <path
+                                        d="M12 4a8 8 0 1 0 0 16 1 1 0 1 1 0 2C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10v1.5a3.5 3.5 0 0 1-6.396 1.966A5 5 0 1 1 17 12v1.5a1.5 1.5 0 0 0 3 0V12a8 8 0 0 0-8-8m3 8a3 3 0 1 0-6 0 3 3 0 0 0 6 0"
+                                      />
+                                    </svg>
+                                    <div
+                                      class="_unread-counter_1147r_8"
+                                    />
+                                  </div>
+                                </span>
                               </div>
                             </div>
                             <div
@@ -10450,31 +10699,6 @@ exports[`<RoomListView /> > renders SmallSectionList story 1`] = `
                                 </div>
                               </button>
                             </div>
-                            <div
-                              aria-hidden="true"
-                              class="RoomListItemView-module_notificationDecoration"
-                            >
-                              <div
-                                class="Flex-module_flex"
-                                data-testid="notification-decoration"
-                                style="--mx-flex-display: flex; --mx-flex-direction: row; --mx-flex-align: center; --mx-flex-justify: center; --mx-flex-gap: var(--cpd-space-1x); --mx-flex-wrap: nowrap;"
-                              >
-                                <svg
-                                  fill="var(--cpd-color-icon-accent-primary)"
-                                  height="20px"
-                                  viewBox="0 0 24 24"
-                                  width="20px"
-                                  xmlns="http://www.w3.org/2000/svg"
-                                >
-                                  <path
-                                    d="M12 4a8 8 0 1 0 0 16 1 1 0 1 1 0 2C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10v1.5a3.5 3.5 0 0 1-6.396 1.966A5 5 0 1 1 17 12v1.5a1.5 1.5 0 0 0 3 0V12a8 8 0 0 0-8-8m3 8a3 3 0 1 0-6 0 3 3 0 0 0 6 0"
-                                  />
-                                </svg>
-                                <div
-                                  class="_unread-counter_1147r_8"
-                                />
-                              </div>
-                            </div>
                           </div>
                         </div>
                       </button>
@@ -10535,6 +10759,17 @@ exports[`<RoomListView /> > renders SmallSectionList story 1`] = `
                                 >
                                   Random
                                 </div>
+                              </div>
+                              <div
+                                class="_typography_6v6n8_153 _font-body-sm-regular_6v6n8_31 RoomListItemView-module_preview"
+                              >
+                                <span
+                                  class="RoomListItemView-module_ellipsis"
+                                />
+                                <span
+                                  aria-hidden="true"
+                                  class="RoomListItemView-module_notificationDecoration"
+                                />
                               </div>
                             </div>
                             <div
@@ -10606,10 +10841,6 @@ exports[`<RoomListView /> > renders SmallSectionList story 1`] = `
                                 </div>
                               </button>
                             </div>
-                            <div
-                              aria-hidden="true"
-                              class="RoomListItemView-module_notificationDecoration"
-                            />
                           </div>
                         </div>
                       </button>
@@ -10814,6 +11045,31 @@ exports[`<RoomListView /> > renders Toast story 1`] = `
                           >
                             Last message in General
                           </span>
+                          <span
+                            aria-hidden="true"
+                            class="RoomListItemView-module_notificationDecoration"
+                          >
+                            <div
+                              class="Flex-module_flex"
+                              data-testid="notification-decoration"
+                              style="--mx-flex-display: flex; --mx-flex-direction: row; --mx-flex-align: center; --mx-flex-justify: center; --mx-flex-gap: var(--cpd-space-1x); --mx-flex-wrap: nowrap;"
+                            >
+                              <svg
+                                fill="var(--cpd-color-icon-accent-primary)"
+                                height="20px"
+                                viewBox="0 0 24 24"
+                                width="20px"
+                                xmlns="http://www.w3.org/2000/svg"
+                              >
+                                <path
+                                  d="M12 4a8 8 0 1 0 0 16 1 1 0 1 1 0 2C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10v1.5a3.5 3.5 0 0 1-6.396 1.966A5 5 0 1 1 17 12v1.5a1.5 1.5 0 0 0 3 0V12a8 8 0 0 0-8-8m3 8a3 3 0 1 0-6 0 3 3 0 0 0 6 0"
+                                />
+                              </svg>
+                              <div
+                                class="_unread-counter_1147r_8"
+                              />
+                            </div>
+                          </span>
                         </div>
                       </div>
                       <div
@@ -10885,31 +11141,6 @@ exports[`<RoomListView /> > renders Toast story 1`] = `
                           </div>
                         </button>
                       </div>
-                      <div
-                        aria-hidden="true"
-                        class="RoomListItemView-module_notificationDecoration"
-                      >
-                        <div
-                          class="Flex-module_flex"
-                          data-testid="notification-decoration"
-                          style="--mx-flex-display: flex; --mx-flex-direction: row; --mx-flex-align: center; --mx-flex-justify: center; --mx-flex-gap: var(--cpd-space-1x); --mx-flex-wrap: nowrap;"
-                        >
-                          <svg
-                            fill="var(--cpd-color-icon-accent-primary)"
-                            height="20px"
-                            viewBox="0 0 24 24"
-                            width="20px"
-                            xmlns="http://www.w3.org/2000/svg"
-                          >
-                            <path
-                              d="M12 4a8 8 0 1 0 0 16 1 1 0 1 1 0 2C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10v1.5a3.5 3.5 0 0 1-6.396 1.966A5 5 0 1 1 17 12v1.5a1.5 1.5 0 0 0 3 0V12a8 8 0 0 0-8-8m3 8a3 3 0 1 0-6 0 3 3 0 0 0 6 0"
-                            />
-                          </svg>
-                          <div
-                            class="_unread-counter_1147r_8"
-                          />
-                        </div>
-                      </div>
                     </div>
                   </div>
                 </button>
@@ -10961,6 +11192,17 @@ exports[`<RoomListView /> > renders Toast story 1`] = `
                           >
                             Random
                           </div>
+                        </div>
+                        <div
+                          class="_typography_6v6n8_153 _font-body-sm-regular_6v6n8_31 RoomListItemView-module_preview"
+                        >
+                          <span
+                            class="RoomListItemView-module_ellipsis"
+                          />
+                          <span
+                            aria-hidden="true"
+                            class="RoomListItemView-module_notificationDecoration"
+                          />
                         </div>
                       </div>
                       <div
@@ -11032,10 +11274,6 @@ exports[`<RoomListView /> > renders Toast story 1`] = `
                           </div>
                         </button>
                       </div>
-                      <div
-                        aria-hidden="true"
-                        class="RoomListItemView-module_notificationDecoration"
-                      />
                     </div>
                   </div>
                 </button>
@@ -11097,6 +11335,10 @@ exports[`<RoomListView /> > renders Toast story 1`] = `
                           >
                             Last message in Engineering
                           </span>
+                          <span
+                            aria-hidden="true"
+                            class="RoomListItemView-module_notificationDecoration"
+                          />
                         </div>
                       </div>
                       <div
@@ -11168,10 +11410,6 @@ exports[`<RoomListView /> > renders Toast story 1`] = `
                           </div>
                         </button>
                       </div>
-                      <div
-                        aria-hidden="true"
-                        class="RoomListItemView-module_notificationDecoration"
-                      />
                     </div>
                   </div>
                 </button>
@@ -11223,6 +11461,17 @@ exports[`<RoomListView /> > renders Toast story 1`] = `
                           >
                             Design
                           </div>
+                        </div>
+                        <div
+                          class="_typography_6v6n8_153 _font-body-sm-regular_6v6n8_31 RoomListItemView-module_preview"
+                        >
+                          <span
+                            class="RoomListItemView-module_ellipsis"
+                          />
+                          <span
+                            aria-hidden="true"
+                            class="RoomListItemView-module_notificationDecoration"
+                          />
                         </div>
                       </div>
                       <div
@@ -11294,10 +11543,6 @@ exports[`<RoomListView /> > renders Toast story 1`] = `
                           </div>
                         </button>
                       </div>
-                      <div
-                        aria-hidden="true"
-                        class="RoomListItemView-module_notificationDecoration"
-                      />
                     </div>
                   </div>
                 </button>
@@ -11359,6 +11604,10 @@ exports[`<RoomListView /> > renders Toast story 1`] = `
                           >
                             Last message in Product
                           </span>
+                          <span
+                            aria-hidden="true"
+                            class="RoomListItemView-module_notificationDecoration"
+                          />
                         </div>
                       </div>
                       <div
@@ -11430,10 +11679,6 @@ exports[`<RoomListView /> > renders Toast story 1`] = `
                           </div>
                         </button>
                       </div>
-                      <div
-                        aria-hidden="true"
-                        class="RoomListItemView-module_notificationDecoration"
-                      />
                     </div>
                   </div>
                 </button>
@@ -11485,6 +11730,40 @@ exports[`<RoomListView /> > renders Toast story 1`] = `
                           >
                             Marketing
                           </div>
+                        </div>
+                        <div
+                          class="_typography_6v6n8_153 _font-body-sm-regular_6v6n8_31 RoomListItemView-module_preview"
+                        >
+                          <span
+                            class="RoomListItemView-module_ellipsis"
+                          />
+                          <span
+                            aria-hidden="true"
+                            class="RoomListItemView-module_notificationDecoration"
+                          >
+                            <div
+                              class="Flex-module_flex"
+                              data-testid="notification-decoration"
+                              style="--mx-flex-display: flex; --mx-flex-direction: row; --mx-flex-align: center; --mx-flex-justify: center; --mx-flex-gap: var(--cpd-space-1x); --mx-flex-wrap: nowrap;"
+                            >
+                              <svg
+                                fill="var(--cpd-color-icon-accent-primary)"
+                                height="20px"
+                                viewBox="0 0 24 24"
+                                width="20px"
+                                xmlns="http://www.w3.org/2000/svg"
+                              >
+                                <path
+                                  d="M12 4a8 8 0 1 0 0 16 1 1 0 1 1 0 2C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10v1.5a3.5 3.5 0 0 1-6.396 1.966A5 5 0 1 1 17 12v1.5a1.5 1.5 0 0 0 3 0V12a8 8 0 0 0-8-8m3 8a3 3 0 1 0-6 0 3 3 0 0 0 6 0"
+                                />
+                              </svg>
+                              <span
+                                class="_unread-counter_1147r_8"
+                              >
+                                5
+                              </span>
+                            </div>
+                          </span>
                         </div>
                       </div>
                       <div
@@ -11556,33 +11835,6 @@ exports[`<RoomListView /> > renders Toast story 1`] = `
                           </div>
                         </button>
                       </div>
-                      <div
-                        aria-hidden="true"
-                        class="RoomListItemView-module_notificationDecoration"
-                      >
-                        <div
-                          class="Flex-module_flex"
-                          data-testid="notification-decoration"
-                          style="--mx-flex-display: flex; --mx-flex-direction: row; --mx-flex-align: center; --mx-flex-justify: center; --mx-flex-gap: var(--cpd-space-1x); --mx-flex-wrap: nowrap;"
-                        >
-                          <svg
-                            fill="var(--cpd-color-icon-accent-primary)"
-                            height="20px"
-                            viewBox="0 0 24 24"
-                            width="20px"
-                            xmlns="http://www.w3.org/2000/svg"
-                          >
-                            <path
-                              d="M12 4a8 8 0 1 0 0 16 1 1 0 1 1 0 2C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10v1.5a3.5 3.5 0 0 1-6.396 1.966A5 5 0 1 1 17 12v1.5a1.5 1.5 0 0 0 3 0V12a8 8 0 0 0-8-8m3 8a3 3 0 1 0-6 0 3 3 0 0 0 6 0"
-                            />
-                          </svg>
-                          <span
-                            class="_unread-counter_1147r_8"
-                          >
-                            5
-                          </span>
-                        </div>
-                      </div>
                     </div>
                   </div>
                 </button>
@@ -11644,6 +11896,10 @@ exports[`<RoomListView /> > renders Toast story 1`] = `
                           >
                             Last message in Sales
                           </span>
+                          <span
+                            aria-hidden="true"
+                            class="RoomListItemView-module_notificationDecoration"
+                          />
                         </div>
                       </div>
                       <div
@@ -11715,10 +11971,6 @@ exports[`<RoomListView /> > renders Toast story 1`] = `
                           </div>
                         </button>
                       </div>
-                      <div
-                        aria-hidden="true"
-                        class="RoomListItemView-module_notificationDecoration"
-                      />
                     </div>
                   </div>
                 </button>
@@ -11770,6 +12022,17 @@ exports[`<RoomListView /> > renders Toast story 1`] = `
                           >
                             Support
                           </div>
+                        </div>
+                        <div
+                          class="_typography_6v6n8_153 _font-body-sm-regular_6v6n8_31 RoomListItemView-module_preview"
+                        >
+                          <span
+                            class="RoomListItemView-module_ellipsis"
+                          />
+                          <span
+                            aria-hidden="true"
+                            class="RoomListItemView-module_notificationDecoration"
+                          />
                         </div>
                       </div>
                       <div
@@ -11841,10 +12104,6 @@ exports[`<RoomListView /> > renders Toast story 1`] = `
                           </div>
                         </button>
                       </div>
-                      <div
-                        aria-hidden="true"
-                        class="RoomListItemView-module_notificationDecoration"
-                      />
                     </div>
                   </div>
                 </button>
@@ -11906,6 +12165,10 @@ exports[`<RoomListView /> > renders Toast story 1`] = `
                           >
                             Last message in Announcements
                           </span>
+                          <span
+                            aria-hidden="true"
+                            class="RoomListItemView-module_notificationDecoration"
+                          />
                         </div>
                       </div>
                       <div
@@ -11977,10 +12240,6 @@ exports[`<RoomListView /> > renders Toast story 1`] = `
                           </div>
                         </button>
                       </div>
-                      <div
-                        aria-hidden="true"
-                        class="RoomListItemView-module_notificationDecoration"
-                      />
                     </div>
                   </div>
                 </button>
@@ -12032,6 +12291,17 @@ exports[`<RoomListView /> > renders Toast story 1`] = `
                           >
                             Off-topic
                           </div>
+                        </div>
+                        <div
+                          class="_typography_6v6n8_153 _font-body-sm-regular_6v6n8_31 RoomListItemView-module_preview"
+                        >
+                          <span
+                            class="RoomListItemView-module_ellipsis"
+                          />
+                          <span
+                            aria-hidden="true"
+                            class="RoomListItemView-module_notificationDecoration"
+                          />
                         </div>
                       </div>
                       <div
@@ -12103,10 +12373,6 @@ exports[`<RoomListView /> > renders Toast story 1`] = `
                           </div>
                         </button>
                       </div>
-                      <div
-                        aria-hidden="true"
-                        class="RoomListItemView-module_notificationDecoration"
-                      />
                     </div>
                   </div>
                 </button>
@@ -12167,6 +12433,33 @@ exports[`<RoomListView /> > renders Toast story 1`] = `
                             class="RoomListItemView-module_ellipsis"
                           >
                             Last message in Team Alpha
+                          </span>
+                          <span
+                            aria-hidden="true"
+                            class="RoomListItemView-module_notificationDecoration"
+                          >
+                            <div
+                              class="Flex-module_flex"
+                              data-testid="notification-decoration"
+                              style="--mx-flex-display: flex; --mx-flex-direction: row; --mx-flex-align: center; --mx-flex-justify: center; --mx-flex-gap: var(--cpd-space-1x); --mx-flex-wrap: nowrap;"
+                            >
+                              <svg
+                                fill="var(--cpd-color-icon-accent-primary)"
+                                height="20px"
+                                viewBox="0 0 24 24"
+                                width="20px"
+                                xmlns="http://www.w3.org/2000/svg"
+                              >
+                                <path
+                                  d="M12 4a8 8 0 1 0 0 16 1 1 0 1 1 0 2C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10v1.5a3.5 3.5 0 0 1-6.396 1.966A5 5 0 1 1 17 12v1.5a1.5 1.5 0 0 0 3 0V12a8 8 0 0 0-8-8m3 8a3 3 0 1 0-6 0 3 3 0 0 0 6 0"
+                                />
+                              </svg>
+                              <span
+                                class="_unread-counter_1147r_8"
+                              >
+                                10
+                              </span>
+                            </div>
                           </span>
                         </div>
                       </div>
@@ -12239,33 +12532,6 @@ exports[`<RoomListView /> > renders Toast story 1`] = `
                           </div>
                         </button>
                       </div>
-                      <div
-                        aria-hidden="true"
-                        class="RoomListItemView-module_notificationDecoration"
-                      >
-                        <div
-                          class="Flex-module_flex"
-                          data-testid="notification-decoration"
-                          style="--mx-flex-display: flex; --mx-flex-direction: row; --mx-flex-align: center; --mx-flex-justify: center; --mx-flex-gap: var(--cpd-space-1x); --mx-flex-wrap: nowrap;"
-                        >
-                          <svg
-                            fill="var(--cpd-color-icon-accent-primary)"
-                            height="20px"
-                            viewBox="0 0 24 24"
-                            width="20px"
-                            xmlns="http://www.w3.org/2000/svg"
-                          >
-                            <path
-                              d="M12 4a8 8 0 1 0 0 16 1 1 0 1 1 0 2C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10v1.5a3.5 3.5 0 0 1-6.396 1.966A5 5 0 1 1 17 12v1.5a1.5 1.5 0 0 0 3 0V12a8 8 0 0 0-8-8m3 8a3 3 0 1 0-6 0 3 3 0 0 0 6 0"
-                            />
-                          </svg>
-                          <span
-                            class="_unread-counter_1147r_8"
-                          >
-                            10
-                          </span>
-                        </div>
-                      </div>
                     </div>
                   </div>
                 </button>
@@ -12317,6 +12583,17 @@ exports[`<RoomListView /> > renders Toast story 1`] = `
                           >
                             Team Beta
                           </div>
+                        </div>
+                        <div
+                          class="_typography_6v6n8_153 _font-body-sm-regular_6v6n8_31 RoomListItemView-module_preview"
+                        >
+                          <span
+                            class="RoomListItemView-module_ellipsis"
+                          />
+                          <span
+                            aria-hidden="true"
+                            class="RoomListItemView-module_notificationDecoration"
+                          />
                         </div>
                       </div>
                       <div
@@ -12388,10 +12665,6 @@ exports[`<RoomListView /> > renders Toast story 1`] = `
                           </div>
                         </button>
                       </div>
-                      <div
-                        aria-hidden="true"
-                        class="RoomListItemView-module_notificationDecoration"
-                      />
                     </div>
                   </div>
                 </button>
@@ -12453,6 +12726,10 @@ exports[`<RoomListView /> > renders Toast story 1`] = `
                           >
                             Last message in Project X
                           </span>
+                          <span
+                            aria-hidden="true"
+                            class="RoomListItemView-module_notificationDecoration"
+                          />
                         </div>
                       </div>
                       <div
@@ -12524,10 +12801,6 @@ exports[`<RoomListView /> > renders Toast story 1`] = `
                           </div>
                         </button>
                       </div>
-                      <div
-                        aria-hidden="true"
-                        class="RoomListItemView-module_notificationDecoration"
-                      />
                     </div>
                   </div>
                 </button>
@@ -12579,6 +12852,17 @@ exports[`<RoomListView /> > renders Toast story 1`] = `
                           >
                             Project Y
                           </div>
+                        </div>
+                        <div
+                          class="_typography_6v6n8_153 _font-body-sm-regular_6v6n8_31 RoomListItemView-module_preview"
+                        >
+                          <span
+                            class="RoomListItemView-module_ellipsis"
+                          />
+                          <span
+                            aria-hidden="true"
+                            class="RoomListItemView-module_notificationDecoration"
+                          />
                         </div>
                       </div>
                       <div
@@ -12650,10 +12934,6 @@ exports[`<RoomListView /> > renders Toast story 1`] = `
                           </div>
                         </button>
                       </div>
-                      <div
-                        aria-hidden="true"
-                        class="RoomListItemView-module_notificationDecoration"
-                      />
                     </div>
                   </div>
                 </button>
@@ -12715,6 +12995,10 @@ exports[`<RoomListView /> > renders Toast story 1`] = `
                           >
                             Last message in Water Cooler
                           </span>
+                          <span
+                            aria-hidden="true"
+                            class="RoomListItemView-module_notificationDecoration"
+                          />
                         </div>
                       </div>
                       <div
@@ -12786,10 +13070,6 @@ exports[`<RoomListView /> > renders Toast story 1`] = `
                           </div>
                         </button>
                       </div>
-                      <div
-                        aria-hidden="true"
-                        class="RoomListItemView-module_notificationDecoration"
-                      />
                     </div>
                   </div>
                 </button>
@@ -12841,6 +13121,40 @@ exports[`<RoomListView /> > renders Toast story 1`] = `
                           >
                             Feedback
                           </div>
+                        </div>
+                        <div
+                          class="_typography_6v6n8_153 _font-body-sm-regular_6v6n8_31 RoomListItemView-module_preview"
+                        >
+                          <span
+                            class="RoomListItemView-module_ellipsis"
+                          />
+                          <span
+                            aria-hidden="true"
+                            class="RoomListItemView-module_notificationDecoration"
+                          >
+                            <div
+                              class="Flex-module_flex"
+                              data-testid="notification-decoration"
+                              style="--mx-flex-display: flex; --mx-flex-direction: row; --mx-flex-align: center; --mx-flex-justify: center; --mx-flex-gap: var(--cpd-space-1x); --mx-flex-wrap: nowrap;"
+                            >
+                              <svg
+                                fill="var(--cpd-color-icon-accent-primary)"
+                                height="20px"
+                                viewBox="0 0 24 24"
+                                width="20px"
+                                xmlns="http://www.w3.org/2000/svg"
+                              >
+                                <path
+                                  d="M12 4a8 8 0 1 0 0 16 1 1 0 1 1 0 2C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10v1.5a3.5 3.5 0 0 1-6.396 1.966A5 5 0 1 1 17 12v1.5a1.5 1.5 0 0 0 3 0V12a8 8 0 0 0-8-8m3 8a3 3 0 1 0-6 0 3 3 0 0 0 6 0"
+                                />
+                              </svg>
+                              <span
+                                class="_unread-counter_1147r_8"
+                              >
+                                15
+                              </span>
+                            </div>
+                          </span>
                         </div>
                       </div>
                       <div
@@ -12912,33 +13226,6 @@ exports[`<RoomListView /> > renders Toast story 1`] = `
                           </div>
                         </button>
                       </div>
-                      <div
-                        aria-hidden="true"
-                        class="RoomListItemView-module_notificationDecoration"
-                      >
-                        <div
-                          class="Flex-module_flex"
-                          data-testid="notification-decoration"
-                          style="--mx-flex-display: flex; --mx-flex-direction: row; --mx-flex-align: center; --mx-flex-justify: center; --mx-flex-gap: var(--cpd-space-1x); --mx-flex-wrap: nowrap;"
-                        >
-                          <svg
-                            fill="var(--cpd-color-icon-accent-primary)"
-                            height="20px"
-                            viewBox="0 0 24 24"
-                            width="20px"
-                            xmlns="http://www.w3.org/2000/svg"
-                          >
-                            <path
-                              d="M12 4a8 8 0 1 0 0 16 1 1 0 1 1 0 2C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10v1.5a3.5 3.5 0 0 1-6.396 1.966A5 5 0 1 1 17 12v1.5a1.5 1.5 0 0 0 3 0V12a8 8 0 0 0-8-8m3 8a3 3 0 1 0-6 0 3 3 0 0 0 6 0"
-                            />
-                          </svg>
-                          <span
-                            class="_unread-counter_1147r_8"
-                          >
-                            15
-                          </span>
-                        </div>
-                      </div>
                     </div>
                   </div>
                 </button>
@@ -13000,6 +13287,10 @@ exports[`<RoomListView /> > renders Toast story 1`] = `
                           >
                             Last message in Ideas
                           </span>
+                          <span
+                            aria-hidden="true"
+                            class="RoomListItemView-module_notificationDecoration"
+                          />
                         </div>
                       </div>
                       <div
@@ -13071,10 +13362,6 @@ exports[`<RoomListView /> > renders Toast story 1`] = `
                           </div>
                         </button>
                       </div>
-                      <div
-                        aria-hidden="true"
-                        class="RoomListItemView-module_notificationDecoration"
-                      />
                     </div>
                   </div>
                 </button>
@@ -13126,6 +13413,17 @@ exports[`<RoomListView /> > renders Toast story 1`] = `
                           >
                             Bugs
                           </div>
+                        </div>
+                        <div
+                          class="_typography_6v6n8_153 _font-body-sm-regular_6v6n8_31 RoomListItemView-module_preview"
+                        >
+                          <span
+                            class="RoomListItemView-module_ellipsis"
+                          />
+                          <span
+                            aria-hidden="true"
+                            class="RoomListItemView-module_notificationDecoration"
+                          />
                         </div>
                       </div>
                       <div
@@ -13197,10 +13495,6 @@ exports[`<RoomListView /> > renders Toast story 1`] = `
                           </div>
                         </button>
                       </div>
-                      <div
-                        aria-hidden="true"
-                        class="RoomListItemView-module_notificationDecoration"
-                      />
                     </div>
                   </div>
                 </button>
@@ -13262,6 +13556,10 @@ exports[`<RoomListView /> > renders Toast story 1`] = `
                           >
                             Last message in Features
                           </span>
+                          <span
+                            aria-hidden="true"
+                            class="RoomListItemView-module_notificationDecoration"
+                          />
                         </div>
                       </div>
                       <div
@@ -13333,10 +13631,6 @@ exports[`<RoomListView /> > renders Toast story 1`] = `
                           </div>
                         </button>
                       </div>
-                      <div
-                        aria-hidden="true"
-                        class="RoomListItemView-module_notificationDecoration"
-                      />
                     </div>
                   </div>
                 </button>
@@ -13388,6 +13682,17 @@ exports[`<RoomListView /> > renders Toast story 1`] = `
                           >
                             Releases
                           </div>
+                        </div>
+                        <div
+                          class="_typography_6v6n8_153 _font-body-sm-regular_6v6n8_31 RoomListItemView-module_preview"
+                        >
+                          <span
+                            class="RoomListItemView-module_ellipsis"
+                          />
+                          <span
+                            aria-hidden="true"
+                            class="RoomListItemView-module_notificationDecoration"
+                          />
                         </div>
                       </div>
                       <div
@@ -13459,10 +13764,6 @@ exports[`<RoomListView /> > renders Toast story 1`] = `
                           </div>
                         </button>
                       </div>
-                      <div
-                        aria-hidden="true"
-                        class="RoomListItemView-module_notificationDecoration"
-                      />
                     </div>
                   </div>
                 </button>
@@ -13640,6 +13941,31 @@ exports[`<RoomListView /> > renders WithActiveFilter story 1`] = `
                           >
                             Last message in General
                           </span>
+                          <span
+                            aria-hidden="true"
+                            class="RoomListItemView-module_notificationDecoration"
+                          >
+                            <div
+                              class="Flex-module_flex"
+                              data-testid="notification-decoration"
+                              style="--mx-flex-display: flex; --mx-flex-direction: row; --mx-flex-align: center; --mx-flex-justify: center; --mx-flex-gap: var(--cpd-space-1x); --mx-flex-wrap: nowrap;"
+                            >
+                              <svg
+                                fill="var(--cpd-color-icon-accent-primary)"
+                                height="20px"
+                                viewBox="0 0 24 24"
+                                width="20px"
+                                xmlns="http://www.w3.org/2000/svg"
+                              >
+                                <path
+                                  d="M12 4a8 8 0 1 0 0 16 1 1 0 1 1 0 2C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10v1.5a3.5 3.5 0 0 1-6.396 1.966A5 5 0 1 1 17 12v1.5a1.5 1.5 0 0 0 3 0V12a8 8 0 0 0-8-8m3 8a3 3 0 1 0-6 0 3 3 0 0 0 6 0"
+                                />
+                              </svg>
+                              <div
+                                class="_unread-counter_1147r_8"
+                              />
+                            </div>
+                          </span>
                         </div>
                       </div>
                       <div
@@ -13711,31 +14037,6 @@ exports[`<RoomListView /> > renders WithActiveFilter story 1`] = `
                           </div>
                         </button>
                       </div>
-                      <div
-                        aria-hidden="true"
-                        class="RoomListItemView-module_notificationDecoration"
-                      >
-                        <div
-                          class="Flex-module_flex"
-                          data-testid="notification-decoration"
-                          style="--mx-flex-display: flex; --mx-flex-direction: row; --mx-flex-align: center; --mx-flex-justify: center; --mx-flex-gap: var(--cpd-space-1x); --mx-flex-wrap: nowrap;"
-                        >
-                          <svg
-                            fill="var(--cpd-color-icon-accent-primary)"
-                            height="20px"
-                            viewBox="0 0 24 24"
-                            width="20px"
-                            xmlns="http://www.w3.org/2000/svg"
-                          >
-                            <path
-                              d="M12 4a8 8 0 1 0 0 16 1 1 0 1 1 0 2C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10v1.5a3.5 3.5 0 0 1-6.396 1.966A5 5 0 1 1 17 12v1.5a1.5 1.5 0 0 0 3 0V12a8 8 0 0 0-8-8m3 8a3 3 0 1 0-6 0 3 3 0 0 0 6 0"
-                            />
-                          </svg>
-                          <div
-                            class="_unread-counter_1147r_8"
-                          />
-                        </div>
-                      </div>
                     </div>
                   </div>
                 </button>
@@ -13787,6 +14088,17 @@ exports[`<RoomListView /> > renders WithActiveFilter story 1`] = `
                           >
                             Random
                           </div>
+                        </div>
+                        <div
+                          class="_typography_6v6n8_153 _font-body-sm-regular_6v6n8_31 RoomListItemView-module_preview"
+                        >
+                          <span
+                            class="RoomListItemView-module_ellipsis"
+                          />
+                          <span
+                            aria-hidden="true"
+                            class="RoomListItemView-module_notificationDecoration"
+                          />
                         </div>
                       </div>
                       <div
@@ -13858,10 +14170,6 @@ exports[`<RoomListView /> > renders WithActiveFilter story 1`] = `
                           </div>
                         </button>
                       </div>
-                      <div
-                        aria-hidden="true"
-                        class="RoomListItemView-module_notificationDecoration"
-                      />
                     </div>
                   </div>
                 </button>
@@ -13923,6 +14231,10 @@ exports[`<RoomListView /> > renders WithActiveFilter story 1`] = `
                           >
                             Last message in Engineering
                           </span>
+                          <span
+                            aria-hidden="true"
+                            class="RoomListItemView-module_notificationDecoration"
+                          />
                         </div>
                       </div>
                       <div
@@ -13994,10 +14306,6 @@ exports[`<RoomListView /> > renders WithActiveFilter story 1`] = `
                           </div>
                         </button>
                       </div>
-                      <div
-                        aria-hidden="true"
-                        class="RoomListItemView-module_notificationDecoration"
-                      />
                     </div>
                   </div>
                 </button>
@@ -14049,6 +14357,17 @@ exports[`<RoomListView /> > renders WithActiveFilter story 1`] = `
                           >
                             Design
                           </div>
+                        </div>
+                        <div
+                          class="_typography_6v6n8_153 _font-body-sm-regular_6v6n8_31 RoomListItemView-module_preview"
+                        >
+                          <span
+                            class="RoomListItemView-module_ellipsis"
+                          />
+                          <span
+                            aria-hidden="true"
+                            class="RoomListItemView-module_notificationDecoration"
+                          />
                         </div>
                       </div>
                       <div
@@ -14120,10 +14439,6 @@ exports[`<RoomListView /> > renders WithActiveFilter story 1`] = `
                           </div>
                         </button>
                       </div>
-                      <div
-                        aria-hidden="true"
-                        class="RoomListItemView-module_notificationDecoration"
-                      />
                     </div>
                   </div>
                 </button>
@@ -14185,6 +14500,10 @@ exports[`<RoomListView /> > renders WithActiveFilter story 1`] = `
                           >
                             Last message in Product
                           </span>
+                          <span
+                            aria-hidden="true"
+                            class="RoomListItemView-module_notificationDecoration"
+                          />
                         </div>
                       </div>
                       <div
@@ -14256,10 +14575,6 @@ exports[`<RoomListView /> > renders WithActiveFilter story 1`] = `
                           </div>
                         </button>
                       </div>
-                      <div
-                        aria-hidden="true"
-                        class="RoomListItemView-module_notificationDecoration"
-                      />
                     </div>
                   </div>
                 </button>
@@ -14311,6 +14626,40 @@ exports[`<RoomListView /> > renders WithActiveFilter story 1`] = `
                           >
                             Marketing
                           </div>
+                        </div>
+                        <div
+                          class="_typography_6v6n8_153 _font-body-sm-regular_6v6n8_31 RoomListItemView-module_preview"
+                        >
+                          <span
+                            class="RoomListItemView-module_ellipsis"
+                          />
+                          <span
+                            aria-hidden="true"
+                            class="RoomListItemView-module_notificationDecoration"
+                          >
+                            <div
+                              class="Flex-module_flex"
+                              data-testid="notification-decoration"
+                              style="--mx-flex-display: flex; --mx-flex-direction: row; --mx-flex-align: center; --mx-flex-justify: center; --mx-flex-gap: var(--cpd-space-1x); --mx-flex-wrap: nowrap;"
+                            >
+                              <svg
+                                fill="var(--cpd-color-icon-accent-primary)"
+                                height="20px"
+                                viewBox="0 0 24 24"
+                                width="20px"
+                                xmlns="http://www.w3.org/2000/svg"
+                              >
+                                <path
+                                  d="M12 4a8 8 0 1 0 0 16 1 1 0 1 1 0 2C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10v1.5a3.5 3.5 0 0 1-6.396 1.966A5 5 0 1 1 17 12v1.5a1.5 1.5 0 0 0 3 0V12a8 8 0 0 0-8-8m3 8a3 3 0 1 0-6 0 3 3 0 0 0 6 0"
+                                />
+                              </svg>
+                              <span
+                                class="_unread-counter_1147r_8"
+                              >
+                                5
+                              </span>
+                            </div>
+                          </span>
                         </div>
                       </div>
                       <div
@@ -14382,33 +14731,6 @@ exports[`<RoomListView /> > renders WithActiveFilter story 1`] = `
                           </div>
                         </button>
                       </div>
-                      <div
-                        aria-hidden="true"
-                        class="RoomListItemView-module_notificationDecoration"
-                      >
-                        <div
-                          class="Flex-module_flex"
-                          data-testid="notification-decoration"
-                          style="--mx-flex-display: flex; --mx-flex-direction: row; --mx-flex-align: center; --mx-flex-justify: center; --mx-flex-gap: var(--cpd-space-1x); --mx-flex-wrap: nowrap;"
-                        >
-                          <svg
-                            fill="var(--cpd-color-icon-accent-primary)"
-                            height="20px"
-                            viewBox="0 0 24 24"
-                            width="20px"
-                            xmlns="http://www.w3.org/2000/svg"
-                          >
-                            <path
-                              d="M12 4a8 8 0 1 0 0 16 1 1 0 1 1 0 2C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10v1.5a3.5 3.5 0 0 1-6.396 1.966A5 5 0 1 1 17 12v1.5a1.5 1.5 0 0 0 3 0V12a8 8 0 0 0-8-8m3 8a3 3 0 1 0-6 0 3 3 0 0 0 6 0"
-                            />
-                          </svg>
-                          <span
-                            class="_unread-counter_1147r_8"
-                          >
-                            5
-                          </span>
-                        </div>
-                      </div>
                     </div>
                   </div>
                 </button>
@@ -14470,6 +14792,10 @@ exports[`<RoomListView /> > renders WithActiveFilter story 1`] = `
                           >
                             Last message in Sales
                           </span>
+                          <span
+                            aria-hidden="true"
+                            class="RoomListItemView-module_notificationDecoration"
+                          />
                         </div>
                       </div>
                       <div
@@ -14541,10 +14867,6 @@ exports[`<RoomListView /> > renders WithActiveFilter story 1`] = `
                           </div>
                         </button>
                       </div>
-                      <div
-                        aria-hidden="true"
-                        class="RoomListItemView-module_notificationDecoration"
-                      />
                     </div>
                   </div>
                 </button>
@@ -14596,6 +14918,17 @@ exports[`<RoomListView /> > renders WithActiveFilter story 1`] = `
                           >
                             Support
                           </div>
+                        </div>
+                        <div
+                          class="_typography_6v6n8_153 _font-body-sm-regular_6v6n8_31 RoomListItemView-module_preview"
+                        >
+                          <span
+                            class="RoomListItemView-module_ellipsis"
+                          />
+                          <span
+                            aria-hidden="true"
+                            class="RoomListItemView-module_notificationDecoration"
+                          />
                         </div>
                       </div>
                       <div
@@ -14667,10 +15000,6 @@ exports[`<RoomListView /> > renders WithActiveFilter story 1`] = `
                           </div>
                         </button>
                       </div>
-                      <div
-                        aria-hidden="true"
-                        class="RoomListItemView-module_notificationDecoration"
-                      />
                     </div>
                   </div>
                 </button>
@@ -14732,6 +15061,10 @@ exports[`<RoomListView /> > renders WithActiveFilter story 1`] = `
                           >
                             Last message in Announcements
                           </span>
+                          <span
+                            aria-hidden="true"
+                            class="RoomListItemView-module_notificationDecoration"
+                          />
                         </div>
                       </div>
                       <div
@@ -14803,10 +15136,6 @@ exports[`<RoomListView /> > renders WithActiveFilter story 1`] = `
                           </div>
                         </button>
                       </div>
-                      <div
-                        aria-hidden="true"
-                        class="RoomListItemView-module_notificationDecoration"
-                      />
                     </div>
                   </div>
                 </button>
@@ -14858,6 +15187,17 @@ exports[`<RoomListView /> > renders WithActiveFilter story 1`] = `
                           >
                             Off-topic
                           </div>
+                        </div>
+                        <div
+                          class="_typography_6v6n8_153 _font-body-sm-regular_6v6n8_31 RoomListItemView-module_preview"
+                        >
+                          <span
+                            class="RoomListItemView-module_ellipsis"
+                          />
+                          <span
+                            aria-hidden="true"
+                            class="RoomListItemView-module_notificationDecoration"
+                          />
                         </div>
                       </div>
                       <div
@@ -14929,10 +15269,6 @@ exports[`<RoomListView /> > renders WithActiveFilter story 1`] = `
                           </div>
                         </button>
                       </div>
-                      <div
-                        aria-hidden="true"
-                        class="RoomListItemView-module_notificationDecoration"
-                      />
                     </div>
                   </div>
                 </button>
@@ -14993,6 +15329,33 @@ exports[`<RoomListView /> > renders WithActiveFilter story 1`] = `
                             class="RoomListItemView-module_ellipsis"
                           >
                             Last message in Team Alpha
+                          </span>
+                          <span
+                            aria-hidden="true"
+                            class="RoomListItemView-module_notificationDecoration"
+                          >
+                            <div
+                              class="Flex-module_flex"
+                              data-testid="notification-decoration"
+                              style="--mx-flex-display: flex; --mx-flex-direction: row; --mx-flex-align: center; --mx-flex-justify: center; --mx-flex-gap: var(--cpd-space-1x); --mx-flex-wrap: nowrap;"
+                            >
+                              <svg
+                                fill="var(--cpd-color-icon-accent-primary)"
+                                height="20px"
+                                viewBox="0 0 24 24"
+                                width="20px"
+                                xmlns="http://www.w3.org/2000/svg"
+                              >
+                                <path
+                                  d="M12 4a8 8 0 1 0 0 16 1 1 0 1 1 0 2C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10v1.5a3.5 3.5 0 0 1-6.396 1.966A5 5 0 1 1 17 12v1.5a1.5 1.5 0 0 0 3 0V12a8 8 0 0 0-8-8m3 8a3 3 0 1 0-6 0 3 3 0 0 0 6 0"
+                                />
+                              </svg>
+                              <span
+                                class="_unread-counter_1147r_8"
+                              >
+                                10
+                              </span>
+                            </div>
                           </span>
                         </div>
                       </div>
@@ -15065,33 +15428,6 @@ exports[`<RoomListView /> > renders WithActiveFilter story 1`] = `
                           </div>
                         </button>
                       </div>
-                      <div
-                        aria-hidden="true"
-                        class="RoomListItemView-module_notificationDecoration"
-                      >
-                        <div
-                          class="Flex-module_flex"
-                          data-testid="notification-decoration"
-                          style="--mx-flex-display: flex; --mx-flex-direction: row; --mx-flex-align: center; --mx-flex-justify: center; --mx-flex-gap: var(--cpd-space-1x); --mx-flex-wrap: nowrap;"
-                        >
-                          <svg
-                            fill="var(--cpd-color-icon-accent-primary)"
-                            height="20px"
-                            viewBox="0 0 24 24"
-                            width="20px"
-                            xmlns="http://www.w3.org/2000/svg"
-                          >
-                            <path
-                              d="M12 4a8 8 0 1 0 0 16 1 1 0 1 1 0 2C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10v1.5a3.5 3.5 0 0 1-6.396 1.966A5 5 0 1 1 17 12v1.5a1.5 1.5 0 0 0 3 0V12a8 8 0 0 0-8-8m3 8a3 3 0 1 0-6 0 3 3 0 0 0 6 0"
-                            />
-                          </svg>
-                          <span
-                            class="_unread-counter_1147r_8"
-                          >
-                            10
-                          </span>
-                        </div>
-                      </div>
                     </div>
                   </div>
                 </button>
@@ -15143,6 +15479,17 @@ exports[`<RoomListView /> > renders WithActiveFilter story 1`] = `
                           >
                             Team Beta
                           </div>
+                        </div>
+                        <div
+                          class="_typography_6v6n8_153 _font-body-sm-regular_6v6n8_31 RoomListItemView-module_preview"
+                        >
+                          <span
+                            class="RoomListItemView-module_ellipsis"
+                          />
+                          <span
+                            aria-hidden="true"
+                            class="RoomListItemView-module_notificationDecoration"
+                          />
                         </div>
                       </div>
                       <div
@@ -15214,10 +15561,6 @@ exports[`<RoomListView /> > renders WithActiveFilter story 1`] = `
                           </div>
                         </button>
                       </div>
-                      <div
-                        aria-hidden="true"
-                        class="RoomListItemView-module_notificationDecoration"
-                      />
                     </div>
                   </div>
                 </button>
@@ -15279,6 +15622,10 @@ exports[`<RoomListView /> > renders WithActiveFilter story 1`] = `
                           >
                             Last message in Project X
                           </span>
+                          <span
+                            aria-hidden="true"
+                            class="RoomListItemView-module_notificationDecoration"
+                          />
                         </div>
                       </div>
                       <div
@@ -15350,10 +15697,6 @@ exports[`<RoomListView /> > renders WithActiveFilter story 1`] = `
                           </div>
                         </button>
                       </div>
-                      <div
-                        aria-hidden="true"
-                        class="RoomListItemView-module_notificationDecoration"
-                      />
                     </div>
                   </div>
                 </button>
@@ -15405,6 +15748,17 @@ exports[`<RoomListView /> > renders WithActiveFilter story 1`] = `
                           >
                             Project Y
                           </div>
+                        </div>
+                        <div
+                          class="_typography_6v6n8_153 _font-body-sm-regular_6v6n8_31 RoomListItemView-module_preview"
+                        >
+                          <span
+                            class="RoomListItemView-module_ellipsis"
+                          />
+                          <span
+                            aria-hidden="true"
+                            class="RoomListItemView-module_notificationDecoration"
+                          />
                         </div>
                       </div>
                       <div
@@ -15476,10 +15830,6 @@ exports[`<RoomListView /> > renders WithActiveFilter story 1`] = `
                           </div>
                         </button>
                       </div>
-                      <div
-                        aria-hidden="true"
-                        class="RoomListItemView-module_notificationDecoration"
-                      />
                     </div>
                   </div>
                 </button>
@@ -15541,6 +15891,10 @@ exports[`<RoomListView /> > renders WithActiveFilter story 1`] = `
                           >
                             Last message in Water Cooler
                           </span>
+                          <span
+                            aria-hidden="true"
+                            class="RoomListItemView-module_notificationDecoration"
+                          />
                         </div>
                       </div>
                       <div
@@ -15612,10 +15966,6 @@ exports[`<RoomListView /> > renders WithActiveFilter story 1`] = `
                           </div>
                         </button>
                       </div>
-                      <div
-                        aria-hidden="true"
-                        class="RoomListItemView-module_notificationDecoration"
-                      />
                     </div>
                   </div>
                 </button>
@@ -15667,6 +16017,40 @@ exports[`<RoomListView /> > renders WithActiveFilter story 1`] = `
                           >
                             Feedback
                           </div>
+                        </div>
+                        <div
+                          class="_typography_6v6n8_153 _font-body-sm-regular_6v6n8_31 RoomListItemView-module_preview"
+                        >
+                          <span
+                            class="RoomListItemView-module_ellipsis"
+                          />
+                          <span
+                            aria-hidden="true"
+                            class="RoomListItemView-module_notificationDecoration"
+                          >
+                            <div
+                              class="Flex-module_flex"
+                              data-testid="notification-decoration"
+                              style="--mx-flex-display: flex; --mx-flex-direction: row; --mx-flex-align: center; --mx-flex-justify: center; --mx-flex-gap: var(--cpd-space-1x); --mx-flex-wrap: nowrap;"
+                            >
+                              <svg
+                                fill="var(--cpd-color-icon-accent-primary)"
+                                height="20px"
+                                viewBox="0 0 24 24"
+                                width="20px"
+                                xmlns="http://www.w3.org/2000/svg"
+                              >
+                                <path
+                                  d="M12 4a8 8 0 1 0 0 16 1 1 0 1 1 0 2C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10v1.5a3.5 3.5 0 0 1-6.396 1.966A5 5 0 1 1 17 12v1.5a1.5 1.5 0 0 0 3 0V12a8 8 0 0 0-8-8m3 8a3 3 0 1 0-6 0 3 3 0 0 0 6 0"
+                                />
+                              </svg>
+                              <span
+                                class="_unread-counter_1147r_8"
+                              >
+                                15
+                              </span>
+                            </div>
+                          </span>
                         </div>
                       </div>
                       <div
@@ -15738,33 +16122,6 @@ exports[`<RoomListView /> > renders WithActiveFilter story 1`] = `
                           </div>
                         </button>
                       </div>
-                      <div
-                        aria-hidden="true"
-                        class="RoomListItemView-module_notificationDecoration"
-                      >
-                        <div
-                          class="Flex-module_flex"
-                          data-testid="notification-decoration"
-                          style="--mx-flex-display: flex; --mx-flex-direction: row; --mx-flex-align: center; --mx-flex-justify: center; --mx-flex-gap: var(--cpd-space-1x); --mx-flex-wrap: nowrap;"
-                        >
-                          <svg
-                            fill="var(--cpd-color-icon-accent-primary)"
-                            height="20px"
-                            viewBox="0 0 24 24"
-                            width="20px"
-                            xmlns="http://www.w3.org/2000/svg"
-                          >
-                            <path
-                              d="M12 4a8 8 0 1 0 0 16 1 1 0 1 1 0 2C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10v1.5a3.5 3.5 0 0 1-6.396 1.966A5 5 0 1 1 17 12v1.5a1.5 1.5 0 0 0 3 0V12a8 8 0 0 0-8-8m3 8a3 3 0 1 0-6 0 3 3 0 0 0 6 0"
-                            />
-                          </svg>
-                          <span
-                            class="_unread-counter_1147r_8"
-                          >
-                            15
-                          </span>
-                        </div>
-                      </div>
                     </div>
                   </div>
                 </button>
@@ -15826,6 +16183,10 @@ exports[`<RoomListView /> > renders WithActiveFilter story 1`] = `
                           >
                             Last message in Ideas
                           </span>
+                          <span
+                            aria-hidden="true"
+                            class="RoomListItemView-module_notificationDecoration"
+                          />
                         </div>
                       </div>
                       <div
@@ -15897,10 +16258,6 @@ exports[`<RoomListView /> > renders WithActiveFilter story 1`] = `
                           </div>
                         </button>
                       </div>
-                      <div
-                        aria-hidden="true"
-                        class="RoomListItemView-module_notificationDecoration"
-                      />
                     </div>
                   </div>
                 </button>
@@ -15952,6 +16309,17 @@ exports[`<RoomListView /> > renders WithActiveFilter story 1`] = `
                           >
                             Bugs
                           </div>
+                        </div>
+                        <div
+                          class="_typography_6v6n8_153 _font-body-sm-regular_6v6n8_31 RoomListItemView-module_preview"
+                        >
+                          <span
+                            class="RoomListItemView-module_ellipsis"
+                          />
+                          <span
+                            aria-hidden="true"
+                            class="RoomListItemView-module_notificationDecoration"
+                          />
                         </div>
                       </div>
                       <div
@@ -16023,10 +16391,6 @@ exports[`<RoomListView /> > renders WithActiveFilter story 1`] = `
                           </div>
                         </button>
                       </div>
-                      <div
-                        aria-hidden="true"
-                        class="RoomListItemView-module_notificationDecoration"
-                      />
                     </div>
                   </div>
                 </button>
@@ -16088,6 +16452,10 @@ exports[`<RoomListView /> > renders WithActiveFilter story 1`] = `
                           >
                             Last message in Features
                           </span>
+                          <span
+                            aria-hidden="true"
+                            class="RoomListItemView-module_notificationDecoration"
+                          />
                         </div>
                       </div>
                       <div
@@ -16159,10 +16527,6 @@ exports[`<RoomListView /> > renders WithActiveFilter story 1`] = `
                           </div>
                         </button>
                       </div>
-                      <div
-                        aria-hidden="true"
-                        class="RoomListItemView-module_notificationDecoration"
-                      />
                     </div>
                   </div>
                 </button>
@@ -16214,6 +16578,17 @@ exports[`<RoomListView /> > renders WithActiveFilter story 1`] = `
                           >
                             Releases
                           </div>
+                        </div>
+                        <div
+                          class="_typography_6v6n8_153 _font-body-sm-regular_6v6n8_31 RoomListItemView-module_preview"
+                        >
+                          <span
+                            class="RoomListItemView-module_ellipsis"
+                          />
+                          <span
+                            aria-hidden="true"
+                            class="RoomListItemView-module_notificationDecoration"
+                          />
                         </div>
                       </div>
                       <div
@@ -16285,10 +16660,6 @@ exports[`<RoomListView /> > renders WithActiveFilter story 1`] = `
                           </div>
                         </button>
                       </div>
-                      <div
-                        aria-hidden="true"
-                        class="RoomListItemView-module_notificationDecoration"
-                      />
                     </div>
                   </div>
                 </button>
