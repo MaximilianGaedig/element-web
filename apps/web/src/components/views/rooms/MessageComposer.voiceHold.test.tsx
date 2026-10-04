@@ -10,6 +10,7 @@ Please see LICENSE files in the repository root for full details.
 import React from "react";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { act, fireEvent, render, screen, waitFor } from "test-utils-rtl";
+import userEvent from "@testing-library/user-event";
 import { type MatrixClient, MsgType, TypedEventEmitter } from "matrix-js-sdk/src/matrix";
 import { clearAllModals, mkStubRoom, mockPlatformPeg, stubClient } from "test-utils";
 
@@ -160,6 +161,26 @@ describe("MessageComposer, holding the microphone", () => {
             .mocked(client.sendMessage)
             .mock.calls.map((call) => call[call.length - 1])
             .filter((content) => (content as { msgtype?: string }).msgtype === MsgType.Audio);
+
+    /*
+     * As on Telegram iOS, send takes the microphone's place. It used to appear inside the input, where the
+     * sticker button had been, and grew the input the moment the first character was typed.
+     */
+    it("puts the send button where the microphone was once there is text, and keeps the input as it was", async () => {
+        const { composer } = open();
+        const island = composer.querySelector(".mx_TgComposerIsland_mic")!;
+        const input = screen.getByRole("textbox");
+
+        await act(async () => {
+            await userEvent.click(input);
+            await userEvent.keyboard("Hello");
+        });
+
+        const send = await screen.findByRole("button", { name: /^Send/ });
+        expect(island).toContainElement(send);
+        expect(island).not.toHaveClass("mx_TgComposerIsland_hidden");
+        expect(composer.querySelector(".mx_MessageComposer_wrapper")).not.toContainElement(send);
+    });
 
     it("records nothing on a tap, and says to hold", async () => {
         const { composer, mic } = open();

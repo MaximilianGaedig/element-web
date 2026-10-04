@@ -849,7 +849,13 @@ export class MessageComposer extends React.Component<IProps, IState> {
         const holding = this.state.voiceHold === "holding";
         const recordingRunning = this.state.haveRecording && !!this.state.recordingRunning;
         // In this layout a recording is sent from where it was started: the microphone's own place.
-        const sendFromIsland = this.state.haveRecording && !holding;
+        /*
+         * Telegram iOS: send takes the microphone's place, in its island, and the input keeps its size and
+         * shape. It used to appear inside the input while the island slid away, which put it where the
+         * sticker button had been (the emoji button then took the microphone's place) and, being taller
+         * than the input's row, grew the input the moment the first character was typed.
+         */
+        const sendFromIsland = (this.state.haveRecording || (telegram && showSendButton)) && !holding;
 
         const classes = classNames({
             "mx_MessageComposer": true,
@@ -940,14 +946,6 @@ export class MessageComposer extends React.Component<IProps, IState> {
                                 >
                                     {_t("action|cancel")}
                                 </AccessibleButton>
-                            )}
-                            {telegram && showSendButton && !this.state.haveRecording && !holding && (
-                                <TelegramSendButton
-                                    mode="send"
-                                    onSend={this.sendMessage}
-                                    onRecord={this.onRecordStartEndClick}
-                                    sendTitle={sendTitle}
-                                />
                             )}
                             {!telegram && showSendButton && (
                                 <SendButton
