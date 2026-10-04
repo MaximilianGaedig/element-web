@@ -18,6 +18,7 @@ import { isAcceptedByBridge, isReadByOthers } from "./readByOthers";
 import { failedSendsFor } from "../room/failedSends";
 import { MessageSendStatusStore } from "../bridge/messageSendStatus";
 import { getBridgeBots } from "../bridge/bridgeInfo";
+import { getFunctionalMembers } from "../room/getFunctionalMembers";
 import { bridgeHealthOf } from "../bridgeLogins";
 
 /** The delivery state of `event` when we sent it, or undefined for anyone else's message. */
@@ -50,4 +51,31 @@ export function getPreviewSendState(
         // Bridges say a message reached their network with their bot's receipt, not a status.
         bridgeAccepted: isAcceptedByBridge(room, event),
     });
+}
+
+/** How many readers' avatars a chat list line shows, newest first. */
+const MAX_PREVIEW_READERS = 3;
+
+/**
+ * In a group, who has read `event` when it is ours and some but not all of the others have: their user IDs,
+ * newest first. Shown on the chat list line instead of the ticks until everyone has read it, when the ticks
+ * say "read" again; nobody yet, or a chat with one other person, keeps the ticks. Bridge bots and a room's
+ * service members are not readers, as nowhere else.
+ */
+export function getPreviewReaders(
+    client: MatrixClient,
+    room: Room,
+    event: MatrixEvent | undefined,
+): string[] | undefined {
+    const me = client.getUserId();
+    if (!event || event.getSender() !== me) return undefined;
+    const notPeople = new Set([...getBridgeBots(room), ...getFunctionalMembers(room)]);
+    const others = room.getJoinedMembers().filter((member) => member.userId !== me && !notPeople.has(member.userId));
+    if (others.length < 2) return undefined;
+    const readers = room
+        .getUsersReadUpTo(event)
+        .filter((userId) => userId !== me && !notPeople.has(userId) && !client.isUserIgnored(userId));
+    if (readers.length === 0 || readers.length >= others.length) return undefined;
+    const readAt = (userId: string): number => room.getReadReceiptForUserId(userId)?.data?.ts ?? 0;
+    return readers.sort((a, b) => readAt(b) - readAt(a)).slice(0, MAX_PREVIEW_READERS);
 }

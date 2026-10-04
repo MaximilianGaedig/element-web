@@ -26,6 +26,8 @@ import { SDKContext } from "../../../../contexts/SDKContext.ts";
 import { RoomPath } from "../RoomPath";
 import { WarmupOnRest } from "./WarmupOnRest";
 import { TelegramSendStatusIcon } from "../../telegram/TelegramTime";
+import MemberAvatar from "../../avatars/MemberAvatar";
+import { _t } from "../../../../languageHandler";
 
 /**
  * RoomListView component using shared components with proper MVVM pattern.
@@ -71,9 +73,20 @@ export function RoomListView(): JSX.Element {
         return <RoomPath room={room} fullPath />;
     }, []);
 
-    // Fork: our last message's ticks, the same glyphs as on the message in the timeline
+    // Fork: our last message's ticks, the same glyphs as on the message in the timeline - or, in a group that
+    // some but not all have read, the avatars of the ones who have (getPreviewReaders).
     const renderSendState = useCallback(
-        (state: RoomListItemSendState): ReactNode => <TelegramSendStatusIcon state={state} />,
+        (state: RoomListItemSendState, readers: string[] | undefined, room: SharedRoom): ReactNode => {
+            if (!readers?.length || !(room instanceof Room)) return <TelegramSendStatusIcon state={state} />;
+            return (
+                <span className="mx_RoomListReaders" aria-label={_t("room|read_by_count", { count: readers.length })}>
+                    {readers.map((userId) => {
+                        const member = room.getMember(userId);
+                        return member ? <MemberAvatar key={userId} member={member} size="16px" hideTitle /> : null;
+                    })}
+                </span>
+            );
+        },
         [],
     );
 

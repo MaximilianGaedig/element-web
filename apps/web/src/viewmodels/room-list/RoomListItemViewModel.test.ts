@@ -852,6 +852,37 @@ describe("RoomListItemViewModel", () => {
             expect(ticks()).toBe("sent");
         });
 
+        // In a group, who has read our last message shows as their avatars until everyone has.
+        describe("in a group", () => {
+            const others = ["@alice:server", "@bob:server", "@carol:server"];
+            beforeEach(() => {
+                vi.spyOn(room, "getJoinedMembers").mockReturnValue(
+                    [me, ...others].map((userId) => ({ userId }) as never),
+                );
+            });
+
+            it("shows who has read it, newest first, while not everyone has", async () => {
+                previewOf(message(me));
+                viewModel = new RoomListItemViewModel({ room, client: matrixClient });
+                await flushPromises();
+                expect(viewModel.getSnapshot().messagePreviewReaders).toBeUndefined();
+                expect(ticks()).toBe("sent");
+
+                receipt("@alice:server", "$msg");
+                expect(viewModel.getSnapshot().messagePreviewReaders).toEqual(["@alice:server"]);
+            });
+
+            it("goes back to the read ticks once everyone has read it", async () => {
+                previewOf(message(me));
+                viewModel = new RoomListItemViewModel({ room, client: matrixClient });
+                await flushPromises();
+
+                for (const userId of others) receipt(userId, "$msg");
+                expect(viewModel.getSnapshot().messagePreviewReaders).toBeUndefined();
+                expect(ticks()).toBe("read");
+            });
+        });
+
         it("follows the bridge's delivery report for the message", async () => {
             state("m.bridge", { bridgebot: "@bot:server" }, "whatsapp");
             previewOf(message(me));

@@ -178,6 +178,20 @@
     align-items: center;
 }
 
+/* Fork: the unread badge, at the end of the second line as in Telegram Web. */
+.notificationDecoration {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+}
+
+/* Fork: when the room was last active, at the end of the name line in tweb's .dialog-subtitle grey. */
+.time {
+    flex-shrink: 0;
+    color: var(--cpd-color-text-secondary);
+    font-variant-numeric: tabular-nums;
+}
+
 .userStatusEmoji {
     padding-left: var(--cpd-space-1-5x);
 }
