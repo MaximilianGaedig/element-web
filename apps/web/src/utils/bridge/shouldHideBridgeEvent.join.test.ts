@@ -29,7 +29,15 @@ function clientWith(bridged: boolean): void {
             // The bridge publishes its import status as room account data (state is only the old fallback).
             getAccountData: (type: string) =>
                 type === "im.mxg.backfill" && bridged ? { getContent: () => ({ state: "complete" }) } : undefined,
-            currentState: { getStateEvents: () => null },
+            // m.bridge names the bridge's bot; asked for by type alone, state events come back as a list.
+            currentState: {
+                getStateEvents: (type: string, key?: string) =>
+                    key !== undefined
+                        ? null
+                        : type === "m.bridge" && bridged
+                          ? [{ getContent: () => ({ bridgebot: "@bridgebot:x" }) }]
+                          : [],
+            },
         }),
     } as never);
 }
@@ -46,6 +54,14 @@ describe("bridged joins and leaves", () => {
         expect(shouldHideBridgeEvent(member("@me:x", "join"))).toBe(false);
         expect(shouldHideBridgeEvent(member("@admin:x", "leave", "@ghost:x"))).toBe(false);
         expect(shouldHideBridgeEvent(member("@admin:x", "invite", "@ghost:x"))).toBe(false);
+    });
+
+    /* A Messenger group opened on a wall of "Facebook bridge bot invited ..." for every member. */
+    it("hides the bridge's bot inviting the people of the other network, but not inviting you", () => {
+        clientWith(true);
+        expect(shouldHideBridgeEvent(member("@bridgebot:x", "invite", "@ghost:x"))).toBe(true);
+        expect(shouldHideBridgeEvent(member("@bridgebot:x", "invite", "@me:x"))).toBe(false);
+        expect(shouldHideBridgeEvent(member("@bridgebot:x", "ban", "@ghost:x"))).toBe(false);
     });
 
     it("leaves ordinary chats alone", () => {
