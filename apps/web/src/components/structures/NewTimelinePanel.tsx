@@ -48,6 +48,13 @@ interface NewTimelinePanelProps {
     room: Room;
     highlightedEventId?: string;
     /**
+     * False once the jump to {@link highlightedEventId} has been made; opening the same link again sets it back to
+     * true, which jumps again. Unset means true.
+     */
+    eventScrollIntoView?: boolean;
+    /** Called with the event once the jump to it has been started. */
+    onEventScrolledIntoView?: (eventId?: string) => void;
+    /**
      * How messages are laid out. RoomView watches this setting for us, so a change
      * arrives here as a new prop.
      */
@@ -253,6 +260,8 @@ function renderTimelineItem(item: TimelineItem, ctx: RenderItemContext): ReactNo
 export function NewTimelinePanel({
     room,
     highlightedEventId,
+    eventScrollIntoView,
+    onEventScrolledIntoView,
     layout,
     hidden,
     active = true,
@@ -307,6 +316,16 @@ export function NewTimelinePanel({
         vm.start();
         // Disposal is handled by useCreateAutoDisposedViewModel; no cleanup needed here.
     }, [vm]);
+
+    // The view model reads the link it was built with when it starts. A link opened afterwards - in the open
+    // room, or in a room built before it was opened - only reaches it here.
+    const builtAt = useRef(highlightedEventId);
+    useEffect(() => {
+        if (!highlightedEventId || eventScrollIntoView === false) return;
+        if (builtAt.current === highlightedEventId) builtAt.current = undefined;
+        else vm.jumpToEvent(highlightedEventId);
+        onEventScrolledIntoView?.(highlightedEventId);
+    }, [vm, highlightedEventId, eventScrollIntoView, onEventScrolledIntoView]);
 
     // The syntax highlighter, ahead of the first code block in this chat (see utils/timeline/codeHighlighter).
     useEffect(() => {

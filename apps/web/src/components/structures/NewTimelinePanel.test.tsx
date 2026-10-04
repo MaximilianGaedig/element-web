@@ -74,6 +74,8 @@ const { vmState } = vi.hoisted(() => ({
     // snapshots by identity, so handing back a fresh object each call would loop.
     vmState: {
         snapshot: {} as Record<string, unknown>,
+        /** The events the panel asked the view model to jump to. */
+        jumps: [] as string[],
         setRows(items: unknown[]) {
             this.snapshot = {
                 items,
@@ -95,6 +97,9 @@ vi.mock("../../viewmodels/room/timeline/RoomTimelineViewModel", () => ({
     RoomTimelineViewModel: class {
         public start = (): void => {};
         public setActive = (): void => {};
+        public jumpToEvent = (eventId: string): void => {
+            vmState.jumps.push(eventId);
+        };
         public dispose = (): void => {};
         public subscribe = (): (() => void) => (): void => {};
         public getSnapshot = (): Record<string, unknown> => vmState.snapshot;
@@ -136,6 +141,7 @@ describe("<NewTimelinePanel />", () => {
         tileProps.current = [];
         rowsRendered.current = [];
         vmState.setRows([]);
+        vmState.jumps = [];
         client = createTestClient();
         room = new Room(ROOM_ID, client, USER_ID, { pendingEventOrdering: PendingEventOrdering.Detached });
         vi.spyOn(client, "getRoom").mockReturnValue(room);
@@ -379,6 +385,41 @@ describe("<NewTimelinePanel />", () => {
 
         expect(tileProps.current[0].editState).toBe(editState);
         expect(tileProps.current[1].editState).toBeUndefined();
+    });
+
+    /*
+     * A link opened while the panel was up - in the open room, or in a room built before it was opened - did
+     * nothing until a reload, because the view model only read the link it was built with.
+     */
+    it("jumps to a link opened after it was built, and again when that link is opened again", () => {
+        const onEventScrolledIntoView = vi.fn();
+        const { rerender } = renderPanel({ onEventScrolledIntoView });
+        const panel = (props: Partial<React.ComponentProps<typeof NewTimelinePanel>>) => (
+            <MatrixClientContext.Provider value={client}>
+                <SDKContext.Provider value={new TestSDKContext()}>
+                    <NewTimelinePanel room={room} onEventScrolledIntoView={onEventScrolledIntoView} {...props} />
+                </SDKContext.Provider>
+            </MatrixClientContext.Provider>
+        );
+
+        rerender(panel({ highlightedEventId: "$linked", eventScrollIntoView: true }));
+        expect(vmState.jumps).toEqual(["$linked"]);
+        expect(onEventScrolledIntoView).toHaveBeenCalledWith("$linked");
+
+        // RoomView clears the flag once told the jump was made, and sets it again when the link is opened again.
+        rerender(panel({ highlightedEventId: "$linked", eventScrollIntoView: false }));
+        expect(vmState.jumps).toEqual(["$linked"]);
+        rerender(panel({ highlightedEventId: "$linked", eventScrollIntoView: true }));
+        expect(vmState.jumps).toEqual(["$linked", "$linked"]);
+    });
+
+    it("leaves the link it was built with to the view model's own start", () => {
+        const onEventScrolledIntoView = vi.fn();
+
+        renderPanel({ highlightedEventId: "$linked", onEventScrolledIntoView });
+
+        expect(vmState.jumps).toEqual([]);
+        expect(onEventScrolledIntoView).toHaveBeenCalledWith("$linked");
     });
 
     it("hides the panel without unmounting it", () => {

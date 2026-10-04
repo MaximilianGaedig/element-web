@@ -790,6 +790,52 @@ describe("RoomTimelineViewModel", () => {
         });
     });
 
+    describe("a link opened while the timeline is up", () => {
+        it("marks the linked message and centres it", async () => {
+            seedTimeline([makeMessage("$a"), makeMessage("$b"), makeMessage("$c")]);
+            const vm = await createStartedViewModel();
+            expect(vm.getSnapshot().highlightedEventId).toBeNull();
+
+            vm.jumpToEvent("$a");
+
+            await vi.waitFor(() => expect(vm.getSnapshot().highlightedEventId).toBe("$a"));
+            expect(vm.getSnapshot().pendingAnchor).toEqual({ targetKey: "$a", align: "center" });
+        });
+
+        it("starts at the link when it arrives before the timeline starts", async () => {
+            seedTimeline([makeMessage("$a"), makeMessage("$b"), makeMessage("$c")]);
+            const vm = new RoomTimelineViewModel({ client, room });
+            vms.push(vm);
+
+            vm.jumpToEvent("$b");
+            vm.start();
+
+            await vi.waitFor(() => expect(vm.getSnapshot().highlightedEventId).toBe("$b"));
+            expect(vm.getSnapshot().pendingAnchor).toEqual({ targetKey: "$b", align: "center" });
+        });
+
+        it("is not undone by the opening load finishing after it", async () => {
+            seedTimeline([makeMessage("$a"), makeMessage("$b"), makeMessage("$c")]);
+            // The opening load waits on the stored room; the jump finds it already in.
+            let storedIn!: () => void;
+            client.loadStoredRoomState = vi
+                .fn()
+                .mockReturnValueOnce(new Promise<void>((resolve) => (storedIn = resolve)))
+                .mockResolvedValue(undefined);
+            const vm = new RoomTimelineViewModel({ client, room });
+            vms.push(vm);
+            vm.start();
+
+            vm.jumpToEvent("$a");
+            await vi.waitFor(() => expect(vm.getSnapshot().highlightedEventId).toBe("$a"));
+            storedIn();
+            await new Promise((resolve) => setTimeout(resolve, 50));
+
+            expect(vm.getSnapshot().highlightedEventId).toBe("$a");
+            expect(vm.getSnapshot().pendingAnchor).toEqual({ targetKey: "$a", align: "center" });
+        });
+    });
+
     describe("jumping to the latest message", () => {
         it("scrolls straight there when the newest message is already loaded", async () => {
             seedTimeline([makeMessage("$a"), makeMessage("$b")]);

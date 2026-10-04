@@ -2710,6 +2710,8 @@ export class RoomView extends React.Component<IRoomProps, IRoomState> {
                         hidden={hideMessagePanel}
                         active={this.props.active !== false}
                         highlightedEventId={highlightedEventId}
+                        eventScrollIntoView={this.state.initialEventScrollIntoView}
+                        onEventScrolledIntoView={this.resetJumpToEvent}
                         layout={this.state.layout}
                         permalinkCreator={this.permalinkCreator}
                         showUrlPreview={!isRoomEncryptionLoading && this.state.showTimelineUrlPreview}

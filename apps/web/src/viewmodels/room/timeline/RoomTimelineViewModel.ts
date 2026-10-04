@@ -186,6 +186,8 @@ export class RoomTimelineViewModel
 
     /** Set by {@link start} so a double-start (e.g. via StrictMode) is a no-op. */
     private started = false;
+    /** Counts loads, so that one finishing after a later one has begun drops its result. */
+    private loadSeq = 0;
 
     /**
      * Set when the timeline was shown with fewer messages than {@link MIN_INITIAL_EVENTS} because
@@ -777,12 +779,15 @@ export class RoomTimelineViewModel
             `[TimelineVM] load() start — kind=${target.kind}${target.kind !== "live" ? ` eventId=${target.eventId}` : ""}`,
         );
         const sdkLoadTarget = target.kind !== "live" ? target.eventId : undefined;
+        // A link opened while the first load is still running must not be undone when that load lands.
+        const seq = ++this.loadSeq;
+        const superseded = (): boolean => this.isDisposed || seq !== this.loadSeq;
 
         try {
             await this.bringInStoredRoom(sdkLoadTarget);
-            if (this.isDisposed) return;
+            if (superseded()) return;
             await this.timelineWindow.load(sdkLoadTarget, INITIAL_SIZE);
-            if (this.isDisposed) return;
+            if (superseded()) return;
             // Loaded afresh, the window is on whatever the room's timelines are now.
             this.leftOnOldTimeline = false;
             this.fillAfterPlacing = false;
@@ -793,9 +798,9 @@ export class RoomTimelineViewModel
                 // What this browser has stored costs no round trip, so it is worth having before the
                 // first paint; what only the server has is not, unless there is nothing to show at all.
                 await this.fillInitialWindow(undefined, "stored");
-                if (this.isDisposed) return;
+                if (superseded()) return;
                 await this.waitForDecryption(this.timelineWindow.getEvents(), PAGINATE_DECRYPT_WAIT_MS);
-                if (this.isDisposed) return;
+                if (superseded()) return;
                 const renderable = this.renderableEventCount(undefined, Direction.Backward);
                 if (renderable === 0) {
                     await this.fillInitialWindow(undefined, "server");
@@ -804,7 +809,7 @@ export class RoomTimelineViewModel
                         renderable < MIN_INITIAL_EVENTS && this.timelineWindow.canPaginate(Direction.Backward);
                 }
             }
-            if (this.isDisposed) return;
+            if (superseded()) return;
             const windowEvents = this.timelineWindow.getEvents();
             debug(
                 `[TimelineVM] load() window — ${windowEvents.length} events in window, ` +
@@ -1313,6 +1318,22 @@ export class RoomTimelineViewModel
         remove(oldest.id);
         this.publishUnreadCounts();
         return oldest.id;
+    }
+
+    /**
+     * Show `eventId` in the middle, marked, with the messages around it: a link opened while this timeline is
+     * already up, because its room was open or was built before being opened. A timeline not started yet starts
+     * there instead.
+     */
+    public jumpToEvent(eventId: string): void {
+        const target = this.sentEventId(eventId);
+        if (!target) return;
+        if (!this.started) {
+            this.opts.initialEventId = target;
+            return;
+        }
+        debug(`[TimelineVM] jumpToEvent — loading at ${target}`);
+        void this.load({ kind: "permalink", eventId: target });
     }
 
     /** Scroll to `eventId` where it is loaded, as {@link onJumpToReadMarker} does, and load it where it is not. */
