@@ -427,7 +427,12 @@ describe("<MatrixChat />", () => {
         it("should open QrLoginDialog on ViewQrLogin action", async () => {
             getComponent();
             defaultDispatcher.fire(Action.ViewQrLogin);
-            await expect(screen.findByRole("dialog", { name: "Sign in with QR code" })).resolves.toMatchSnapshot();
+            // The dialog is a lazy() component, and React reveals suspended content at least 300 ms after its
+            // fallback (react-dom's FALLBACK_THROTTLE_MS): it appears 330-390 ms after the action here, and
+            // findByRole's default 1 s was not always enough on a busy CI runner (MEO-135).
+            await expect(
+                screen.findByRole("dialog", { name: "Sign in with QR code" }, { timeout: 5000 }),
+            ).resolves.toMatchSnapshot();
         });
 
         it("should ignore ViewQrLogin action when logged in", async () => {
