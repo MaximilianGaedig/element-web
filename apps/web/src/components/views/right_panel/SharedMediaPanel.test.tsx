@@ -14,7 +14,9 @@ import { flushPromises, mkMembership, mkMessage, stubClient } from "test-utils";
 import { type MatrixClient, MatrixEvent, Room } from "matrix-js-sdk/src/matrix";
 
 import MatrixClientContext from "../../../contexts/MatrixClientContext";
-import { SharedMediaPane, thumbSizeFor } from "./SharedMediaPanel";
+import { SDKContext } from "../../../contexts/SDKContext";
+import { type SDKContextClass } from "../../../contexts/SDKContextClass";
+import SharedMediaPanel, { SharedMediaPane, thumbSizeFor } from "./SharedMediaPanel";
 import { SharedMediaLoader } from "../../../utils/sharedMedia";
 import { floatingFloor } from "../../../utils/sharedMediaLayout";
 import UIStore, { UI_EVENTS } from "../../../stores/UIStore";
@@ -512,6 +514,96 @@ describe("<SharedMediaPane />", () => {
             } finally {
                 UIStore.instance.windowHeight = before;
             }
+        });
+    });
+
+    describe("the tabs", () => {
+        function stats(byKind: Record<string, number>, complete = true): RoomStats {
+            return { total: 20, by_kind: byKind, senders: [], sender_count: 1, complete } as RoomStats;
+        }
+
+        async function renderPanel(events: MatrixEvent[] = []) {
+            room.addLiveEvents(events, { addToState: true });
+            render(
+                <MatrixClientContext.Provider value={client}>
+                    {/* The card only reads the right panel's history, to decide on a back button. */}
+                    <SDKContext.Provider
+                        value={{ rightPanelStore: { roomPhaseHistory: [] } } as unknown as SDKContextClass}
+                    >
+                        <SharedMediaPanel room={room} onClose={() => {}} />
+                    </SDKContext.Provider>
+                </MatrixClientContext.Provider>,
+            );
+            await flushPromises();
+        }
+
+        const tabNames = (): string[] => screen.getAllByRole("tab").map((t) => t.textContent ?? "");
+
+        it("hides the tabs the server says are empty, but not links, which it cannot count for sure", async () => {
+            vi.mocked(fetchRoomStats).mockResolvedValue(stats({ text: 4, image: 3, file: 2 }));
+            await renderPanel();
+            expect(tabNames()).toEqual(["Media", "Files", "Links"]);
+        });
+
+        it("shows every tab when the server keeps no counts", async () => {
+            vi.mocked(fetchRoomStats).mockResolvedValue(undefined);
+            await renderPanel();
+            expect(tabNames()).toEqual(["Media", "Files", "Links", "Music", "Voice"]);
+        });
+
+        it("shows every tab while the counts are still loading", async () => {
+            vi.mocked(fetchRoomStats).mockReturnValue(new Promise(() => {}));
+            await renderPanel();
+            expect(tabNames()).toEqual(["Media", "Files", "Links", "Music", "Voice"]);
+        });
+
+        it("shows every tab until the server has counted the whole history", async () => {
+            vi.mocked(fetchRoomStats).mockResolvedValue(stats({ text: 4, image: 3 }, false));
+            await renderPanel();
+            expect(tabNames()).toEqual(["Media", "Files", "Links", "Music", "Voice"]);
+        });
+
+        it("shows every tab in a room the server cannot read", async () => {
+            vi.mocked(fetchRoomStats).mockResolvedValue(stats({ encrypted: 40 }));
+            await renderPanel();
+            expect(tabNames()).toEqual(["Media", "Files", "Links", "Music", "Voice"]);
+
+            client.isRoomEncrypted.mockReturnValue(true);
+            vi.mocked(fetchRoomStats).mockResolvedValue(stats({ text: 4 }));
+            document.body.innerHTML = "";
+            await renderPanel();
+            expect(tabNames()).toEqual(["Media", "Files", "Links", "Music", "Voice"]);
+        });
+
+        it("opens on the first tab left when the one it would open on is empty", async () => {
+            vi.mocked(fetchRoomStats).mockResolvedValue(stats({ audio: 2, file: 1 }));
+            await renderPanel();
+            expect(tabNames()).toEqual(["Files", "Links", "Music"]);
+            expect(screen.getByRole("tab", { name: "Files" })).toHaveAttribute("aria-selected", "true");
+        });
+
+        it("leaves the open tab as it is while the counts load, then moves off it if it turns out empty", async () => {
+            let answer!: (s: RoomStats) => void;
+            vi.mocked(fetchRoomStats).mockReturnValue(new Promise((resolve) => (answer = resolve)));
+            await renderPanel();
+            expect(screen.getByRole("tab", { name: "Media" })).toHaveAttribute("aria-selected", "true");
+
+            await act(async () => answer(stats({ voice: 1 })));
+            expect(tabNames()).toEqual(["Links", "Voice"]);
+            expect(screen.getByRole("tab", { name: "Links" })).toHaveAttribute("aria-selected", "true");
+        });
+
+        it("keeps a tab that has something loaded even if the counts say zero", async () => {
+            vi.mocked(fetchRoomStats).mockResolvedValue(stats({ text: 4 }));
+            await renderPanel([image("$i1", "a.jpg")]);
+            expect(tabNames()).toEqual(["Media", "Links"]);
+        });
+
+        it("is left with links, which are never hidden, when the server counts nothing at all", async () => {
+            vi.mocked(fetchRoomStats).mockResolvedValue(stats({}));
+            await renderPanel();
+            expect(tabNames()).toEqual(["Links"]);
+            expect(screen.getByRole("tab", { name: "Links" })).toHaveAttribute("aria-selected", "true");
         });
     });
 });

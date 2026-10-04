@@ -15,7 +15,7 @@ Please see LICENSE files in the repository root for full details.
  *   src/scss/partials/_slider.scss      .menu-horizontal-div: tabs with a sliding pill (--tabs-transition)
  */
 
-import React, { type JSX, type ReactNode, useLayoutEffect, useMemo, useRef, useState } from "react";
+import React, { type JSX, type ReactNode, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { type Room, type RoomMember } from "matrix-js-sdk/src/matrix";
 import MentionIcon from "@vector-im/compound-design-tokens/assets/web/icons/mention";
 import InfoIcon from "@vector-im/compound-design-tokens/assets/web/icons/info";
@@ -35,7 +35,12 @@ import { DmLastSeenSubtitle } from "../bridge/LastSeen";
 import { copyPlaintext } from "../../../utils/strings";
 import dis from "../../../dispatcher/dispatcher";
 import { Action } from "../../../dispatcher/actions";
-import { SHARED_MEDIA_TAB_LABELS, SharedMediaPane, useSharedMediaLoader } from "../right_panel/SharedMediaPanel";
+import {
+    SHARED_MEDIA_TAB_LABELS,
+    SharedMediaPane,
+    useSharedMediaLoader,
+    useVisibleSharedMediaTabs,
+} from "../right_panel/SharedMediaPanel";
 import { TgStatsSection } from "./TgHistory";
 import { TgRow } from "./TgRow";
 
@@ -51,6 +56,12 @@ export interface TgTab {
 export function TgTabs({ tabs, initial }: { tabs: TgTab[]; initial?: string }): JSX.Element | null {
     const [active, setActive] = useState(initial ?? tabs[0]?.id);
     const current = tabs.find((t) => t.id === active) ?? tabs[0];
+    // A tab that goes (an empty shared-media one) leaves the first one open; keep that as the choice so
+    // the tab coming back later doesn't pull the reader off it.
+    const currentId = current?.id;
+    useEffect(() => {
+        if (currentId) setActive(currentId);
+    }, [currentId]);
     const itemRefs = useRef(new Map<string, HTMLButtonElement>());
     const [pill, setPill] = useState<{ left: number; width: number } | null>(null);
     const [animatePill, setAnimatePill] = useState(false);
@@ -174,6 +185,7 @@ export function TgProfile({
 }: TgProfileProps): JSX.Element {
     const name = useRoomName(room);
     const mediaLoader = useSharedMediaLoader(room);
+    const visibleMediaTabs = useVisibleSharedMediaTabs(mediaLoader);
     const dmMember = useDmMember(room);
     const members = useRoomMembers(room);
     const [notifState, setNotifState] = useNotificationState(room);
@@ -209,8 +221,10 @@ export function TgProfile({
             content: <MembersTab room={room} members={members} onShowAll={onRoomMembersClick} />,
         });
     }
-    // tweb: the profile's search-super tabs (Media, Files, Links, Music, Voice) sit right in this strip.
+    // tweb: the profile's search-super tabs (Media, Files, Links, Music, Voice) sit right in this strip,
+    // less the empty ones; TgTabs opens the first one left when the open one goes.
     for (const { id, label } of SHARED_MEDIA_TAB_LABELS) {
+        if (!visibleMediaTabs.includes(id)) continue;
         tabs.push({ id, label: label(), content: <SharedMediaPane loader={mediaLoader} tab={id} /> });
     }
 

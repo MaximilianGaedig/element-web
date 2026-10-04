@@ -79,6 +79,7 @@ import RoomContext, { TimelineRenderingType } from "../../../contexts/RoomContex
 import { useMatrixClientContext } from "../../../contexts/MatrixClientContext";
 import { fetchRoomStats } from "../../../utils/chatHistory";
 import {
+    emptyTabsFromStats,
     mediaSenderName,
     SHARED_MEDIA_TABS,
     SharedMediaLoader,
@@ -228,6 +229,39 @@ function useRoomKindCounts(room: Room): Record<string, number> | undefined {
         };
     }, [room]);
     return byKind;
+}
+
+/**
+ * The tabs worth showing, in tweb's order: all of them, less the ones the server positively says are
+ * empty (tweb appSearchSuper hideEmptyTabs). Unknown counts - no index, an encrypted room, the numbers
+ * still loading - hide nothing. A tab that has something loaded (a message that just arrived) comes
+ * back, as tweb's tab does when its counter leaves zero. Never empty: links are always there.
+ */
+export function useVisibleSharedMediaTabs(loader: SharedMediaLoader): SharedMediaTab[] {
+    const { room } = loader;
+    const byKind = useRoomKindCounts(room);
+    const loaded = useLoadedTabs(loader);
+    return useMemo(() => {
+        // An encrypted room's index only sees ciphertext, so its zeros mean nothing.
+        const empty = byKind && !room.client.isRoomEncrypted(room.roomId) ? emptyTabsFromStats(byKind) : undefined;
+        return SHARED_MEDIA_TABS.filter((tab) => !empty?.has(tab) || loaded.includes(tab));
+    }, [byKind, loaded, room]);
+}
+
+/** The tabs the loader already holds something for, as a list that only changes when that does. */
+function useLoadedTabs(loader: SharedMediaLoader): SharedMediaTab[] {
+    const read = useCallback(() => SHARED_MEDIA_TABS.filter((tab) => loader.state(tab).items.length > 0), [loader]);
+    const [loaded, setLoaded] = useState(read);
+    useEffect(() => {
+        const update = (): void =>
+            setLoaded((prev) => {
+                const next = read();
+                return next.join() === prev.join() ? prev : next;
+            });
+        update();
+        return loader.subscribe(update);
+    }, [loader, read]);
+    return loaded;
 }
 
 /** Grid thumbnails are requested at least this size (3 columns of a narrow panel), cropped square server-side. */
@@ -1892,7 +1926,15 @@ function SharedMediaTabBody({
 }
 
 /** tweb .menu-horizontal-div: pill tabs whose highlight slides to the active one (--tabs-transition). */
-function Tabs({ active, onChange }: { active: SharedMediaTab; onChange: (tab: SharedMediaTab) => void }): JSX.Element {
+function Tabs({
+    tabs,
+    active,
+    onChange,
+}: {
+    tabs: SharedMediaTab[];
+    active: SharedMediaTab;
+    onChange: (tab: SharedMediaTab) => void;
+}): JSX.Element {
     const refs = useRef(new Map<SharedMediaTab, HTMLButtonElement>());
     const [bg, setBg] = useState<{ left: number; width: number } | null>(null);
     useLayoutEffect(() => {
@@ -1912,7 +1954,7 @@ function Tabs({ active, onChange }: { active: SharedMediaTab; onChange: (tab: Sh
                     style={{ transform: `translateX(${bg.left}px)`, width: bg.width }}
                 />
             )}
-            {SHARED_MEDIA_TABS.map((tab) => (
+            {tabs.map((tab) => (
                 <button
                     key={tab}
                     ref={(el) => void (el ? refs.current.set(tab, el) : refs.current.delete(tab))}
@@ -1958,7 +2000,12 @@ export const SHARED_MEDIA_TAB_LABELS: Array<{ id: SharedMediaTab; label: () => s
 
 export default function SharedMediaPanel({ room, onClose }: Props): JSX.Element {
     const loader = useLoader(room);
-    const [tab, setTab] = useState<SharedMediaTab>("media");
+    const [chosen, setTab] = useState<SharedMediaTab>("media");
+    const tabs = useVisibleSharedMediaTabs(loader);
+    // tweb: when the open tab is hidden the first one left opens instead.
+    const tab = tabs.includes(chosen) ? chosen : tabs[0];
+    // Keep the one left open as the choice, so the tab coming back later doesn't pull the reader off it.
+    useEffect(() => setTab(tab), [tab]);
     const [sentinel, stuck] = useStuck();
     const [filter, setFilter] = useState<MediaFilter>({ photos: true, videos: true });
     const roomContext = useContext(RoomContext);
@@ -1972,7 +2019,7 @@ export default function SharedMediaPanel({ room, onClose }: Props): JSX.Element 
                     })}
                     data-mx-floating
                 >
-                    <Tabs active={tab} onChange={setTab} />
+                    <Tabs tabs={tabs} active={tab} onChange={setTab} />
                 </div>
                 <SharedMediaTabBody key={tab} loader={loader} tab={tab} filter={filter} setFilter={setFilter} />
             </BaseCard>

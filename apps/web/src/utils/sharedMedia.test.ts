@@ -8,7 +8,14 @@ Please see LICENSE files in the repository root for full details.
 import { describe, expect, it, vi } from "vitest";
 import { Direction, type MatrixClient, MatrixEvent, type Room } from "matrix-js-sdk/src/matrix";
 
-import { extractLinks, isVoice, SharedMediaLoader, sharedMediaTab, tabCountsFromStats } from "./sharedMedia";
+import {
+    emptyTabsFromStats,
+    extractLinks,
+    isVoice,
+    SharedMediaLoader,
+    sharedMediaTab,
+    tabCountsFromStats,
+} from "./sharedMedia";
 
 let n = 0;
 function msg(content: Record<string, unknown>, ts = 1000): MatrixEvent {
@@ -398,5 +405,25 @@ describe("SharedMediaLoader without a pagination token", () => {
         expect(createMessagesRequest.mock.calls[0][1]).toBeNull();
         expect(loader.state("media").items.map((e) => e.getId())).toEqual(["$old"]);
         expect(loader.state("media").done).toBe(false);
+    });
+});
+
+describe("emptyTabsFromStats", () => {
+    it("hides the tabs the server counts as zero", () => {
+        expect(emptyTabsFromStats({ text: 10, image: 3 })).toEqual(new Set(["files", "music", "voice"]));
+        expect(emptyTabsFromStats({ text: 10, sticker: 4 })).toEqual(new Set(["media", "files", "music", "voice"]));
+    });
+
+    it("counts photos and videos together as the media tab", () => {
+        expect(emptyTabsFromStats({ video: 1, file: 1, audio: 1, voice: 1 })).toEqual(new Set());
+    });
+
+    it("never hides links, whose zero the server cannot tell from not counting them", () => {
+        expect(emptyTabsFromStats({ text: 10 }).has("links")).toBe(false);
+        expect(emptyTabsFromStats({ text: 10, link: 2 }).has("links")).toBe(false);
+    });
+
+    it("hides nothing in a room the server cannot read", () => {
+        expect(emptyTabsFromStats({ encrypted: 120, text: 3 })).toEqual(new Set());
     });
 });

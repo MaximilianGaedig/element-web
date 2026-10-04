@@ -180,6 +180,29 @@ export function tabCountsFromStats(byKind: Record<string, number>): Partial<Reco
     return counts;
 }
 
+/** The tabs whose count the server keeps in all cases; the rest can be unknown (see {@link emptyTabsFromStats}). */
+const COUNTED_TABS: readonly SharedMediaTab[] = ["media", "files", "music", "voice"];
+
+/**
+ * The tabs the server's own counts say have nothing in them, which are hidden.
+ *
+ * Port of tweb appSearchSuper.ts (e555527) `isCounterDrivenMediaTab`, `loadFirstTime` and
+ * `updateMediaTabVisibility`: a tab whose message counter is zero is hidden, and the first tab with
+ * something in it is the one that opens. Telegram's counters are exact; ours come from the room's
+ * statistics, so a tab is only hidden where they can really say zero:
+ *  - Links: the server counts them only where it is new enough to, and then leaves a zero out like
+ *    any other kind, so a missing count is the same for "none" and "doesn't know". Never hidden.
+ *  - A room with encrypted messages: the server cannot see what is inside, so zero images
+ *    says nothing. Nothing is hidden.
+ * The caller must pass counts only once the server has covered the whole history (`complete`); a
+ * partial count understates the room.
+ */
+export function emptyTabsFromStats(byKind: Record<string, number>): ReadonlySet<SharedMediaTab> {
+    if (byKind.encrypted) return new Set();
+    const counts = tabCountsFromStats(byKind);
+    return new Set(COUNTED_TABS.filter((tab) => !counts[tab]));
+}
+
 /** Who sent it, as the lists label it: a bridge's per-message profile first, then the room member. */
 export function mediaSenderName(event: MatrixEvent, room?: Room): string {
     const sender = event.getSender() ?? "";
