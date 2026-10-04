@@ -209,6 +209,9 @@ export class OwnProfileStore extends AsyncStoreWithClient<IState> {
     private onStateEvents = async (ev: MatrixEvent): Promise<void> => {
         const myUserId = MatrixClientPeg.safeGet().getUserId();
         if (ev.getType() === EventType.RoomMember && ev.getSender() === myUserId && ev.getStateKey() === myUserId) {
+            // Membership events from before the last fetch (the cache replaying hundreds of rooms at startup)
+            // cannot carry a newer profile; refetching for each kept the profile endpoint busy for seconds.
+            if (this.state.fetchedAt && ev.getTs() < this.state.fetchedAt) return;
             await this.onProfileUpdate();
         }
     };

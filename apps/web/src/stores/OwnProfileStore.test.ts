@@ -9,8 +9,8 @@ Please see LICENSE files in the repository root for full details.
 // @vitest-environment happy-dom
 
 import { vi, describe, it, expect, beforeEach, afterEach, type MockedObject, type Mock } from "vitest";
-import { ClientEvent, type MatrixClient, MatrixError } from "matrix-js-sdk/src/matrix";
-import { stubClient } from "test-utils";
+import { ClientEvent, type MatrixClient, MatrixError, RoomStateEvent } from "matrix-js-sdk/src/matrix";
+import { mkEvent, stubClient } from "test-utils";
 
 import { OwnProfileStore } from "./OwnProfileStore";
 import { UPDATE_EVENT } from "./AsyncStore";
@@ -48,6 +48,30 @@ describe("OwnProfileStore", () => {
         expect(onUpdate).toHaveBeenCalled();
         expect(ownProfileStore.displayName).toBe("Display Name");
         expect(ownProfileStore.avatarMxc).toBe("mxc://example.com/abc123");
+    });
+
+    it("refetches for a new own membership event, but not for ones older than the last fetch", async () => {
+        client.getProfileInfo.mockResolvedValue({ displayname: "Display Name" });
+        await ownProfileStore.start();
+        const member = (ts: number) =>
+            mkEvent({
+                event: true,
+                type: "m.room.member",
+                user: client.getSafeUserId(),
+                skey: client.getSafeUserId(),
+                content: { membership: "join", displayname: "Display Name" },
+                ts,
+            });
+        // the throttle lets a call through after 200 ms
+        await new Promise((r) => setTimeout(r, 250));
+        client.getProfileInfo.mockClear();
+
+        client.emit(RoomStateEvent.Events, member(1), {} as any, null);
+        await new Promise((r) => setTimeout(r, 250));
+        expect(client.getProfileInfo).not.toHaveBeenCalled();
+
+        client.emit(RoomStateEvent.Events, member(Date.now() + 1000), {} as any, null);
+        await vi.waitFor(() => expect(client.getProfileInfo).toHaveBeenCalledTimes(1));
     });
 
     it("if there is a M_NOT_FOUND error, it should report ready, displayname = MXID and avatar = null", async () => {
