@@ -9,7 +9,7 @@ Please see LICENSE files in the repository root for full details.
 // @vitest-environment happy-dom
 
 import { vi, describe, it, expect, beforeEach } from "vitest";
-import { type SlidingSync, SlidingSyncEvent, SlidingSyncState } from "matrix-js-sdk/src/sliding-sync";
+import { SlidingSync, SlidingSyncEvent, SlidingSyncState } from "matrix-js-sdk/src/sliding-sync";
 import { ClientEvent, type MatrixClient, MatrixEvent, Room } from "matrix-js-sdk/src/matrix";
 import fetchMock from "@fetch-mock/vitest";
 import EventEmitter from "node:events";
@@ -58,6 +58,29 @@ describe("SlidingSyncManager", () => {
         for (const list of ["favourites", "dms", "untagged"]) {
             expect(fresh.slidingSync!.getListParams(list)?.timeline_limit).toBe(LIST_TIMELINE_LIMIT);
         }
+    });
+
+    describe("setup", () => {
+        it.each([
+            [true, 1],
+            [false, 0],
+        ])(
+            "with the server advertising presence = %s registers the presence extension %i time(s)",
+            async (advertised, times) => {
+                const fresh = new SlidingSyncManager();
+                vi.spyOn(fresh as any, "startSpidering").mockResolvedValue(undefined);
+                const register = vi.spyOn(SlidingSync.prototype, "registerExtension").mockImplementation(() => {});
+                vi.mocked(client.doesServerSupportUnstableFeature).mockImplementation(
+                    async (feature) => advertised && feature === "im.mxg.msc4186.presence",
+                );
+
+                await fresh.setup(client);
+
+                const presence = register.mock.calls.filter(([ext]) => ext.name() === "im.mxg.presence");
+                expect(presence).toHaveLength(times);
+                register.mockRestore();
+            },
+        );
     });
 
     describe("setRoomVisible", () => {

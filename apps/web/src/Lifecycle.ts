@@ -19,8 +19,7 @@ import EventIndexPeg from "./indexing/EventIndexPeg";
 import { createMatrixClient, createClientWithCreds, type IMatrixClientCreds } from "./utils/createMatrixClient";
 import UserActivity from "./UserActivity";
 import Presence from "./Presence";
-import { PresencePoller } from "./utils/presence/PresencePoller";
-import { PresenceSyncLoop } from "./utils/presence/PresenceSyncLoop";
+import { startPresenceDelivery, stopPresenceDelivery } from "./utils/presence/delivery";
 import { UnsentResender } from "./utils/room/unsentResender";
 import dis from "./dispatcher/dispatcher";
 import DMRoomMap from "./utils/DMRoomMap";
@@ -1092,21 +1091,7 @@ async function startMatrixClient(
     // A message just written is sent even when older ones in the room did not go out (unsentResender.ts).
     UnsentResender.start(client);
 
-    // Simplified sliding sync delivers no presence: run a presence-only /sync long-poll beside it,
-    // falling back to polling /presence for DM partners while that keeps failing. The v2 sync delivers
-    // only changes, so it gets everyone's current presence once instead.
-    if (!PresenceSyncLoop.isApplicable(client)) void PresenceSyncLoop.snapshot(client);
-    PresenceSyncLoop.start(client, {
-        onFallback: (active) => {
-            if (active) {
-                PresencePoller.start(client, {
-                    getOpenRoomId: () => SDKContextClass.instance.roomViewStore.getRoomId(),
-                });
-            } else {
-                PresencePoller.stop();
-            }
-        },
-    });
+    startPresenceDelivery(client, () => SDKContextClass.instance.roomViewStore.getRoomId());
 
     // Now that we have a MatrixClientPeg, update the Jitsi info
     Jitsi.getInstance().start();
@@ -1212,8 +1197,7 @@ export function stopMatrixClient(unsetClient = true): void {
     UserActivity.sharedInstance().stop();
     SDKContextClass.instance.typingStore.reset();
     Presence.stop();
-    PresenceSyncLoop.stop();
-    PresencePoller.stop();
+    stopPresenceDelivery();
     UnsentResender.stop();
     ActiveWidgetStore.instance.stop();
     IntegrationManagers.sharedInstance().stopWatching();

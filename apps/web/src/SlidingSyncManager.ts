@@ -54,6 +54,7 @@ import { sleep } from "matrix-js-sdk/src/utils";
 import { BACKFILL_EVENT_TYPE } from "./utils/chatHistory";
 import { BRIDGE_LOGIN_EVENT_TYPE } from "./utils/bridgeLogins";
 import { roomListRequiredState } from "./utils/sync/roomListState";
+import { registerSlidingSyncPresence } from "./utils/presence/SlidingSyncPresenceExtension";
 
 // how long to long poll for
 const SLIDING_SYNC_TIMEOUT_MS = 20 * 1000;
@@ -386,6 +387,8 @@ export class SlidingSyncManager {
     public async setup(client: MatrixClient): Promise<SlidingSync | undefined> {
         const slidingSync = this.configure(client, client.baseUrl);
         logger.info("Simplified Sliding Sync activated at", client.baseUrl);
+        // Presence rides this connection where the server has it; the old long-poll is for the others.
+        await registerSlidingSyncPresence(slidingSync, client);
         void this.startSpidering(slidingSync, 50, 50); // 50 rooms at a time, 50ms apart
         return slidingSync;
     }
