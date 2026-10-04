@@ -13,6 +13,8 @@ import userEvent from "@testing-library/user-event";
 import { vi, describe, it, expect, beforeEach } from "vitest";
 import { type MatrixClient } from "matrix-js-sdk/src/matrix";
 
+import { VirtuosoMockContext } from "@element-hq/web-shared-components";
+
 import { ContactsView } from "./ContactsView";
 import { type Call } from "../../../utils/contacts/calls";
 import { type Person } from "../../../utils/contacts/people";
@@ -79,7 +81,12 @@ const call = (over: Partial<Call> = {}): Call => ({
 
 /* The bar at the bottom of the column decides which list this is, so the test says which one too. */
 const open = (tab: "people" | "calls" = "people"): RenderResult =>
-    render(<ContactsView tab={tab} onFinished={() => {}} />);
+    // The list is virtualised: the mock gives it a viewport tall enough to draw every row.
+    render(
+        <VirtuosoMockContext.Provider value={{ viewportHeight: 100000, itemHeight: 50 }}>
+            <ContactsView tab={tab} onFinished={() => {}} />
+        </VirtuosoMockContext.Provider>,
+    );
 
 beforeEach(() => {
     clearSearch();
@@ -99,6 +106,21 @@ beforeEach(() => {
 });
 
 describe("ContactsView people", () => {
+    /* Every person was a row in the page: 631 of them took 620 ms and 8000 elements to open. */
+    it("draws only the people on screen, however many there are", async () => {
+        const many = Array.from({ length: 400 }, (_, i) => person(`Person ${String(i).padStart(3, "0")}`));
+        vi.spyOn(peopleModule, "allPeople").mockResolvedValue(many);
+        render(
+            <VirtuosoMockContext.Provider value={{ viewportHeight: 600, itemHeight: 50 }}>
+                <ContactsView tab="people" onFinished={() => {}} />
+            </VirtuosoMockContext.Provider>,
+        );
+
+        await waitFor(() => expect(screen.getByText("Person 000")).toBeInTheDocument());
+        expect(screen.queryByText("Person 399")).not.toBeInTheDocument();
+        expect(document.querySelectorAll(".mx_Contacts_row").length).toBeLessThan(60);
+    });
+
     it("files people under their initials and offers a letter for each section", async () => {
         vi.spyOn(peopleModule, "allPeople").mockResolvedValue([person("Ada"), person("Bob"), person("+49 170")]);
         open();

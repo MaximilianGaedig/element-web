@@ -195,6 +195,23 @@ Please see LICENSE files in the repository root for full details.
         overflow-y: auto;
     }
 
+    /* The people list scrolls inside its virtualised list, which takes what is left under any notice above it. */
+    .mx_Contacts_list_virtual {
+        overflow: hidden;
+        /* A virtualised list needs a height to fill: where its container only caps it, it would have none. */
+        min-height: 40vh;
+
+        > :last-child {
+            flex: 1;
+            min-height: 0;
+        }
+    }
+
+    /* The group the reader's own card is in has no letter, so its heading takes no room. */
+    .mx_Contacts_topGroup {
+        height: 0;
+    }
+
     /*
      * A full-width row with a hairline under the words, which is the shape of a grouped list: the rounded
      * pill this used to be made every name look like a separate control rather than one list to read down.

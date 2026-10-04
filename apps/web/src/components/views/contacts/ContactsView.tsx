@@ -17,6 +17,11 @@ Please see LICENSE files in the repository root for full details.
  */
 
 import React, { type JSX, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+    GroupedVirtualizedList,
+    type Group,
+    type GroupedVirtualizedListProps,
+} from "@element-hq/web-shared-components";
 import { Button, ChatFilter, IconButton, Menu, MenuItem, MenuTitle } from "@vector-im/compound-web";
 import UserProfileIcon from "@vector-im/compound-design-tokens/assets/web/icons/user-profile";
 import VoiceCallIcon from "@vector-im/compound-design-tokens/assets/web/icons/voice-call";
@@ -146,6 +151,35 @@ function Face({ name, avatarUrl }: { name: string; avatarUrl?: string }): JSX.El
  * render is a new component every time, so React throws away what was inside it - here the open menu -
  * on every keystroke in the search field.
  */
+/** A letter's heading in the people list; the empty letter is the top group, which has no heading. */
+interface ContactsHeader {
+    letter: string;
+}
+
+/** A row of the people list. */
+type ContactsEntry = { kind: "me" } | { kind: "duplicates" } | { kind: "person"; person: Person };
+
+/** What the people list's rows show beyond the rows themselves. */
+interface ContactsListContext {
+    picked: ReadonlySet<string>;
+    selecting: boolean;
+    menuFor: string | undefined;
+    myName: string;
+    myAvatar: string | undefined;
+    suggestions: number;
+}
+
+/** The virtualised list's scroll handle, for jumping to a letter. */
+type ListHandle = NonNullable<
+    Parameters<
+        NonNullable<GroupedVirtualizedListProps<ContactsHeader, ContactsEntry, ContactsListContext>["scrollHandleRef"]>
+    >[0]
+>;
+
+function entryKey(entry: ContactsEntry): string {
+    return entry.kind === "person" ? `person:${entry.person.id}` : entry.kind;
+}
+
 function PersonRowMenu({
     row,
     onOpenMenu,
@@ -1094,14 +1128,16 @@ export function ContactsView({ tab, onFinished }: Props): JSX.Element {
      * The index scrolls the list's own scroller, so the dialog around it does not move - and by measured
      * offset rather than scrollIntoView, which would scroll every scroller between here and the document.
      */
-    const listRef = useRef<HTMLDivElement>(null);
+    const listHandle = useRef<ListHandle | null>(null);
+    const setListHandle = useCallback((handle: ListHandle | null): void => {
+        listHandle.current = handle;
+    }, []);
     const [dragging, setDragging] = useState(false);
+    /** Where each letter's heading is in the virtualised list: its rows are not all in the page to measure. */
+    const letterIndex = useRef(new Map<string, number>());
     const jumpTo = useCallback((letter: string): void => {
-        const list = listRef.current;
-        const section = list?.querySelector<HTMLElement>(`[data-section="${letter}"]`);
-        if (list && section) {
-            list.scrollTop += section.getBoundingClientRect().top - list.getBoundingClientRect().top;
-        }
+        const index = letterIndex.current.get(letter);
+        if (index !== undefined) listHandle.current?.scrollToIndex({ index, align: "start" });
     }, []);
 
     /*
@@ -1499,6 +1535,101 @@ export function ContactsView({ tab, onFinished }: Props): JSX.Element {
             </div>
         ) : null;
 
+    // The list's rows: the reader's own card and the duplicates line first, under no letter, then a group per
+    // letter (or one group of matches while searching).
+    const showDuplicates = !query && !!state?.suggestions.length && duplicatesKey !== dismissedDuplicates;
+    const listGroups = useMemo((): Group<ContactsHeader, ContactsEntry>[] => {
+        const top: ContactsEntry[] = [];
+        if (!query) top.push({ kind: "me" });
+        if (showDuplicates) top.push({ kind: "duplicates" });
+        const lettered = (query ? [{ letter: "", items: shown }] : sections).map((section) => ({
+            header: { letter: section.letter },
+            items: section.items.map((person): ContactsEntry => ({ kind: "person", person })),
+        }));
+        return [...(top.length ? [{ header: { letter: "" }, items: top }] : []), ...lettered];
+    }, [query, showDuplicates, shown, sections]);
+    useEffect(() => {
+        // Each group is its heading followed by its rows in the list's flat order.
+        const at = new Map<string, number>();
+        let index = 0;
+        for (const group of listGroups) {
+            if (group.header.letter) at.set(group.header.letter, index);
+            index += 1 + group.items.length;
+        }
+        letterIndex.current = at;
+    }, [listGroups]);
+    // What the rows show that is not in the groups, so a change to it redraws them.
+    const listContext = useMemo(
+        (): ContactsListContext => ({
+            picked,
+            selecting,
+            menuFor,
+            myName,
+            myAvatar,
+            suggestions: state?.suggestions.length ?? 0,
+        }),
+        [picked, selecting, menuFor, myName, myAvatar, state?.suggestions.length],
+    );
+    const renderEntry = (entry: ContactsEntry): JSX.Element => {
+        switch (entry.kind) {
+            case "me":
+                /*
+                 * The reader's own card, at the top and outside the letters.
+                 *
+                 * A phone's address book opens on you: it is the card you hand to other people and the one
+                 * you edit most, and filing it under its own initial makes you scroll to find yourself.
+                 */
+                return (
+                    <button type="button" className="mx_Contacts_row mx_Contacts_me" onClick={openMe}>
+                        <span className="mx_Contacts_faceWith">
+                            <Face name={myName} avatarUrl={myAvatar} />
+                        </span>
+                        <span className="mx_Contacts_rowText">
+                            <span className="mx_Contacts_name">{myName}</span>
+                            <span className="mx_Contacts_detail">{_t("contacts|my_card")}</span>
+                        </span>
+                    </button>
+                );
+            case "duplicates":
+                /*
+                 * One line about the duplicates, not the duplicates themselves: deciding who is who is a job
+                 * you sit down to, on a screen of its own. Put away until something changes.
+                 */
+                return (
+                    <div className="mx_Contacts_duplicates">
+                        <button type="button" className="mx_Contacts_duplicatesOpen" onClick={() => setReviewing(true)}>
+                            <span className="mx_Contacts_rowText">
+                                <span className="mx_Contacts_name">
+                                    {_t("contacts|duplicates_found", { count: state?.suggestions.length ?? 0 })}
+                                </span>
+                                <span className="mx_Contacts_detail">{_t("contacts|duplicates_what")}</span>
+                            </span>
+                            <ChevronRightIcon width="20" height="20" aria-hidden />
+                        </button>
+                        <IconButton
+                            size="28px"
+                            aria-label={_t("action|dismiss")}
+                            onClick={() => dismissDuplicates(duplicatesKey)}
+                        >
+                            <CloseIcon />
+                        </IconButton>
+                    </div>
+                );
+            case "person":
+                return (
+                    <PersonRow
+                        client={client}
+                        person={entry.person}
+                        onOpen={setOpen}
+                        menu={personMenu}
+                        selected={picked.has(entry.person.id)}
+                        selecting={selecting}
+                        onToggle={toggle}
+                    />
+                );
+        }
+    };
+
     return (
         <div className="mx_Contacts mx_ContactsView">
             {/*
@@ -1773,105 +1904,45 @@ export function ContactsView({ tab, onFinished }: Props): JSX.Element {
                             </div>
                         )}
                         <div className="mx_Contacts_listWithIndex">
-                            <div className="mx_Contacts_list" ref={listRef}>
-                                {/*
-                                 * The reader's own card, at the top and outside the letters.
-                                 *
-                                 * A phone's address book opens on you: it is the card you hand to other people
-                                 * and the one you edit most, and filing it under its own initial makes you
-                                 * scroll to find yourself among everyone else.
-                                 */}
-                                {!query && (
-                                    <button type="button" className="mx_Contacts_row mx_Contacts_me" onClick={openMe}>
-                                        <span className="mx_Contacts_faceWith">
-                                            <Face name={myName} avatarUrl={myAvatar} />
-                                        </span>
-                                        <span className="mx_Contacts_rowText">
-                                            <span className="mx_Contacts_name">{myName}</span>
-                                            <span className="mx_Contacts_detail">{_t("contacts|my_card")}</span>
-                                        </span>
-                                    </button>
-                                )}
+                            <div className="mx_Contacts_list mx_Contacts_list_virtual">
                                 {people === undefined && <Spinner />}
-                                {/*
-                                 * One line about the duplicates, not the duplicates themselves.
-                                 *
-                                 * A phone says "3 Duplicates Found" above the list and keeps the cards on a
-                                 * screen of their own, because deciding who is who is a job you sit down to -
-                                 * and a stack of unanswered questions in front of the address book makes the
-                                 * address book harder to use every time you open it.
-                                 */}
-                                {!query && !!state?.suggestions.length && duplicatesKey !== dismissedDuplicates && (
-                                    <div className="mx_Contacts_duplicates">
-                                        <button
-                                            type="button"
-                                            className="mx_Contacts_duplicatesOpen"
-                                            onClick={() => setReviewing(true)}
-                                        >
-                                            <span className="mx_Contacts_rowText">
-                                                <span className="mx_Contacts_name">
-                                                    {_t("contacts|duplicates_found", {
-                                                        count: state.suggestions.length,
-                                                    })}
-                                                </span>
-                                                <span className="mx_Contacts_detail">
-                                                    {_t("contacts|duplicates_what")}
-                                                </span>
-                                            </span>
-                                            <ChevronRightIcon width="20" height="20" aria-hidden />
-                                        </button>
-                                        {/*
-                                         * Put away until something changes: the same suggestions stay
-                                         * hidden, and a new duplicate brings the line back, since that
-                                         * is news the reader has not seen.
-                                         */}
-                                        <IconButton
-                                            size="28px"
-                                            aria-label={_t("action|dismiss")}
-                                            onClick={() => dismissDuplicates(duplicatesKey)}
-                                        >
-                                            <CloseIcon />
-                                        </IconButton>
-                                    </div>
-                                )}
-                                {people !== undefined && !shown.length && (
+                                {people !== undefined && !shown.length && !query && (
                                     <p className="mx_Contacts_empty">{_t("contacts|no_people")}</p>
                                 )}
-                                {(query ? [{ letter: "", items: shown }] : sections).map((section) => (
-                                    /*
-                                     * A section around each letter, not a bare heading in the list.
-                                     *
-                                     * The headings are sticky, and siblings sticking to the same top in one
-                                     * containing block all pin at zero and overlap - so an earlier letter is
-                                     * still "at the top" while a later one covers it, and measuring it to
-                                     * scroll there returns no distance at all. The index could go forwards
-                                     * and never back. Inside its own section a heading sticks within that
-                                     * section, which also makes the next one push it out as iOS does.
-                                     */
-                                    <div
-                                        className="mx_Contacts_section"
-                                        data-section={section.letter}
-                                        key={section.letter}
-                                    >
-                                        {section.letter && (
-                                            <h3 className="mx_Contacts_letter" data-letter={section.letter}>
-                                                {section.letter}
+                                {/*
+                                 * Only the rows on screen are drawn. Every person was a row in the page before:
+                                 * 631 of them took 620 ms and 8000 elements to open, with the main thread
+                                 * blocked for 800 ms, and a real address book is several times that.
+                                 */}
+                                <GroupedVirtualizedList<ContactsHeader, ContactsEntry, ContactsListContext>
+                                    groups={listGroups}
+                                    context={listContext}
+                                    getItemKey={entryKey}
+                                    getHeaderKey={(header) => `letter:${header.letter}`}
+                                    isItemFocusable={() => true}
+                                    isGroupHeaderFocusable={() => false}
+                                    getGroupHeaderComponent={(_index, header) =>
+                                        header.letter ? (
+                                            <h3 className="mx_Contacts_letter" data-letter={header.letter}>
+                                                {header.letter}
                                             </h3>
-                                        )}
-                                        {section.items.map((person) => (
-                                            <PersonRow
-                                                key={person.id}
-                                                client={client}
-                                                person={person}
-                                                onOpen={setOpen}
-                                                menu={personMenu}
-                                                selected={picked.has(person.id)}
-                                                selecting={selecting}
-                                                onToggle={toggle}
-                                            />
-                                        ))}
-                                    </div>
-                                ))}
+                                        ) : (
+                                            <div className="mx_Contacts_topGroup" />
+                                        )
+                                    }
+                                    renderStickyHeader={(_index, header) =>
+                                        header.letter ? (
+                                            <h3 className="mx_Contacts_letter" aria-hidden="true">
+                                                {header.letter}
+                                            </h3>
+                                        ) : null
+                                    }
+                                    getItemComponent={(_index, entry, _context, onFocus) => (
+                                        <div onFocus={(e) => onFocus(entry, e)}>{renderEntry(entry)}</div>
+                                    )}
+                                    scrollHandleRef={setListHandle}
+                                    increaseViewportBy={{ top: 600, bottom: 600 }}
+                                />
                             </div>
                             {/* Nothing to jump between under one letter, so the index only appears above that. */}
                             {!query && sections.length > 1 && (
