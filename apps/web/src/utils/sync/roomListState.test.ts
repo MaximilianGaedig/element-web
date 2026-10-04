@@ -7,7 +7,14 @@ Please see LICENSE files in the repository root for full details.
 
 import { describe, it, expect } from "vitest";
 
-import { ROOM_LIST_STATE_TYPES, roomListRequiredState } from "./roomListState";
+import { OPEN_ROOM_STATE, ROOM_LIST_STATE_TYPES, roomListRequiredState } from "./roomListState";
+import { WIDGET_LAYOUT_EVENT_TYPE } from "../../stores/widgets/types";
+import { JitsiCallMemberEventType } from "../../call-types";
+import { ROOM_FEATURES_EVENT_TYPE } from "../bridge/roomFeatures";
+import { BRIDGE_SETTINGS_EVENT_TYPE } from "../bridge/declaredSettings";
+import { BOT_COMMANDS_EVENT_TYPE } from "../bridge/botCommands";
+import { DISAPPEARING_TIMER_KEY } from "../bridge/disappearingMessages";
+import { BACKFILL_SUMMARY_EVENT_TYPE } from "../importOverview";
 
 describe("roomListRequiredState", () => {
     // Asked for separately, the two ways of syncing drifted: a type added for the chat list reached one only.
@@ -28,5 +35,23 @@ describe("roomListRequiredState", () => {
             .filter(([type]) => type === "m.room.member")
             .map(([, key]) => key);
         expect(members).toEqual(["$ME", "$LAZY"]);
+    });
+});
+
+describe("OPEN_ROOM_STATE", () => {
+    // Written out as strings to keep heavy modules off the sync path: they must still be the types those read.
+    it("names the types the open room's features read", () => {
+        const asked = new Set(OPEN_ROOM_STATE.map(([type]) => type));
+        for (const type of [
+            WIDGET_LAYOUT_EVENT_TYPE,
+            JitsiCallMemberEventType,
+            ROOM_FEATURES_EVENT_TYPE,
+            BRIDGE_SETTINGS_EVENT_TYPE,
+            BOT_COMMANDS_EVENT_TYPE,
+            DISAPPEARING_TIMER_KEY,
+            BACKFILL_SUMMARY_EVENT_TYPE,
+        ]) {
+            expect(asked).toContain(type);
+        }
     });
 });

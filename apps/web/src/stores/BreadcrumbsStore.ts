@@ -35,6 +35,12 @@ export class BreadcrumbsStore extends AsyncStoreWithClient<IState> {
 
     private waitingRooms: { roomId: string; addedTs: number }[] = [];
 
+    /**
+     * The saved breadcrumbs, including rooms the client does not have yet. Sliding sync sends rooms a batch at a
+     * time, so a saved room can arrive after the store is ready: it is shown then, and keeps its place meanwhile.
+     */
+    private roomIds: string[] = [];
+
     private constructor() {
         super(defaultDispatcher);
 
@@ -86,7 +92,10 @@ export class BreadcrumbsStore extends AsyncStoreWithClient<IState> {
 
     private onRoom = async (room: Room): Promise<void> => {
         const waitingRoom = this.waitingRooms.find((r) => r.roomId === room.roomId);
-        if (!waitingRoom) return;
+        if (!waitingRoom) {
+            if (this.roomIds.includes(room.roomId)) await this.showRooms();
+            return;
+        }
         this.waitingRooms.splice(this.waitingRooms.indexOf(waitingRoom), 1);
 
         if (Date.now() - waitingRoom.addedTs > AUTOJOIN_WAIT_THRESHOLD_MS) return; // Too long ago.
@@ -97,7 +106,15 @@ export class BreadcrumbsStore extends AsyncStoreWithClient<IState> {
         let roomIds = SettingsStore.getValue("breadcrumb_rooms");
         if (!roomIds || roomIds.length === 0) roomIds = [];
 
-        const rooms = filterBoolean(roomIds.map((r) => this.matrixClient?.getRoom(r)));
+        this.roomIds = roomIds;
+        await this.showRooms();
+    }
+
+    /** Shows the saved rooms the client has. */
+    private async showRooms(added?: Room): Promise<void> {
+        const rooms = filterBoolean(
+            this.roomIds.map((r) => (r === added?.roomId ? added : this.matrixClient?.getRoom(r))),
+        );
         const currentRooms = this.state.rooms || [];
         if (!arrayHasDiff(rooms, currentRooms)) return; // no change (probably echo)
         await this.updateState({ rooms });
@@ -105,7 +122,8 @@ export class BreadcrumbsStore extends AsyncStoreWithClient<IState> {
 
     private async appendRoom(room: Room): Promise<void> {
         let updated = false;
-        const rooms = (this.state.rooms || []).slice(); // cheap clone
+        // From the saved list, not the rooms shown: saving only those would drop the rooms that have not arrived.
+        const roomIds = this.roomIds.slice(); // cheap clone
         const msc3946ProcessDynamicPredecessor = SettingsStore.getValue("feature_dynamic_room_predecessors");
 
         // If the room is upgraded, use that room instead. We'll also splice out
@@ -116,39 +134,39 @@ export class BreadcrumbsStore extends AsyncStoreWithClient<IState> {
 
             // Take out any room that isn't the most recent room
             for (let i = 0; i < history.length - 1; i++) {
-                const idx = rooms.findIndex((r) => r.roomId === history[i].roomId);
+                const idx = roomIds.indexOf(history[i].roomId);
                 if (idx !== -1) {
-                    rooms.splice(idx, 1);
+                    roomIds.splice(idx, 1);
                     updated = true;
                 }
             }
         }
 
         // Remove the existing room, if it is present
-        const existingIdx = rooms.findIndex((r) => r.roomId === room.roomId);
+        const existingIdx = roomIds.indexOf(room.roomId);
 
         // If we're focusing on the first room no-op
         if (existingIdx !== 0) {
             if (existingIdx !== -1) {
-                rooms.splice(existingIdx, 1);
+                roomIds.splice(existingIdx, 1);
             }
 
             // Splice the room to the start of the list
-            rooms.splice(0, 0, room);
+            roomIds.splice(0, 0, room.roomId);
             updated = true;
         }
 
-        if (rooms.length > MAX_ROOMS) {
+        if (roomIds.length > MAX_ROOMS) {
             // This looks weird, but it's saying to start at the MAX_ROOMS point in the
             // list and delete everything after it.
-            rooms.splice(MAX_ROOMS, rooms.length - MAX_ROOMS);
+            roomIds.splice(MAX_ROOMS, roomIds.length - MAX_ROOMS);
             updated = true;
         }
 
         if (updated) {
             // Update the breadcrumbs
-            await this.updateState({ rooms });
-            const roomIds = rooms.map((r) => r.roomId);
+            this.roomIds = roomIds;
+            await this.showRooms(room);
             if (roomIds.length > 0) {
                 await SettingsStore.setValue("breadcrumb_rooms", null, SettingLevel.ACCOUNT, roomIds);
             }

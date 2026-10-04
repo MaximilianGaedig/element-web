@@ -485,11 +485,28 @@ export class RoomListStoreV3Class extends AsyncStoreWithClient<EmptyObject> {
                 );
                 return;
             }
+            if (this.isReplaced(room)) {
+                logger.info(
+                    `RoomListStoreV3: Refusing to add new room ${room.roomId} because a known room replaced it.`,
+                );
+                return;
+            }
             this.roomSkipList.addNewRoom(room);
         } else {
             this.roomSkipList.reInsertRoom(room);
         }
         this.scheduleEmit();
+    }
+
+    /**
+     * Whether a room we know has replaced this one by an upgrade. The list starts from getVisibleRooms, which leaves
+     * such rooms out, but rooms also arrive later (sliding sync sends them a batch at a time), and an old room can
+     * arrive after the room that replaced it.
+     */
+    private isReplaced(room: Room): boolean {
+        const history =
+            this.matrixClient?.getRoomUpgradeHistory(room.roomId, true, this.msc3946ProcessDynamicPredecessor) ?? [];
+        return history.length > 0 && history[history.length - 1].roomId !== room.roomId;
     }
 
     private onActiveSpaceChanged(): void {

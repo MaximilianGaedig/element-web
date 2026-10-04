@@ -60,6 +60,25 @@ describe("SlidingSyncManager", () => {
         }
     });
 
+    it("asks for the state an open room shows, by type, for both kinds of room", () => {
+        const fresh = new SlidingSyncManager();
+        (fresh as any).configure(client, "invalid");
+        const ss = fresh.slidingSync as any;
+        const unencrypted: [string, string][] = ss.customSubscriptions.get("unencrypted").required_state;
+        const encrypted: [string, string][] = ss.roomSubscriptionInfo.required_state;
+        // Not by a "*" event type alone: a server that does not support one (tuwunel) sends none of these.
+        for (const required of [unencrypted, encrypted]) {
+            expect(required).toContainEqual(["m.room.pinned_events", ""]);
+            expect(required).toContainEqual(["m.room.topic", ""]);
+            expect(required).toContainEqual(["m.room.history_visibility", ""]);
+            expect(required).toContainEqual(["io.element.widgets.layout", ""]);
+        }
+        // Encrypted rooms need every member to encrypt for; unencrypted ones load them lazily.
+        expect(encrypted).toContainEqual(["m.room.member", "*"]);
+        expect(unencrypted).not.toContainEqual(["m.room.member", "*"]);
+        expect(unencrypted).toContainEqual(["m.room.member", "$LAZY"]);
+    });
+
     describe("setRoomVisible", () => {
         it("adds a subscription for the room", async () => {
             const roomId = "!room:id";

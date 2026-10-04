@@ -250,6 +250,29 @@ describe("RoomListStoreV3", () => {
             expect(roomIds).toContain(newRoom.roomId);
         });
 
+        it("Replaced room arriving after the room that replaced it is not added", async () => {
+            const { store, rooms, client, dispatcher } = await getRoomListStore();
+            // Under sliding sync rooms arrive a batch at a time: the old room can come after its successor.
+            const successor = rooms[5];
+            const oldRoom = new Room("!fooold:matrix.org", client, client.getSafeUserId(), {});
+            vi.mocked(client.getRoomUpgradeHistory).mockImplementation((roomId) =>
+                roomId === oldRoom.roomId ? [oldRoom, successor] : [],
+            );
+
+            dispatcher.dispatch(
+                {
+                    action: "MatrixActions.Room.myMembership",
+                    membership: KnownMembership.Join,
+                    room: oldRoom,
+                },
+                true,
+            );
+
+            const roomIds = store.getSortedRooms().map((r) => r.roomId);
+            expect(roomIds).not.toContain(oldRoom.roomId);
+            expect(roomIds).toContain(successor.roomId);
+        });
+
         it("should not remove predecessor room based on non-reciprocated relationship", async () => {
             const { store, rooms, client, dispatcher } = await getRoomListStore();
             const oldRoom = rooms[32];
