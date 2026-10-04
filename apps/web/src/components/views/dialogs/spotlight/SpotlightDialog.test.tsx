@@ -135,6 +135,11 @@ function mockClient({
     return cli;
 }
 
+/** The tab that says what the search is looking for: the filter, if any. */
+function selectedTab(): HTMLElement {
+    return screen.getByRole("tab", { selected: true });
+}
+
 describe("Spotlight Dialog", () => {
     const testPerson: IUserChunkMember = {
         user_id: "@janedoe:matrix.org",
@@ -254,7 +259,7 @@ describe("Spotlight Dialog", () => {
 
         fireEvent.keyDown(document.querySelector(".mx_SpotlightDialog_searchBox input")!, { key: "Enter" });
 
-        expect(document.querySelector("div.mx_SpotlightDialog_filter")).not.toBeInTheDocument();
+        expect(selectedTab()).toHaveTextContent("All");
     });
 
     it("should not offer the enter shortcut on the no results entry", async () => {
@@ -267,9 +272,6 @@ describe("Spotlight Dialog", () => {
 
         const noResults = document.querySelector("#mx_SpotlightDialog_button_noResults")!;
         expect(noResults.querySelector(".mx_SpotlightDialog_enterPrompt")).not.toBeInTheDocument();
-
-        const startChat = document.querySelector("#mx_SpotlightDialog_button_startChat")!;
-        expect(startChat.querySelector(".mx_SpotlightDialog_enterPrompt")).toBeInTheDocument();
     });
 
     it("should expose the no results entry as an unavailable option rather than a button", async () => {
@@ -283,18 +285,13 @@ describe("Spotlight Dialog", () => {
         const noResults = document.querySelector("#mx_SpotlightDialog_button_noResults")!;
         expect(noResults).toHaveAttribute("aria-disabled", "true");
         expect(noResults).not.toHaveClass("mx_AccessibleButton");
-
-        const startChat = document.querySelector("#mx_SpotlightDialog_button_startChat")!;
-        expect(startChat).not.toHaveAttribute("aria-disabled");
-        expect(startChat).toHaveClass("mx_AccessibleButton");
     });
 
     describe("should apply filters supplied via props", () => {
         it("without filter", async () => {
             render(<SpotlightDialog onFinished={() => null} />);
 
-            const filterChip = document.querySelector("div.mx_SpotlightDialog_filter");
-            expect(filterChip).not.toBeInTheDocument();
+            expect(selectedTab()).toHaveTextContent("All");
         });
 
         it("with public room filter", async () => {
@@ -304,9 +301,7 @@ describe("Spotlight Dialog", () => {
             vi.advanceTimersByTime(200);
             await flushPromisesWithFakeTimers();
 
-            const filterChip = document.querySelector("div.mx_SpotlightDialog_filter")!;
-            expect(filterChip).toBeInTheDocument();
-            expect(filterChip.innerHTML).toContain("Public rooms");
+            expect(selectedTab()).toHaveTextContent("Public rooms");
 
             await waitFor(() => {
                 const content = document.querySelector("#mx_SpotlightDialog_content")!;
@@ -328,9 +323,7 @@ describe("Spotlight Dialog", () => {
             vi.advanceTimersByTime(200);
             await flushPromisesWithFakeTimers();
 
-            const filterChip = document.querySelector("div.mx_SpotlightDialog_filter")!;
-            expect(filterChip).toBeInTheDocument();
-            expect(filterChip.innerHTML).toContain("People");
+            expect(selectedTab()).toHaveTextContent("People");
 
             await waitFor(() => {
                 const content = document.querySelector("#mx_SpotlightDialog_content")!;
@@ -364,14 +357,12 @@ describe("Spotlight Dialog", () => {
             vi.advanceTimersByTime(200);
             await flushPromisesWithFakeTimers();
 
-            fireEvent.click(screen.getByText("Public rooms"));
+            fireEvent.click(screen.getByRole("tab", { name: "Public rooms" }));
             // search is debounced
             vi.advanceTimersByTime(200);
             await flushPromisesWithFakeTimers();
 
-            const filterChip = document.querySelector("div.mx_SpotlightDialog_filter")!;
-            expect(filterChip).toBeInTheDocument();
-            expect(filterChip.innerHTML).toContain("Public rooms");
+            expect(selectedTab()).toHaveTextContent("Public rooms");
 
             await waitFor(() => {
                 const content = document.querySelector("#mx_SpotlightDialog_content")!;
@@ -388,15 +379,13 @@ describe("Spotlight Dialog", () => {
             vi.advanceTimersByTime(200);
             await flushPromisesWithFakeTimers();
 
-            fireEvent.click(screen.getByText("People"));
+            fireEvent.click(screen.getByRole("tab", { name: "People" }));
 
             // search is debounced
             vi.advanceTimersByTime(200);
             await flushPromisesWithFakeTimers();
 
-            const filterChip = document.querySelector("div.mx_SpotlightDialog_filter")!;
-            expect(filterChip).toBeInTheDocument();
-            expect(filterChip.innerHTML).toContain("People");
+            expect(selectedTab()).toHaveTextContent("People");
 
             await waitFor(() => {
                 const content = document.querySelector("#mx_SpotlightDialog_content")!;
@@ -407,23 +396,20 @@ describe("Spotlight Dialog", () => {
         });
     });
 
-    describe("should allow clearing filter manually", () => {
+    describe("should allow clearing filter with the All tab", () => {
         it("with public room filter", async () => {
             render(<SpotlightDialog initialFilter={Filter.PublicRooms} onFinished={() => null} />);
             // search is debounced
             vi.advanceTimersByTime(200);
             await flushPromisesWithFakeTimers();
 
-            let filterChip = document.querySelector("div.mx_SpotlightDialog_filter")!;
-            expect(filterChip).toBeInTheDocument();
-            expect(filterChip.innerHTML).toContain("Public rooms");
+            expect(selectedTab()).toHaveTextContent("Public rooms");
 
-            fireEvent.click(filterChip.querySelector("div.mx_SpotlightDialog_filter--close")!);
+            fireEvent.click(screen.getByRole("tab", { name: "All" }));
             vi.advanceTimersByTime(200);
             await flushPromisesWithFakeTimers();
 
-            filterChip = document.querySelector("div.mx_SpotlightDialog_filter")!;
-            expect(filterChip).not.toBeInTheDocument();
+            expect(selectedTab()).toHaveTextContent("All");
         });
         it("with people filter", async () => {
             render(
@@ -437,16 +423,13 @@ describe("Spotlight Dialog", () => {
             vi.advanceTimersByTime(200);
             await flushPromisesWithFakeTimers();
 
-            let filterChip = document.querySelector("div.mx_SpotlightDialog_filter");
-            expect(filterChip).toBeInTheDocument();
-            expect(filterChip!.innerHTML).toContain("People");
+            expect(selectedTab()).toHaveTextContent("People");
 
-            fireEvent.click(filterChip!.querySelector("div.mx_SpotlightDialog_filter--close")!);
+            fireEvent.click(screen.getByRole("tab", { name: "All" }));
             vi.advanceTimersByTime(1);
             await flushPromisesWithFakeTimers();
 
-            filterChip = document.querySelector("div.mx_SpotlightDialog_filter");
-            expect(filterChip).not.toBeInTheDocument();
+            expect(selectedTab()).toHaveTextContent("All");
         });
     });
 
@@ -464,12 +447,12 @@ describe("Spotlight Dialog", () => {
         });
 
         it("should find Rooms", () => {
-            expect(options).toHaveLength(5);
+            expect(options).toHaveLength(1);
             expect(options[0]!.innerHTML).toContain(testRoom.name);
         });
 
         it("should not find LocalRooms", () => {
-            expect(options).toHaveLength(5);
+            expect(options).toHaveLength(1);
             expect(options[0]!.innerHTML).not.toContain(testLocalRoom.name);
         });
     });
@@ -774,7 +757,7 @@ describe("Spotlight Dialog", () => {
         vi.advanceTimersByTime(200);
         await flushPromisesWithFakeTimers();
 
-        fireEvent.click(document.getElementById("mx_SpotlightDialog_button_searchMessages")!);
+        fireEvent.click(screen.getByRole("tab", { name: "Messages" }));
 
         // The same view, narrowed to messages: not a jump to some other search.
         expect(screen.getByPlaceholderText("Search messages")).toBeInTheDocument();

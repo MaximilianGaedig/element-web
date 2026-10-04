@@ -104,26 +104,55 @@ describe("Spotlight messages", () => {
         vi.clearAllTimers();
     });
 
-    it("renders the full-screen variant on a handheld, with Cancel and the filter tabs", async () => {
+    it("renders the handheld variant with Cancel and the filter tabs", async () => {
         vi.mocked(useScreenSize).mockReturnValue(ScreenSize.mobile);
         const onFinished = vi.fn();
         const { container } = render(<SpotlightDialog onFinished={onFinished} />);
         await settle();
 
         expect(container.querySelector(".mx_SpotlightDialog_handheld")).toBeInTheDocument();
-        expect(screen.getByRole("group", { name: "Search filters" })).toBeInTheDocument();
-        // The desktop's list of other searches is the tabs here, not repeated.
-        expect(document.querySelector(".mx_SpotlightDialog_otherSearches")).not.toBeInTheDocument();
+        expect(screen.getByRole("tablist", { name: "Search filters" })).toBeInTheDocument();
+        expect(screen.queryByRole("button", { name: "Close" })).not.toBeInTheDocument();
 
         fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
         expect(onFinished).toHaveBeenCalled();
     });
 
-    it("keeps the desktop dialog as it was", async () => {
-        render(<SpotlightDialog onFinished={vi.fn()} />);
+    it("is the same full-screen search on a desktop: tabs instead of a list of filters, and a close button", async () => {
+        const onFinished = vi.fn();
+        render(<SpotlightDialog onFinished={onFinished} />);
         await settle();
+
         expect(document.querySelector(".mx_SpotlightDialog_handheld")).not.toBeInTheDocument();
+        // Not held to a dialog's fixed width: that is what left the search a strip in the middle of the screen.
+        expect(document.querySelector(".mx_SpotlightDialog")).not.toHaveClass("mx_Dialog_fixedWidth");
+        // Public spaces joins them only once the server says it can filter by room type, which this one does not.
+        expect(screen.getAllByRole("tab").map((tab) => tab.textContent)).toEqual([
+            "All",
+            "People",
+            "Messages",
+            "Public rooms",
+        ]);
+        expect(screen.getByRole("tab", { name: "All" })).toHaveAttribute("aria-selected", "true");
+        // The tabs are the filters: the old "Search for" list of them is gone.
+        expect(document.querySelector(".mx_SpotlightDialog_otherSearches")).not.toBeInTheDocument();
         expect(screen.queryByRole("button", { name: "Cancel" })).not.toBeInTheDocument();
+
+        fireEvent.click(screen.getByRole("button", { name: "Close" }));
+        expect(onFinished).toHaveBeenCalled();
+    });
+
+    it("clears the query with the clear button and keeps the field focused", async () => {
+        vi.mocked(eventSearch).mockResolvedValue(found([]));
+        render(<SpotlightDialog initialText="dune" onFinished={vi.fn()} />);
+        await settle();
+        const input = screen.getByRole("textbox", { name: "Search" });
+
+        fireEvent.click(screen.getByRole("button", { name: "Clear" }));
+
+        expect(input).toHaveValue("");
+        expect(input).toHaveFocus();
+        expect(screen.queryByRole("button", { name: "Clear" })).not.toBeInTheDocument();
     });
 
     it("groups messages after the chats, with the chat, the sender and the match marked", async () => {
@@ -165,11 +194,24 @@ describe("Spotlight messages", () => {
         await settle();
 
         expect(document.querySelectorAll(".mx_SpotlightDialog_message")).toHaveLength(3);
-        fireEvent.click(screen.getByText("Show all messages"));
+        fireEvent.click(screen.getByRole("button", { name: "Show all" }));
         await settle();
 
         expect(document.querySelectorAll(".mx_SpotlightDialog_message")).toHaveLength(5);
+        expect(screen.getByRole("tab", { name: "Messages" })).toHaveAttribute("aria-selected", "true");
         expect(screen.getByRole("button", { name: "Media" })).toBeInTheDocument();
+        // The whole list says how many matched, as Telegram's does.
+        expect(screen.getByRole("heading", { name: "5 messages found" })).toBeInTheDocument();
+    });
+
+    it("says so, and what to try, when no message matched", async () => {
+        vi.mocked(eventSearch).mockResolvedValue(found([]));
+        render(<SpotlightDialog initialText="dune" initialFilter={Filter.Messages} onFinished={vi.fn()} />);
+        await settle();
+
+        expect(screen.getByText("No messages found")).toBeInTheDocument();
+        expect(screen.getByText("Try other words, or turn off a filter.")).toBeInTheDocument();
+        expect(screen.queryByRole("heading", { name: "Messages" })).not.toBeInTheDocument();
     });
 
     it("opens as the messages view when asked for the Messages filter", async () => {

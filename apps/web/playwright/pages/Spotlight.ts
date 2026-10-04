@@ -30,19 +30,13 @@ export class Spotlight {
     }
 
     public async filter(filter: Filter) {
-        let selector: string;
-        switch (filter) {
-            case Filter.People:
-                selector = "#mx_SpotlightDialog_button_startChat";
-                break;
-            case Filter.PublicRooms:
-                selector = "#mx_SpotlightDialog_button_explorePublicRooms";
-                break;
-            default:
-                selector = ".mx_SpotlightDialog_filter";
-                break;
-        }
-        await this.root.locator(selector).click();
+        const name = filter === Filter.People ? "People" : "Public rooms";
+        await this.root.getByRole("tab", { name }).click();
+    }
+
+    /** The tab that is on: what the search is looking for. */
+    public get selectedTab() {
+        return this.root.getByRole("tab", { selected: true });
     }
 
     public async search(query: string) {

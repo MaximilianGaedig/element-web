@@ -10,17 +10,21 @@ Please see LICENSE files in the repository root for full details.
  *
  * A hit says what Telegram's says: the chat it was in (avatar and name), when, who said it, and the line
  * with the words that matched marked. Pressing one opens that chat at that message, which is the only
- * reason to look a message up. Under the first few hits "Show all" turns the group into the whole view;
- * there the list pages itself as its end comes into view, with skeleton rows where the next page will be.
+ * reason to look a message up. Among the other results the group shows its first few hits and "Show all"
+ * in its heading turns it into the whole view (the Messages tab); there the list pages itself as its end
+ * comes into view, with skeleton rows where the next page will be.
  */
 
 import React, { type JSX, useEffect, useMemo, useRef } from "react";
-import classNames from "classnames";
+import { ChatFilter } from "@vector-im/compound-web";
+import { ErrorIcon, SearchIcon } from "@vector-im/compound-design-tokens/assets/web/icons";
 
 import { _t, _td } from "../../../../languageHandler";
 import { formatRelativeTime } from "../../../../DateUtils";
 import RoomAvatar from "../../avatars/RoomAvatar";
 import { Option } from "./Option";
+import { SpotlightEmptyState } from "./SpotlightEmptyState";
+import AccessibleButton from "../../elements/AccessibleButton";
 import { type MessageHit, type MessageSearch } from "./useMessageSearch";
 import { snippetParts } from "./messageSnippet";
 import {
@@ -68,18 +72,16 @@ function Chip<T extends string>({
 }): JSX.Element {
     const on = value === current;
     return (
-        <button
-            type="button"
-            className={classNames("mx_SpotlightDialog_chip", { mx_SpotlightDialog_chip_on: on })}
-            aria-pressed={on}
-            onClick={() => onChange(on ? "any" : value)}
-        >
+        <ChatFilter selected={on} aria-pressed={on} onClick={() => onChange(on ? "any" : value)}>
             {label}
-        </button>
+        </ChatFilter>
     );
 }
 
-/** What kind, where and when, as rows of chips that scroll sideways rather than wrap. */
+/**
+ * What kind, where and when, as one row of the room list's own filter chips that scrolls sideways rather
+ * than wraps, the three groups set apart by a thin rule: the same cuts as Telegram's global search.
+ */
 export function MessageFilterChips({
     filter,
     onChange,
@@ -88,38 +90,36 @@ export function MessageFilterChips({
     onChange(this: void, filter: MessageFilter): void;
 }): JSX.Element {
     return (
-        <div className="mx_SpotlightDialog_messageFilters" role="group" aria-label={_t("spotlight_dialog|filters")}>
-            <div className="mx_SpotlightDialog_chipRow">
-                {MESSAGE_KINDS.map((kind) => (
-                    <Chip<MessageKind>
-                        key={kind}
-                        value={kind}
-                        current={filter.kind}
-                        label={_t(KIND_LABELS[kind])}
-                        onChange={(next) => onChange({ ...filter, kind: next })}
-                    />
-                ))}
-            </div>
-            <div className="mx_SpotlightDialog_chipRow">
-                {MESSAGE_CHATS.map((chat) => (
-                    <Chip<MessageChat>
-                        key={chat}
-                        value={chat}
-                        current={filter.chat}
-                        label={_t(CHAT_LABELS[chat])}
-                        onChange={(next) => onChange({ ...filter, chat: next })}
-                    />
-                ))}
-                {MESSAGE_WHENS.map((when) => (
-                    <Chip<MessageWhen>
-                        key={when}
-                        value={when}
-                        current={filter.when}
-                        label={_t(WHEN_LABELS[when])}
-                        onChange={(next) => onChange({ ...filter, when: next })}
-                    />
-                ))}
-            </div>
+        <div className="mx_SpotlightDialog_chipRow" role="group" aria-label={_t("spotlight_dialog|filters")}>
+            {MESSAGE_KINDS.map((kind) => (
+                <Chip<MessageKind>
+                    key={kind}
+                    value={kind}
+                    current={filter.kind}
+                    label={_t(KIND_LABELS[kind])}
+                    onChange={(next) => onChange({ ...filter, kind: next })}
+                />
+            ))}
+            <span className="mx_SpotlightDialog_chipDivider" aria-hidden />
+            {MESSAGE_CHATS.map((chat) => (
+                <Chip<MessageChat>
+                    key={chat}
+                    value={chat}
+                    current={filter.chat}
+                    label={_t(CHAT_LABELS[chat])}
+                    onChange={(next) => onChange({ ...filter, chat: next })}
+                />
+            ))}
+            <span className="mx_SpotlightDialog_chipDivider" aria-hidden />
+            {MESSAGE_WHENS.map((when) => (
+                <Chip<MessageWhen>
+                    key={when}
+                    value={when}
+                    current={filter.when}
+                    label={_t(WHEN_LABELS[when])}
+                    onChange={(next) => onChange({ ...filter, when: next })}
+                />
+            ))}
         </div>
     );
 }
@@ -145,7 +145,7 @@ function Hit({
             onClick={() => onOpen(hit)}
             aria-label={`${room.name}, ${sender}: ${body}`}
         >
-            <RoomAvatar room={room} size="40px" />
+            <RoomAvatar room={room} size="48px" />
             <div className="mx_SpotlightDialog_message_text">
                 <div className="mx_SpotlightDialog_message_head">
                     <span className="mx_SpotlightDialog_message_room">{room.name}</span>
@@ -190,7 +190,7 @@ interface Props {
 }
 
 export function MessageResults({ search, term, preview, onOpen, onShowAll }: Props): JSX.Element | null {
-    const { hits, loading, loadingMore, hasMore, failed, loadMore } = search;
+    const { hits, loading, loadingMore, hasMore, failed, loadMore, count } = search;
     const highlights = useMemo(() => [...search.highlights, term.trim()], [search.highlights, term]);
     const end = useRef<HTMLDivElement>(null);
 
@@ -209,28 +209,50 @@ export function MessageResults({ search, term, preview, onOpen, onShowAll }: Pro
     // Among other results a group with nothing in it is not worth a heading.
     if (preview && !loading && !hits.length) return null;
 
+    if (!preview && !loading && !loadingMore && !hits.length) {
+        return failed ? (
+            <SpotlightEmptyState icon={<ErrorIcon />} title={_t("spotlight_dialog|messages_failed")} />
+        ) : (
+            <SpotlightEmptyState
+                icon={<SearchIcon />}
+                title={_t("spotlight_dialog|messages_none")}
+                description={_t("spotlight_dialog|messages_none_hint")}
+            />
+        );
+    }
+
     const shown = preview ? hits.slice(0, PREVIEW_COUNT) : hits;
+    const showAll = preview && onShowAll && (hits.length > PREVIEW_COUNT || hasMore);
+    // Telegram heads the whole list with how many there are; the server counts before the chips narrow it.
+    const heading =
+        !preview && count !== undefined && !loading
+            ? _t("spotlight_dialog|messages_count", { count })
+            : _t("spotlight_dialog|messages_label");
     return (
         <div
             className="mx_SpotlightDialog_section mx_SpotlightDialog_results mx_SpotlightDialog_messages"
             role="group"
             aria-labelledby="mx_SpotlightDialog_section_messages"
         >
-            <h4 id="mx_SpotlightDialog_section_messages">{_t("spotlight_dialog|messages_label")}</h4>
+            <div className="mx_SpotlightDialog_sectionHeader">
+                <h4 id="mx_SpotlightDialog_section_messages">{heading}</h4>
+                {showAll && (
+                    <AccessibleButton
+                        kind="link_inline"
+                        className="mx_SpotlightDialog_showAll"
+                        tabIndex={-1}
+                        onClick={onShowAll}
+                    >
+                        {_t("action|show_all")}
+                    </AccessibleButton>
+                )}
+            </div>
             <div>
                 {shown.map((hit) => (
                     <Hit key={hit.event.getId()} hit={hit} highlights={highlights} onOpen={onOpen} />
                 ))}
                 {(loading || (loadingMore && !preview)) && <Skeletons />}
                 {failed && <p className="mx_SpotlightDialog_messagesNote">{_t("spotlight_dialog|messages_failed")}</p>}
-                {!preview && !loading && !failed && !hits.length && !loadingMore && (
-                    <p className="mx_SpotlightDialog_messagesNote">{_t("spotlight_dialog|messages_none")}</p>
-                )}
-                {preview && onShowAll && (hits.length > PREVIEW_COUNT || hasMore) && (
-                    <Option className="mx_SpotlightDialog_showAll" onClick={onShowAll}>
-                        {_t("spotlight_dialog|messages_show_all")}
-                    </Option>
-                )}
                 {!preview && <div ref={end} className="mx_SpotlightDialog_messagesEnd" aria-hidden />}
             </div>
         </div>

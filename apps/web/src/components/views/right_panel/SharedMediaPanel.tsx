@@ -62,7 +62,7 @@ import IconizedContextMenu, {
 } from "../context_menus/IconizedContextMenu";
 import { useContextMenu } from "../../structures/ContextMenu";
 import UIStore, { UI_EVENTS } from "../../../stores/UIStore";
-import { scrollStripTo } from "../telegram/TgStickersPanel";
+import { scrollStripTo } from "../../../utils/scrollStripTo";
 import Modal from "../../../Modal";
 import AlbumLightbox from "../elements/AlbumLightbox";
 import { chatColumnsEnabled } from "../../../utils/telegram/telegramLayout";

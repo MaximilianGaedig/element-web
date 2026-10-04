@@ -105,32 +105,22 @@ test.describe("Spotlight", () => {
         await expect(page.locator(".mx_RoomSublist_skeletonUI")).not.toBeAttached();
     });
 
-    test("should be able to add and remove filters via keyboard", async ({ page, app }) => {
+    test("should be able to switch filters via keyboard", async ({ page, app }) => {
         const spotlight = await app.openSpotlight();
         await page.waitForTimeout(1000); // wait for the dialog to settle, otherwise our keypresses might race with an update
 
-        // initially, public spaces should be highlighted (because there are no other suggestions)
-        await expect(spotlight.dialog.locator("#mx_SpotlightDialog_button_explorePublicSpaces")).toHaveAttribute(
-            "aria-selected",
-            "true",
-        );
+        await expect(spotlight.selectedTab).toHaveText("All");
 
-        // hitting enter should enable the public rooms filter
-        await spotlight.searchBox.press("Enter");
-        await expect(spotlight.dialog.locator(".mx_SpotlightDialog_filter")).toHaveText("Public spaces");
-        await spotlight.searchBox.press("Backspace");
-        await expect(spotlight.dialog.locator(".mx_SpotlightDialog_filter")).not.toBeAttached();
-        await page.waitForTimeout(200); // Again, wait to settle so keypresses arrive correctly
+        // The tabs are one stop after the field; the arrows move between them.
+        await spotlight.searchBox.getByRole("textbox", { name: "Search" }).press("Tab");
+        await page.keyboard.press("ArrowRight");
+        await expect(spotlight.selectedTab).toHaveText("People");
+        await page.keyboard.press("End");
+        await expect(spotlight.selectedTab).toHaveText("Public spaces");
 
-        await spotlight.searchBox.press("ArrowDown");
-        await expect(spotlight.dialog.locator("#mx_SpotlightDialog_button_explorePublicRooms")).toHaveAttribute(
-            "aria-selected",
-            "true",
-        );
-        await spotlight.searchBox.press("Enter");
-        await expect(spotlight.dialog.locator(".mx_SpotlightDialog_filter")).toHaveText("Public rooms");
-        await spotlight.searchBox.press("Backspace");
-        await expect(spotlight.dialog.locator(".mx_SpotlightDialog_filter")).not.toBeAttached();
+        // Backspace in an empty field drops the filter, as it did when the filter was a chip in the field.
+        await spotlight.searchBox.getByRole("textbox", { name: "Search" }).press("Backspace");
+        await expect(spotlight.selectedTab).toHaveText("All");
     });
 
     test("should find joined rooms", async ({ page, app, room1 }) => {
@@ -444,9 +434,8 @@ test.describe("Spotlight", () => {
                     // open animation has finished and results have had a chance to render.
                     await expect(spotlight.searchBox.getByRole("textbox", { name: "Search" })).toBeFocused();
 
-                    // #mx_SpotlightDialog_keyboardPrompt is a sibling of the [role=dialog] element,
-                    // not a descendant, so it must be located from the page rather than spotlight.dialog.
-                    const kbdHint = page.locator("#mx_SpotlightDialog_keyboardPrompt kbd").first();
+                    // The keyboard hints are the footer of the dialog.
+                    const kbdHint = spotlight.dialog.locator("#mx_SpotlightDialog_keyboardPrompt kbd").first();
                     await expect(kbdHint).toBeAttached();
 
                     const recentlyViewed = spotlight.dialog.locator(
@@ -506,8 +495,7 @@ test.describe("Spotlight", () => {
                     await spotlight.filter(Filter.PublicRooms);
                     await spotlight.search(room1.name);
 
-                    const filterChip = spotlight.dialog.locator(".mx_SpotlightDialog_filter");
-                    await expect(filterChip).toHaveText("Public rooms");
+                    await expect(spotlight.selectedTab).toHaveText("Public rooms");
 
                     results = spotlight.results;
                     await expect(results).toHaveCount(2);
@@ -515,7 +503,7 @@ test.describe("Spotlight", () => {
                     await expect(results.nth(1)).toHaveAttribute("aria-selected", "false");
                     await expect(results.locator(".mx_SpotlightDialog_result_publicRoomAlias")).toHaveCount(2);
 
-                    axe.include(".mx_SpotlightDialog_filter");
+                    axe.include(".mx_SpotlightDialog_tabs");
                     // XXX: same nested-interactive issue as above; here the endAdornment is the
                     // View/Join button rather than RoomResultContextMenus.
                     await expect(axe).toHaveNoViolations();

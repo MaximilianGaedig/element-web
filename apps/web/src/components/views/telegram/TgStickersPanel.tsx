@@ -11,6 +11,7 @@ import { _t } from "../../../languageHandler";
 import Spinner from "../elements/Spinner";
 import { matchesSticker, PackTab, StickerThumb } from "../bridge/PackStickerPicker";
 import { type PackImage, type StickerPack } from "../../../utils/bridge/imagePacks";
+import { scrollStripTo } from "../../../utils/scrollStripTo";
 
 /** tweb mediaSizes esgSticker (72px) and .super-stickers gap (.25rem). */
 const STICKER_SIZE = 72;
@@ -166,17 +167,6 @@ export function TgStickersPanel({ packs, onSend }: Props): JSX.Element {
             </div>
         </div>
     );
-}
-
-/** Scrolls a horizontal strip (only) so `item` is in view: at the nearest edge, or centred. */
-export function scrollStripTo(strip: HTMLElement, item: HTMLElement, mode: "nearest" | "center"): void {
-    const left = item.offsetLeft - strip.offsetLeft;
-    const right = left + item.offsetWidth;
-    let target = strip.scrollLeft;
-    if (mode === "center") target = left - (strip.clientWidth - item.offsetWidth) / 2;
-    else if (left < strip.scrollLeft) target = left;
-    else if (right > strip.scrollLeft + strip.clientWidth) target = right - strip.clientWidth;
-    strip.scrollTo({ left: target, behavior: "smooth" });
 }
 
 /** One pack: its title and grid; the grid mounts when the section nears the viewport. */

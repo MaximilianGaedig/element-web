@@ -1,0 +1,71 @@
+/*
+Copyright 2026 New Vector Ltd.
+
+SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only OR LicenseRef-Element-Commercial
+Please see LICENSE files in the repository root for full details.
+*/
+
+/* tweb .menu-horizontal-div and .menu-horizontal-scrollable: tabs keep their width and the strip scrolls sideways. */
+.mx_PillTabs {
+    --PillTabs-transition: 0.2s ease-in-out;
+
+    position: relative;
+    display: flex;
+    min-width: 0;
+    height: 40px;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+
+    &::-webkit-scrollbar {
+        display: none;
+    }
+}
+
+.mx_PillTabs_pill {
+    position: absolute;
+    inset-block: 4px;
+    inset-inline-start: 0;
+    border-radius: 20px;
+    background-color: var(--cpd-color-bg-accent-subtle, var(--cpd-color-bg-subtle-secondary));
+    transition:
+        transform var(--PillTabs-transition),
+        width var(--PillTabs-transition);
+    pointer-events: none;
+}
+
+.mx_PillTabs_tab {
+    position: relative;
+    z-index: 1;
+    flex: 0 0 auto;
+    margin: 0 2px;
+    padding: 0 var(--cpd-space-4x);
+    border: 0;
+    border-radius: 20px;
+    background: none;
+    font: var(--cpd-font-body-md-semibold);
+    white-space: nowrap;
+    color: var(--cpd-color-text-secondary);
+    cursor: pointer;
+    transition: color var(--PillTabs-transition);
+
+    &:hover:not(.mx_PillTabs_tab_active) {
+        background-color: var(--cpd-color-bg-subtle-secondary);
+    }
+
+    &:focus-visible {
+        outline: 2px solid var(--cpd-color-border-focused);
+        outline-offset: -2px;
+    }
+}
+
+.mx_PillTabs_tab_active {
+    color: var(--cpd-color-text-action-accent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .mx_PillTabs_pill,
+    .mx_PillTabs_tab {
+        transition: none;
+    }
+}

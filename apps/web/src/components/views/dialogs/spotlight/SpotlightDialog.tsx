@@ -33,11 +33,10 @@ import { sanitizeHtml } from "@element-hq/element-web-shared-utils";
 import {
     ChatIcon,
     RoomIcon,
-    SpaceIcon,
-    UserProfileIcon,
     HomeIcon,
     GroupIcon,
     CloseIcon,
+    SearchIcon,
     LinkIcon,
     SettingsIcon,
 } from "@vector-im/compound-design-tokens/assets/web/icons";
@@ -100,6 +99,8 @@ import { useFeatureEnabled } from "../../../../hooks/useSettings";
 import { filterBoolean } from "../../../../utils/arrays";
 import { transformSearchTerm } from "../../../../utils/SearchInput";
 import { Filter } from "./Filter";
+import { PillTabs, type PillTab } from "../../elements/PillTabs";
+import { SpotlightEmptyState } from "./SpotlightEmptyState";
 import { MessageFilterChips, MessageResults } from "./MessageResults";
 import { NO_MESSAGE_FILTER, type MessageFilter } from "./messageFilters";
 import { type MessageHit, useMessageSearch } from "./useMessageSearch";
@@ -150,19 +151,6 @@ function filterToLabel(filter: Filter): string {
             return _t("spotlight_dialog|public_spaces_label");
         case Filter.Messages:
             return _t("spotlight_dialog|messages_label");
-    }
-}
-
-function filterToIcon(filter: Filter): JSX.Element {
-    switch (filter) {
-        case Filter.People:
-            return <UserProfileIcon />;
-        case Filter.PublicRooms:
-            return <RoomIcon />;
-        case Filter.PublicSpaces:
-            return <SpaceIcon />;
-        case Filter.Messages:
-            return <ChatIcon />;
     }
 }
 
@@ -667,59 +655,6 @@ const SpotlightDialog: React.FC<IProps> = ({ initialText = "", initialFilter = n
         onFinished();
     };
 
-    let otherSearchesSection: JSX.Element | undefined;
-    // On a handheld the same filters are the chips under the field, so the list of them is not repeated.
-    if (!handheld && (trimmedQuery || (filter !== Filter.PublicRooms && filter !== Filter.PublicSpaces))) {
-        otherSearchesSection = (
-            <div
-                className="mx_SpotlightDialog_section mx_SpotlightDialog_otherSearches"
-                role="group"
-                aria-labelledby="mx_SpotlightDialog_section_otherSearches"
-            >
-                <h4 id="mx_SpotlightDialog_section_otherSearches">
-                    {trimmedQuery
-                        ? _t("spotlight_dialog|heading_with_query", { query })
-                        : _t("spotlight_dialog|heading_without_query")}
-                </h4>
-                <div>
-                    {filter !== Filter.PublicSpaces && supportsSpaceFiltering && (
-                        <Option
-                            id="mx_SpotlightDialog_button_explorePublicSpaces"
-                            onClick={() => setFilter(Filter.PublicSpaces)}
-                        >
-                            {filterToIcon(Filter.PublicSpaces)}
-                            {filterToLabel(Filter.PublicSpaces)}
-                        </Option>
-                    )}
-                    {filter !== Filter.PublicRooms && (
-                        <Option
-                            id="mx_SpotlightDialog_button_explorePublicRooms"
-                            onClick={() => setFilter(Filter.PublicRooms)}
-                        >
-                            {filterToIcon(Filter.PublicRooms)}
-                            {filterToLabel(Filter.PublicRooms)}
-                        </Option>
-                    )}
-                    {filter !== Filter.People && (
-                        <Option id="mx_SpotlightDialog_button_startChat" onClick={() => setFilter(Filter.People)}>
-                            {filterToIcon(Filter.People)}
-                            {filterToLabel(Filter.People)}
-                        </Option>
-                    )}
-                    {filter === null && (
-                        <Option
-                            id="mx_SpotlightDialog_button_searchMessages"
-                            onClick={() => setFilter(Filter.Messages)}
-                        >
-                            <ChatIcon />
-                            {_t("spotlight_dialog|messages_label")}
-                        </Option>
-                    )}
-                </div>
-            </div>
-        );
-    }
-
     const openMessage = (hit: MessageHit, ev?: { type: string }): void => {
         viewRoom({ roomId: hit.room.roomId, eventId: hit.event.getId() }, true, ev?.type !== "click");
     };
@@ -727,17 +662,15 @@ const SpotlightDialog: React.FC<IProps> = ({ initialText = "", initialFilter = n
     let content: JSX.Element;
     if (filter === Filter.Messages) {
         // The whole view is the Messages group: nothing else is looked for, so nothing else is offered.
-        content = (
-            <>
-                <MessageFilterChips filter={messageFilter} onChange={setMessageFilter} />
-                {trimmedQuery ? (
-                    <MessageResults search={messageSearch} term={trimmedQuery} onOpen={(hit) => openMessage(hit)} />
-                ) : (
-                    <p className="mx_SpotlightDialog_messagesNote mx_SpotlightDialog_messagesHint">
-                        {_t("spotlight_dialog|messages_hint")}
-                    </p>
-                )}
-            </>
+        content = trimmedQuery ? (
+            <MessageResults search={messageSearch} term={trimmedQuery} onOpen={(hit) => openMessage(hit)} />
+        ) : (
+            <SpotlightEmptyState
+                className="mx_SpotlightDialog_messagesHint"
+                icon={<ChatIcon />}
+                title={_t("spotlight_dialog|messages_hint_title")}
+                description={_t("spotlight_dialog|messages_hint")}
+            />
         );
     } else if (trimmedQuery || filter !== null) {
         const resultMapper = (result: Result): JSX.Element => {
@@ -1186,8 +1119,16 @@ const SpotlightDialog: React.FC<IProps> = ({ initialText = "", initialFilter = n
         if (trimmedQuery && !hasResults && !messagesPending) {
             noResultsSection = (
                 <div className="mx_SpotlightDialog_section mx_SpotlightDialog_results" role="group">
-                    <Option id="mx_SpotlightDialog_button_noResults" onClick={null}>
-                        {_t("spotlight_dialog|no_results")}
+                    <Option
+                        id="mx_SpotlightDialog_button_noResults"
+                        className="mx_SpotlightDialog_noResults"
+                        onClick={null}
+                    >
+                        <SpotlightEmptyState
+                            icon={<SearchIcon />}
+                            title={_t("spotlight_dialog|no_results")}
+                            description={_t("spotlight_dialog|no_results_hint")}
+                        />
                     </Option>
                 </div>
             );
@@ -1220,7 +1161,6 @@ const SpotlightDialog: React.FC<IProps> = ({ initialText = "", initialFilter = n
                 {/* After the chats: what is typed is a chat's name far more often than a setting's. */}
                 {settingsSection}
                 {hiddenResultsSection}
-                {otherSearchesSection}
                 {groupChatSection}
             </>
         );
@@ -1315,7 +1255,6 @@ const SpotlightDialog: React.FC<IProps> = ({ initialText = "", initialFilter = n
                 </div>
 
                 {recentSearchesSection}
-                {otherSearchesSection}
             </>
         );
     }
@@ -1419,121 +1358,136 @@ const SpotlightDialog: React.FC<IProps> = ({ initialText = "", initialFilter = n
 
     const activeDescendant = rovingContext.state.activeNode?.id;
 
-    return (
-        <>
-            <div id="mx_SpotlightDialog_keyboardPrompt">
-                {_t(
-                    "spotlight_dialog|keyboard_scroll_hint",
-                    {},
-                    {
-                        arrows: () => (
-                            <>
-                                <kbd>↓</kbd>
-                                <kbd>↑</kbd>
-                                {filter === null && !query && <kbd>←</kbd>}
-                                {filter === null && !query && <kbd>→</kbd>}
-                            </>
-                        ),
-                    },
-                )}
-            </div>
+    const tabs: PillTab<Filter | null>[] = [
+        { value: null, label: _t("spotlight_dialog|all") },
+        { value: Filter.People, label: filterToLabel(Filter.People) },
+        { value: Filter.Messages, label: filterToLabel(Filter.Messages) },
+        { value: Filter.PublicRooms, label: filterToLabel(Filter.PublicRooms) },
+        ...(supportsSpaceFiltering ? [{ value: Filter.PublicSpaces, label: filterToLabel(Filter.PublicSpaces) }] : []),
+    ];
 
-            <BaseDialog
-                className={classNames("mx_SpotlightDialog", { mx_SpotlightDialog_handheld: handheld })}
-                onFinished={onFinished}
-                hasCancel={false}
-                onKeyDown={onDialogKeyDown}
-                screenName="UnifiedSearch"
-                aria-label={_t("spotlight_dialog|search_dialog")}
-            >
-                <div className="mx_SpotlightDialog_searchBox mx_textinput">
-                    {!handheld && filter !== null && (
-                        <div className="mx_SpotlightDialog_filter">
-                            {filterToIcon(filter)}
-                            <span>{filterToLabel(filter)}</span>
+    return (
+        <BaseDialog
+            className={classNames("mx_SpotlightDialog", { mx_SpotlightDialog_handheld: handheld })}
+            onFinished={onFinished}
+            // A dialog's fixed width (60vw, at most 704px) is what kept the search to a strip of the screen.
+            fixedWidth={false}
+            hasCancel={false}
+            onKeyDown={onDialogKeyDown}
+            screenName="UnifiedSearch"
+            aria-label={_t("spotlight_dialog|search_dialog")}
+        >
+            {/*
+             * The search is a screen of its own on every size, as Telegram's, Slack's and GitHub's are: the
+             * field, the tabs that say what is looked for and, for messages, the chips that narrow them stay at
+             * the top while the results scroll under them. On a wide screen everything sits in one column of
+             * reading width rather than stretching across it.
+             */}
+            <div className="mx_SpotlightDialog_header">
+                <div className="mx_SpotlightDialog_column mx_SpotlightDialog_bar">
+                    <div className="mx_SpotlightDialog_searchBox mx_textinput">
+                        <SearchIcon className="mx_SpotlightDialog_searchIcon" aria-hidden />
+                        <input
+                            ref={inputRef}
+                            autoFocus
+                            type="text"
+                            autoComplete="off"
+                            autoCapitalize="off"
+                            autoCorrect="off"
+                            spellCheck="false"
+                            placeholder={
+                                filter === Filter.Messages
+                                    ? _t("spotlight_dialog|search_messages")
+                                    : _t("action|search")
+                            }
+                            enterKeyHint="search"
+                            value={query}
+                            onChange={setQuery}
+                            onKeyDown={onKeyDown}
+                            aria-owns="mx_SpotlightDialog_content"
+                            aria-activedescendant={activeDescendant}
+                            aria-label={_t("action|search")}
+                            aria-describedby="mx_SpotlightDialog_keyboardPrompt"
+                        />
+                        {(publicRoomsLoading || peopleLoading || networkPeopleLoading || profileLoading) && (
+                            <Spinner size={20} />
+                        )}
+                        {query && (
                             <AccessibleButton
+                                className="mx_SpotlightDialog_clear"
                                 tabIndex={-1}
-                                title={_t("spotlight_dialog|remove_filter", {
-                                    filter: filterToLabel(filter),
-                                })}
-                                className="mx_SpotlightDialog_filter--close"
-                                onClick={() => setFilter(null)}
+                                onClick={() => {
+                                    _setQuery("");
+                                    inputRef.current?.focus();
+                                }}
+                                aria-label={_t("action|clear")}
                             >
                                 <CloseIcon />
                             </AccessibleButton>
-                        </div>
-                    )}
-                    <input
-                        ref={inputRef}
-                        autoFocus
-                        type="text"
-                        autoComplete="off"
-                        autoCapitalize="off"
-                        autoCorrect="off"
-                        spellCheck="false"
-                        placeholder={
-                            filter === Filter.Messages ? _t("spotlight_dialog|search_messages") : _t("action|search")
-                        }
-                        enterKeyHint="search"
-                        value={query}
-                        onChange={setQuery}
-                        onKeyDown={onKeyDown}
-                        aria-owns="mx_SpotlightDialog_content"
-                        aria-activedescendant={activeDescendant}
-                        aria-label={_t("action|search")}
-                        aria-describedby="mx_SpotlightDialog_keyboardPrompt"
-                    />
-                    {(publicRoomsLoading || peopleLoading || networkPeopleLoading || profileLoading) && (
-                        <Spinner size={24} />
-                    )}
-                    {handheld && (
-                        <AccessibleButton
-                            className="mx_SpotlightDialog_cancel"
-                            onClick={onFinished}
-                            aria-label={_t("action|cancel")}
-                        >
+                        )}
+                    </div>
+                    {handheld ? (
+                        <AccessibleButton className="mx_SpotlightDialog_cancel" onClick={onFinished}>
                             {_t("action|cancel")}
+                        </AccessibleButton>
+                    ) : (
+                        <AccessibleButton
+                            className="mx_SpotlightDialog_close"
+                            onClick={onFinished}
+                            aria-label={_t("action|close")}
+                        >
+                            <kbd>Esc</kbd>
+                            <CloseIcon />
                         </AccessibleButton>
                     )}
                 </div>
-
-                {handheld && (
-                    <div className="mx_SpotlightDialog_tabs" role="group" aria-label={_t("spotlight_dialog|filters")}>
-                        {[
-                            { value: null, label: _t("spotlight_dialog|all") },
-                            { value: Filter.People, label: filterToLabel(Filter.People) },
-                            { value: Filter.Messages, label: filterToLabel(Filter.Messages) },
-                            { value: Filter.PublicRooms, label: filterToLabel(Filter.PublicRooms) },
-                            ...(supportsSpaceFiltering
-                                ? [{ value: Filter.PublicSpaces, label: filterToLabel(Filter.PublicSpaces) }]
-                                : []),
-                        ].map(({ value, label }) => (
-                            <button
-                                key={label}
-                                type="button"
-                                className={classNames("mx_SpotlightDialog_chip", {
-                                    mx_SpotlightDialog_chip_on: value === filter,
-                                })}
-                                aria-pressed={value === filter}
-                                onClick={() => setFilter(value)}
-                            >
-                                {label}
-                            </button>
-                        ))}
+                <div className="mx_SpotlightDialog_column">
+                    <PillTabs
+                        className="mx_SpotlightDialog_tabs"
+                        tabs={tabs}
+                        active={filter}
+                        onChange={setFilter}
+                        aria-label={_t("spotlight_dialog|filters")}
+                    />
+                </div>
+                {filter === Filter.Messages && (
+                    <div className="mx_SpotlightDialog_column">
+                        <MessageFilterChips filter={messageFilter} onChange={setMessageFilter} />
                     </div>
                 )}
+            </div>
 
-                <div
-                    ref={scrollContainerRef}
-                    id="mx_SpotlightDialog_content"
-                    role="listbox"
-                    aria-activedescendant={activeDescendant}
-                    aria-describedby="mx_SpotlightDialog_keyboardPrompt"
-                >
-                    {content}
-                </div>
-            </BaseDialog>
-        </>
+            <div
+                ref={scrollContainerRef}
+                id="mx_SpotlightDialog_content"
+                role="listbox"
+                aria-activedescendant={activeDescendant}
+                aria-describedby="mx_SpotlightDialog_keyboardPrompt"
+            >
+                <div className="mx_SpotlightDialog_column">{content}</div>
+            </div>
+
+            <div id="mx_SpotlightDialog_keyboardPrompt">
+                <span>
+                    {_t(
+                        "spotlight_dialog|keyboard_scroll_hint",
+                        {},
+                        {
+                            arrows: () => (
+                                <>
+                                    <kbd>↓</kbd>
+                                    <kbd>↑</kbd>
+                                    {filter === null && !query && <kbd>←</kbd>}
+                                    {filter === null && !query && <kbd>→</kbd>}
+                                </>
+                            ),
+                        },
+                    )}
+                </span>
+                <span>{_t("spotlight_dialog|keyboard_open_hint", {}, { enter: () => <kbd>↵</kbd> })}</span>
+                <span>{_t("spotlight_dialog|keyboard_close_hint", {}, { esc: () => <kbd>Esc</kbd> })}</span>
+            </div>
+        </BaseDialog>
     );
 };
 
