@@ -1380,10 +1380,9 @@ const SpotlightDialog: React.FC<IProps> = ({ initialText = "", initialFilter = n
             aria-label={_t("spotlight_dialog|search_dialog")}
         >
             {/*
-             * The search is a screen of its own on every size, as Telegram's, Slack's and GitHub's are: the
-             * field, the tabs that say what is looked for and, for messages, the chips that narrow them stay at
-             * the top while the results scroll under them. On a wide screen everything sits in one column of
-             * reading width rather than stretching across it.
+             * The search is a screen of its own on a handheld and a panel centred over the app on anything
+             * larger (_SpotlightDialog.pcss): the field, the tabs that say what is looked for and, for messages,
+             * the chips that narrow them stay at the top while the results scroll under them.
              */}
             <div className="mx_SpotlightDialog_header">
                 <div className="mx_SpotlightDialog_column mx_SpotlightDialog_bar">

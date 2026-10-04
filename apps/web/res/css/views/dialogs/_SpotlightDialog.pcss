@@ -7,9 +7,9 @@ Please see LICENSE files in the repository root for full details.
 */
 
 /*
- * The search is a screen of its own on every size, as Telegram's, Slack's and GitHub's are, not a window over
- * the chat list. The glass border, the rounded box and the drawer other dialogs become on a handheld are all
- * dropped (hence the !important: they override Compound's and the handheld dialog rules).
+ * On a handheld the search is a screen of its own, as Telegram's is, not a window over the chat list. The glass
+ * border, the rounded box and the drawer other dialogs become on a handheld are all dropped (hence the
+ * !important: they override Compound's and the handheld dialog rules). Larger screens get a centred panel below.
  */
 .mx_SpotlightDialog_wrapper {
     .mx_Dialog_border {
@@ -34,6 +34,24 @@ Please see LICENSE files in the repository root for full details.
         contain: unset;
         animation: mx_SpotlightDialog_in 0.16s ease-out;
     }
+}
+
+/*
+ * Off a handheld the search is a panel centred over the app, as a command palette is (Slack's, GitHub's, VS
+ * Code's), not the whole window: a 760px column in the middle of a wide empty screen read as a page of its
+ * own, and the chat it was opened from was gone. Centred rather than docked over the chat list, because the
+ * search is a dialog in a root of its own (Modal.tsx), not part of the left panel, and the same panel serves
+ * every screen size from a tablet up. The dimmed app shows around it and a click there closes it.
+ */
+.mx_SpotlightDialog_wrapper:not(:has(.mx_SpotlightDialog_handheld)) .mx_Dialog {
+    inset: max(var(--cpd-space-6x), 10vh) 0 auto !important;
+    width: min(720px, calc(100vw - 2 * var(--cpd-space-6x))) !important;
+    height: min(720px, calc(100dvh - 2 * max(var(--cpd-space-6x), 10vh))) !important;
+    margin: 0 auto !important;
+    padding: 0 !important;
+    border: 1px solid var(--cpd-color-border-interactive-secondary) !important;
+    border-radius: 16px !important;
+    box-shadow: 0 16px 48px rgb(0 0 0 / 24%) !important;
 }
 
 @keyframes mx_SpotlightDialog_in {

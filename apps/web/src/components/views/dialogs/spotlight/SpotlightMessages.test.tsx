@@ -118,13 +118,13 @@ describe("Spotlight messages", () => {
         expect(onFinished).toHaveBeenCalled();
     });
 
-    it("is the same full-screen search on a desktop: tabs instead of a list of filters, and a close button", async () => {
+    it("is a panel rather than the handheld screen on a desktop: tabs instead of a list of filters, and a close button", async () => {
         const onFinished = vi.fn();
         render(<SpotlightDialog onFinished={onFinished} />);
         await settle();
 
         expect(document.querySelector(".mx_SpotlightDialog_handheld")).not.toBeInTheDocument();
-        // Not held to a dialog's fixed width: that is what left the search a strip in the middle of the screen.
+        // Not held to a dialog's fixed width: the stylesheet sizes the centred panel by the handheld class.
         expect(document.querySelector(".mx_SpotlightDialog")).not.toHaveClass("mx_Dialog_fixedWidth");
         // Public spaces joins them only once the server says it can filter by room type, which this one does not.
         expect(screen.getAllByRole("tab").map((tab) => tab.textContent)).toEqual([
