@@ -87,6 +87,14 @@ export interface RoomListItemViewSnapshot {
     messagePreviewThumbnailIsReply?: boolean;
     /** Fork: the delivery state of the previewed message, only when the current user sent it. */
     messagePreviewSendState?: RoomListItemSendState;
+    /**
+     * Fork: in a group, who has read the previewed message when it is the current user's and some (not all)
+     * of the others have: their user IDs, newest first, at most three. Shown in place of the ticks, as
+     * avatars, until everyone has read it.
+     */
+    messagePreviewReaders?: string[];
+    /** Fork: when the room was last active, formatted for its line (as Telegram's chat list shows it). */
+    lastActivity?: string;
     /** The MSC4426 user status of the other user in a DM room, if any */
     userStatus?: UserStatus;
     /** Notification decoration data */
@@ -179,7 +187,7 @@ export interface RoomListItemViewProps extends Omit<React.HTMLAttributes<HTMLBut
     /** Optional function to render the room path (e.g. space breadcrumbs) */
     renderRoomPath?: (room: Room) => ReactNode;
     /** Fork: optional function to render the previewed message's delivery state (its ticks) */
-    renderSendState?: (state: RoomListItemSendState) => ReactNode;
+    renderSendState?: (state: RoomListItemSendState, readers: string[] | undefined, room: Room) => ReactNode;
     /** Whether this item is the source of an active drag operation */
     isDragSource?: boolean;
     ref?: Ref<Element>;

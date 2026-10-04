@@ -28,7 +28,7 @@ export interface RoomListItemContentProps {
     /** Optional function to render the room path (e.g. space breadcrumbs) */
     renderRoomPath?: (room: Room) => ReactNode;
     /** Fork: optional function to render the previewed message's delivery state (its ticks) */
-    renderSendState?: (state: RoomListItemSendState) => ReactNode;
+    renderSendState?: (state: RoomListItemSendState, readers: string[] | undefined, room: Room) => ReactNode;
     /** Whether the item is being dragged */
     isDragging?: boolean;
 }
@@ -59,7 +59,7 @@ export const RoomListItemContent = memo(function RoomListItemContent({
             <Flex className={styles.content} gap="var(--cpd-space-2x)" align="center" justify="space-between">
                 {/* We truncate the room name when too long. Title here is to show the full name on hover */}
                 <div className={styles.ellipsis}>
-                    {/* Fork: the name line, with the last message's ticks at its end when it is ours, as in Telegram */}
+                    {/* Fork: the name line, with the time of the room's last activity at its end, as in Telegram Web */}
                     <div className={styles.nameLine}>
                         <div className={styles.roomName} title={item.name} data-testid="room-name">
                             {item.name}
@@ -72,36 +72,45 @@ export const RoomListItemContent = memo(function RoomListItemContent({
                                 </Tooltip>
                             )}
                         </div>
-                        {item.messagePreviewSendState && renderSendState && (
-                            <span className={styles.sendState} data-testid="room-send-state">
-                                {renderSendState(item.messagePreviewSendState)}
-                            </span>
+                        {item.lastActivity && (
+                            <Text as="span" size="sm" className={styles.time} data-testid="room-time">
+                                {item.lastActivity}
+                            </Text>
                         )}
                     </div>
 
-                    {item.messagePreview && (
-                        <Text as="div" size="sm" className={styles.preview} title={item.messagePreview}>
-                            {item.messagePreviewThumbnail && item.messagePreviewThumbnailIsReply && (
-                                <ReplyIcon
-                                    className={styles.previewReplyIcon}
-                                    width="14px"
-                                    height="14px"
-                                    aria-hidden={true}
-                                    data-testid="preview-reply-icon"
-                                />
-                            )}
-                            {item.messagePreviewThumbnail && (
-                                <img
-                                    className={styles.previewThumbnail}
-                                    src={item.messagePreviewThumbnail}
-                                    alt=""
-                                    loading="lazy"
-                                    decoding="async"
-                                />
-                            )}
-                            <span className={styles.ellipsis}>{item.messagePreview}</span>
-                        </Text>
-                    )}
+                    {/* Fork: the second line - the last message, then its ticks (or who has read it) and the unread
+                        badge at its end, as in Telegram Web. Drawn without a preview too, for the badge. */}
+                    <Text as="div" size="sm" className={styles.preview} title={item.messagePreview}>
+                        {item.messagePreviewThumbnail && item.messagePreviewThumbnailIsReply && (
+                            <ReplyIcon
+                                className={styles.previewReplyIcon}
+                                width="14px"
+                                height="14px"
+                                aria-hidden={true}
+                                data-testid="preview-reply-icon"
+                            />
+                        )}
+                        {item.messagePreviewThumbnail && (
+                            <img
+                                className={styles.previewThumbnail}
+                                src={item.messagePreviewThumbnail}
+                                alt=""
+                                loading="lazy"
+                                decoding="async"
+                            />
+                        )}
+                        <span className={styles.ellipsis}>{item.messagePreview}</span>
+                        {item.messagePreviewSendState && renderSendState && (
+                            <span className={styles.sendState} data-testid="room-send-state">
+                                {renderSendState(item.messagePreviewSendState, item.messagePreviewReaders, item.room)}
+                            </span>
+                        )}
+                        {/* aria-hidden because we summarise the unread count/notification status in a11yLabel */}
+                        <span className={styles.notificationDecoration} aria-hidden={true}>
+                            <NotificationDecoration {...item.notification} />
+                        </span>
+                    </Text>
                 </div>
                 {!isDragging && (item.showMoreOptionsMenu || item.showNotificationMenu) && (
                     <RoomListItemHoverMenu
@@ -110,11 +119,6 @@ export const RoomListItemContent = memo(function RoomListItemContent({
                         vm={vm}
                     />
                 )}
-
-                {/* aria-hidden because we summarise the unread count/notification status in a11yLabel */}
-                <div className={styles.notificationDecoration} aria-hidden={true}>
-                    <NotificationDecoration {...item.notification} />
-                </div>
             </Flex>
         </Flex>
     );

@@ -2461,6 +2461,10 @@
             "go_to_next_message": "View the pinned message in the timeline and the next oldest pinned message here",
             "title": "<bold>%(index)s of %(length)s</bold> Pinned messages"
         },
+        "read_by_count": {
+            "one": "Read by %(count)s person",
+            "other": "Read by %(count)s people"
+        },
         "read_topic": "Click to read topic",
         "rejecting": "Rejecting invite…",
         "rejoin_button": "Re-join",

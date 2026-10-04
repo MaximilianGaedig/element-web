@@ -27,6 +27,9 @@ Please see LICENSE files in the repository root for full details.
     position: relative;
     height: 100%;
     background-color: var(--cpd-color-bg-canvas-default);
+    /* tweb #column-left: a hairline between the chat list and the chat, so the two read as separate columns
+       where their backgrounds are close. */
+    border-inline-end: 1px solid var(--cpd-color-separator-primary);
 }
 
 .mx_TgColumns_list {
@@ -283,5 +286,23 @@ Please see LICENSE files in the repository root for full details.
             transform: translate3d(calc(-25vw * (1 - var(--TgColumns-swipe-progress))), 0, 0);
             opacity: var(--TgColumns-swipe-progress);
         }
+    }
+}
+
+/*
+ * Who has read our last message in a group, at the end of its line in the chat list: their avatars
+ * overlapping as Telegram stacks readers, each ringed in the row's background so the overlap reads.
+ */
+.mx_RoomListReaders {
+    display: inline-flex;
+    align-items: center;
+
+    > * {
+        box-shadow: 0 0 0 1.5px var(--cpd-color-bg-canvas-default);
+        border-radius: 50%;
+    }
+
+    > * + * {
+        margin-inline-start: -5px;
     }
 }

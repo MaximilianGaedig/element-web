@@ -46,7 +46,9 @@ import { getCustomSectionData, isDefaultSectionTag } from "../../stores/room-lis
 import { getBridgeBots } from "../../utils/bridge/bridgeInfo";
 import { _t } from "../../languageHandler";
 import { fetchUserStatus } from "../../utils/userStatus";
-import { getPreviewSendState } from "../../utils/telegram/previewSendState";
+import { getPreviewReaders, getPreviewSendState } from "../../utils/telegram/previewSendState";
+import { formatRelativeTime } from "../../DateUtils";
+import { getLastTimestamp } from "../../stores/room-list-v3/skip-list/sorters/utils/getLastTimestamp";
 import { MessageSendStatusStore } from "../../utils/bridge/messageSendStatus";
 import { onBridgeStatusChange } from "../../utils/chatHistory";
 
@@ -271,8 +273,14 @@ export class RoomListItemViewModel
         if (this.disposables.isDisposed) return;
         const { room, client } = this.props;
         const messagePreviewSendState = getPreviewSendState(client, room, this.previewEvent);
+        const readers = messagePreviewSendState ? getPreviewReaders(client, room, this.previewEvent) : undefined;
         this.watchSendState(messagePreviewSendState ? this.previewEvent : undefined);
-        this.snapshot.merge({ messagePreviewSendState });
+        this.snapshot.merge({
+            messagePreviewSendState,
+            messagePreviewReaders: keepIfSame(this.snapshot.current.messagePreviewReaders, readers),
+            // The line's time follows the room's activity, which events arriving here move.
+            lastActivity: RoomListItemViewModel.formatLastActivity(room, client),
+        });
     }
 
     /** Fork: watch the bridge's reports about `event` (ours), or stop watching with none. */
@@ -319,6 +327,7 @@ export class RoomListItemViewModel
             messagePreviewThumbnail: this.snapshot.current.messagePreviewThumbnail,
             messagePreviewThumbnailIsReply: this.snapshot.current.messagePreviewThumbnailIsReply,
             messagePreviewSendState: this.snapshot.current.messagePreviewSendState,
+            messagePreviewReaders: this.snapshot.current.messagePreviewReaders,
         });
     }
 
@@ -402,6 +411,13 @@ export class RoomListItemViewModel
      * Generate a complete RoomListItem with all synchronous data.
      * Message preview is loaded separately to avoid blocking initial render.
      */
+    /** Fork: the time on the room's line - when it was last active, as Element writes a time relative to today. */
+    private static formatLastActivity(room: Room, client: MatrixClient): string | undefined {
+        const ts = getLastTimestamp(room, client.getSafeUserId());
+        if (ts <= 0) return undefined;
+        return formatRelativeTime(new Date(ts), SettingsStore.getValue("showTwelveHourTimestamps"));
+    }
+
     private static generateItemSync(
         room: Room,
         client: MatrixClient,
@@ -474,6 +490,7 @@ export class RoomListItemViewModel
             id: room.roomId,
             room,
             name: room.name,
+            lastActivity: RoomListItemViewModel.formatLastActivity(room, client),
             messagePreview,
             notification: {
                 hasAnyNotificationOrActivity: notifState.hasAnyNotificationOrActivity || hasParticipantsInCall,

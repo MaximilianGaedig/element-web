@@ -106,6 +106,13 @@
 .content {
     flex: 1;
     min-width: 0;
+
+    /* Fork: the name and message lines take the row's width, so the time and the badge at their ends sit at
+       its right edge rather than after the text. */
+    > .ellipsis {
+        flex: 1 1 auto;
+        min-width: 0;
+    }
 }
 
 .text {
@@ -176,6 +183,20 @@
     flex-shrink: 0;
     display: inline-flex;
     align-items: center;
+}
+
+/* Fork: the unread badge, at the end of the second line as in Telegram Web. */
+.notificationDecoration {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+}
+
+/* Fork: when the room was last active, at the end of the name line in tweb's .dialog-subtitle grey. */
+.time {
+    flex-shrink: 0;
+    color: var(--cpd-color-text-secondary);
+    font-variant-numeric: tabular-nums;
 }
 
 .userStatusEmoji {
