@@ -10,7 +10,6 @@ import { type MatrixEvent } from "matrix-js-sdk/src/matrix";
 import { MatrixClientPeg } from "../../MatrixClientPeg";
 import { hasDisappeared } from "./disappearingMessages";
 import { backfillStatusOf } from "../chatHistory";
-import { getBridgeBots } from "./bridgeInfo";
 
 /** Set by bridges on state changes that are bookkeeping, e.g. syncing members or implicit names. */
 export const EXCLUDE_FROM_TIMELINE_KEY = "com.beeper.exclude_from_timeline";
@@ -39,25 +38,11 @@ function isBridgedSelfJoinOrLeave(ev: MatrixEvent): boolean {
 }
 
 /**
- * The bridge's bot inviting someone other than you: the bridge bringing a person from the other network into
- * the member list, just before their (hidden) join. A Messenger group opened on a wall of "Facebook bridge bot
- * invited ..." for every member. An invite of you still shows, as do invites anyone else sends.
- */
-function isBridgeBotInvite(ev: MatrixEvent): boolean {
-    if (ev.getType() !== "m.room.member" || ev.getContent().membership !== "invite") return false;
-    const client = MatrixClientPeg.get();
-    const room = client?.getRoom(ev.getRoomId());
-    if (!room || ev.getStateKey() === client?.getUserId()) return false;
-    return getBridgeBots(room).has(ev.getSender() ?? "");
-}
-
-/**
  * Timeline hiding rules for mautrix bridge extensions, consulted by shouldHideEvent.
  */
 export function shouldHideBridgeEvent(ev: MatrixEvent): boolean {
     if (ev.isState() && ev.getContent()[EXCLUDE_FROM_TIMELINE_KEY] === true) return true;
     if (isBridgedSelfJoinOrLeave(ev)) return true;
-    if (isBridgeBotInvite(ev)) return true;
     // Thread roots stay visible so the thread remains reachable, as in shouldHideEvent.
     if (ev.isRedacted() && !ev.getThread()) {
         const redaction = ev.getRedactionEvent();
