@@ -42,6 +42,7 @@ exports[`Spotlight Dialog > metaspaces > should show Home metaspace 1`] = `
         autocapitalize="off"
         autocomplete="off"
         autocorrect="off"
+        enterkeyhint="search"
         placeholder="Search"
         spellcheck="false"
         type="text"

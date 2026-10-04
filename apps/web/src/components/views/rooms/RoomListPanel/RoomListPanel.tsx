@@ -8,7 +8,7 @@ Please see LICENSE files in the repository root for full details.
 import React, { useState, useCallback, useContext } from "react";
 import { Flex, RoomListHeaderView, useCreateAutoDisposedViewModel } from "@element-hq/web-shared-components";
 import { IconButton } from "@vector-im/compound-web";
-import FoundIcon from "@vector-im/compound-design-tokens/assets/web/icons/search";
+import FoundIcon from "@vector-im/compound-design-tokens/assets/web/icons/list-bulleted";
 
 import { shouldShowComponent } from "../../../../customisations/helpers/UIComponents";
 import { UIComponent } from "../../../../settings/UIFeature";
@@ -98,6 +98,10 @@ export const RoomListPanel: React.FC = () => {
                 <>
                     {/*
                      * Fork: what is in these chats, beside the list's own menu.
+                     *
+                     * Not a magnifier: this is not a search. It lists what the chats contain by kind (dates, numbers,
+                     * addresses, links), and a magnifier here promised the search that is one tap away in the bar
+                     * at the foot, with messages among its filters.
                      *
                      * It belongs here rather than in the bar at the foot: the bar says which of the three
                      * views this column is showing, and this opens something over all of them - it is not a

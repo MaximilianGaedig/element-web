@@ -21,7 +21,7 @@ import {
 } from "matrix-js-sdk/src/matrix";
 import { KnownMembership } from "matrix-js-sdk/src/types";
 import { sanitizeHtml } from "@element-hq/element-web-shared-utils";
-import { fireEvent, render, screen, waitFor } from "test-utils-rtl";
+import { act, fireEvent, render, screen, waitFor } from "test-utils-rtl";
 import { flushPromisesWithFakeTimers, mkRoom, stubClient } from "test-utils";
 
 import SpotlightDialog from "./SpotlightDialog";
@@ -41,6 +41,12 @@ import { SDKContextClass } from "../../../../contexts/SDKContextClass";
 vi.useFakeTimers({ shouldAdvanceTime: true });
 
 vi.mock("../../../../utils/Feedback");
+
+// Searching messages is its own tests' business (SpotlightMessages.test.tsx): here it finds nothing.
+vi.mock("../../../../Searching", () => ({
+    default: vi.fn(async () => ({ results: [], highlights: [] })),
+    searchPagination: vi.fn(),
+}));
 
 vi.mock("../../../../utils/direct-messages", async () => ({
     // @ts-ignore
@@ -186,8 +192,13 @@ describe("Spotlight Dialog", () => {
     it("should not fall into a filter when the query matches nothing", async () => {
         render(<SpotlightDialog initialText="zzzznothingmatchesthis" onFinished={() => null} />);
 
-        vi.advanceTimersByTime(200);
-        await flushPromisesWithFakeTimers();
+        await act(async () => {
+            vi.advanceTimersByTime(400);
+            await flushPromisesWithFakeTimers();
+        });
+
+        // The entry the arrows start on is chosen a tick after the results land.
+        await act(async () => vi.advanceTimersByTime(10));
 
         expect(screen.getByText("No results found")).toBeInTheDocument();
 
@@ -199,8 +210,10 @@ describe("Spotlight Dialog", () => {
     it("should not offer the enter shortcut on the no results entry", async () => {
         render(<SpotlightDialog initialText="zzzznothingmatchesthis" onFinished={() => null} />);
 
-        vi.advanceTimersByTime(200);
-        await flushPromisesWithFakeTimers();
+        await act(async () => {
+            vi.advanceTimersByTime(400);
+            await flushPromisesWithFakeTimers();
+        });
 
         const noResults = document.querySelector("#mx_SpotlightDialog_button_noResults")!;
         expect(noResults.querySelector(".mx_SpotlightDialog_enterPrompt")).not.toBeInTheDocument();
@@ -212,8 +225,10 @@ describe("Spotlight Dialog", () => {
     it("should expose the no results entry as an unavailable option rather than a button", async () => {
         render(<SpotlightDialog initialText="zzzznothingmatchesthis" onFinished={() => null} />);
 
-        vi.advanceTimersByTime(200);
-        await flushPromisesWithFakeTimers();
+        await act(async () => {
+            vi.advanceTimersByTime(400);
+            await flushPromisesWithFakeTimers();
+        });
 
         const noResults = document.querySelector("#mx_SpotlightDialog_button_noResults")!;
         expect(noResults).toHaveAttribute("aria-disabled", "true");
@@ -703,20 +718,18 @@ describe("Spotlight Dialog", () => {
         });
     });
 
-    it("should allow jumping into message search", async () => {
+    it("should search messages in the same view", async () => {
         const onFinished = vi.fn();
         render(<SpotlightDialog initialText="search term" onFinished={onFinished} />);
         vi.advanceTimersByTime(200);
         await flushPromisesWithFakeTimers();
 
-        fireEvent.click(screen.getByText("Messages"));
+        fireEvent.click(document.getElementById("mx_SpotlightDialog_button_searchMessages")!);
 
-        expect(defaultDispatcher.dispatch).toHaveBeenCalledWith(
-            expect.objectContaining({
-                action: Action.FocusMessageSearch,
-                initialText: "search term",
-            }),
-        );
+        // The same view, narrowed to messages: not a jump to some other search.
+        expect(screen.getByPlaceholderText("Search messages")).toBeInTheDocument();
+        expect(screen.getByRole("button", { name: "Media" })).toBeInTheDocument();
+        expect(onFinished).not.toHaveBeenCalled();
     });
 
     describe("keyboard prompt filter and query checks", () => {
@@ -771,6 +784,11 @@ describe("Spotlight Dialog", () => {
             await waitFor(() =>
                 expect(container.querySelector(".mx_SpotlightDialog_metaspaceResult")).toBeInTheDocument(),
             );
+            // Past the message search, which has nothing to add.
+            await act(async () => {
+                vi.advanceTimersByTime(400);
+                await flushPromisesWithFakeTimers();
+            });
             expect(asFragment()).toMatchSnapshot();
         });
     });

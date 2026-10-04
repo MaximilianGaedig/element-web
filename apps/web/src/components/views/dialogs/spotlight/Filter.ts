@@ -10,4 +10,6 @@ export enum Filter {
     People,
     PublicRooms,
     PublicSpaces,
+    /** What was said, across every chat: the search view's Messages group as a view of its own. */
+    Messages,
 }
