@@ -181,15 +181,32 @@ describe("<RoomListItemView />", () => {
         expect(look(unread.getByTestId("room-name"))).toBe(readName);
     });
 
-    it("shows the last message's ticks at the end of the name line when it is ours", () => {
+    // The time ends the name line; the ticks sit on the message line, in front of the unread badge, as in Telegram.
+    it("puts the time at the end of the name line and our last message's ticks on the message line", () => {
         render(
-            <Default
+            <WithNotification
+                lastActivity="12:30"
                 messagePreviewSendState="read"
                 renderSendState={(state) => <span data-testid="ticks">{state}</span>}
             />,
         );
-        expect(screen.getByTestId("room-send-state")).toContainElement(screen.getByTestId("ticks"));
+        const ticks = screen.getByTestId("room-send-state");
+        expect(ticks).toContainElement(screen.getByTestId("ticks"));
         expect(screen.getByTestId("ticks")).toHaveTextContent("read");
+
+        const name = screen.getByTestId("room-name").getBoundingClientRect();
+        const time = screen.getByTestId("room-time").getBoundingClientRect();
+        const row = screen.getByRole("option").getBoundingClientRect();
+        const ticksBox = ticks.getBoundingClientRect();
+        const badge = screen.getByTestId("notification-decoration").getBoundingClientRect();
+
+        // Name line: the time is on the name's line, after it, and not on the message line.
+        expect(time.top).toBeLessThan(name.bottom);
+        expect(time.left).toBeGreaterThanOrEqual(name.right);
+        // Message line: below the name, ticks left of the badge, the badge nearer the row's right edge.
+        expect(ticksBox.top).toBeGreaterThanOrEqual(name.bottom);
+        expect(ticksBox.right).toBeLessThanOrEqual(badge.left);
+        expect(badge.right).toBeLessThanOrEqual(row.right);
     });
 
     it("shows no ticks when the last message is not ours", () => {
