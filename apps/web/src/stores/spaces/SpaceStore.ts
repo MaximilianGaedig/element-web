@@ -138,6 +138,8 @@ export default class SpaceStore extends AsyncStoreWithClient<EmptyObject> {
     private spaceOrderLocalEchoMap = new Map<string, string | undefined>();
     // The following properties are set by onReady as they live in account_data
     private _allRoomsInHome = false;
+    /** Set while new rooms wait to be worked into the spaces: see scheduleRoomsUpdate. */
+    private roomsUpdateTimer?: ReturnType<typeof setTimeout>;
     private _enabledMetaSpaces: MetaSpace[] = [];
     /** Whether the feature flag is set for MSC3946 */
     private _msc3946ProcessDynamicPredecessor: boolean = SettingsStore.getValue("feature_dynamic_room_predecessors");
@@ -481,6 +483,7 @@ export default class SpaceStore extends AsyncStoreWithClient<EmptyObject> {
             );
         }
 
+        this.flushRoomsUpdate();
         // meta spaces never have descendants
         // and the aggregate cache is not managed for meta spaces
         if (!includeDescendantSpaces || isMetaSpace(space)) {
@@ -502,6 +505,7 @@ export default class SpaceStore extends AsyncStoreWithClient<EmptyObject> {
             return undefined;
         }
 
+        this.flushRoomsUpdate();
         // meta spaces never have descendants
         // and the aggregate cache is not managed for meta spaces
         if (!includeDescendantSpaces || isMetaSpace(space)) {
@@ -741,7 +745,24 @@ export default class SpaceStore extends AsyncStoreWithClient<EmptyObject> {
         }
     };
 
+    /**
+     * Works a new room into the spaces once the rooms arriving with it are all in. Rooms come in bursts - a sync
+     * response, the last session's cache - and working every space's rooms out again for each one was quadratic:
+     * over a second for 700 rooms. Anything that reads the spaces before then gets the update first
+     * (flushRoomsUpdate).
+     */
+    private scheduleRoomsUpdate(): void {
+        this.roomsUpdateTimer ??= setTimeout(this.onRoomsUpdate, 0);
+    }
+
+    /** Does a scheduled update now, for a reader that must see the rooms that have arrived. */
+    private flushRoomsUpdate(): void {
+        if (this.roomsUpdateTimer !== undefined) this.onRoomsUpdate();
+    }
+
     private onRoomsUpdate = (): void => {
+        clearTimeout(this.roomsUpdateTimer);
+        this.roomsUpdateTimer = undefined;
         if (!this.matrixClient) return;
         const visibleRooms = this.matrixClient.getVisibleRooms(this._msc3946ProcessDynamicPredecessor);
 
@@ -910,7 +931,7 @@ export default class SpaceStore extends AsyncStoreWithClient<EmptyObject> {
         const membership = newMembership || roomMembership;
 
         if (!room.isSpaceRoom()) {
-            this.onRoomsUpdate();
+            this.scheduleRoomsUpdate();
 
             if (membership === KnownMembership.Join) {
                 // the user just joined a room, remove it from the suggested list if it was there
@@ -1018,7 +1039,7 @@ export default class SpaceStore extends AsyncStoreWithClient<EmptyObject> {
                 break;
             case EventType.RoomCreate:
                 // The room might become a video room. We need to tag it for that videoRooms space.
-                this.onRoomsUpdate();
+                this.scheduleRoomsUpdate();
                 break;
         }
     };
@@ -1112,6 +1133,8 @@ export default class SpaceStore extends AsyncStoreWithClient<EmptyObject> {
             this.matrixClient.removeListener(RoomStateEvent.Members, this.onRoomStateMembers);
             this.matrixClient.removeListener(ClientEvent.AccountData, this.onAccountData);
         }
+        clearTimeout(this.roomsUpdateTimer);
+        this.roomsUpdateTimer = undefined;
         await this.reset();
     }
 

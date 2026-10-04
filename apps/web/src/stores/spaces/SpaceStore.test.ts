@@ -831,6 +831,38 @@ describe("SpaceStore", () => {
                 client.emit(RoomStateEvent.Members, memberEvent, spaceRoom.currentState, user);
             };
 
+            // The cache of the last session and a large sync bring hundreds of rooms at once. Working every space's
+            // rooms out again for each of them made taking 700 rooms in quadratic (MEO-118).
+            it("works a burst of new rooms into the spaces once, not once per room", async () => {
+                await run();
+                const getVisibleRooms = vi.mocked(client).getVisibleRooms;
+                const workInRooms = (count: number, prefix: string): number => {
+                    getVisibleRooms.mockClear();
+                    for (let i = 0; i < count; i++) {
+                        client.emit(RoomEvent.MyMembership, mkRoom(`!${prefix}${i}:server`), KnownMembership.Join);
+                    }
+                    vi.runOnlyPendingTimers();
+                    return getVisibleRooms.mock.calls.length;
+                };
+
+                const forOne = workInRooms(1, "one");
+                expect(forOne).toBeGreaterThan(0);
+                expect(workInRooms(50, "burst")).toBe(forOne);
+            });
+
+            it("puts a room from a burst in its space for anyone who asks before the burst is over", async () => {
+                const space5 = "!space5:server";
+                const late = "!late:server";
+                mkSpace(space5, [late]);
+                await run();
+                expect(store.isRoomInSpace(space5, late)).toBeFalsy();
+
+                client.emit(RoomEvent.MyMembership, mkRoom(late), KnownMembership.Join);
+
+                // no timer has run: reading the space works the pending room in first
+                expect(store.isRoomInSpace(space5, late)).toBeTruthy();
+            });
+
             it("emits events for parent spaces when child room is added", async () => {
                 await run();
 
