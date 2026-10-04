@@ -24,6 +24,7 @@ import {
     type MatrixEvent,
     type Room,
     RoomEvent,
+    RoomType,
     type SlidingSyncCache,
     type SlidingSyncSnapshot,
 } from "matrix-js-sdk/src/matrix";
@@ -165,6 +166,16 @@ export function fromNewestMessage(room: CachedRoom): CachedRoom {
 }
 
 /** What a cached room is replayed as: complete as far as it goes, with its earlier history to be asked for. */
+/**
+ * Whether a cached room is a space. Spaces have no messages, so no bump_stamp: by recency they come last, and the
+ * space bar filled in only as the rest of the cache was replayed.
+ */
+function isSpace(cached: CachedRoom): boolean {
+    return cached.required_state.some(
+        (event) => event.type === EventType.RoomCreate && event.content?.type === RoomType.Space,
+    );
+}
+
 function asRoomData(cached: CachedRoom): MSC3575RoomData {
     const room = fromNewestMessage(cached);
     return { ...room, name: room.name ?? "", initial: true, limited: true, num_live: 0, prev_batch: room.prev_batch };
@@ -391,7 +402,7 @@ export class SlidingSyncCacheStore implements SlidingSyncCache {
         const first: Record<string, MSC3575RoomData> = {};
         const rest: Record<string, MSC3575RoomData> = {};
         byRecency.forEach(([roomId, room], index) => {
-            const toFirst = index < FIRST_ROOMS || favourite.has(roomId) || !!room.invite_state;
+            const toFirst = index < FIRST_ROOMS || favourite.has(roomId) || !!room.invite_state || isSpace(room);
             (toFirst ? first : rest)[roomId] = asRoomData(room);
         });
         const global = [...this.globalAccountData.values()];
