@@ -125,7 +125,7 @@ import { NotificationLevel } from "../../stores/notifications/NotificationLevel"
 import { UserTab } from "../views/dialogs/UserTab";
 import { type UserSettingsPageProps } from "../views/settings/UserSettingsPage";
 import { roomListPanelView, setRoomListPanelView, subscribeRoomListPanelView } from "../../utils/roomListPanelView";
-import { setUserSettingsSection } from "../../utils/userSettingsSection";
+import { rememberedUserSettingsSection, setUserSettingsSection } from "../../utils/userSettingsSection";
 import { shouldSkipSetupEncryption } from "../../utils/crypto/shouldSkipSetupEncryption";
 import { Filter } from "../views/dialogs/spotlight/Filter";
 import { SessionLockStolenView } from "./auth/SessionLockStolenView";
@@ -1156,7 +1156,11 @@ export default class MatrixChat extends React.PureComponent<IProps, IState> {
             logger.warn("Ignoring a request to open the settings outside the logged-in view");
             return;
         }
-        if (this.state.page_type !== PageType.Settings) this.roomBeforeSettings = this.state.currentRoomId;
+        if (this.state.page_type !== PageType.Settings) {
+            this.roomBeforeSettings = this.state.currentRoomId;
+            // Coming back to the settings, from the chats or the people: to where they were left.
+            section ??= rememberedUserSettingsSection();
+        }
         const known = section && Object.values(UserTab).includes(section) ? section : undefined;
         this.setStateForNewView({
             view: Views.LOGGED_IN,

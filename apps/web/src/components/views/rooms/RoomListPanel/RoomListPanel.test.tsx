@@ -86,7 +86,7 @@ describe("<RoomListPanel />", () => {
         renderComponent();
         expect(screen.queryByTestId("room-list-header")).toBeNull();
         expect(screen.getByRole("heading", { name: "Settings" })).toBeInTheDocument();
-        expect(screen.getByRole("button", { name: "Account" })).toBeInTheDocument();
+        expect(screen.getByRole("option", { name: "Account" })).toBeInTheDocument();
         // The bar stays, to go anywhere else from here.
         expect(screen.getByRole("button", { name: "Messages" })).toBeInTheDocument();
     });

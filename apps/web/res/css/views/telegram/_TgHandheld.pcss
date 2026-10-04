@@ -352,7 +352,7 @@ html[data-tg-screen="mobile"] {
         border-radius: 0;
         font: var(--cpd-font-body-lg-regular);
 
-        &[aria-current="page"] {
+        &[aria-selected="true"] {
             background: none;
 
             > svg {
@@ -403,7 +403,8 @@ html[data-tg-screen="mobile"] {
     }
 
     .mx_UserSettingsPage_body {
-        padding: var(--cpd-space-4x) var(--cpd-space-4x) calc(var(--cpd-space-8x) + var(--tg-safe-bottom, 0px));
+        /* Clear of the navigation floating over the foot of the page. */
+        padding: var(--cpd-space-4x) var(--cpd-space-4x) var(--mx-room-list-toast-bottom);
 
         > .mx_SettingsTab {
             max-width: none;
@@ -411,6 +412,6 @@ html[data-tg-screen="mobile"] {
     }
 
     .mx_UserSettingsPage_toastContainer {
-        bottom: calc(var(--cpd-space-6x) + var(--tg-safe-bottom, 0px));
+        bottom: var(--mx-room-list-toast-bottom);
     }
 }

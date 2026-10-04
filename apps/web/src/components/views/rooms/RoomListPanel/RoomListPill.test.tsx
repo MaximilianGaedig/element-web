@@ -18,6 +18,7 @@ import { clearSearch, panelSearch } from "../../../../utils/panelSearch";
 import defaultDispatcher from "../../../../dispatcher/dispatcher";
 import { Action } from "../../../../dispatcher/actions";
 import { isAddingContact, setAddingContact } from "../../../../utils/contacts/adding";
+import { onSettingsFocusRequest } from "../../../../utils/settingsFocus";
 import { setBarActions } from "../../../../utils/roomListBarActions";
 
 afterEach(() => {
@@ -158,14 +159,18 @@ describe("RoomListPill", () => {
         expect(dispatch).not.toHaveBeenCalledWith({ action: Action.ViewUserSettings });
     });
 
-    /* There is nothing in the list of sections to filter: search there is the app's own, as over the chats. */
-    it("opens the app's search over the settings", async () => {
+    /* The settings have a search field of their own at the head of their list: the button goes there. */
+    it("asks the settings' search field for the focus over the settings", async () => {
         const fire = vi.spyOn(defaultDispatcher, "fire");
+        const focus = vi.fn();
+        const stop = onSettingsFocusRequest(focus);
         setRoomListPanelView("settings");
         render(<RoomListPill />);
         await userEvent.click(screen.getByRole("button", { name: "Search" }));
-        expect(fire).toHaveBeenCalledWith(Action.OpenSpotlight);
+        expect(focus).toHaveBeenCalledWith("search");
+        expect(fire).not.toHaveBeenCalledWith(Action.OpenSpotlight);
         expect(screen.queryByRole("searchbox")).toBeNull();
+        stop();
     });
 
     it("can leave search out entirely", () => {

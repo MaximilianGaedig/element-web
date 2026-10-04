@@ -48,15 +48,95 @@ const parseDeviceExtendedInformation = (matrixClient: MatrixClient, device: IMyD
 export async function fetchExtendedDeviceInformation(matrixClient: MatrixClient): Promise<DevicesDictionary> {
     const { devices } = await matrixClient.getDevices();
 
+    // Together, not one after another: each asks the crypto layer, and a long list of sessions is that many
+    // round trips in a row otherwise.
+    const verified = await Promise.all(devices.map((device) => isDeviceVerified(matrixClient, device.device_id)));
+
     const devicesDict: DevicesDictionary = {};
-    for (const device of devices) {
+    devices.forEach((device, index) => {
         devicesDict[device.device_id] = {
             ...device,
-            isVerified: await isDeviceVerified(matrixClient, device.device_id),
+            isVerified: verified[index],
             ...parseDeviceExtendedInformation(matrixClient, device),
         };
-    }
+    });
     return devicesDict;
+}
+
+interface OwnDevicesSnapshot {
+    devices: DevicesDictionary;
+    pushers: IPusher[];
+    localNotificationSettings: Map<string, LocalNotificationSettings>;
+    dehydratedDeviceId: string | undefined;
+}
+
+async function fetchSnapshot(matrixClient: MatrixClient): Promise<OwnDevicesSnapshot> {
+    const ownUserId = matrixClient.getUserId()!;
+    // Nothing here depends on anything else here: the three asks go out together.
+    const [devices, { pushers }, userDevices] = await Promise.all([
+        fetchExtendedDeviceInformation(matrixClient),
+        matrixClient.getPushers(),
+        matrixClient.getCrypto()?.getUserDeviceInfo([ownUserId]),
+    ]);
+
+    const localNotificationSettings = new Map<string, LocalNotificationSettings>();
+    Object.keys(devices).forEach((deviceId) => {
+        const eventType = `${LOCAL_NOTIFICATION_SETTINGS_PREFIX.name}.${deviceId}` as const;
+        const event = matrixClient.getAccountData(eventType);
+        if (event) {
+            localNotificationSettings.set(deviceId, event.getContent());
+        }
+    });
+
+    const dehydratedDeviceIds: string[] = [];
+    for (const device of userDevices?.get(ownUserId)?.values() ?? []) {
+        if (device.dehydrated) {
+            dehydratedDeviceIds.push(device.deviceId);
+        }
+    }
+    // If the user has exactly one device marked as dehydrated, we consider
+    // that as the dehydrated device, and hide it as a normal device (but
+    // indicate that the user is using a dehydrated device).  If the user has
+    // more than one, that is anomalous, and we show all the devices so that
+    // nothing is hidden.
+    return {
+        devices,
+        pushers,
+        localNotificationSettings,
+        dehydratedDeviceId: dehydratedDeviceIds.length == 1 ? dehydratedDeviceIds[0] : undefined,
+    };
+}
+
+/*
+ * The last list of sessions fetched, per client, and the fetch in flight. The settings are a page now, so
+ * the section is opened and left as often as the person moves around, and each time it started from nothing
+ * and waited for the server; it now shows what was last known at once and refreshes under it. The fetch
+ * can also be started before the section is (prefetchOwnDevices), when the settings column opens.
+ */
+const snapshots = new WeakMap<MatrixClient, OwnDevicesSnapshot>();
+const inFlight = new WeakMap<MatrixClient, Promise<OwnDevicesSnapshot>>();
+
+/** `fresh`: after a change, when a fetch begun before it would be out of date by the time it answered. */
+function loadOwnDevices(matrixClient: MatrixClient, fresh = false): Promise<OwnDevicesSnapshot> {
+    let pending = inFlight.get(matrixClient);
+    if (!pending || fresh) {
+        const started: Promise<OwnDevicesSnapshot> = fetchSnapshot(matrixClient)
+            .then((snapshot) => {
+                snapshots.set(matrixClient, snapshot);
+                return snapshot;
+            })
+            .finally(() => {
+                if (inFlight.get(matrixClient) === started) inFlight.delete(matrixClient);
+            });
+        inFlight.set(matrixClient, started);
+        pending = started;
+    }
+    return pending;
+}
+
+/** Starts fetching the sessions ahead of the section that shows them; failures are the section's to show. */
+export function prefetchOwnDevices(matrixClient: MatrixClient): void {
+    void loadOwnDevices(matrixClient).catch(() => {});
 }
 
 export enum OwnDevicesError {
@@ -85,13 +165,16 @@ export const useOwnDevices = (): DevicesState => {
     const currentDeviceId = matrixClient.getDeviceId()!;
     const userId = matrixClient.getSafeUserId();
 
-    const [devices, setDevices] = useState<DevicesState["devices"]>({});
-    const [dehydratedDeviceId, setDehydratedDeviceId] = useState<DevicesState["dehydratedDeviceId"]>(undefined);
-    const [pushers, setPushers] = useState<DevicesState["pushers"]>([]);
+    const cached = snapshots.get(matrixClient);
+    const [devices, setDevices] = useState<DevicesState["devices"]>(cached?.devices ?? {});
+    const [dehydratedDeviceId, setDehydratedDeviceId] = useState<DevicesState["dehydratedDeviceId"]>(
+        cached?.dehydratedDeviceId,
+    );
+    const [pushers, setPushers] = useState<DevicesState["pushers"]>(cached?.pushers ?? []);
     const [localNotificationSettings, setLocalNotificationSettings] = useState<
         DevicesState["localNotificationSettings"]
-    >(new Map<string, LocalNotificationSettings>());
-    const [isLoadingDeviceList, setIsLoadingDeviceList] = useState(true);
+    >(cached?.localNotificationSettings ?? new Map<string, LocalNotificationSettings>());
+    const [isLoadingDeviceList, setIsLoadingDeviceList] = useState(!cached);
     const [supportsMSC3881, setSupportsMSC3881] = useState(true); // optimisticly saying yes!
 
     const [error, setError] = useState<OwnDevicesError>();
@@ -102,56 +185,37 @@ export const useOwnDevices = (): DevicesState => {
         });
     }, [matrixClient]);
 
-    const refreshDevices = useCallback(async (): Promise<void> => {
-        setIsLoadingDeviceList(true);
-        try {
-            const devices = await fetchExtendedDeviceInformation(matrixClient);
-            setDevices(devices);
-
-            const { pushers } = await matrixClient.getPushers();
-            setPushers(pushers);
-
-            const notificationSettings = new Map<string, LocalNotificationSettings>();
-            Object.keys(devices).forEach((deviceId) => {
-                const eventType = `${LOCAL_NOTIFICATION_SETTINGS_PREFIX.name}.${deviceId}` as const;
-                const event = matrixClient.getAccountData(eventType);
-                if (event) {
-                    notificationSettings.set(deviceId, event.getContent());
+    const refresh = useCallback(
+        async (quietly: boolean, fresh = false): Promise<void> => {
+            // Over what is already shown, a refresh of it is not a reason to draw the skeleton again.
+            if (!quietly) setIsLoadingDeviceList(true);
+            try {
+                const snapshot = await loadOwnDevices(matrixClient, fresh);
+                setDevices(snapshot.devices);
+                setPushers(snapshot.pushers);
+                setLocalNotificationSettings(snapshot.localNotificationSettings);
+                setDehydratedDeviceId(snapshot.dehydratedDeviceId);
+                setError(undefined);
+                setIsLoadingDeviceList(false);
+            } catch (error) {
+                if ((error as MatrixError).httpStatus == 404) {
+                    // 404 probably means the HS doesn't yet support the API.
+                    setError(OwnDevicesError.Unsupported);
+                } else {
+                    logger.error("Error loading sessions:", error);
+                    setError(OwnDevicesError.Default);
                 }
-            });
-            setLocalNotificationSettings(notificationSettings);
-
-            const ownUserId = matrixClient.getUserId()!;
-            const userDevices = (await matrixClient.getCrypto()?.getUserDeviceInfo([ownUserId]))?.get(ownUserId);
-            const dehydratedDeviceIds: string[] = [];
-            for (const device of userDevices?.values() ?? []) {
-                if (device.dehydrated) {
-                    dehydratedDeviceIds.push(device.deviceId);
-                }
+                setIsLoadingDeviceList(false);
             }
-            // If the user has exactly one device marked as dehydrated, we consider
-            // that as the dehydrated device, and hide it as a normal device (but
-            // indicate that the user is using a dehydrated device).  If the user has
-            // more than one, that is anomalous, and we show all the devices so that
-            // nothing is hidden.
-            setDehydratedDeviceId(dehydratedDeviceIds.length == 1 ? dehydratedDeviceIds[0] : undefined);
+        },
+        [matrixClient],
+    );
+    const refreshDevices = useCallback(() => refresh(false, true), [refresh]);
 
-            setIsLoadingDeviceList(false);
-        } catch (error) {
-            if ((error as MatrixError).httpStatus == 404) {
-                // 404 probably means the HS doesn't yet support the API.
-                setError(OwnDevicesError.Unsupported);
-            } else {
-                logger.error("Error loading sessions:", error);
-                setError(OwnDevicesError.Default);
-            }
-            setIsLoadingDeviceList(false);
-        }
-    }, [matrixClient]);
-
+    // Opened again, it shows what it had and brings it up to date underneath.
     useEffect(() => {
-        void refreshDevices();
-    }, [refreshDevices]);
+        void refresh(snapshots.has(matrixClient));
+    }, [refresh, matrixClient]);
 
     useEffect(() => {
         const deviceIds = Object.keys(devices);

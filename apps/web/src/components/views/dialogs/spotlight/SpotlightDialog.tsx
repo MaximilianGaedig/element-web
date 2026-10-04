@@ -39,6 +39,7 @@ import {
     GroupIcon,
     CloseIcon,
     LinkIcon,
+    SettingsIcon,
 } from "@vector-im/compound-design-tokens/assets/web/icons";
 
 import { KeyBindingAction } from "../../../../accessibility/KeyboardShortcuts";
@@ -103,8 +104,12 @@ import { MessageFilterChips, MessageResults } from "./MessageResults";
 import { NO_MESSAGE_FILTER, type MessageFilter } from "./messageFilters";
 import { type MessageHit, useMessageSearch } from "./useMessageSearch";
 import { ScreenSize, useScreenSize } from "../../../../utils/telegram/tgLayout/mediaSizes";
+import { useUserSettingsSections } from "../../settings/userSettingsSections";
+import { searchSettings } from "../../settings/settingsSearch";
+import { type OpenToTabPayload } from "../../../../dispatcher/payloads/OpenToTabPayload";
 
 const MAX_RECENT_SEARCHES = 10;
+const SETTINGS_LIMIT = 6; // a few: the search is mostly for chats, and the settings' own list has the rest
 const SECTION_LIMIT = 50; // only show 50 results per section for performance reasons
 const AVATAR_SIZE = "24px";
 
@@ -481,6 +486,13 @@ const SpotlightDialog: React.FC<IProps> = ({ initialText = "", initialFilter = n
         filter,
         msc3946ProcessDynamicPredecessor,
     ]);
+
+    // The settings, by the same index the settings' own search reads: only when searching everything.
+    const settingsSections = useUserSettingsSections();
+    const settingsResults = useMemo(
+        () => (filter === null && trimmedQuery ? searchSettings(trimmedQuery, settingsSections, SETTINGS_LIMIT) : []),
+        [filter, trimmedQuery, settingsSections],
+    );
 
     const results = useMemo<Record<Section, Result[]>>(() => {
         const results: Record<Section, Result[]> = {
@@ -926,6 +938,39 @@ const SpotlightDialog: React.FC<IProps> = ({ initialText = "", initialFilter = n
             );
         }
 
+        let settingsSection: JSX.Element | undefined;
+        if (settingsResults.length) {
+            settingsSection = (
+                <div
+                    className="mx_SpotlightDialog_section mx_SpotlightDialog_results"
+                    role="group"
+                    aria-labelledby="mx_SpotlightDialog_section_settings"
+                >
+                    <h4 id="mx_SpotlightDialog_section_settings">{_t("common|settings")}</h4>
+                    <div>
+                        {settingsResults.map(({ section, label, sectionLabel }) => (
+                            <Option
+                                id={`mx_SpotlightDialog_button_result_settings_${section}_${label ?? ""}`}
+                                key={`settings-${section}-${label ?? ""}`}
+                                onClick={() => {
+                                    defaultDispatcher.dispatch<OpenToTabPayload>({
+                                        action: Action.ViewUserSettings,
+                                        initialTabId: section,
+                                        props: label ? { highlight: label } : undefined,
+                                    });
+                                    onFinished();
+                                }}
+                            >
+                                <SettingsIcon />
+                                {label ?? sectionLabel}
+                                {label && <span className="mx_SpotlightDialog_result_details">{sectionLabel}</span>}
+                            </Option>
+                        ))}
+                    </div>
+                </div>
+            );
+        }
+
         let spacesSection: JSX.Element | undefined;
         if (results[Section.Spaces].length) {
             spacesSection = (
@@ -1133,6 +1178,7 @@ const SpotlightDialog: React.FC<IProps> = ({ initialText = "", initialFilter = n
             !!results[Section.Rooms].length ||
             !!results[Section.Spaces].length ||
             !!results[Section.PublicRoomsAndSpaces].length ||
+            !!settingsResults.length ||
             !!spaceResults.length ||
             !!joinRoomSection;
         // Messages that matched are results too: "No results" over them would be a lie.
@@ -1171,6 +1217,8 @@ const SpotlightDialog: React.FC<IProps> = ({ initialText = "", initialFilter = n
                 {messagesSection}
                 {publicRoomsSection}
                 {joinRoomSection}
+                {/* After the chats: what is typed is a chat's name far more often than a setting's. */}
+                {settingsSection}
                 {hiddenResultsSection}
                 {otherSearchesSection}
                 {groupChatSection}

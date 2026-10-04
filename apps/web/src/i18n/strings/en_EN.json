@@ -3860,6 +3860,13 @@
         "reply_video": "Video",
         "reply_voice": "Voice message",
         "resize_chat_list": "Resize chat list",
+        "settings_results": {
+            "one": "%(count)s result",
+            "other": "%(count)s results",
+            "zero": "No results"
+        },
+        "settings_search": "Search settings",
+        "settings_search_empty": "No settings match",
         "show_all_members": {
             "one": "Show %(count)s member",
             "other": "Show all %(count)s members"
