@@ -41,6 +41,12 @@ import { PREVIEW_FIELD, setServerPreview } from "./serverPreviews";
 
 const DB_NAME = "mx-sliding-sync-cache";
 const STORE = "snapshots";
+/**
+ * Raised when what is kept can no longer be trusted, so that the next session starts afresh: a resumed connection
+ * describes only rooms that changed, and anything wrong in the rest would stay. 2: the server dated bridged chats
+ * by when the bridge made them (MEO-137).
+ */
+const FORMAT = 2;
 
 /**
  * How many of a room's latest events are kept: as many as the lists ask for (LIST_TIMELINE_LIMIT), so that
@@ -188,11 +194,12 @@ async function read(key: string): Promise<unknown> {
     }
 }
 
-async function write(entries: Record<string, unknown>): Promise<void> {
+async function write(entries: Record<string, unknown>, remove: string[] = []): Promise<void> {
     const db = await openDb();
     try {
         await new Promise<void>((resolve, reject) => {
             const tx = db.transaction(STORE, "readwrite");
+            for (const key of remove) tx.objectStore(STORE).delete(key);
             for (const [key, value] of Object.entries(entries)) tx.objectStore(STORE).put(value, key);
             tx.oncomplete = (): void => resolve();
             tx.onerror = (): void => reject(tx.error);
@@ -255,7 +262,17 @@ export class SlidingSyncCacheStore implements SlidingSyncCache {
     }
 
     private key(part: "first" | "rest"): string {
-        return `${this.userId}:${part}`;
+        return `${this.userId}:${FORMAT}:${part}`;
+    }
+
+    /** Where earlier formats kept this user's rooms: removed when the current one is written. */
+    private oldKeys(): string[] {
+        const parts = ["first", "rest"];
+        const formats = Array.from({ length: FORMAT - 1 }, (_, i) => i + 1);
+        return [
+            ...parts.map((part) => `${this.userId}:${part}`),
+            ...formats.flatMap((format) => parts.map((part) => `${this.userId}:${format}:${part}`)),
+        ];
     }
 
     // ── For the SDK: what the last session kept ──
@@ -379,14 +396,17 @@ export class SlidingSyncCacheStore implements SlidingSyncCache {
         });
         const global = [...this.globalAccountData.values()];
         try {
-            await write({
-                [this.key("first")]: {
-                    rooms: first,
-                    accountData: { global, rooms: roomAccountData },
-                    pos: this.pos,
-                } satisfies SlidingSyncSnapshot,
-                [this.key("rest")]: rest,
-            });
+            await write(
+                {
+                    [this.key("first")]: {
+                        rooms: first,
+                        accountData: { global, rooms: roomAccountData },
+                        pos: this.pos,
+                    } satisfies SlidingSyncSnapshot,
+                    [this.key("rest")]: rest,
+                },
+                this.oldKeys(),
+            );
         } catch (error) {
             logger.warn("Could not keep sliding sync for the next session", error);
         }
