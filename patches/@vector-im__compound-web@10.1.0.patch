@@ -1,5 +1,33 @@
+diff --git a/dist/components/Avatar/Avatar.cjs b/dist/components/Avatar/Avatar.cjs
+index 55d1592f5fb8e6e63f24263c8e3c6238117d95d6..c3de4fc89aa19b5c616a3f1a5e618a131abbf800 100644
+--- a/dist/components/Avatar/Avatar.cjs
++++ b/dist/components/Avatar/Avatar.cjs
+@@ -34,7 +34,8 @@ var Avatar = (0, react.forwardRef)(function Avatar({ src, id, name = "", type =
+ 			"--cpd-avatar-size": size
+ 		}
+ 	}, /* @__PURE__ */ (0, react_jsx_runtime.jsx)(react.default.Fragment, { children: !src ? require_string.getInitialLetter(name) : /* @__PURE__ */ (0, react_jsx_runtime.jsx)("img", {
+-		loading: "lazy",
++		// Fork: no lazy loading. Avatars sit in virtualised lists whose scroll box clips them, so a lazy image only
++		// starts loading once it is on screen and shows an empty circle meanwhile.
+ 		alt: "",
+ 		src,
+ 		referrerPolicy: "no-referrer",
+diff --git a/dist/components/Avatar/Avatar.js b/dist/components/Avatar/Avatar.js
+index 824bb6b4b602db15607bb6765aaec959c6396051..bf9b7590d2cd4481882a759bfcfb7cd2e73d6d23 100644
+--- a/dist/components/Avatar/Avatar.js
++++ b/dist/components/Avatar/Avatar.js
+@@ -31,7 +31,8 @@ var Avatar = forwardRef(function Avatar({ src, id, name = "", type = "round", cl
+ 			"--cpd-avatar-size": size
+ 		}
+ 	}, /* @__PURE__ */ jsx(React.Fragment, { children: !src ? getInitialLetter(name) : /* @__PURE__ */ jsx("img", {
+-		loading: "lazy",
++		// Fork: no lazy loading. Avatars sit in virtualised lists whose scroll box clips them, so a lazy image only
++		// starts loading once it is on screen and shows an empty circle meanwhile.
+ 		alt: "",
+ 		src,
+ 		referrerPolicy: "no-referrer",
 diff --git a/dist/components/Tooltip/Tooltip.cjs b/dist/components/Tooltip/Tooltip.cjs
-index a282d34afb4172398f9433cb257bfb0748b52c44..a96a7a13aaab9f4cc8c5dba557c79b24b960b231 100644
+index a282d34afb4172398f9433cb257bfb0748b52c44..105cb9112eb0c2da4e752a270ddd0d874bcdb356 100644
 --- a/dist/components/Tooltip/Tooltip.cjs
 +++ b/dist/components/Tooltip/Tooltip.cjs
 @@ -10,6 +10,11 @@ let react_jsx_runtime = require("react/jsx-runtime");
@@ -33,7 +61,7 @@ index a282d34afb4172398f9433cb257bfb0748b52c44..a96a7a13aaab9f4cc8c5dba557c79b24
  	return /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_floating_ui_react.FloatingPortal, { children: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
  		ref: rest.refs.setFloating,
 diff --git a/dist/components/Tooltip/Tooltip.js b/dist/components/Tooltip/Tooltip.js
-index fcbf7f4c98383e319f32c8d5e3c91c540bd9e63e..e62b4f0f7ea80e768b0da0e6a9c3807e5a3f02cf 100644
+index fcbf7f4c98383e319f32c8d5e3c91c540bd9e63e..48c0c71b8b2e8b8d323e28b762fbf52cb55af5a1 100644
 --- a/dist/components/Tooltip/Tooltip.js
 +++ b/dist/components/Tooltip/Tooltip.js
 @@ -7,6 +7,11 @@ import { jsx, jsxs } from "react/jsx-runtime";

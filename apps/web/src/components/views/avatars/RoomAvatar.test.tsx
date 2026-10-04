@@ -133,6 +133,15 @@ describe("RoomAvatar", () => {
         ]);
         expect(render(<RoomAvatar room={room} />).container).toMatchSnapshot();
     });
+    it("loads its picture as soon as it is rendered, not once it scrolls into view", () => {
+        // A lazy image in the virtualised room list only starts loading once its row is on screen, so rows
+        // rendered ahead of the scroll showed an empty circle.
+        const room = new Room("!room:example.com", client, client.getSafeUserId());
+        vi.spyOn(room, "getMxcAvatarUrl").mockReturnValue("mxc://example.com/foobar");
+        room.name = "test room";
+        const { getByTestId } = render(<RoomAvatar room={room} />);
+        expect(getByTestId("avatar-img").querySelector("img")).not.toHaveAttribute("loading");
+    });
     it("should not render an invite avatar if the user has disabled it", () => {
         SettingsStore.setValue("mediaPreviewConfig", null, SettingLevel.ACCOUNT, {
             invite_avatars: MediaPreviewValue.Off,

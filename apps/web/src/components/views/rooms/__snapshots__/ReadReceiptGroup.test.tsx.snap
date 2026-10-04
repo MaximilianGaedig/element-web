@@ -112,7 +112,6 @@ exports[`ReadReceiptGroup > <ReadReceiptPerson /> > should render 1`] = `
           class="_image"
           data-type="round"
           height="24px"
-          loading="lazy"
           referrerpolicy="no-referrer"
           src="http://this.is.a.url//placekitten.com/400/400"
           width="24px"

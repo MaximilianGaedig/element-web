@@ -31,7 +31,6 @@ exports[`RoomAvatar > should render an avatar for a room the user is invited to 
       class="_image"
       data-type="round"
       height="36px"
-      loading="lazy"
       referrerpolicy="no-referrer"
       src="http://this.is.a.url/example.com/foobar"
       width="36px"
