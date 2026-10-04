@@ -1155,6 +1155,10 @@ describe("RoomTimelineViewModel", () => {
 
                 vm.onVisibleRangeChanged(indexOfKey(items, "$u2"), indexOfKey(items, "$u2"));
                 expect(vm.getSnapshot().numUnreadMessages).toBe(1);
+
+                // Back up above what was read: it stays read (the count used to climb back to 3).
+                vm.onVisibleRangeChanged(indexOfKey(items, "$read"), indexOfKey(items, "$read"));
+                expect(vm.getSnapshot().numUnreadMessages).toBe(1);
             });
 
             it("counts a mention as seen once it has been on screen", async () => {
@@ -1455,7 +1459,7 @@ describe("RoomTimelineViewModel", () => {
          */
         it("sends nothing for a message the reader's receipt is already past", async () => {
             seedTimeline([makeMessage("$a", { user: "@other:x" }), makeMessage("$b", { user: "@other:x" })]);
-            vi.spyOn(room, "hasUserReadEvent").mockImplementation((_user, id) => id === "$a");
+            vi.spyOn(room, "getEventReadUpTo").mockReturnValue("$b");
             const vm = await createStartedViewModel();
             vm.onAnchorReached();
             const items = vm.getSnapshot().items;
@@ -1505,6 +1509,22 @@ describe("RoomTimelineViewModel", () => {
 
             await flushReceiptDebounce();
             expect(vi.mocked(client.sendReadReceipt).mock.calls.at(-1)?.[0]?.getId()).toBe("$status");
+        });
+
+        /* With the newest message the reader's own, no receipt went out and others' messages stayed unread. */
+        it("still reads up to the reader's own newest message when their receipt is behind it", async () => {
+            seedTimeline([
+                makeMessage("$a", { user: "@other:x" }),
+                makeMessage("$mine", { user: client.getSafeUserId() }),
+            ]);
+            vi.spyOn(room, "getEventReadUpTo").mockReturnValue(null);
+            const vm = await createStartedViewModel();
+            vm.onAnchorReached();
+
+            vm.onVisibleRangeChanged(0, vm.getSnapshot().items.length - 1);
+
+            await flushReceiptDebounce();
+            expect(vi.mocked(client.sendReadReceipt).mock.calls[0][0]?.getId()).toBe("$mine");
         });
 
         it("sends nothing while no message's end is on screen", async () => {

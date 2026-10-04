@@ -326,6 +326,8 @@ export class RoomTimelineViewModel
     private readMarkerEventId: string | null = null;
     /** The last row read on screen (`readableEndIndex` of {@link onVisibleRangeChanged}), as an array index. */
     private readableEndArrayIndex = 0;
+    /** The newest message read on screen this session: what is at or before it is not unread. */
+    private seenUpToId: string | null = null;
 
     /**
      * Where the unread line sits, decided once when the room is opened and then left alone for
@@ -1080,11 +1082,22 @@ export class RoomTimelineViewModel
         const client = this.opts.client;
         const me = client.getSafeUserId();
         const marker = this.readMarkerEventId ? items.findIndex((item) => item.key === this.readMarkerEventId) : -1;
+        // Positions in the live timeline, once per count rather than once per row: this runs on every scroll.
+        const position = new Map(
+            room
+                .getLiveTimeline()
+                .getEvents()
+                .map((ev, i) => [ev.getId(), i]),
+        );
+        const seenAt = this.seenUpToId ? (position.get(this.seenUpToId) ?? -1) : -1;
         let count = 0;
         for (let i = Math.max(this.readableEndArrayIndex, marker) + 1; i < items.length; i++) {
             const item = items[i];
             if (item.kind !== "event" || isLocalEchoId(item.key)) continue;
             const event = room.findEventById(item.key);
+            // Read on screen earlier in this session, then scrolled back above: still read. The count went up
+            // again every time the reader scrolled back up past what they had already read.
+            if (event && seenAt >= 0 && (position.get(item.key) ?? -1) <= seenAt) continue;
             if (event && event.getSender() !== me && eventTriggersUnreadCount(client, event)) count++;
         }
         if (!atLiveEnd) count = Math.max(count, room.getUnreadNotificationCount(NotificationCountType.Total));
@@ -1142,6 +1155,7 @@ export class RoomTimelineViewModel
             const item = items[i];
             if (item?.kind === "event" && !isLocalEchoId(item.key)) {
                 this.readableEventId = item.key;
+                if (this.active && this.isAfter(item.key, this.seenUpToId)) this.seenUpToId = item.key;
                 break;
             }
         }
@@ -1229,7 +1243,7 @@ export class RoomTimelineViewModel
         // Nor behind where the reader's receipt already is, as after jumping up to a mention or a reaction:
         // the receipt would move back, and the server takes any receipt as reading the whole room and
         // clears its counts, so a room half read showed as read.
-        if (this.opts.room.hasUserReadEvent(this.opts.client.getSafeUserId(), eventId)) {
+        if (this.receiptIsPast(eventId)) {
             this.lastSentReceiptEventId = eventId;
             return;
         }
@@ -1252,6 +1266,43 @@ export class RoomTimelineViewModel
             this.lastSentReceiptEventId = null; // allow retry
             logger.warn(`[TimelineVM] sendAutoReadReceipt — sendReadReceipt failed`, err);
         });
+    }
+
+    /**
+     * Whether `eventId` comes after `than` in the room (true when there is nothing to compare with). By
+     * position in the live timeline: timestamps are not an order, and bridged history shares them. An event
+     * not in the live timeline is older than all of it.
+     */
+    private isAfter(eventId: string, than: string | null): boolean {
+        if (!than || than === eventId) return !than;
+        const live = this.opts.room.getLiveTimeline().getEvents();
+        const at = live.findIndex((ev) => ev.getId() === eventId);
+        const thanAt = live.findIndex((ev) => ev.getId() === than);
+        if (at < 0)
+            return (
+                thanAt < 0 &&
+                (this.opts.room.findEventById(eventId)?.getTs() ?? 0) >
+                    (this.opts.room.findEventById(than)?.getTs() ?? 0)
+            );
+        return thanAt < 0 || at > thanAt;
+    }
+
+    /**
+     * Whether the reader's own receipt, as the server has it, is at or after this event. Not the SDK's
+     * hasUserReadEvent, which also counts anything at or before a message the reader sent as read: with the
+     * newest message being the reader's own, no receipt went out at all, and what others had written before
+     * it stayed unread on the server.
+     */
+    private receiptIsPast(eventId: string): boolean {
+        const readUpTo = this.opts.room.getEventReadUpTo(this.opts.client.getSafeUserId(), true);
+        if (!readUpTo) return false;
+        if (readUpTo === eventId) return true;
+        const live = this.opts.room.getLiveTimeline().getEvents();
+        const receiptAt = live.findIndex((ev) => ev.getId() === readUpTo);
+        if (receiptAt < 0) return false; // further back than the live timeline: behind anything here
+        const eventAt = live.findIndex((ev) => ev.getId() === eventId);
+        // An event not in the live timeline is older than all of it.
+        return eventAt < 0 || receiptAt > eventAt;
     }
 
     private sendReceiptOnceBack(): void {
