@@ -53,7 +53,39 @@ describe("RoomListStoreV3", () => {
         return { client, rooms, store, dispatcher };
     }
 
+    // Each store subscribes to the shared dispatcher, settings and space store, which keeps it, its 100 rooms and their
+    // mocks alive for the rest of the file. Dozens of tests add up to the worker's heap limit (it aborts), so undo
+    // what each test subscribed.
+    let unsubscribe: Array<() => void> = [];
+
     beforeEach(() => {
+        unsubscribe = [];
+
+        const register = dispatcher.register.bind(dispatcher);
+        vi.spyOn(dispatcher, "register").mockImplementation((callback) => {
+            const token = register(callback);
+            unsubscribe.push(() => dispatcher.unregister(token));
+            return token;
+        });
+
+        const watchSetting = SettingsStore.watchSetting.bind(SettingsStore);
+        vi.spyOn(SettingsStore, "watchSetting").mockImplementation((...args) => {
+            const reference = watchSetting(...args);
+            unsubscribe.push(() => SettingsStore.unwatchSetting(reference));
+            return reference;
+        });
+
+        const { spaceStore } = SDKContextClass.instance;
+        const listenersBefore = spaceStore.eventNames().map((name) => [name, spaceStore.listeners(name)] as const);
+        unsubscribe.push(() => {
+            for (const name of spaceStore.eventNames()) {
+                const before = listenersBefore.find(([n]) => n === name)?.[1] ?? [];
+                for (const listener of spaceStore.listeners(name)) {
+                    if (!before.includes(listener)) spaceStore.off(name, listener as (...args: unknown[]) => void);
+                }
+            }
+        });
+
         vi.spyOn(global, "requestAnimationFrame").mockImplementation((cb: FrameRequestCallback) => {
             cb(0);
             return 0;
@@ -79,6 +111,7 @@ describe("RoomListStoreV3", () => {
     });
 
     afterEach(() => {
+        unsubscribe.forEach((undo) => undo());
         vi.restoreAllMocks();
     });
 
