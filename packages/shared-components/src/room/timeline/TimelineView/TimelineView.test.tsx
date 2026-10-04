@@ -256,6 +256,28 @@ describe("<TimelineView />", () => {
         expect(container.querySelector(`.${styles.cover}`)?.children).toHaveLength(1);
     });
 
+    /* A chat with nothing to show never had rows to place, so it spun for good. */
+    it("says the chat is empty, without a spinner or placeholder, once there is nothing to show", async () => {
+        const { vm, update } = makeFakeVm({ items: [] });
+        const { container } = render(
+            <div style={{ height: VIEWPORT_HEIGHT, width: 320 }}>
+                <TimelineView
+                    vm={vm}
+                    renderItem={renderItem}
+                    renderPlaceholder={() => <div data-testid="placeholder" />}
+                    renderEmpty={() => <div data-testid="empty" />}
+                />
+            </div>,
+        );
+
+        update({ items: [], isEmpty: true });
+
+        expect(await screen.findByTestId("empty")).toBeInTheDocument();
+        await new Promise((resolve) => setTimeout(resolve, 1500));
+        expect(screen.queryByTestId("placeholder")).toBeNull();
+        expect(container.querySelector(`.${styles.cover}`)?.children).toHaveLength(1);
+    });
+
     describe("the list changing height, as a phone's keyboard coming up does", () => {
         const endOf = (scroller: HTMLElement): number => scroller.scrollHeight - scroller.clientHeight;
         const Timeline = ({ vm, height }: { vm: TimelineViewModel; height: number }): React.ReactNode => (

@@ -790,6 +790,70 @@ describe("RoomTimelineViewModel", () => {
         });
     });
 
+    describe("a chat whose newest events are all hidden", () => {
+        /** An event the timeline does not draw, like the status a bridge keeps updating. */
+        const makeHidden = (id: string): MatrixEvent =>
+            new MatrixEvent({
+                type: "im.mxg.backfill",
+                state_key: "",
+                event_id: id,
+                sender: "@bridge:example.org",
+                room_id: ROOM_ID,
+                origin_server_ts: 1,
+                content: { state: "running" },
+            });
+
+        /* A bridged group whose history never came across: the chat spun for good instead of saying so. */
+        it("says it is empty when there is nothing to show", async () => {
+            seedTimeline([makeHidden("$h1"), makeHidden("$h2"), makeHidden("$h3")]);
+            const vm = new RoomTimelineViewModel({ client, room });
+            vms.push(vm);
+
+            vm.start();
+
+            await vi.waitFor(() => expect(vm.getSnapshot().isEmpty).toBe(true));
+            expect(vm.getSnapshot().items).toEqual([]);
+        });
+
+        it("is not empty once there is a message", async () => {
+            seedTimeline([makeHidden("$h1"), makeMessage("$a")]);
+
+            const vm = await createStartedViewModel();
+
+            expect(vm.getSnapshot().isEmpty).toBe(false);
+        });
+
+        it("keeps fetching older history past a long run of them to the messages before it", async () => {
+            const live = room.getLiveTimeline();
+            live.setPaginationToken("t-older", Direction.Backward);
+            let batch = 0;
+            vi.mocked(client.paginateEventTimeline).mockImplementation(async () => {
+                batch++;
+                const older =
+                    batch < 5
+                        ? Array.from({ length: 100 }, (_, i) => makeHidden(`$hidden${batch}_${i}`))
+                        : [makeMessage("$old")];
+                room.getUnfilteredTimelineSet().addEventsToTimeline(
+                    older,
+                    true,
+                    false,
+                    live,
+                    batch < 5 ? "t-more" : null,
+                );
+                if (batch >= 5) live.setPaginationToken(null, Direction.Backward);
+                return batch < 5;
+            });
+            seedTimeline([makeHidden("$h1"), makeHidden("$h2")]);
+            const vm = new RoomTimelineViewModel({ client, room });
+            vms.push(vm);
+
+            vm.start();
+
+            await vi.waitFor(() => expect(eventKeys(vm.getSnapshot().items)).toEqual(["$old"]));
+            expect(vm.getSnapshot().isEmpty).toBe(false);
+        });
+    });
+
     describe("a link opened while the timeline is up", () => {
         it("marks the linked message and centres it", async () => {
             seedTimeline([makeMessage("$a"), makeMessage("$b"), makeMessage("$c")]);

@@ -88,6 +88,14 @@ Please see LICENSE files in the repository root for full details.
         }
     }
 
+    /* Said in place of the list in a chat with nothing to show. */
+    .mx_NewTimelinePanel_empty {
+        padding: var(--cpd-space-1x) var(--cpd-space-3x);
+        border-radius: var(--cpd-space-4x);
+        background-color: var(--cpd-color-bg-subtle-secondary);
+        color: var(--cpd-color-text-secondary);
+    }
+
     /* The row holding the spinner shown while more history is fetched. Its height is
        fixed so the row always measures the same. */
     .mx_NewTimelinePanel_loading {

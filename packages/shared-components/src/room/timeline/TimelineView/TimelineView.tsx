@@ -138,6 +138,7 @@ export function TimelineView({
     paddingEnd = 0,
     animateNewMessages = false,
     renderPlaceholder,
+    renderEmpty,
 }: TimelineViewProps): JSX.Element {
     const snapshot = useViewModel(vm);
 
@@ -836,7 +837,10 @@ export function TimelineView({
             </div>
             {!revealed && (
                 <div className={styles.cover}>
-                    {slowToPlace && (renderPlaceholder ? renderPlaceholder() : <InlineSpinner size={32} />)}
+                    {/* Rows are what end the wait, so a chat with none would otherwise spin for good. */}
+                    {snapshot.isEmpty && snapshot.items.length === 0
+                        ? renderEmpty?.()
+                        : slowToPlace && (renderPlaceholder ? renderPlaceholder() : <InlineSpinner size={32} />)}
                 </div>
             )}
             {renderStickyDate && <StickyDate ref={stickyDateRef} render={renderStickyDate} />}

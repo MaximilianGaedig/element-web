@@ -147,6 +147,12 @@ export interface TimelineViewSnapshot {
     hasHighlights: boolean;
 
     /**
+     * True once loading has finished and found nothing to draw: no message in the chat as far as could be
+     * fetched. The view then stops waiting for rows to place and shows {@link TimelineViewProps.renderEmpty}.
+     */
+    isEmpty?: boolean;
+
+    /**
      * How many messages that mention the reader they have not yet seen: Telegram's "@" button and its
      * badge. Counted as messages, not as people asking, and it falls as the reader brings them on
      * screen. The button is offered only while this is above zero.
@@ -266,6 +272,9 @@ export interface TimelineViewProps {
      * for an embedder that has something more like the timeline to show there.
      */
     renderPlaceholder?: () => ReactNode;
+
+    /** Drawn in place of the list when the chat has nothing to show (see {@link TimelineViewSnapshot.isEmpty}). */
+    renderEmpty?: () => ReactNode;
 
     /**
      * Bring a new message in the way Telegram Web does, rather than jumping to it: the row is

@@ -13,7 +13,7 @@ import {
     type TimelineItem,
     ReadMarker,
 } from "@element-hq/web-shared-components";
-import { InlineSpinner } from "@vector-im/compound-web";
+import { InlineSpinner, Text } from "@vector-im/compound-web";
 import classNames from "classnames";
 
 import {
@@ -399,6 +399,16 @@ export function NewTimelinePanel({
         ),
         [clearance.start, clearance.end],
     );
+    // A chat with nothing to show, such as a bridged group whose history never came across: said so, as
+    // Telegram does, rather than a spinner that never stops.
+    const renderEmpty = useCallback(
+        (): ReactNode => (
+            <Text as="div" size="sm" className="mx_NewTimelinePanel_empty">
+                {_t("timeline|empty_chat")}
+            </Text>
+        ),
+        [],
+    );
     const renderStickyDate = useCallback(
         (ts: number): ReactNode => (
             // Keyed by the day: the separator builds its view model once, from the timestamp it
@@ -478,6 +488,7 @@ export function NewTimelinePanel({
                 // ...and brings a new message up from behind the composer instead of jumping to it.
                 animateNewMessages={telegramBubbles}
                 renderPlaceholder={telegramBubbles ? renderPlaceholder : undefined}
+                renderEmpty={renderEmpty}
                 paddingStart={clearance.start ? clearance.start + CHROME_GAP : 0}
                 paddingEnd={clearance.end ? clearance.end + CHROME_GAP : 0}
             />

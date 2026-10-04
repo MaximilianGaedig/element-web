@@ -93,6 +93,12 @@ const INITIAL_SIZE = 100;
 const MIN_INITIAL_EVENTS = 40;
 
 /**
+ * How many more pages to fetch, beyond the initial fill, for a chat whose newest events are all ones the
+ * timeline hides (a bridge's status updates, a burst of joins) before deciding it has nothing to show.
+ */
+const MAX_HIDDEN_PAGES = 10;
+
+/**
  * The most messages we keep loaded at once. Loading more than this makes the SDK drop an
  * equivalent number from the far end, so memory stays bounded however long someone scrolls.
  *
@@ -186,6 +192,8 @@ export class RoomTimelineViewModel
 
     /** Set by {@link start} so a double-start (e.g. via StrictMode) is a no-op. */
     private started = false;
+    /** Whether a load has finished, so that a list still empty means the chat has nothing to show. */
+    private loaded = false;
     /** Counts loads, so that one finishing after a later one has begun drops its result. */
     private loadSeq = 0;
 
@@ -804,6 +812,16 @@ export class RoomTimelineViewModel
                 const renderable = this.renderableEventCount(undefined, Direction.Backward);
                 if (renderable === 0) {
                     await this.fillInitialWindow(undefined, "server");
+                    for (
+                        let page = 0;
+                        page < MAX_HIDDEN_PAGES &&
+                        this.renderableEventCount(undefined, Direction.Backward) === 0 &&
+                        this.timelineWindow.canPaginate(Direction.Backward);
+                        page++
+                    ) {
+                        if (superseded()) return;
+                        await this.timelineWindow.paginate(Direction.Backward, PAGINATE_SIZE, true);
+                    }
                 } else {
                     this.fillAfterPlacing =
                         renderable < MIN_INITIAL_EVENTS && this.timelineWindow.canPaginate(Direction.Backward);
@@ -866,6 +884,7 @@ export class RoomTimelineViewModel
             this.baseItems = items;
             this.backwardSpinnerVisible = false;
             this.forwardSpinnerVisible = false;
+            this.loaded = true;
             this.republish(`load(${target.kind})-done`, {
                 atLiveEnd: this.windowAtLiveEnd(),
                 pendingAnchor,
@@ -883,6 +902,7 @@ export class RoomTimelineViewModel
             }
         } catch (e) {
             logger.error(`[TimelineVM] load() error`, e);
+            this.loaded = true;
             this.backwardSpinnerVisible = false;
             this.forwardSpinnerVisible = false;
             this.republish(`load(${target.kind})-error`);
@@ -1743,7 +1763,12 @@ export class RoomTimelineViewModel
         if (this.forwardSpinnerVisible) {
             items.push({ kind: "loading", key: RoomTimelineViewModel.FORWARD_LOADING_KEY });
         }
-        this.mergeSnapshot({ items, ...extra }, reason);
+        const isEmpty =
+            this.loaded &&
+            items.length === 0 &&
+            !this.timelineWindow.canPaginate(Direction.Backward) &&
+            !this.timelineWindow.canPaginate(Direction.Forward);
+        this.mergeSnapshot({ items, isEmpty, ...extra }, reason);
     }
 
     /**
