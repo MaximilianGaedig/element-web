@@ -92,4 +92,110 @@ describe("low-power mode", () => {
         lowPower.report({ battery: { level: 0.9, charging: true } });
         expect(lowPower.isOn()).toBe(true);
     });
+
+    describe("listening to the device", () => {
+        afterEach(() => vi.unstubAllGlobals());
+
+        /** A battery that can be told to change, as the browser's would. */
+        function fakeBattery(level: number, charging: boolean): EventTarget & { level: number; charging: boolean } {
+            return Object.assign(new EventTarget(), { level, charging });
+        }
+
+        it("follows the battery as it drains and as it is plugged in", async () => {
+            const battery = fakeBattery(0.5, false);
+            vi.stubGlobal("navigator", { getBattery: () => Promise.resolve(battery) });
+            lowPower.start();
+            await new Promise((resolve) => setTimeout(resolve, 0)); // the battery arrives
+            expect(lowPower.isOn()).toBe(false);
+
+            battery.level = 0.1;
+            battery.dispatchEvent(new Event("levelchange"));
+            expect(lowPower.isOn()).toBe(true);
+
+            battery.charging = true;
+            battery.dispatchEvent(new Event("chargingchange"));
+            expect(lowPower.isOn()).toBe(false);
+        });
+
+        it("is on from the start for a battery already low", async () => {
+            vi.stubGlobal("navigator", { getBattery: () => Promise.resolve(fakeBattery(0.1, false)) });
+            lowPower.start();
+            await vi.waitFor(() => expect(lowPower.isOn()).toBe(true));
+        });
+
+        it("is not thrown by a browser that has the battery method and will not let a page call it", async () => {
+            vi.stubGlobal("navigator", { getBattery: () => Promise.reject(new Error("blocked")) });
+            expect(() => lowPower.start()).not.toThrow();
+            await new Promise((resolve) => setTimeout(resolve, 0));
+            expect(lowPower.isOn()).toBe(false);
+        });
+
+        it("follows save-data as the reader turns it on and off", () => {
+            const connection = Object.assign(new EventTarget(), { saveData: true });
+            vi.stubGlobal("navigator", { connection });
+            lowPower.start();
+            expect(lowPower.isOn()).toBe(true);
+
+            connection.saveData = false;
+            connection.dispatchEvent(new Event("change"));
+            expect(lowPower.isOn()).toBe(false);
+        });
+
+        it("starts listening once, however often it is asked to", () => {
+            const getBattery = vi.fn(() => new Promise<never>(() => undefined));
+            vi.stubGlobal("navigator", { getBattery });
+            lowPower.start();
+            lowPower.start();
+            expect(getBattery).toHaveBeenCalledTimes(1);
+        });
+
+        describe("watching animation frames", () => {
+            afterEach(() => vi.useRealTimers());
+
+            /** Frames that arrive `gap` ms apart, as far as the page can tell. */
+            function framesEvery(gap: number): void {
+                let now = 0;
+                vi.stubGlobal("requestAnimationFrame", (callback: (at: number) => void) =>
+                    setTimeout(() => callback((now += gap)), 0),
+                );
+            }
+
+            it("takes a second capped sample to call it a cap", async () => {
+                vi.useFakeTimers();
+                vi.stubGlobal("navigator", {});
+                framesEvery(33.3);
+                lowPower.start();
+
+                // One could be a slow moment that happened to be even.
+                await vi.advanceTimersByTimeAsync(16_000);
+                expect(lowPower.isOn()).toBe(false);
+
+                await vi.advanceTimersByTimeAsync(121_000);
+                expect(lowPower.isOn()).toBe(true);
+            });
+
+            it("is not on for frames at sixty a second", async () => {
+                vi.useFakeTimers();
+                vi.stubGlobal("navigator", {});
+                framesEvery(16.7);
+                lowPower.start();
+
+                await vi.advanceTimersByTimeAsync(300_000);
+                expect(lowPower.isOn()).toBe(false);
+            });
+
+            it("is switched off again by a sample that is not capped", async () => {
+                vi.useFakeTimers();
+                vi.stubGlobal("navigator", {});
+                framesEvery(33.3);
+                lowPower.start();
+                await vi.advanceTimersByTimeAsync(137_000);
+                expect(lowPower.isOn()).toBe(true);
+
+                framesEvery(16.7);
+                await vi.advanceTimersByTimeAsync(121_000);
+                expect(lowPower.isOn()).toBe(false);
+            });
+        });
+    });
 });

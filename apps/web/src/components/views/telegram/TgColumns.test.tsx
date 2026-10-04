@@ -20,6 +20,13 @@ import dis from "../../../dispatcher/dispatcher";
 import { Action } from "../../../dispatcher/actions";
 import { STORAGE_KEY_LEFT } from "../../../utils/telegram/tgLayout/constants";
 import RightPanelStore from "../../../stores/right-panel/RightPanelStore";
+import { lowPower } from "../../../utils/lowPower";
+import { playLadder } from "../../../utils/telegram/tgLayout/ladder";
+
+vi.mock("../../../utils/telegram/tgLayout/ladder", async (importOriginal) => ({
+    ...(await importOriginal<typeof import("../../../utils/telegram/tgLayout/ladder")>()),
+    playLadder: vi.fn(),
+}));
 
 function setViewport(width: number, height: number): void {
     UIStore.instance.windowWidth = width;
@@ -334,6 +341,57 @@ describe("TgColumns", () => {
             rerender(pane("!b:x"));
             rerender(pane("!c:x"));
             expect(mounts).not.toHaveBeenCalled();
+        });
+
+        describe("the ladder of messages for a chat just opened", () => {
+            /** A chat in front with a message in it, and one kept mounted behind it with a message of its own. */
+            function renderChatWithMessages(): void {
+                render(
+                    <TgColumns
+                        spacePanel={null}
+                        leftPanel={null}
+                        resizeNotifier={new ResizeNotifier()}
+                        chatOpen
+                        chatKey="!a:x"
+                    >
+                        <div className="mx_RoomView_kept" data-active="false">
+                            <div className="mx_RoomView_MessageList" data-testid="behind">
+                                <div data-testid="event-tile" />
+                            </div>
+                        </div>
+                        <div className="mx_RoomView_kept" data-active="true">
+                            <div className="mx_RoomView_MessageList" data-testid="front">
+                                <div data-testid="event-tile" />
+                            </div>
+                        </div>
+                    </TgColumns>,
+                );
+            }
+
+            beforeEach(() => {
+                vi.mocked(playLadder).mockClear();
+                vi.spyOn(window, "requestAnimationFrame").mockImplementation((callback) => {
+                    callback(0);
+                    return 1;
+                });
+            });
+
+            afterEach(() => {
+                lowPower.reset();
+                vi.restoreAllMocks();
+            });
+
+            it("plays on the room in front, not on one kept behind it", () => {
+                renderChatWithMessages();
+                expect(playLadder).toHaveBeenCalledTimes(1);
+                expect(vi.mocked(playLadder).mock.calls[0][0]).toBe(screen.getByTestId("front"));
+            });
+
+            it("does not play while power is being saved", () => {
+                lowPower.setMode("on");
+                renderChatWithMessages();
+                expect(playLadder).not.toHaveBeenCalled();
+            });
         });
 
         it("runs the push again for a second chat pushed in a row, on the same pane", () => {
