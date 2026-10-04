@@ -7,7 +7,16 @@ Please see LICENSE files in the repository root for full details.
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { isContentNamed, respondApp, syncAppCache } from "./offline";
+import {
+    APP_CACHE,
+    classifyAppRequest,
+    deleteUnknownCaches,
+    isContentNamed,
+    MEDIA_CACHE,
+    PREVIEW_CACHE,
+    respondApp,
+    syncAppCache,
+} from "./offline";
 
 describe("development app caching", () => {
     afterEach(() => {
@@ -238,5 +247,167 @@ describe("the domain's own config", () => {
 
         serverNeverAnswers();
         expect(await answerWithoutNetwork("i18n/xx.json")).toBe(NETWORK);
+    });
+});
+
+/*
+ * `/?build=<id>` makes the server answer with another build on this same origin. The worker must not
+ * answer that page, or anything the page then loads, from the cached production build.
+ */
+describe("the build selector", () => {
+    const scope = "https://chat.example.org/";
+    const HOUR = 60 * 60 * 1000;
+    let caches: Map<string, Map<string, Response>>;
+    let fetch: ReturnType<typeof vi.fn>;
+    let worker: typeof import("./offline");
+
+    const navigation = (search: string): Request =>
+        ({ method: "GET", url: `${scope}${search}`, mode: "navigate" }) as Request;
+
+    /** Stands in for Cache Storage with one map per cache name. */
+    function stubCaches(): void {
+        const open = async (name: string): Promise<Cache> => {
+            const held = caches.get(name) ?? new Map<string, Response>();
+            caches.set(name, held);
+            const key = (k: string | Request): string => new URL(typeof k === "string" ? k : k.url, scope).href;
+            return {
+                match: async (k: string | Request) => held.get(key(k))?.clone(),
+                put: async (k: string | Request, r: Response) => void held.set(key(k), r),
+                delete: async (k: string | Request) => held.delete(key(k)),
+                keys: async () => [...held.keys()].map((url) => new Request(url)),
+            } as unknown as Cache;
+        };
+        vi.stubGlobal("caches", { open });
+    }
+
+    /** A request the worker handles; resolves to the text of what the page got. */
+    async function load(request: Request): Promise<{ text: string; waited: Promise<unknown> }> {
+        const waits: Promise<unknown>[] = [];
+        const kind = classifyAppRequest(request, scope)!;
+        const res = await worker.respondApp({ request, waitUntil: (p) => void waits.push(p) }, kind);
+        return { text: await res.text(), waited: Promise.all(waits) };
+    }
+
+    beforeEach(async () => {
+        vi.stubEnv("NODE_ENV", "production");
+        vi.stubGlobal("self", { registration: { scope } });
+        caches = new Map();
+        stubCaches();
+        // A production build is cached; the network serves whichever build is selected.
+        const app = new Map<string, Response>([[`${scope}__index__`, new Response("cached production")]]);
+        caches.set(APP_CACHE, app);
+        fetch = vi.fn(async (input: string | Request) => {
+            const url = typeof input === "string" ? input : input.url;
+            if (url.endsWith("offline-manifest.json")) return new Response("{}", { status: 404 });
+            return new Response("from the network");
+        });
+        vi.stubGlobal("fetch", fetch);
+        vi.resetModules(); // the worker keeps the selection in memory
+        worker = await import("./offline");
+    });
+
+    afterEach(() => {
+        vi.useRealTimers();
+        vi.unstubAllEnvs();
+        vi.unstubAllGlobals();
+    });
+
+    it("sends only a valid build id to the network, and leaves the cached page for everything else", () => {
+        expect(classifyAppRequest(navigation("?build=pr-5"), scope)).toBe("select-build");
+        expect(classifyAppRequest(navigation("?build=dev-91"), scope)).toBe("select-build");
+        expect(classifyAppRequest(navigation("?build=prod"), scope)).toBe("select-build");
+        expect(classifyAppRequest(navigation(""), scope)).toBe("shell");
+        expect(classifyAppRequest(navigation("?build="), scope)).toBe("shell");
+        expect(classifyAppRequest(navigation("?build=PR_5"), scope)).toBe("shell");
+        expect(classifyAppRequest(navigation(`?build=${"a".repeat(41)}`), scope)).toBe("shell");
+        expect(classifyAppRequest(navigation("?build=../x"), scope)).toBe("shell");
+    });
+
+    it("answers the page from the cache when no build is selected", async () => {
+        expect((await load(navigation(""))).text).toBe("cached production");
+    });
+
+    it("loads the selected build's page from the network, not the cached production one", async () => {
+        expect((await load(navigation("?build=pr-5"))).text).toBe("from the network");
+    });
+
+    it("leaves every app request to the network while a build is selected", async () => {
+        await load(navigation("?build=pr-5"));
+        fetch.mockClear();
+
+        expect((await load(navigation(""))).text).toBe("from the network");
+        expect((await load({ method: "GET", url: `${scope}config.json`, mode: "cors" } as Request)).text).toBe(
+            "from the network",
+        );
+        expect((await load({ method: "GET", url: `${scope}bundles/abc/init.js`, mode: "cors" } as Request)).text).toBe(
+            "from the network",
+        );
+        expect(fetch).toHaveBeenCalledTimes(3);
+        // And nothing of the selected build lands in the production cache.
+        expect([...caches.get(APP_CACHE)!.keys()]).toEqual([`${scope}__index__`]);
+    });
+
+    it("does not replace the cached production build with the selected one", async () => {
+        await load(navigation("?build=pr-5"));
+        fetch.mockClear();
+
+        await worker.syncAppCache();
+
+        expect(fetch).not.toHaveBeenCalled();
+    });
+
+    it("keeps the selection when the worker is restarted", async () => {
+        await load(navigation("?build=pr-5"));
+        vi.resetModules();
+        worker = await import("./offline");
+
+        expect((await load(navigation(""))).text).toBe("from the network");
+    });
+
+    it("goes back to the cached production build, and updates it, on ?build=prod", async () => {
+        await load(navigation("?build=pr-5"));
+        fetch.mockClear();
+
+        const prod = await load(navigation("?build=prod"));
+        await prod.waited;
+
+        expect(prod.text).toBe("from the network");
+        // The page is fetched first: the server only drops its cookie with that answer.
+        expect(fetch.mock.calls[0][0].url).toBe(`${scope}?build=prod`);
+        expect(fetch.mock.calls[1][0]).toBe(`${scope}offline-manifest.json`);
+        expect((await load(navigation(""))).text).toBe("cached production");
+    });
+
+    it("lapses with the server's cookie, after a day", async () => {
+        vi.useFakeTimers();
+        await load(navigation("?build=pr-5"));
+
+        vi.advanceTimersByTime(23 * HOUR);
+        expect((await load(navigation(""))).text).toBe("from the network");
+
+        vi.advanceTimersByTime(2 * HOUR);
+        expect((await load(navigation(""))).text).toBe("cached production");
+    });
+
+    it("still loads the page when the selection cannot be written", async () => {
+        const open = vi.fn(async (name: string) => {
+            if (name === PREVIEW_CACHE) throw new Error("quota");
+            return { match: async () => new Response("cached production") } as unknown as Cache;
+        });
+        vi.stubGlobal("caches", { open });
+
+        expect((await load(navigation("?build=pr-5"))).text).toBe("from the network");
+    });
+
+    it("does not throw away the stored selection when it cleans up old caches", async () => {
+        const deleted: string[] = [];
+        vi.stubGlobal("caches", {
+            keys: async () => [APP_CACHE, MEDIA_CACHE, PREVIEW_CACHE, "workbox-old"],
+            delete: async (name: string) => void deleted.push(name),
+        });
+
+        await deleteUnknownCaches();
+
+        expect(deleted).toEqual(["workbox-old"]);
     });
 });

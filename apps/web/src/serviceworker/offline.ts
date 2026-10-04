@@ -16,18 +16,31 @@ Please see LICENSE files in the repository root for full details.
  *
  * Media: Matrix content is immutable per mxc URI, so downloads and thumbnails are kept and served from the
  * cache before any network or auth work.
+ *
+ * Build selector: opening `/?build=<id>` makes the server (nginx on chat.mxg.sh) answer with another build of
+ * Element on this same origin, so the login and the caches carry over. While that build is selected the worker
+ * steps aside completely: its page, config and files come from the network and nothing of them is cached
+ * next to the production build. `?build=prod` brings the production build back.
  */
 
 // v2: v1 kept every file it had ever cached under the same name (see isContentNamed), so it is
 // thrown away rather than repaired - it cannot say which of its files are the stale ones.
 export const APP_CACHE = "element-app-v2";
 export const MEDIA_CACHE = "element-media-v1";
-const KNOWN_CACHES = new Set([APP_CACHE, MEDIA_CACHE]);
+/** Holds one small entry: which build is selected, if any. */
+export const PREVIEW_CACHE = "element-preview-v1";
+const KNOWN_CACHES = new Set([APP_CACHE, MEDIA_CACHE, PREVIEW_CACHE]);
 
 const OFFLINE_MANIFEST = "offline-manifest.json";
 /** Where the worker keeps the manifest of the build whose index.html it serves. */
 const MANIFEST_KEY = "__offline_manifest__";
 const SHELL_KEY = "__index__";
+const PREVIEW_KEY = "__preview__";
+
+/** The ids the server routes: lower-case letters, digits and dashes. Anything else in `?build=` is ignored. */
+const BUILD_ID = /^[a-z0-9-]{1,40}$/;
+/** The server's `mxg_build` cookie lasts this long, so the selection ends with it. */
+const PREVIEW_MS = 24 * 60 * 60 * 1000;
 
 /*
  * A development build, read where it is used rather than decided once at import.
@@ -74,9 +87,10 @@ export async function deleteUnknownCaches(): Promise<void> {
  * shell: the page; revalidate: small unhashed files (config, translations), cached and refreshed in the
  * background; network-first: `version` (update checks); immutable: content-hashed build files; build: any
  * other file of ours, answered from the cache when the build has it (workers, WASM, icons, and the pages
- * of embedded Element Call, Jitsi and the download frame).
+ * of embedded Element Call, Jitsi and the download frame); select-build: the page opened with `?build=<id>`,
+ * which picks another build (or, for `prod`, leaves it) and is answered by the network.
  */
-export type AppRequestKind = "shell" | "revalidate" | "network-first" | "immutable" | "build";
+export type AppRequestKind = "shell" | "revalidate" | "network-first" | "immutable" | "build" | "select-build";
 
 /** How an app request (same origin as the worker) is answered, or undefined to leave it to the network. */
 export function classifyAppRequest(request: Request, scope: string): AppRequestKind | undefined {
@@ -86,7 +100,9 @@ export function classifyAppRequest(request: Request, scope: string): AppRequestK
     if (url.origin !== base.origin || !url.pathname.startsWith(base.pathname)) return undefined;
     const path = url.pathname.slice(base.pathname.length);
 
-    if (request.mode === "navigate" && (path === "" || path === "index.html")) return "shell";
+    if (request.mode === "navigate" && (path === "" || path === "index.html")) {
+        return BUILD_ID.test(url.searchParams.get("build") ?? "") ? "select-build" : "shell";
+    }
     // A homeserver on the same origin: its API and media are not ours to cache here.
     if (path.startsWith("_matrix/") || path.startsWith(".well-known/")) return undefined;
     // The remote inspection relay (utils/remoteDebug.ts): what it serves is made per request.
@@ -152,6 +168,34 @@ async function appCacheReady(cache: Cache): Promise<boolean> {
     return !!(await cache.match(SHELL_KEY));
 }
 
+/** When the selected build lapses (ms since the epoch), or null for none; undefined until read from the cache. */
+let previewUntil: number | null | undefined;
+
+/**
+ * Whether another build is selected. Kept in memory after the first read so the check costs nothing on
+ * the requests that follow; the cache entry is what survives the worker being stopped.
+ */
+async function previewSelected(): Promise<boolean> {
+    if (previewUntil === undefined) {
+        const cache = await caches.open(PREVIEW_CACHE);
+        const held: { until?: number } | undefined = await (await cache.match(PREVIEW_KEY))?.json();
+        previewUntil = held?.until ?? null;
+    }
+    return previewUntil !== null && previewUntil > Date.now();
+}
+
+/** Records the selected build, or with `prod` that none is. */
+async function selectBuild(id: string): Promise<void> {
+    const cache = await caches.open(PREVIEW_CACHE);
+    if (id === "prod") {
+        previewUntil = null;
+        await cache.delete(PREVIEW_KEY);
+    } else {
+        previewUntil = Date.now() + PREVIEW_MS;
+        await cache.put(PREVIEW_KEY, Response.json({ id, until: previewUntil }));
+    }
+}
+
 /** Answers an app request per {@link classifyAppRequest}; the network as before until a build is cached. */
 export async function respondApp(event: FetchEventLike, kind: AppRequestKind): Promise<Response> {
     // A failed fetch (offline, or a file of a build that's gone) is a network error for the page either way.
@@ -162,6 +206,17 @@ export async function respondApp(event: FetchEventLike, kind: AppRequestKind): P
 async function respondAppOrThrow(event: FetchEventLike, kind: AppRequestKind): Promise<Response> {
     // This origin may still have a production app cached from before the dev server started.
     if (isDev()) return fetch(event.request);
+    if (kind === "select-build") {
+        const id = new URL(event.request.url).searchParams.get("build") ?? "";
+        // A write that fails must not stop the page loading; the selection then simply lapses with the worker.
+        await selectBuild(id).catch(() => {});
+        const res = await fetch(event.request);
+        // Only now has the server dropped its cookie, so a sync any earlier would cache the selected build as production.
+        if (id === "prod") event.waitUntil(syncAppCache());
+        return res;
+    }
+    // The selected build is served by the network whole, so none of its files mix with the cached production ones.
+    if (await previewSelected().catch(() => false)) return fetch(event.request);
     const cache = await caches.open(APP_CACHE);
     if (!(await appCacheReady(cache))) {
         if (kind === "shell") event.waitUntil(syncAppCache());
@@ -256,6 +311,8 @@ export function syncAppCache(): Promise<void> {
 }
 
 async function doSyncAppCache(): Promise<void> {
+    // The manifest and index.html now come from the selected build: they must not replace production's cached ones.
+    if (await previewSelected()) return;
     const res = await fetch(scopeUrl(OFFLINE_MANIFEST), { cache: "no-store" });
     if (!res.ok) return; // dev build, or not deployed with a manifest
     const manifest: OfflineManifest = await res.json();
