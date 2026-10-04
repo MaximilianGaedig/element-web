@@ -23,8 +23,8 @@ import { useCallback, useSyncExternalStore } from "react";
 import { getBridgeBots } from "../bridge/bridgeInfo";
 import { getFunctionalMembers } from "../room/getFunctionalMembers";
 
-/** Per room, where others have read up to, recomputed when receipts or the timeline change. */
-const cache = new WeakMap<Room, { ts: number; eventId?: string }>();
+/** Per room, where others have read up to in timeline order, recomputed when receipts or the timeline change. */
+const cache = new WeakMap<Room, number>();
 /** Rooms whose events already drop their cache entry. */
 const watched = new WeakSet<Room>();
 
@@ -55,20 +55,20 @@ function ignoredReaders(room: Room): Set<string> {
     return ignored;
 }
 
-/** The newest event in the live timeline that somebody else has read: its timestamp, or -1 for none. */
-export function othersReadUpTo(room: Room): { ts: number; eventId?: string } {
+/** The newest event in the live timeline that somebody else has read: its position, or -1 for none. */
+export function othersReadUpTo(room: Room): number {
     const held = cache.get(room);
     if (held) return held;
     watch(room);
     const ignored = ignoredReaders(room);
     const events = room.getLiveTimeline().getEvents();
-    let found: { ts: number; eventId?: string } = { ts: -1 };
+    let found = -1;
     for (let i = events.length - 1; i >= 0; i--) {
         const readers = room
             .getReceiptsForEvent(events[i])
             .filter((receipt) => receipt.type === ReceiptType.Read && !ignored.has(receipt.userId));
         if (readers.length) {
-            found = { ts: events[i].getTs(), eventId: events[i].getId() };
+            found = i;
             break;
         }
     }
@@ -79,8 +79,14 @@ export function othersReadUpTo(room: Room): { ts: number; eventId?: string } {
 /** Whether `event` is at or before what somebody else has read. */
 export function isReadByOthers(room: Room, event: MatrixEvent): boolean {
     const upTo = othersReadUpTo(room);
-    if (upTo.ts < 0) return false;
-    return event.getId() === upTo.eventId || event.getTs() <= upTo.ts;
+    if (upTo < 0) return false;
+    const eventId = event.getId();
+    if (!eventId) return false;
+    const eventIndex = room
+        .getLiveTimeline()
+        .getEvents()
+        .findIndex((timelineEvent) => timelineEvent.getId() === eventId);
+    return eventIndex >= 0 && eventIndex <= upTo;
 }
 
 /** {@link isReadByOthers}, kept current as receipts arrive. */
