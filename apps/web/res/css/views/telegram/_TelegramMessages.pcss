@@ -449,6 +449,17 @@ Please see LICENSE files in the repository root for full details.
         .mx_ImageBody_container {
             border-radius: var(--tg-bubble-radius);
         }
+
+        /*
+         * A caption is as wide as its picture and wraps to it, as in Telegram. The line is a column as wide
+         * as its widest child, so a long caption set the bubble's width and stretched the picture's box with
+         * it (a portrait photo went from 266px to 575px); contained, it adds no width of its own. It also
+         * keeps a text bubble's inset rather than running to the bubble's edge.
+         */
+        .mx_EventTile_caption {
+            contain: inline-size;
+            padding: 0.25rem 0.5rem 0.375rem 0.625rem;
+        }
     }
 
     .mx_EventTile_tgOwn.mx_EventTile_tgBubble > .mx_EventTile_tgMediaLine {
