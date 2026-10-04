@@ -36,6 +36,7 @@ import shouldHideEvent from "../../../shouldHideEvent";
 import SettingsStore from "../../../settings/SettingsStore";
 import UserActivity from "../../../UserActivity";
 import Timer from "../../../utils/Timer";
+import { eventTriggersUnreadCount } from "../../../Unread";
 import { clearRoomNotification } from "../../../utils/notifications";
 import { pendingEventsToShow } from "../../../utils/room/pendingEvents";
 import { hasThreadSummary } from "../../../utils/EventUtils";
@@ -312,6 +313,8 @@ export class RoomTimelineViewModel
      * used by {@link dispose} and {@link onMarkAllAsRead} but NOT by the UI.
      */
     private readMarkerEventId: string | null = null;
+    /** The last row read on screen (`readableEndIndex` of {@link onVisibleRangeChanged}), as an array index. */
+    private readableEndArrayIndex = 0;
 
     /**
      * Where the unread line sits, decided once when the room is opened and then left alone for
@@ -329,13 +332,6 @@ export class RoomTimelineViewModel
      * ({@link onMarkAllAsRead}).
      */
     private frozenMarkerEventId: string | null = null;
-
-    /**
-     * Count of new live messages that arrived since the user last reached the
-     * visual bottom of the live timeline. Reset on `onAtBottomStateChange(true)`
-     * when `atLiveEnd` is also true.
-     */
-    private unreadMessageCount = 0;
 
     /**
      * Messages that mention the reader and have not been seen, by event ID, with the time they were
@@ -567,14 +563,10 @@ export class RoomTimelineViewModel
                 const items = this.buildItems();
 
                 const atLiveEnd = this.windowAtLiveEnd();
-                // Accumulate unread count only for messages from other users.
-                if (!this.isAtBottom && event.getSender() !== this.opts.client.getSafeUserId()) {
-                    this.unreadMessageCount++;
-                }
                 this.baseItems = items;
                 this.republish("live-event", {
                     atLiveEnd,
-                    numUnreadMessages: this.isAtBottom ? 0 : this.unreadMessageCount,
+                    numUnreadMessages: this.isAtBottom && atLiveEnd ? 0 : this.unreadBelow(items, atLiveEnd),
                     hasHighlights: this.opts.room.getUnreadNotificationCount(NotificationCountType.Highlight) > 0,
                     canJumpToReadMarker: this.computeCanJumpToReadMarker(items),
                 });
@@ -1044,16 +1036,37 @@ export class RoomTimelineViewModel
         }
     };
 
+    /**
+     * How many unread messages are below what the reader has read on screen, as Telegram's "down" button
+     * counts them: from others, of the kinds that count as unread, after the read marker and after the last
+     * row read on screen. Past the end of what is loaded, the server's count for the room stands in.
+     */
+    private unreadBelow(items: TimelineItem[], atLiveEnd: boolean): number {
+        const room = this.opts.room;
+        const client = this.opts.client;
+        const me = client.getSafeUserId();
+        const marker = this.readMarkerEventId ? items.findIndex((item) => item.key === this.readMarkerEventId) : -1;
+        let count = 0;
+        for (let i = Math.max(this.readableEndArrayIndex, marker) + 1; i < items.length; i++) {
+            const item = items[i];
+            if (item.kind !== "event" || isLocalEchoId(item.key)) continue;
+            const event = room.findEventById(item.key);
+            if (event && event.getSender() !== me && eventTriggersUnreadCount(client, event)) count++;
+        }
+        if (!atLiveEnd) count = Math.max(count, room.getUnreadNotificationCount(NotificationCountType.Total));
+        return count;
+    }
+
     public onAtBottomStateChange = (atBottom: boolean): void => {
         this.isAtBottom = atBottom;
         if (this.active) this.readingHistory = !atBottom;
-        if (atBottom && this.snapshot.current.atLiveEnd) {
-            this.unreadMessageCount = 0;
-        }
         this.mergeSnapshot(
             {
                 isAtBottom: atBottom,
-                numUnreadMessages: atBottom && this.snapshot.current.atLiveEnd ? 0 : this.unreadMessageCount,
+                numUnreadMessages:
+                    atBottom && this.snapshot.current.atLiveEnd
+                        ? 0
+                        : this.unreadBelow(this.snapshot.current.items, this.snapshot.current.atLiveEnd),
             },
             "at-bottom",
         );
@@ -1078,6 +1091,7 @@ export class RoomTimelineViewModel
         const prevEndArrayIndex = this.visibleEndArrayIndex;
         this.visibleStartArrayIndex = Math.max(0, startIndex);
         this.visibleEndArrayIndex = Math.max(0, endIndex);
+        this.readableEndArrayIndex = Math.max(0, readableEndIndex);
 
         for (let i = endIndex; i >= startIndex; i--) {
             const item = items[i];
@@ -1107,6 +1121,15 @@ export class RoomTimelineViewModel
             if (canJumpToReadMarker !== this.snapshot.current.canJumpToReadMarker) {
                 this.mergeSnapshot({ canJumpToReadMarker }, "range-changed");
             }
+        }
+
+        // Telegram's count on the "down" button: the unread messages still below what is read on screen.
+        const numUnreadMessages =
+            this.isAtBottom && this.snapshot.current.atLiveEnd
+                ? 0
+                : this.unreadBelow(items, this.snapshot.current.atLiveEnd);
+        if (numUnreadMessages !== this.snapshot.current.numUnreadMessages) {
+            this.mergeSnapshot({ numUnreadMessages }, "unread-below");
         }
 
         // Debounce sending a read receipt for the last visible event.
@@ -1241,7 +1264,6 @@ export class RoomTimelineViewModel
 
     public onJumpToLive = (scrollNow: ImmediateScroll): void => {
         debug(`[TimelineVM] onJumpToLive — atLiveEnd=${this.snapshot.current.atLiveEnd}`);
-        this.unreadMessageCount = 0;
         if (!this.snapshot.current.atLiveEnd) {
             // The newest messages are not loaded, so fetch them first. load() sets
             // pendingAnchor, which is what makes the view scroll there once they arrive.

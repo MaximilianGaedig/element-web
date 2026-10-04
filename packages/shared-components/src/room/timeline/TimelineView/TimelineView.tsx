@@ -67,6 +67,9 @@ const ESTIMATED_ITEM_HEIGHT = 48;
 const OVERSCAN = 16;
 /** px from the list bottom still counted as "at the bottom". */
 const AT_BOTTOM_THRESHOLD_PX = 4;
+/** How long a jump glides for, and how many screens it glides at most (a farther one cuts to that close). */
+const JUMP_GLIDE_MS = 320;
+const JUMP_GLIDE_SCREENS = 2;
 /** How many screens' height from the start of what is loaded the earlier history is asked for. */
 const PREFETCH_SCREENS = 2;
 /**
@@ -736,10 +739,57 @@ export function TimelineView({
     // Handed to the overlay buttons, and through them to the view model, so it can scroll
     // us straight away when the message it wants is already loaded — no fetch needed, and
     // no round trip through `pendingAnchor` above.
+    // A jump (to the next mention, a reaction, the unread marker, the end) glides there as in Telegram iOS
+    // rather than cutting to it. A far one cuts to a couple of screens short and glides the rest, so it takes
+    // no longer than a near one. The target is asked for afresh each frame: rows measured on the way move it.
+    const jumpFrameRef = useRef<number | undefined>(undefined);
+    useEffect(() => {
+        const scroller = scrollerRef.current;
+        if (!scroller) return;
+        // The reader taking hold of the list ends a glide.
+        const stop = (): void => {
+            if (jumpFrameRef.current !== undefined) cancelAnimationFrame(jumpFrameRef.current);
+            jumpFrameRef.current = undefined;
+        };
+        scroller.addEventListener("wheel", stop, { passive: true });
+        scroller.addEventListener("touchstart", stop, { passive: true });
+        scroller.addEventListener("pointerdown", stop, { passive: true });
+        return () => {
+            stop();
+            scroller.removeEventListener("wheel", stop);
+            scroller.removeEventListener("touchstart", stop);
+            scroller.removeEventListener("pointerdown", stop);
+        };
+    }, []);
     const scrollNow = useCallback<ImmediateScroll>(
         (anchor) => {
             const target = offsetForKey(anchor.targetKey, anchor.align);
-            if (target !== null) virtualizer.scrollToOffset(target);
+            const scroller = scrollerRef.current;
+            if (target === null) return;
+            if (jumpFrameRef.current !== undefined) cancelAnimationFrame(jumpFrameRef.current);
+            jumpFrameRef.current = undefined;
+            const reduced =
+                typeof window.matchMedia === "function" &&
+                window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+            if (!scroller || reduced) {
+                virtualizer.scrollToOffset(target);
+                return;
+            }
+            const reach = scroller.clientHeight * JUMP_GLIDE_SCREENS;
+            let from = scroller.scrollTop;
+            if (Math.abs(target - from) > reach) {
+                from = target - Math.sign(target - from) * reach;
+                virtualizer.scrollToOffset(from);
+            }
+            const startedAt = performance.now();
+            const glide = (now: number): void => {
+                const progress = Math.min(1, (now - startedAt) / JUMP_GLIDE_MS);
+                const eased = 1 - (1 - progress) ** 3;
+                const to = offsetForKey(anchor.targetKey, anchor.align) ?? target;
+                virtualizer.scrollToOffset(from + (to - from) * eased);
+                jumpFrameRef.current = progress < 1 ? requestAnimationFrame(glide) : undefined;
+            };
+            jumpFrameRef.current = requestAnimationFrame(glide);
         },
         [offsetForKey, virtualizer],
     );

@@ -588,4 +588,33 @@ describe("<TimelineView />", () => {
         await scrollTo(scroller, 1100);
         await waitFor(() => expect(actions.onStartReached).toHaveBeenCalled());
     });
+
+    // As in Telegram iOS: a jump glides to its target rather than cutting to it.
+    it("glides to where a jump goes", async () => {
+        // Motion as a reader without reduced motion has it.
+        const matchMedia = window.matchMedia.bind(window);
+        vi.spyOn(window, "matchMedia").mockImplementation((query: string) =>
+            query.includes("prefers-reduced-motion") ? ({ matches: false } as MediaQueryList) : matchMedia(query),
+        );
+        const { vm, actions } = makeFakeVm({ items: eventItems(30), isAtBottom: false });
+        renderTimeline(vm);
+        const scroller = screen.getByTestId("timeline-scroller");
+        await waitFor(() => expect(actions.onAnchorReached).toHaveBeenCalled(), { timeout: 5000 });
+        await waitFor(() => expect(scroller.scrollTop).toBeGreaterThan(500));
+        const before = scroller.scrollTop;
+
+        const jumpToBottom = await screen.findByRole("button", { name: "Scroll to most recent messages" });
+        await userEvent.setup().click(jumpToBottom);
+        const scrollNow = actions.onJumpToLive.mock.calls[0][0] as (anchor: {
+            targetKey: string;
+            align: string;
+        }) => void;
+        act(() => scrollNow({ targetKey: vm.getSnapshot().items[0].key, align: "start" }));
+
+        // Not there at once (a far jump cuts to two screens short of it and glides the rest)...
+        expect(scroller.scrollTop).toBeGreaterThan(0);
+        expect(scroller.scrollTop).toBeLessThan(before);
+        // ...but soon after.
+        await waitFor(() => expect(scroller.scrollTop).toBe(0), { timeout: 1000 });
+    });
 });

@@ -1008,6 +1008,28 @@ describe("RoomTimelineViewModel", () => {
                 expect(scrollNow).toHaveBeenCalledTimes(3);
             });
 
+            // Telegram's "down" button counts the unread messages still below what is on screen.
+            it("counts the unread messages below what has been read on screen", async () => {
+                seedTimeline([
+                    makeMessage("$read"),
+                    makeMessage("$u1", { user: BOB }),
+                    makeMessage("$u2", { user: BOB }),
+                    makeMessage("$mine"),
+                    makeMessage("$u3", { user: BOB }),
+                ]);
+                markReadUpTo("$read");
+                const vm = await createStartedViewModel();
+                vm.onAnchorReached();
+                vm.onAtBottomStateChange(false);
+                const items = vm.getSnapshot().items;
+
+                vm.onVisibleRangeChanged(indexOfKey(items, "$read"), indexOfKey(items, "$read"));
+                expect(vm.getSnapshot().numUnreadMessages).toBe(3); // not our own
+
+                vm.onVisibleRangeChanged(indexOfKey(items, "$u2"), indexOfKey(items, "$u2"));
+                expect(vm.getSnapshot().numUnreadMessages).toBe(1);
+            });
+
             it("counts a mention as seen once it has been on screen", async () => {
                 seedTimeline([makeMessage("$read"), makeMention("$m1", { ts: 10 }), makeMention("$m2", { ts: 20 })]);
                 markReadUpTo("$read");
