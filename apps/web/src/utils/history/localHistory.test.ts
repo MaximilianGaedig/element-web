@@ -111,6 +111,20 @@ describe("local history", () => {
         expect(page.end).toBe("t_before_a");
     });
 
+    // The sliding sync cache writes a room from its newest message on (MEO-130): the next session starts there,
+    // with no token, and the events left out must still come back, followed by the server's token.
+    it("carries on past what the cache left out, to the token the first session had", async () => {
+        await see(timelineOf([raw("$0"), raw("$1"), raw("$2"), raw("$m"), raw("$status")], "t_before_0"));
+        // Replayed from the cache: from $m, and no token (the SDK pages back from the latest then).
+        const replayed = timelineOf([raw("$m"), raw("$status")], FROM_LATEST_PAGINATION_TOKEN);
+        await see(replayed);
+
+        expect(replayed.getPaginationToken(Direction.Backward)).toBe(`${LOCAL_PAGINATION_PREFIX}$m`);
+        const page = await client.createMessagesRequest(roomId, `${LOCAL_PAGINATION_PREFIX}$m`, 30, Direction.Backward);
+        expect(page.chunk.map((e) => e.event_id)).toEqual(["$2", "$1", "$0"]);
+        expect(page.end).toBe("t_before_0");
+    });
+
     it("never ends a page without a way on, unless it reached the room's creation", async () => {
         // $b..$c were seen together but nothing about what is before $b: the page must not claim the start.
         await see(timelineOf([raw("$b"), raw("$c")], FROM_LATEST_PAGINATION_TOKEN));

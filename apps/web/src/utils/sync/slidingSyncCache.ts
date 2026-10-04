@@ -130,8 +130,37 @@ export function mergeRoomData(
     return room;
 }
 
+/** The events a room's chat-list line can show: what its timeline is kept from (see fromNewestMessage). */
+const MESSAGE_TYPES: ReadonlySet<string> = new Set([
+    EventType.RoomMessage,
+    EventType.RoomMessageEncrypted,
+    EventType.Sticker,
+    EventType.CallInvite,
+    "m.poll.start",
+    "org.matrix.msc3381.poll.start",
+]);
+
+/**
+ * What is written of a room's timeline: its newest message and what came after it, not the events before.
+ *
+ * The lists ask for ten events so that a message is among them, but every session replays what is written,
+ * and in most chats the message is one of the last few (a delivery status or a reaction follows it): ~7000
+ * events for 700 rooms, where ~2000 do. The events left out are in the message database with the token before
+ * them (utils/history/localHistory), so scrolling back from the message carries on there. Their own token no
+ * longer fits the first event kept and goes; a room with no message among its events is written whole.
+ */
+export function fromNewestMessage(room: CachedRoom): CachedRoom {
+    let newest = -1;
+    room.timeline.forEach((event, i) => {
+        if (MESSAGE_TYPES.has(event.type) && !(event as IStateEvent).state_key) newest = i;
+    });
+    if (newest <= 0) return room;
+    return { ...room, timeline: room.timeline.slice(newest), prev_batch: undefined };
+}
+
 /** What a cached room is replayed as: complete as far as it goes, with its earlier history to be asked for. */
-function asRoomData(room: CachedRoom): MSC3575RoomData {
+function asRoomData(cached: CachedRoom): MSC3575RoomData {
+    const room = fromNewestMessage(cached);
     return { ...room, name: room.name ?? "", initial: true, limited: true, num_live: 0, prev_batch: room.prev_batch };
 }
 

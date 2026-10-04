@@ -22,6 +22,7 @@ import {
     CACHED_TIMELINE,
     clearSlidingSyncCache,
     FIRST_ROOMS,
+    fromNewestMessage,
     mergeRoomData,
     SlidingSyncCacheStore,
 } from "./slidingSyncCache";
@@ -48,6 +49,56 @@ const keepListState = (event: IStateEvent): boolean => ROOM_LIST_STATE_TYPES.inc
 /** A room update with only the fields a test is about: as the server sends them, without a name unless it changed. */
 const update = (fields: Partial<MSC3575RoomData>): MSC3575RoomData =>
     ({ required_state: [], timeline: [], ...fields }) as MSC3575RoomData;
+
+// Every session replays what is written: from the newest message on is what the chat needs (MEO-130).
+describe("fromNewestMessage", () => {
+    const status = (id: string): IRoomEvent => ({
+        type: "com.beeper.message_send_status",
+        event_id: id,
+        sender: "@bot:example.org",
+        origin_server_ts: 1,
+        content: { "m.relates_to": { rel_type: "m.reference", event_id: "$x" } },
+    });
+    const room = (timeline: IRoomEvent[]) =>
+        ({ required_state: [], timeline, prev_batch: "t_before_first", name: "Chat" }) as Parameters<
+            typeof fromNewestMessage
+        >[0];
+
+    it("keeps the newest message and what came after it, and lets the token for before the first event go", () => {
+        const kept = fromNewestMessage(
+            room([message("$1"), status("$s1"), message("$2"), status("$s2"), status("$s3")]),
+        );
+        expect(kept.timeline.map((event) => event.event_id)).toEqual(["$2", "$s2", "$s3"]);
+        expect(kept.prev_batch).toBeUndefined();
+    });
+
+    it("keeps a room whole when its first event is the newest message, or there is none", () => {
+        const first = room([message("$1"), status("$s1")]);
+        expect(fromNewestMessage(first)).toBe(first);
+        const none = room([status("$s1"), status("$s2")]);
+        expect(fromNewestMessage(none)).toBe(none);
+    });
+
+    it("is what the next session is handed", async () => {
+        (globalThis as { indexedDB?: IDBFactory }).indexedDB = new IDBFactory();
+        await clearSlidingSyncCache();
+        const client = Object.assign(new EventEmitter(), { getRoom: () => null }) as unknown as MatrixClient;
+        const store = new SlidingSyncCacheStore(ME);
+        const sync = new EventEmitter();
+        store.record(sync as unknown as SlidingSync, client);
+        sync.emit(SlidingSyncEvent.RoomData, "!r:example.org", {
+            required_state: [],
+            initial: true,
+            prev_batch: "t_before_1",
+            timeline: [message("$1"), message("$2"), status("$s")],
+        });
+        await store.save(client);
+
+        const first = await new SlidingSyncCacheStore(ME).loadFirst();
+        expect(first!.rooms["!r:example.org"].timeline.map((event) => event.event_id)).toEqual(["$2", "$s"]);
+        expect(first!.rooms["!r:example.org"].prev_batch).toBeUndefined();
+    });
+});
 
 describe("mergeRoomData", () => {
     it("keeps the state the chat list reads, replaced by type and key, and nothing else", () => {
