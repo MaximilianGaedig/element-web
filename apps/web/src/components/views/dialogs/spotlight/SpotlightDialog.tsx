@@ -602,10 +602,12 @@ const SpotlightDialog: React.FC<IProps> = ({ initialText = "", initialFilter = n
         });
         return () => clearTimeout(timer);
         // we intentionally ignore changes to the rovingContext for the purpose of this hook
-        // we only want to reset the focus whenever the results or filters change (the messages are results too:
-        // when they land, the entry first in the list may be a different one)
+        // we only want to reset the focus whenever the results or filters change. The messages are results too:
+        // when the first page lands, or a chip narrows them, the entry first in the list may be a different one.
+        // A further page added to the end is not a new set of results: following the number of hits here
+        // threw the list back to its top every time it was scrolled far enough to fetch more.
         // oxlint-disable-next-line react-hooks/exhaustive-deps
-    }, [results, filter, messageSearch.loading, messageSearch.hits.length]);
+    }, [results, filter, messageFilter, messageSearch.loading, messageSearch.hits.length > 0]);
 
     const viewRoom = (
         room: {

@@ -266,6 +266,56 @@ describe("Spotlight messages", () => {
         });
     });
 
+    it("keeps the place in the list when the next page arrives as it is scrolled to its end", async () => {
+        // The list asks for the next page when its end comes into view: hold on to that so the test can scroll there.
+        let reachEnd: (() => void) | undefined;
+        vi.stubGlobal(
+            "IntersectionObserver",
+            class {
+                public constructor(callback: IntersectionObserverCallback) {
+                    reachEnd = () => callback([{ isIntersecting: true } as IntersectionObserverEntry], this as any);
+                }
+                public observe(): void {}
+                public disconnect(): void {}
+            },
+        );
+        const results = found(
+            ["$1", "$2", "$3", "$4"].map((id) => hit(id, GROUP_ID, `dune ${id}`)),
+            "more",
+        );
+        vi.mocked(eventSearch).mockResolvedValue(results);
+        vi.mocked(searchPagination).mockImplementation(async () => {
+            results.results.push(...["$5", "$6"].map((id) => hit(id, GROUP_ID, `dune ${id}`)));
+            results.next_batch = undefined;
+            return results;
+        });
+        const scrolledTo = vi.spyOn(HTMLElement.prototype, "scrollIntoView");
+        try {
+            render(<SpotlightDialog initialText="dune" initialFilter={Filter.Messages} onFinished={vi.fn()} />);
+            await settle();
+            const input = screen.getByRole("textbox", { name: "Search" });
+            expect(input).toHaveAttribute("aria-activedescendant", "mx_SpotlightDialog_button_message_$1");
+
+            // Down to the last hit, then its end comes into view and the next page is fetched.
+            for (let i = 0; i < 3; i++) fireEvent.keyDown(input, { key: "ArrowDown" });
+            expect(input).toHaveAttribute("aria-activedescendant", "mx_SpotlightDialog_button_message_$4");
+            scrolledTo.mockClear();
+            act(() => reachEnd!());
+            await settle();
+
+            expect(searchPagination).toHaveBeenCalled();
+            expect(document.getElementById("mx_SpotlightDialog_button_message_$6")).toBeInTheDocument();
+            // Neither the selection nor the scroll position goes back to the first hit.
+            expect(input).toHaveAttribute("aria-activedescendant", "mx_SpotlightDialog_button_message_$4");
+            expect(scrolledTo.mock.contexts).not.toContain(
+                document.getElementById("mx_SpotlightDialog_button_message_$1"),
+            );
+        } finally {
+            scrolledTo.mockRestore();
+            vi.unstubAllGlobals();
+        }
+    });
+
     it("asks for the next page when a filter leaves the first one nearly empty", async () => {
         vi.mocked(eventSearch).mockResolvedValue(found([hit("$text", GROUP_ID, "dune")], "more"));
         const results = found([hit("$text", GROUP_ID, "dune")], "more");
