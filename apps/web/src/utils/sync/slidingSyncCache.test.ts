@@ -360,6 +360,50 @@ describe("SlidingSyncCacheStore", () => {
     });
 
     // The connection carries on from the cache, and the server does not send again what it sent before.
+    // The server once dated bridged chats by when the bridge made them (MEO-137). A resumed connection describes
+    // only rooms that changed, so dates kept before the fix would have stayed: an older cache is not used.
+    it("starts afresh from a cache kept in an older format", async () => {
+        await new Promise<void>((resolve, reject) => {
+            const request = indexedDB.open("mx-sliding-sync-cache", 1);
+            request.onupgradeneeded = (): void => {
+                request.result.createObjectStore("snapshots");
+            };
+            request.onsuccess = (): void => {
+                const db = request.result;
+                const tx = db.transaction("snapshots", "readwrite");
+                tx.objectStore("snapshots").put(
+                    { rooms: {}, accountData: { global: [], rooms: {} }, pos: "5" },
+                    `${ME}:first`,
+                );
+                tx.oncomplete = (): void => {
+                    db.close();
+                    resolve();
+                };
+                tx.onerror = (): void => reject(tx.error);
+            };
+            request.onerror = (): void => reject(request.error);
+        });
+
+        const store = new SlidingSyncCacheStore(ME);
+        expect(await store.loadFirst()).toBeNull();
+
+        // ...and it is removed once the current format is written.
+        await store.save(client);
+        const old = await new Promise<unknown>((resolve, reject) => {
+            const request = indexedDB.open("mx-sliding-sync-cache", 1);
+            request.onsuccess = (): void => {
+                const get = request.result.transaction("snapshots").objectStore("snapshots").get(`${ME}:first`);
+                get.onsuccess = (): void => {
+                    request.result.close();
+                    resolve(get.result);
+                };
+                get.onerror = (): void => reject(get.error);
+            };
+            request.onerror = (): void => reject(request.error);
+        });
+        expect(old).toBeUndefined();
+    });
+
     it("hands the next session the position of the last response taken in whole", async () => {
         const store = new SlidingSyncCacheStore(ME);
         const sync = new FakeSlidingSync();
