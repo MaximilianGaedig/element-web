@@ -146,7 +146,7 @@ export function sectionContentLabels(section: UserTab): string[] {
     return [...names, ...labels].filter((label): label is string => !!label);
 }
 
-/** Which of the settings with a section this has, by key: for the test that guards the table. */
+/** @knipignore Only its test calls this, to guard that every setting in the table is real. */
 export const indexedSettings = (): [UserTab, SettingKey[]][] =>
     Object.entries(CONTENTS).map(([tab, contents]) => [tab as UserTab, contents.settings ?? []]);
 
