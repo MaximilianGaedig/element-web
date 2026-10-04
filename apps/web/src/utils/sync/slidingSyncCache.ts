@@ -107,13 +107,9 @@ export function mergeRoomData(
 
     const incoming = data.timeline ?? [];
     let timeline = room.timeline;
-    // A timeline that does not carry on from what is kept replaces it: kept side by side, they would hide
-    // whatever was said in between.
-    if (
-        data.limited &&
-        incoming.length &&
-        !incoming.some((event) => timeline.some((k) => k.event_id === event.event_id))
-    ) {
+    // A limited timeline that does not reach back to the earliest kept event replaces what is kept: kept above
+    // it, the earlier events would sit over a gap no token leads into (as the SDK does with them too).
+    if (data.limited && incoming.length && !incoming.some((event) => event.event_id === timeline[0]?.event_id)) {
         timeline = [];
     }
     const seen = new Set(timeline.map((event) => event.event_id));

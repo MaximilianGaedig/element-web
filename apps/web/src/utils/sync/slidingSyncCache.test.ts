@@ -145,6 +145,33 @@ describe("mergeRoomData", () => {
             expect(room.prev_batch).toBeUndefined();
         });
 
+        // Kept above it, the earlier events would sit over a gap no token leads into.
+        it("is the new one when a limited timeline does not reach back to the earliest kept event", () => {
+            let room = mergeRoomData(
+                undefined,
+                update({
+                    initial: true,
+                    limited: true,
+                    required_state: [],
+                    timeline: [message("$1"), message("$2")],
+                    prev_batch: "t1",
+                }),
+                keepListState,
+            );
+            room = mergeRoomData(
+                room,
+                update({
+                    limited: true,
+                    required_state: [],
+                    timeline: [message("$2"), message("$3")],
+                    prev_batch: "t2",
+                }),
+                keepListState,
+            );
+            expect(room.timeline.map((event) => event.event_id)).toEqual(["$2", "$3"]);
+            expect(room.prev_batch).toBe("t2");
+        });
+
         it("is the new one when a timeline that does not carry on replaces what is kept", () => {
             let room = mergeRoomData(
                 undefined,
