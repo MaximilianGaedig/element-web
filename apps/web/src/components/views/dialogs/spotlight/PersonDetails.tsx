@@ -8,8 +8,8 @@ Please see LICENSE files in the repository root for full details.
 import React, { type JSX, useEffect, useState } from "react";
 import { type MatrixClient } from "matrix-js-sdk/src/matrix";
 
-import { publishedIdentity } from "../../../../utils/contacts/people";
-import { bridgedPersonLine } from "../../../../utils/contacts/networkHandle";
+import { publishedIdentity, savedOnNetworks } from "../../../../utils/contacts/people";
+import { bridgedPersonLine, type PublishedIdentity } from "../../../../utils/contacts/networkHandle";
 
 interface Props {
     client: MatrixClient;
@@ -25,8 +25,8 @@ interface Props {
 
 /**
  * The line under a person in the search results: for somebody on a bridged network, the username or number
- * that network knows them by (utils/contacts/networkHandle.ts), not their ghost's Matrix ID; for a Matrix
- * account, the Matrix ID.
+ * that network knows them by (utils/contacts/networkHandle.ts), not their ghost's Matrix ID, and whether
+ * the network's own address book holds them; for a Matrix account, the Matrix ID.
  *
  * Their profile has to be asked for that, once per person (people.ts keeps the answers). Until it answers
  * the line holds what is already known - the network of the chat, the network's own line - rather than
@@ -40,10 +40,10 @@ export function PersonDetails({ client, userId, id, className, context, network 
         setBridged(undefined);
         // A profile that cannot be read leaves them a Matrix account here, as the contacts list does.
         void Promise.resolve()
-            .then(() => publishedIdentity(client, userId))
-            .catch(() => ({ identifiers: [] }))
-            .then((identity) => {
-                if (live) setBridged(bridgedPersonLine(client, identity) ?? null);
+            .then(() => Promise.all([publishedIdentity(client, userId), savedOnNetworks(client)]))
+            .catch((): [PublishedIdentity, Map<string, string>] => [{ identifiers: [] }, new Map()])
+            .then(([identity, saved]) => {
+                if (live) setBridged(bridgedPersonLine(client, identity, saved.get(userId)) ?? null);
             });
         return () => {
             live = false;

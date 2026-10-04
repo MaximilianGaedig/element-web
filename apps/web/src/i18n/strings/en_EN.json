@@ -3699,6 +3699,7 @@
         "no_results": "No results found",
         "no_results_hint": "Check the spelling, or try another tab.",
         "other_rooms_in_space": "Other rooms in %(spaceName)s",
+        "person_in_contacts": "In your %(network)s contacts",
         "public_rooms_label": "Public rooms",
         "public_spaces_label": "Public spaces",
         "recent_searches_section_title": "Recent searches",

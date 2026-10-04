@@ -269,6 +269,23 @@ export async function networkOfUser(client: MatrixClient, userId: string): Promi
 }
 
 /**
+ * Whose ghosts are in a network's own address book, and which network's: the bridges' contact lists
+ * (Telegram, WhatsApp and Signal keep one; Messenger and Instagram publish none), asked for at most every
+ * few minutes like the rest of the contacts. Empty when no bridge can answer.
+ */
+export async function savedOnNetworks(client: MatrixClient): Promise<Map<string, string>> {
+    const saved = new Map<string, string>();
+    try {
+        for (const account of await bridgeContacts(client, false)) {
+            if (account.mxid && account.saved) saved.set(account.mxid, account.network);
+        }
+    } catch {
+        // No bridge reachable is no contacts known, not an error to show next to a search result.
+    }
+    return saved;
+}
+
+/**
  * What a ghost's profile says about the account it stands for: which network (its id, `telegram`), its id
  * there and the identifiers the network published. `network` is absent for a Matrix account of its own.
  * Cached with the rest of the profile.

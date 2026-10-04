@@ -30,6 +30,7 @@ import eventSearch, { searchPagination } from "../../../../Searching";
 import { ScreenSize, useScreenSize } from "../../../../utils/telegram/tgLayout/mediaSizes";
 import SettingsStore from "../../../../settings/SettingsStore";
 import { startDmOnFirstMessage } from "../../../../utils/direct-messages";
+import { savedOnNetworks } from "../../../../utils/contacts/people";
 
 vi.useFakeTimers({ shouldAdvanceTime: true });
 
@@ -45,6 +46,11 @@ vi.mock("../../../../utils/direct-messages", async () => ({
     // @ts-ignore
     ...(await vi.importActual("../../../../utils/direct-messages")),
     startDmOnFirstMessage: vi.fn(),
+}));
+vi.mock("../../../../utils/contacts/people", async () => ({
+    // @ts-ignore
+    ...(await vi.importActual("../../../../utils/contacts/people")),
+    savedOnNetworks: vi.fn(),
 }));
 vi.mock("../../../../utils/telegram/tgLayout/mediaSizes", async () => ({
     // @ts-ignore
@@ -105,6 +111,7 @@ describe("Spotlight messages", () => {
         vi.mocked(eventSearch).mockReset();
         vi.mocked(searchPagination).mockReset();
         vi.mocked(defaultDispatcher.dispatch).mockClear();
+        vi.mocked(savedOnNetworks).mockResolvedValue(new Map());
     });
 
     afterEach(() => {
@@ -459,6 +466,21 @@ describe("Spotlight messages", () => {
             expect(details("@whatsapp_1002:example.com")).toHaveTextContent(/^\+48987654321 · Whatsapp$/);
             // A Matrix account of its own is known by its Matrix ID.
             expect(details("@carol:example.com")).toHaveTextContent(/^@carol:example.com$/);
+        });
+
+        it("says which bridged people the network's own address book holds", async () => {
+            vi.mocked(savedOnNetworks).mockResolvedValue(new Map([["@telegram_3001:example.com", "Telegram"]]));
+            const people = ["@telegram_3001:example.com", "@telegram_3002:example.com"].map((userId) => {
+                const member = new RoomMember(GROUP_ID, userId);
+                member.name = member.rawDisplayName = `Ada ${userId.slice(10, 14)}`;
+                return member;
+            });
+            vi.mocked(group.getJoinedMembers).mockReturnValue(people);
+            render(<SpotlightDialog initialText="ada" initialFilter={Filter.People} onFinished={vi.fn()} />);
+            await settle();
+
+            expect(details("@telegram_3001:example.com")).toHaveTextContent(/^@ada · In your Telegram contacts$/);
+            expect(details("@telegram_3002:example.com")).toHaveTextContent(/^@ada · Telegram$/);
         });
 
         it("describes a chat with one bridged person the same way", async () => {

@@ -16,6 +16,7 @@ Please see LICENSE files in the repository root for full details.
 
 import { type MatrixClient } from "matrix-js-sdk/src/matrix";
 
+import { _t } from "../../languageHandler";
 import { getBridgeInfo } from "../bridge/bridgeInfo";
 import { emailKey, phoneKey } from "./identity";
 
@@ -67,12 +68,20 @@ function networkName(client: MatrixClient, network: string): string {
 
 /**
  * The line under a bridged person's name: what the network knows them as and which network, `@ada ·
- * Telegram`, or the network alone when it published nothing. Undefined for a Matrix account, whose Matrix
- * ID is its handle.
+ * Telegram`, or the network alone when it published nothing. When the network's own address book holds
+ * them (`savedOn`, the network's name as the bridge's contact list gives it) the line says so instead of
+ * only naming the network: `@ada · In your Telegram contacts`. Undefined for a Matrix account, whose
+ * Matrix ID is its handle.
  */
-export function bridgedPersonLine(client: MatrixClient, identity: PublishedIdentity): string | undefined {
+export function bridgedPersonLine(
+    client: MatrixClient,
+    identity: PublishedIdentity,
+    savedOn?: string,
+): string | undefined {
     if (!identity.network) return undefined;
-    const name = networkName(client, identity.network);
+    const name = savedOn
+        ? _t("spotlight_dialog|person_in_contacts", { network: savedOn })
+        : networkName(client, identity.network);
     const handle = networkHandle(identity.identifiers);
     return handle ? `${handle} · ${name}` : name;
 }

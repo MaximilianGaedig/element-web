@@ -34,6 +34,12 @@ describe("bridgedPersonLine", () => {
         expect(bridgedPersonLine(client, { network: "signal", identifiers: [] })).toBe("Signal");
     });
 
+    it("says when the network's own address book holds them", () => {
+        expect(bridgedPersonLine(client, { network: "telegram", identifiers: ["telegram:ada"] }, "Telegram")).toBe(
+            "@ada · In your Telegram contacts",
+        );
+    });
+
     it("leaves a Matrix account to its Matrix ID", () => {
         expect(bridgedPersonLine(client, { identifiers: ["tel:+48123456789"] })).toBeUndefined();
     });
