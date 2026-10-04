@@ -1,0 +1,6 @@
+# pnpm writes and deletes `_tmp_<pid>_<hex>` probe files in the directory it runs in. Nx's package-json
+# plugin runs `pnpm --version` in every freshly spawned plugin worker (it only reads the top-level
+# `packageManager` field, not `devEngines.packageManager`), so each graph recompute makes a probe
+# whose deletion schedules the next recompute. The daemon never settles, `nx` commands hang, and
+# daemon.log grows quadratically (21 GB in six hours here).
+_tmp_*
