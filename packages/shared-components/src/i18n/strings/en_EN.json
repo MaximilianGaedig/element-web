@@ -37,6 +37,10 @@
         "view_source": "View source",
         "yes": "Yes"
     },
+    "build_banner": {
+        "not_production": "Build %(build)s, not production",
+        "return_to_production": "Return to production"
+    },
     "common": {
         "attachment": "Attachment",
         "encryption_enabled": "Encryption enabled",

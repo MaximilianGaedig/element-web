@@ -38,6 +38,7 @@ export * from "./room/timeline/event-tile/body/ViewSourceEventView";
 export * from "./room/timeline/event-tile/EventTileView/TileErrorView";
 export * from "./core/pill-input/Pill";
 export * from "./core/pill-input/PillInput";
+export * from "./build/BuildBannerView";
 export * from "./room/RoomStatusBar";
 export * from "./room/WidgetPip";
 export * from "./room/ElementCallAppTile";

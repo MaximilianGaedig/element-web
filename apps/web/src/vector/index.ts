@@ -124,6 +124,7 @@ async function start(): Promise<void> {
         loadApp,
         loadPlugins,
         showError,
+        showBuildBanner,
         showIncompatibleBrowser,
         _t,
         extractErrorMessageFromError,
@@ -163,6 +164,7 @@ async function start(): Promise<void> {
         // await things settling so that any errors we have to render have features like i18n running
         await settled(loadThemePromise, loadLanguagePromise);
         bootMark("i18n_theme_loaded");
+        showBuildBanner();
 
         const loadPluginsPromise = loadPlugins();
         await settled(loadPluginsPromise);
