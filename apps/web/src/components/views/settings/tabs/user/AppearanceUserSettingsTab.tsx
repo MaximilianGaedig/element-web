@@ -138,6 +138,7 @@ export default class AppearanceUserSettingsTab extends React.Component<EmptyObje
                                 label={_t("settings|read_receipts_style")}
                                 level={SettingLevel.ACCOUNT}
                             />
+                            <SettingsFlag name="roomListReadersOnOthers" level={SettingLevel.ACCOUNT} />
                         </Form.Root>
                     </SettingsSubsection>
                     <FontScalingPanel />

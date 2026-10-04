@@ -27,8 +27,12 @@ export interface RoomListItemContentProps {
     renderAvatar: (room: Room) => ReactNode;
     /** Optional function to render the room path (e.g. space breadcrumbs) */
     renderRoomPath?: (room: Room) => ReactNode;
-    /** Fork: optional function to render the previewed message's delivery state (its ticks) */
-    renderSendState?: (state: RoomListItemSendState, readers: string[] | undefined, room: Room) => ReactNode;
+    /** Fork: optional function to render the previewed message's delivery state (its ticks), or who has read it */
+    renderSendState?: (
+        state: RoomListItemSendState | undefined,
+        readers: string[] | undefined,
+        room: Room,
+    ) => ReactNode;
     /** Whether the item is being dragged */
     isDragging?: boolean;
 }
@@ -101,7 +105,7 @@ export const RoomListItemContent = memo(function RoomListItemContent({
                             />
                         )}
                         <span className={styles.ellipsis}>{item.messagePreview}</span>
-                        {item.messagePreviewSendState && renderSendState && (
+                        {(item.messagePreviewSendState || item.messagePreviewReaders?.length) && renderSendState && (
                             <span className={styles.sendState} data-testid="room-send-state">
                                 {renderSendState(item.messagePreviewSendState, item.messagePreviewReaders, item.room)}
                             </span>

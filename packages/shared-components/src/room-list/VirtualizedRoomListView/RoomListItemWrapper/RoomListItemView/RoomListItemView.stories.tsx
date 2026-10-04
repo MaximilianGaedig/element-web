@@ -30,7 +30,7 @@ type RoomListItemProps = RoomListItemViewSnapshot &
         isFirstItem: boolean;
         isLastItem: boolean;
         renderAvatar: (room: Room) => React.ReactElement;
-        renderSendState?: (state: RoomListItemSendState) => React.ReactNode;
+        renderSendState?: (state: RoomListItemSendState | undefined, readers: string[] | undefined) => React.ReactNode;
     };
 
 // Wrapper component that creates a mocked ViewModel

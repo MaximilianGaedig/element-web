@@ -134,6 +134,10 @@ export class RoomListItemViewModel
             SettingsStore.unwatchSetting(settingsWatchRef);
         });
 
+        // Fork: whether somebody else's last message shows who has read it
+        const readersOnOthersRef = SettingsStore.watchSetting("roomListReadersOnOthers", null, this.onSendStateChanged);
+        this.disposables.track(() => SettingsStore.unwatchSetting(readersOnOthersRef));
+
         // Subscribe to settings changes for section toggle
         const settingsShowSectionsRef = SettingsStore.watchSetting(
             "RoomList.showSections",
@@ -273,7 +277,13 @@ export class RoomListItemViewModel
         if (this.disposables.isDisposed) return;
         const { room, client } = this.props;
         const messagePreviewSendState = getPreviewSendState(client, room, this.previewEvent);
-        const readers = messagePreviewSendState ? getPreviewReaders(client, room, this.previewEvent) : undefined;
+        // Somebody else's message has readers but no ticks, when the setting asks for them
+        const readers = getPreviewReaders(
+            client,
+            room,
+            this.previewEvent,
+            SettingsStore.getValue("roomListReadersOnOthers"),
+        );
         this.watchSendState(messagePreviewSendState ? this.previewEvent : undefined);
         this.snapshot.merge({
             messagePreviewSendState,

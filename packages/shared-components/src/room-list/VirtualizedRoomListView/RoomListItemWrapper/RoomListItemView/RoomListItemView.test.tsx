@@ -209,6 +209,17 @@ describe("<RoomListItemView />", () => {
         expect(badge.right).toBeLessThanOrEqual(row.right);
     });
 
+    it("draws who has read somebody else's message, which has no ticks", () => {
+        render(
+            <Default
+                messagePreviewReaders={["@alice:server"]}
+                renderSendState={(state, readers) => <span data-testid="readers">{`${state}:${readers?.join()}`}</span>}
+            />,
+        );
+        expect(screen.getByTestId("room-send-state")).toContainElement(screen.getByTestId("readers"));
+        expect(screen.getByTestId("readers")).toHaveTextContent("undefined:@alice:server");
+    });
+
     it("shows no ticks when the last message is not ours", () => {
         render(<Default renderSendState={(state) => <span>{state}</span>} />);
         expect(screen.queryByTestId("room-send-state")).toBeNull();

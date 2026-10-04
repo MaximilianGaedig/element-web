@@ -126,7 +126,11 @@ export interface RoomListViewProps {
     /** Optional render function for room path / breadcrumbs */
     renderRoomPath?: (room: Room) => ReactNode;
     /** Fork: optional render function for a room's last message ticks, when the current user sent it */
-    renderSendState?: (state: RoomListItemSendState, readers: string[] | undefined, room: Room) => ReactNode;
+    renderSendState?: (
+        state: RoomListItemSendState | undefined,
+        readers: string[] | undefined,
+        room: Room,
+    ) => ReactNode;
     /** Optional callback for keyboard events on the room list */
     onKeyDown?: (e: React.KeyboardEvent<HTMLDivElement>) => void;
 }

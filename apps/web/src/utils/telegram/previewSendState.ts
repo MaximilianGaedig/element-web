@@ -57,25 +57,37 @@ export function getPreviewSendState(
 const MAX_PREVIEW_READERS = 3;
 
 /**
- * In a group, who has read `event` when it is ours and some but not all of the others have: their user IDs,
- * newest first. Shown on the chat list line instead of the ticks until everyone has read it, when the ticks
- * say "read" again; nobody yet, or a chat with one other person, keeps the ticks. Bridge bots and a room's
- * service members are not readers, as nowhere else.
+ * In a group, who has read the message the row previews: their user IDs, newest first. Bridge bots and a
+ * room's service members are not readers, as nowhere else.
+ *
+ * Our own message shows them instead of the ticks until everyone has read it, when the ticks say "read"
+ * again; nobody yet, or a chat with one other person, keeps the ticks.
+ *
+ * Somebody else's message has no ticks, so with `includeOthers` it shows every reader besides us and its
+ * sender, once we have read it ourselves (it is the unread badge's job until then). It is the room's last
+ * message, so a reader's receipt at or after it means they read exactly this message.
  */
 export function getPreviewReaders(
     client: MatrixClient,
     room: Room,
     event: MatrixEvent | undefined,
+    includeOthers = false,
 ): string[] | undefined {
     const me = client.getUserId();
-    if (!event || event.getSender() !== me) return undefined;
+    const eventId = event?.getId();
+    if (!me || !event || !eventId) return undefined;
+    const sender = event.getSender();
+    const ours = sender === me;
+    if (!ours && (!includeOthers || !room.hasUserReadEvent(me, eventId))) return undefined;
     const notPeople = new Set([...getBridgeBots(room), ...getFunctionalMembers(room)]);
     const others = room.getJoinedMembers().filter((member) => member.userId !== me && !notPeople.has(member.userId));
     if (others.length < 2) return undefined;
     const readers = room
         .getUsersReadUpTo(event)
-        .filter((userId) => userId !== me && !notPeople.has(userId) && !client.isUserIgnored(userId));
-    if (readers.length === 0 || readers.length >= others.length) return undefined;
+        .filter(
+            (userId) => userId !== me && userId !== sender && !notPeople.has(userId) && !client.isUserIgnored(userId),
+        );
+    if (readers.length === 0 || (ours && readers.length >= others.length)) return undefined;
     const readAt = (userId: string): number => room.getReadReceiptForUserId(userId)?.data?.ts ?? 0;
     return readers.sort((a, b) => readAt(b) - readAt(a)).slice(0, MAX_PREVIEW_READERS);
 }
