@@ -471,12 +471,11 @@ export class MessageComposer extends React.Component<IProps, IState> {
         if (this.state.bridgePlaceholder && !this.props.replyToEvent && this.isMainRoomComposer) {
             return this.state.bridgePlaceholder;
         }
-        // In a bridged chat the placeholder says where the message goes; in a bridge's own room, that it is a command.
+        // In a bridge's own room everything typed is a command; a bridged chat keeps the plain placeholder
+        // (a command typed there is called out by BridgeCommandBanner).
         const bridge = this.bridgeContext;
-        if (bridge && !this.props.replyToEvent && this.isMainRoomComposer) {
-            return bridge.kind === "management"
-                ? _t("bridge|composer_command", { network: bridge.network })
-                : _t("bridge|composer_message_on_network", { name: this.props.room.name, network: bridge.network });
+        if (bridge?.kind === "management" && !this.props.replyToEvent && this.isMainRoomComposer) {
+            return _t("bridge|composer_command", { network: bridge.network });
         }
         // tweb's input placeholder is just "Message" (or "Reply" while replying), encrypted or not.
         if (floatingBarsEnabled()) {
