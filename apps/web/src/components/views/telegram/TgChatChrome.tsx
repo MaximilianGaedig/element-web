@@ -71,6 +71,10 @@ export function TgChatChrome({ body }: Props): JSX.Element {
             const composerHeight = composer ? Math.max(0, b.bottom - composer.top) : 0;
             set("--tg-composer-height", composerHeight);
             set("--tg-composer-block", composerHeight + (above?.height ?? 0) + (status?.height ?? 0));
+            // How far in from the body's right edge the header and the composer end: the corner buttons line
+            // up with them, not with the edge of the timeline, which is wider than the chat column.
+            set("--tg-header-inline-end", header ? Math.max(0, b.right - header.right) : 0);
+            set("--tg-composer-inline-end", composer ? Math.max(0, b.right - composer.right) : 0);
             if (atBottom && scroll) scroll.scrollTop = scroll.scrollHeight;
         };
         const observer = new ResizeObserver(update);
@@ -96,6 +100,8 @@ export function TgChatChrome({ body }: Props): JSX.Element {
             el.style.removeProperty("--tg-header-block");
             el.style.removeProperty("--tg-composer-height");
             el.style.removeProperty("--tg-composer-block");
+            el.style.removeProperty("--tg-header-inline-end");
+            el.style.removeProperty("--tg-composer-inline-end");
         };
     }, [body]);
 

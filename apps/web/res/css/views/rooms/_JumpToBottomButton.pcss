@@ -5,7 +5,9 @@ SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only OR LicenseRef-Element-Com
 Please see LICENSE files in the repository root for full details.
 */
 
-.mx_JumpToBottomButton {
+/* The old timeline's lone button. The new timeline's stack item carries the same class name but is laid
+   out by its stack; placed by this as well, it sat over the mention button above it and took its clicks. */
+.mx_JumpToBottomButton:not(.mx_JumpButton) {
     z-index: 1000;
     position: absolute;
     /* 12 because height is 50 but button is only 38 = 12+(50-38) = 24 */

@@ -273,14 +273,21 @@ html[data-floating-bars] .mx_RoomView_body {
         padding-bottom: calc(var(--tg-composer-block, 0px) + 8px);
     }
 
+    /*
+     * Straight above the composer's last button (send, or the microphone), as Telegram's go-down button
+     * sits over its send button: the composer is a column in the middle of a wider timeline, and the
+     * timeline's own edge left the buttons hanging out past it. TgChatChrome measures the inset.
+     */
     .mx_JumpToBottomButton:not(.mx_JumpButton),
     .mx_TimelineJumpStack {
         bottom: calc(var(--tg-composer-block, 0px) + 0.5rem);
+        right: var(--tg-composer-inline-end, var(--cpd-space-6x));
     }
 
-    /* The jump-up button sits under the floating header (and the pinned plate), not behind it. */
+    /* The jump-up button sits under the floating header (and the pinned plate), not behind it, at its end. */
     .mx_TopUnreadMessagesBar {
         top: calc(var(--tg-header-block, 0px) + 0.5rem);
+        right: var(--tg-header-inline-end, var(--cpd-space-6x));
     }
 
     /*
