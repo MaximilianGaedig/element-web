@@ -14,7 +14,7 @@ import {
     type MatrixClient,
     type MatrixEvent,
     type Room,
-    type RoomMember,
+    RoomMember,
 } from "matrix-js-sdk/src/matrix";
 import { KnownMembership } from "matrix-js-sdk/src/types";
 import { act, fireEvent, render, screen } from "test-utils-rtl";
@@ -28,6 +28,8 @@ import defaultDispatcher from "../../../../dispatcher/dispatcher";
 import { Action } from "../../../../dispatcher/actions";
 import eventSearch, { searchPagination } from "../../../../Searching";
 import { ScreenSize, useScreenSize } from "../../../../utils/telegram/tgLayout/mediaSizes";
+import SettingsStore from "../../../../settings/SettingsStore";
+import { startDmOnFirstMessage } from "../../../../utils/direct-messages";
 
 vi.useFakeTimers({ shouldAdvanceTime: true });
 
@@ -38,6 +40,11 @@ vi.mock("../../../../dispatcher/dispatcher", () => ({
 vi.mock("../../../../Searching", () => ({
     default: vi.fn(),
     searchPagination: vi.fn(),
+}));
+vi.mock("../../../../utils/direct-messages", async () => ({
+    // @ts-ignore
+    ...(await vi.importActual("../../../../utils/direct-messages")),
+    startDmOnFirstMessage: vi.fn(),
 }));
 vi.mock("../../../../utils/telegram/tgLayout/mediaSizes", async () => ({
     // @ts-ignore
@@ -333,5 +340,84 @@ describe("Spotlight messages", () => {
 
         expect(searchPagination).toHaveBeenCalled();
         expect(document.getElementById("mx_SpotlightDialog_button_message_$photo")).toBeInTheDocument();
+    });
+
+    describe("search history", () => {
+        let stored: Record<string, string[]>;
+        beforeEach(() => {
+            stored = {
+                "SpotlightSearch.recentSearches": [GROUP_ID, DM_ID],
+                "SpotlightSearch.recentMessageSearches": [],
+            };
+            const getValue = SettingsStore.getValue.bind(SettingsStore);
+            vi.spyOn(SettingsStore, "getValue").mockImplementation(((name: string, ...rest: any[]) =>
+                name in stored ? stored[name] : (getValue as any)(name, ...rest)) as any);
+            vi.spyOn(SettingsStore, "setValue").mockImplementation(async (name: string, _room, _level, value) => {
+                stored[name] = value as string[];
+            });
+        });
+        afterEach(() => {
+            vi.mocked(SettingsStore.getValue).mockRestore();
+            vi.mocked(SettingsStore.setValue).mockRestore();
+        });
+
+        const recent = (roomId: string): HTMLElement | null =>
+            document.getElementById(`mx_SpotlightDialog_button_recentSearch_${roomId}`);
+
+        it("offers the recent chats under every tab, narrowed to what the tab is for", async () => {
+            client.publicRooms = vi.fn().mockResolvedValue({ chunk: [] });
+            render(<SpotlightDialog initialFilter={Filter.People} onFinished={vi.fn()} />);
+            await settle();
+            expect(recent(DM_ID)).toBeInTheDocument();
+            expect(recent(GROUP_ID)).not.toBeInTheDocument();
+
+            fireEvent.click(screen.getByRole("tab", { name: "Public rooms" }));
+            await settle();
+            expect(recent(GROUP_ID)).toBeInTheDocument();
+            expect(recent(DM_ID)).not.toBeInTheDocument();
+
+            fireEvent.click(screen.getByRole("tab", { name: "All" }));
+            await settle();
+            expect(recent(GROUP_ID)).toBeInTheDocument();
+            expect(recent(DM_ID)).toBeInTheDocument();
+        });
+
+        it("remembers what found an opened message and offers it again under Messages", async () => {
+            vi.mocked(eventSearch).mockResolvedValue(found([hit("$42", GROUP_ID, "dune")]));
+            const first = render(
+                <SpotlightDialog initialText="dune" initialFilter={Filter.Messages} onFinished={vi.fn()} />,
+            );
+            await settle();
+            fireEvent.click(document.getElementById("mx_SpotlightDialog_button_message_$42")!);
+            expect(stored["SpotlightSearch.recentMessageSearches"]).toEqual(["dune"]);
+            expect(stored["SpotlightSearch.recentSearches"]).toEqual([GROUP_ID, DM_ID]);
+            first.unmount();
+
+            render(<SpotlightDialog initialFilter={Filter.Messages} onFinished={vi.fn()} />);
+            await settle();
+            fireEvent.click(document.getElementById("mx_SpotlightDialog_button_recentMessageSearch_dune")!);
+            await settle();
+            expect(screen.getByRole("textbox", { name: "Search" })).toHaveValue("dune");
+            expect(eventSearch).toHaveBeenLastCalledWith(client, "dune", undefined, expect.any(AbortSignal));
+        });
+
+        it("remembers the chat with a person picked under People", async () => {
+            const bob = new RoomMember(GROUP_ID, "@bob:example.com");
+            bob.name = bob.rawDisplayName = "Bob";
+            vi.mocked(group.getJoinedMembers).mockReturnValue([bob]);
+            const bobDm = mkRoom(client, "!bob:example.com");
+            vi.mocked(client.getRoom).mockImplementation((id) =>
+                id === GROUP_ID ? group : id === DM_ID ? dm : id === bobDm.roomId ? bobDm : null,
+            );
+            vi.mocked(startDmOnFirstMessage).mockResolvedValue(bobDm.roomId);
+            render(<SpotlightDialog initialText="bob" initialFilter={Filter.People} onFinished={vi.fn()} />);
+            await settle();
+
+            fireEvent.click(document.getElementById("mx_SpotlightDialog_button_result_@bob:example.com")!);
+            await settle();
+
+            expect(startDmOnFirstMessage).toHaveBeenCalled();
+            expect(stored["SpotlightSearch.recentSearches"]).toEqual([bobDm.roomId, GROUP_ID, DM_ID]);
+        });
     });
 });

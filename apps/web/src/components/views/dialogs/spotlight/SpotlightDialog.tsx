@@ -53,7 +53,12 @@ import { Action } from "../../../../dispatcher/actions";
 import defaultDispatcher from "../../../../dispatcher/dispatcher";
 import { type ViewRoomPayload } from "../../../../dispatcher/payloads/ViewRoomPayload";
 import { useDebouncedCallback } from "../../../../hooks/spotlight/useDebouncedCallback";
-import { useRecentSearches } from "../../../../hooks/spotlight/useRecentSearches";
+import {
+    rememberRecentMessageSearch,
+    rememberRecentRoom,
+    useRecentMessageSearches,
+    useRecentSearches,
+} from "../../../../hooks/spotlight/useRecentSearches";
 import { useProfileInfo } from "../../../../hooks/useProfileInfo";
 import { usePublicRoomDirectory } from "../../../../hooks/usePublicRoomDirectory";
 import { useSpaceResults } from "../../../../hooks/useSpaceResults";
@@ -66,7 +71,6 @@ import { MatrixClientPeg } from "../../../../MatrixClientPeg";
 import { PosthogAnalytics } from "../../../../PosthogAnalytics";
 import { getCachedRoomIdForAlias } from "../../../../RoomAliasCache";
 import { showStartChatInviteDialog } from "../../../../RoomInvite";
-import { SettingLevel } from "../../../../settings/SettingLevel";
 import SettingsStore from "../../../../settings/SettingsStore";
 import { BreadcrumbsStore } from "../../../../stores/BreadcrumbsStore";
 import { type RoomNotificationState } from "../../../../stores/notifications/RoomNotificationState";
@@ -109,7 +113,6 @@ import { useUserSettingsSections } from "../../settings/userSettingsSections";
 import { searchSettings } from "../../settings/settingsSearch";
 import { type OpenToTabPayload } from "../../../../dispatcher/payloads/OpenToTabPayload";
 
-const MAX_RECENT_SEARCHES = 10;
 const SETTINGS_LIMIT = 6; // a few: the search is mostly for chats, and the settings' own list has the rest
 const SECTION_LIMIT = 50; // only show 50 results per section for performance reasons
 const AVATAR_SIZE = "24px";
@@ -330,6 +333,7 @@ const SpotlightDialog: React.FC<IProps> = ({ initialText = "", initialFilter = n
     const handheld = useScreenSize() === ScreenSize.mobile;
     const [query, _setQuery] = useState(initialText);
     const [recentSearches, clearRecentSearches] = useRecentSearches();
+    const [recentMessageSearches, clearRecentMessageSearches] = useRecentMessageSearches();
     const [filter, setFilterInternal] = useState<Filter | null>(initialFilter);
     const setFilter = useCallback((filter: Filter | null) => {
         setFilterInternal(filter);
@@ -623,19 +627,7 @@ const SpotlightDialog: React.FC<IProps> = ({ initialText = "", initialFilter = n
         persist = false,
         viaKeyboard = false,
     ): void => {
-        if (persist) {
-            const recents = new Set(SettingsStore.getValue("SpotlightSearch.recentSearches", null).reverse());
-            // remove & add the room to put it at the end
-            recents.delete(room.roomId);
-            recents.add(room.roomId);
-
-            void SettingsStore.setValue(
-                "SpotlightSearch.recentSearches",
-                null,
-                SettingLevel.ACCOUNT,
-                Array.from(recents).reverse().slice(0, MAX_RECENT_SEARCHES),
-            );
-        }
+        if (persist) rememberRecentRoom(room.roomId);
 
         defaultDispatcher.dispatch<ViewRoomPayload>({
             action: Action.ViewRoom,
@@ -658,7 +650,104 @@ const SpotlightDialog: React.FC<IProps> = ({ initialText = "", initialFilter = n
     };
 
     const openMessage = (hit: MessageHit, ev?: { type: string }): void => {
+        rememberRecentMessageSearch(trimmedQuery);
         viewRoom({ roomId: hit.room.roomId, eventId: hit.event.getId() }, true, ev?.type !== "click");
+    };
+
+    /*
+     * The chats recently opened from the search, whichever tab they were found under. Every tab offers them
+     * while nothing is typed, narrowed to what the tab is for, so switching tabs does not lose them.
+     */
+    const recentRoomsSection = (rooms: Room[]): JSX.Element | undefined => {
+        if (!rooms.length) return undefined;
+        return (
+            <div
+                className="mx_SpotlightDialog_section mx_SpotlightDialog_recentSearches"
+                role="group"
+                // Firefox sometimes makes this element focusable due to overflow,
+                // so force it out of tab order by default.
+                tabIndex={-1}
+                aria-labelledby="mx_SpotlightDialog_section_recentSearches"
+            >
+                <h4>
+                    <span id="mx_SpotlightDialog_section_recentSearches">
+                        {_t("spotlight_dialog|recent_searches_section_title")}
+                    </span>
+                    <AccessibleButton kind="link" onClick={clearRecentSearches}>
+                        {_t("action|clear")}
+                    </AccessibleButton>
+                </h4>
+                <div>
+                    {rooms.map((room) => {
+                        const notification = RoomNotificationStateStore.instance.getRoomState(room);
+                        const unreadLabel = roomAriaUnreadLabel(room, notification);
+                        const ariaProperties = {
+                            "aria-label": unreadLabel ? `${room.name} ${unreadLabel}` : room.name,
+                            "aria-describedby": `mx_SpotlightDialog_button_recentSearch_${room.roomId}_details`,
+                        };
+                        return (
+                            <Option
+                                id={`mx_SpotlightDialog_button_recentSearch_${room.roomId}`}
+                                key={room.roomId}
+                                onClick={(ev) => {
+                                    viewRoom({ roomId: room.roomId }, true, ev?.type !== "click");
+                                }}
+                                endAdornment={<RoomResultContextMenus room={room} />}
+                                {...ariaProperties}
+                            >
+                                <DecoratedRoomAvatar room={room} size={AVATAR_SIZE} tooltipProps={{ tabIndex: -1 }} />
+                                {room.name}
+                                <NotificationBadge
+                                    notification={notification}
+                                    className="mx_SpotlightDialog_notificationBadge"
+                                />
+                                <RoomContextDetails
+                                    id={`mx_SpotlightDialog_button_recentSearch_${room.roomId}_details`}
+                                    className="mx_SpotlightDialog_result_details"
+                                    room={room}
+                                />
+                            </Option>
+                        );
+                    })}
+                </div>
+            </div>
+        );
+    };
+
+    /** The words recently used to find a message: pressing one searches for it again. */
+    const recentMessageSearchesSection = (): JSX.Element | undefined => {
+        if (!recentMessageSearches.length) return undefined;
+        return (
+            <div
+                className="mx_SpotlightDialog_section mx_SpotlightDialog_results mx_SpotlightDialog_recentMessageSearches"
+                role="group"
+                aria-labelledby="mx_SpotlightDialog_section_recentMessageSearches"
+            >
+                <h4>
+                    <span id="mx_SpotlightDialog_section_recentMessageSearches">
+                        {_t("spotlight_dialog|recent_searches_section_title")}
+                    </span>
+                    <AccessibleButton kind="link" onClick={clearRecentMessageSearches}>
+                        {_t("action|clear")}
+                    </AccessibleButton>
+                </h4>
+                <div>
+                    {recentMessageSearches.map((term) => (
+                        <Option
+                            id={`mx_SpotlightDialog_button_recentMessageSearch_${term}`}
+                            key={term}
+                            onClick={() => {
+                                _setQuery(term);
+                                inputRef.current?.focus();
+                            }}
+                        >
+                            <SearchIcon />
+                            <span className="mx_SpotlightDialog_result_name">{term}</span>
+                        </Option>
+                    ))}
+                </div>
+            </div>
+        );
     };
 
     let content: JSX.Element;
@@ -667,12 +756,15 @@ const SpotlightDialog: React.FC<IProps> = ({ initialText = "", initialFilter = n
         content = trimmedQuery ? (
             <MessageResults search={messageSearch} term={trimmedQuery} onOpen={(hit) => openMessage(hit)} />
         ) : (
-            <SpotlightEmptyState
-                className="mx_SpotlightDialog_messagesHint"
-                icon={<ChatIcon />}
-                title={_t("spotlight_dialog|messages_hint_title")}
-                description={_t("spotlight_dialog|messages_hint")}
-            />
+            <>
+                {recentMessageSearchesSection()}
+                <SpotlightEmptyState
+                    className="mx_SpotlightDialog_messagesHint"
+                    icon={<ChatIcon />}
+                    title={_t("spotlight_dialog|messages_hint_title")}
+                    description={_t("spotlight_dialog|messages_hint")}
+                />
+            </>
         );
     } else if (trimmedQuery || filter !== null) {
         const resultMapper = (result: Result): JSX.Element => {
@@ -715,7 +807,11 @@ const SpotlightDialog: React.FC<IProps> = ({ initialText = "", initialFilter = n
                         id={`mx_SpotlightDialog_button_result_${result.member.userId}`}
                         key={`${Section[result.section]}-${result.member.userId}`}
                         onClick={() => {
-                            void startDmOnFirstMessage(cli, [result.member]);
+                            // The chat with them is what the recent searches can offer again; a chat that
+                            // exists only locally until the first message is sent is not one yet.
+                            void startDmOnFirstMessage(cli, [result.member]).then((roomId) => {
+                                if (roomId && cli.getRoom(roomId) && !isLocalRoom(roomId)) rememberRecentRoom(roomId);
+                            });
                             onFinished();
                         }}
                         aria-label={
@@ -1149,8 +1245,22 @@ const SpotlightDialog: React.FC<IProps> = ({ initialText = "", initialFilter = n
             );
         }
 
+        // With nothing typed, a tab still offers the chats recently found, those that are what it is for.
+        let recentSection: JSX.Element | undefined;
+        if (!trimmedQuery) {
+            const isDm = (room: Room): boolean => !!DMRoomMap.shared().getUserIdForRoomId(room.roomId);
+            recentSection = recentRoomsSection(
+                recentSearches.filter((room) => {
+                    if (filter === Filter.People) return isDm(room);
+                    if (filter === Filter.PublicSpaces) return room.isSpaceRoom();
+                    return !isDm(room) && !room.isSpaceRoom();
+                }),
+            );
+        }
+
         content = (
             <>
+                {recentSection}
                 {noResultsSection}
                 {peopleSection}
                 {suggestionsSection}
@@ -1167,65 +1277,7 @@ const SpotlightDialog: React.FC<IProps> = ({ initialText = "", initialFilter = n
             </>
         );
     } else {
-        let recentSearchesSection: JSX.Element | undefined;
-        if (recentSearches.length) {
-            recentSearchesSection = (
-                <div
-                    className="mx_SpotlightDialog_section mx_SpotlightDialog_recentSearches"
-                    role="group"
-                    // Firefox sometimes makes this element focusable due to overflow,
-                    // so force it out of tab order by default.
-                    tabIndex={-1}
-                    aria-labelledby="mx_SpotlightDialog_section_recentSearches"
-                >
-                    <h4>
-                        <span id="mx_SpotlightDialog_section_recentSearches">
-                            {_t("spotlight_dialog|recent_searches_section_title")}
-                        </span>
-                        <AccessibleButton kind="link" onClick={clearRecentSearches}>
-                            {_t("action|clear")}
-                        </AccessibleButton>
-                    </h4>
-                    <div>
-                        {recentSearches.map((room) => {
-                            const notification = RoomNotificationStateStore.instance.getRoomState(room);
-                            const unreadLabel = roomAriaUnreadLabel(room, notification);
-                            const ariaProperties = {
-                                "aria-label": unreadLabel ? `${room.name} ${unreadLabel}` : room.name,
-                                "aria-describedby": `mx_SpotlightDialog_button_recentSearch_${room.roomId}_details`,
-                            };
-                            return (
-                                <Option
-                                    id={`mx_SpotlightDialog_button_recentSearch_${room.roomId}`}
-                                    key={room.roomId}
-                                    onClick={(ev) => {
-                                        viewRoom({ roomId: room.roomId }, true, ev?.type !== "click");
-                                    }}
-                                    endAdornment={<RoomResultContextMenus room={room} />}
-                                    {...ariaProperties}
-                                >
-                                    <DecoratedRoomAvatar
-                                        room={room}
-                                        size={AVATAR_SIZE}
-                                        tooltipProps={{ tabIndex: -1 }}
-                                    />
-                                    {room.name}
-                                    <NotificationBadge
-                                        notification={notification}
-                                        className="mx_SpotlightDialog_notificationBadge"
-                                    />
-                                    <RoomContextDetails
-                                        id={`mx_SpotlightDialog_button_recentSearch_${room.roomId}_details`}
-                                        className="mx_SpotlightDialog_result_details"
-                                        room={room}
-                                    />
-                                </Option>
-                            );
-                        })}
-                    </div>
-                </div>
-            );
-        }
+        const recentSearchesSection = recentRoomsSection(recentSearches);
 
         content = (
             <>

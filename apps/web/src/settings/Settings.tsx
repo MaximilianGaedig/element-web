@@ -314,6 +314,7 @@ export interface Settings {
     "showMediaEventIds": IBaseSetting<{ [eventId: string]: boolean }>;
     "pdfViewerState": IBaseSetting<{ [mxcUri: string]: PdfViewerState }>;
     "SpotlightSearch.recentSearches": IBaseSetting<string[]>;
+    "SpotlightSearch.recentMessageSearches": IBaseSetting<string[]>;
     "SpotlightSearch.showNsfwPublicRooms": IBaseSetting<boolean>;
     "room_directory_servers": IBaseSetting<string[]>;
     "integrationProvisioning": IBaseSetting<boolean>;
@@ -1206,6 +1207,13 @@ export const SETTINGS: Settings = {
         // not really a setting
         supportedLevels: [SettingLevel.ACCOUNT],
         default: [], // list of room IDs, most recent first
+        // For privacy
+        shouldExportToRageshake: false,
+    },
+    "SpotlightSearch.recentMessageSearches": {
+        // not really a setting
+        supportedLevels: [SettingLevel.ACCOUNT],
+        default: [], // what was typed to find a message that was then opened, most recent first
         // For privacy
         shouldExportToRageshake: false,
     },
