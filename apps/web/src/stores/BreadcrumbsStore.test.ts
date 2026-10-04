@@ -9,13 +9,14 @@ Please see LICENSE files in the repository root for full details.
 // @vitest-environment happy-dom
 
 import { describe, it, beforeEach, afterEach, expect, vi } from "vitest";
-import { type MatrixClient, Room } from "matrix-js-sdk/src/matrix";
+import { ClientEvent, type MatrixClient, Room } from "matrix-js-sdk/src/matrix";
 import { createTestClient, flushPromises, setupAsyncStoreWithClient } from "test-utils";
 
 import SettingsStore from "../settings/SettingsStore";
 import { BreadcrumbsStore } from "./BreadcrumbsStore";
 import { Action } from "../dispatcher/actions";
 import defaultDispatcher from "../dispatcher/dispatcher";
+import { SettingLevel } from "../settings/SettingLevel";
 
 describe("BreadcrumbsStore", () => {
     let store: BreadcrumbsStore;
@@ -105,6 +106,46 @@ describe("BreadcrumbsStore", () => {
 
             // We pass the value of the dynamic predecessor setting through
             expect(client.getRoomUpgradeHistory).toHaveBeenCalledWith(room.roomId, true, true);
+        });
+    });
+
+    // Sliding sync sends rooms a batch at a time: the store is ready before every room it names has arrived.
+    describe("With saved rooms that arrive after the store is ready", () => {
+        const early = new Room("!early:example.com", client, "@user:example.com");
+        const late = new Room("!late:example.com", client, "@user:example.com");
+        let arrived: Room[];
+
+        beforeEach(async () => {
+            arrived = [early];
+            vi.spyOn(SettingsStore, "getValue").mockImplementation((settingName) =>
+                settingName === "breadcrumb_rooms" ? [early.roomId, late.roomId] : false,
+            );
+            vi.mocked(client.getRoom).mockImplementation((roomId) => arrived.find((r) => r.roomId === roomId) ?? null);
+            vi.mocked(client.getRoomUpgradeHistory).mockReturnValue([]);
+            await setupAsyncStoreWithClient(store, client);
+        });
+
+        it("Shows a saved room once it arrives", async () => {
+            expect(store.rooms.map((r) => r.roomId)).toEqual([early.roomId]);
+
+            arrived.push(late);
+            client.emit(ClientEvent.Room, late);
+            await flushPromises();
+
+            expect(store.rooms.map((r) => r.roomId)).toEqual([early.roomId, late.roomId]);
+        });
+
+        it("Keeps saved rooms that have not arrived when a room is added", async () => {
+            const joined = new Room("!joined:example.com", client, "@user:example.com");
+            arrived.push(joined);
+
+            await dispatchJoinRoom(joined.roomId);
+
+            expect(SettingsStore.setValue).toHaveBeenCalledWith("breadcrumb_rooms", null, SettingLevel.ACCOUNT, [
+                joined.roomId,
+                early.roomId,
+                late.roomId,
+            ]);
         });
     });
 
