@@ -23,7 +23,10 @@ import {
     ProfileKeyMSC4175Timezone,
     SyncState,
     MatrixError,
+    Room,
+    RoomStateEvent,
 } from "matrix-js-sdk/src/matrix";
+import { KnownMembership } from "matrix-js-sdk/src/types";
 import { MediaHandler } from "matrix-js-sdk/src/webrtc/mediaHandler";
 import { logger } from "matrix-js-sdk/src/logger";
 import userEvent from "@testing-library/user-event";
@@ -49,6 +52,8 @@ import Modal from "../../Modal";
 import { SETTINGS } from "../../settings/Settings";
 import ToastStore from "../../stores/ToastStore";
 import { ModuleApi } from "../../modules/Api";
+import RoomListStoreV3 from "../../stores/room-list-v3/RoomListStoreV3";
+import { DefaultTagID } from "../../stores/room-list-v3/skip-list/tag";
 
 describe("<LoggedInView />", () => {
     const userId = "@alice:domain.org";
@@ -524,6 +529,44 @@ describe("<LoggedInView />", () => {
             );
             mockClient.emit(ClientEvent.Sync, SyncState.Prepared, null, undefined);
             expect(dismissToast).toHaveBeenCalledWith("serverlimit");
+        });
+    });
+
+    describe("server notices", () => {
+        const stateEvent = (room: Room, type: string): MatrixEvent =>
+            new MatrixEvent({ type, room_id: room.roomId, state_key: "", sender: userId, content: {} });
+
+        // Every state event of every room passes through here: the cache replay of 700 rooms is ~8700 of them.
+        // Looking through the whole room list for each one made the replay quadratic (MEO-118).
+        it("looks only at the room the state event is in, not through the room list", () => {
+            const room = new Room("!plain:domain.org", mockClient, userId);
+            mockClient.getRoom.mockImplementation((roomId) => (roomId === room.roomId ? room : null));
+            const getServerNoticeRooms = vi.spyOn(RoomListStoreV3.instance, "getServerNoticeRooms").mockReturnValue([]);
+            getComponent();
+            getServerNoticeRooms.mockClear();
+
+            mockClient.emit(RoomStateEvent.Events, stateEvent(room, EventType.RoomName), room.currentState, null);
+
+            expect(getServerNoticeRooms).not.toHaveBeenCalled();
+        });
+
+        it("updates the notices when a server-notice room's state changes", () => {
+            const room = new Room("!notices:domain.org", mockClient, userId);
+            room.updateMyMembership(KnownMembership.Join);
+            room.tags = { [DefaultTagID.ServerNotice]: {} };
+            mockClient.getRoom.mockImplementation((roomId) => (roomId === room.roomId ? room : null));
+            const getServerNoticeRooms = vi.spyOn(RoomListStoreV3.instance, "getServerNoticeRooms").mockReturnValue([]);
+            getComponent();
+            getServerNoticeRooms.mockClear();
+
+            mockClient.emit(
+                RoomStateEvent.Events,
+                stateEvent(room, EventType.RoomPinnedEvents),
+                room.currentState,
+                null,
+            );
+
+            expect(getServerNoticeRooms).toHaveBeenCalled();
         });
     });
 

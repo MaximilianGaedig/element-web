@@ -40,6 +40,8 @@ import { Action } from "../../dispatcher/actions";
 import LeftPanel from "./LeftPanel";
 import { type ViewRoomDeltaPayload } from "../../dispatcher/payloads/ViewRoomDeltaPayload";
 import RoomListStoreV3 from "../../stores/room-list-v3/RoomListStoreV3";
+import { DefaultTagID } from "../../stores/room-list-v3/skip-list/tag";
+import { getTagsForRoom } from "../../utils/room/getTagsForRoom";
 import NonUrgentToastContainer from "./NonUrgentToastContainer";
 import { type IOOBData, type IThreepidInvite } from "../../stores/ThreepidInviteStore";
 import Modal from "../../Modal";
@@ -370,8 +372,10 @@ class LoggedInView extends React.Component<IProps, IState> {
     };
 
     private onRoomStateEvents = (ev: MatrixEvent): void => {
-        const serverNoticeList = RoomListStoreV3.instance.getServerNoticeRooms();
-        if (serverNoticeList.some((r) => r.roomId === ev.getRoomId())) {
+        // Every state event of every room comes through here (thousands while a sync or the cache is taken in),
+        // so only the event's own room is looked at, not the whole room list.
+        const room = this._matrixClient.getRoom(ev.getRoomId());
+        if (room && getTagsForRoom(room).includes(DefaultTagID.ServerNotice)) {
             void this.updateServerNoticeEvents();
         }
     };
