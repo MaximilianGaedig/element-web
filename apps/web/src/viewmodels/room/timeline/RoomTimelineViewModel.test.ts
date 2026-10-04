@@ -665,6 +665,31 @@ describe("RoomTimelineViewModel", () => {
         });
     });
 
+    describe("a page of history that fails", () => {
+        /* Offline, the view asked again the moment a failure was published: 341 requests in 90 seconds. */
+        it("is not asked for again at once, and is asked for once the browser is back online", async () => {
+            seedTimeline([makeMessage("$a"), makeMessage("$b"), makeMessage("$c")]);
+            room.getLiveTimeline().setPaginationToken("t-older", Direction.Backward);
+            vi.mocked(client.paginateEventTimeline).mockRejectedValue(new Error("net::ERR_INTERNET_DISCONNECTED"));
+            const online = vi.spyOn(navigator, "onLine", "get").mockReturnValue(false);
+            const vm = await createStartedViewModel();
+            vm.onAnchorReached();
+
+            vm.onStartReached();
+            await vi.waitFor(() => expect(client.paginateEventTimeline).toHaveBeenCalledTimes(1));
+            await vi.waitFor(() => expect(kinds(vm.getSnapshot().items)).not.toContain("loading"));
+            vm.onStartReached();
+            vm.onStartReached();
+            await new Promise((r) => setTimeout(r, 100));
+            expect(client.paginateEventTimeline).toHaveBeenCalledTimes(1);
+
+            online.mockReturnValue(true);
+            vi.mocked(client.paginateEventTimeline).mockResolvedValue(false);
+            window.dispatchEvent(new Event("online"));
+            await vi.waitFor(() => expect(client.paginateEventTimeline).toHaveBeenCalledTimes(2));
+        });
+    });
+
     describe("pagination (continued)", () => {
         /** Point the window's paginate/canPaginate at test doubles. */
         const stubWindow = (

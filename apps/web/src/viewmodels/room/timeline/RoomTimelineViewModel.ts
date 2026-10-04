@@ -93,6 +93,10 @@ const INITIAL_SIZE = 100;
  */
 const MIN_INITIAL_EVENTS = 40;
 
+/** How long to wait before asking again for a page of history that failed to come: doubling, up to the max. */
+const PAGINATE_RETRY_MIN_MS = 2_000;
+const PAGINATE_RETRY_MAX_MS = 60_000;
+
 /**
  * How many more pages to fetch, beyond the initial fill, for a chat whose newest events are all ones the
  * timeline hides (a bridge's status updates, a burst of joins) before deciding it has nothing to show.
@@ -326,6 +330,15 @@ export class RoomTimelineViewModel
     private readMarkerEventId: string | null = null;
     /** The last row read on screen (`readableEndIndex` of {@link onVisibleRangeChanged}), as an array index. */
     private readableEndArrayIndex = 0;
+    /**
+     * After a page of history failed to come, when it may be asked for again, per direction, and whether
+     * the view asked meanwhile. Without this the view, still at the top, asked again the moment the
+     * failure was published: offline that was a request every few milliseconds, 341 in 90 seconds.
+     */
+    private readonly paginateHold = new Map<Direction, { until: number; backoffMs: number; wanted: boolean }>();
+    private paginateRetryTimers = new Map<Direction, ReturnType<typeof setTimeout>>();
+    private onlineListener?: () => void;
+
     /** The newest message read on screen this session: what is at or before it is not unread. */
     private seenUpToId: string | null = null;
 
@@ -1687,6 +1700,8 @@ export class RoomTimelineViewModel
      *   {@link sendAutoReadReceipt} for the rationale.
      */
     public override dispose(): void {
+        for (const timer of this.paginateRetryTimers.values()) clearTimeout(timer);
+        if (this.onlineListener) window.removeEventListener("online", this.onlineListener);
         if (this.decryptDebounceTimer !== null) {
             clearTimeout(this.decryptDebounceTimer);
             this.decryptDebounceTimer = null;
@@ -1819,6 +1834,8 @@ export class RoomTimelineViewModel
             return;
         }
 
+        if (this.isHeld(Direction.Backward)) return;
+
         this.backwardPaginateChain = this.runPaginateChain(Direction.Backward).finally(() => {
             this.backwardPaginateChain = null;
             if (this.initialFillInFlight) {
@@ -1870,6 +1887,8 @@ export class RoomTimelineViewModel
             }
             return;
         }
+
+        if (this.isHeld(Direction.Forward)) return;
 
         this.forwardPaginateChain = this.runPaginateChain(Direction.Forward).finally(() => {
             this.forwardPaginateChain = null;
@@ -2013,6 +2032,57 @@ export class RoomTimelineViewModel
      * backward batch. Forward pagination only ever trims the oldest, so it cannot touch the flag
      * and one check once the loop finishes is enough.
      */
+    /** Whether a failed page is still being waited out in this direction; if so, it is asked for after. */
+    private isHeld(direction: Direction): boolean {
+        const hold = this.paginateHold.get(direction);
+        if (!hold || Date.now() >= hold.until) return false;
+        hold.wanted = true;
+        debug(`[TimelineVM] paginate held — retry in ${hold.until - Date.now()}ms`);
+        return true;
+    }
+
+    /**
+     * A page failed: wait before asking again, twice as long each time up to a minute - and while the
+     * browser is offline, until it is back, then at once.
+     */
+    private holdAfterFailure(direction: Direction): void {
+        const previous = this.paginateHold.get(direction)?.backoffMs ?? 0;
+        const backoffMs = Math.min(Math.max(PAGINATE_RETRY_MIN_MS, previous * 2), PAGINATE_RETRY_MAX_MS);
+        const offline = typeof navigator !== "undefined" && navigator.onLine === false;
+        this.paginateHold.set(direction, {
+            until: offline ? Number.POSITIVE_INFINITY : Date.now() + backoffMs,
+            backoffMs,
+            wanted: false,
+        });
+        const retry = (): void => {
+            if (this.isDisposed) return;
+            const hold = this.paginateHold.get(direction);
+            if (!hold) return;
+            hold.until = 0;
+            if (!hold.wanted) return;
+            if (direction === Direction.Backward) this.triggerBackwardPaginate();
+            else this.triggerForwardPaginate();
+        };
+        clearTimeout(this.paginateRetryTimers.get(direction));
+        if (offline) {
+            if (!this.onlineListener) {
+                this.onlineListener = (): void => {
+                    window.removeEventListener("online", this.onlineListener!);
+                    this.onlineListener = undefined;
+                    for (const [dir, hold] of this.paginateHold) {
+                        hold.until = 0;
+                        if (!hold.wanted) continue;
+                        if (dir === Direction.Backward) this.triggerBackwardPaginate();
+                        else this.triggerForwardPaginate();
+                    }
+                };
+                window.addEventListener("online", this.onlineListener);
+            }
+        } else {
+            this.paginateRetryTimers.set(direction, setTimeout(retry, backoffMs));
+        }
+    }
+
     private async runPaginateChain(direction: Direction): Promise<void> {
         // A backstop: the loop already stops when canPaginate() or hasMore say
         // there is no more history. This caps how long it can keep fetching nothing displayable
@@ -2085,6 +2155,7 @@ export class RoomTimelineViewModel
                 emptyBatches++;
             }
 
+            this.paginateHold.delete(direction);
             if (isBackward) {
                 this.backwardSpinnerVisible = false;
                 this.republish("paginate(backward)-end", {
@@ -2098,6 +2169,7 @@ export class RoomTimelineViewModel
             }
         } catch (e) {
             logger.error(`[TimelineVM] paginate(${dirLabel}) error`, e);
+            this.holdAfterFailure(direction);
             if (isBackward) {
                 this.backwardSpinnerVisible = false;
                 this.republish("paginate(backward)-error");
