@@ -340,10 +340,16 @@ export class SlidingSyncManager {
             if (state !== SlidingSyncState.Complete) {
                 return;
             }
-            await sleep(gapBetweenRequestsMs); // don't tightloop; even on errors
             if (err) {
+                await sleep(gapBetweenRequestsMs); // don't tightloop on errors
                 return;
             }
+            // Fork: the ranges grow here, at once, while no request is out: the next one is built after this
+            // returns and carries them. Growing them a moment later (the 50 ms this used to wait) aborted the
+            // long-poll that had already gone out, which the server had already answered - and a request sent
+            // again from the same position is a replay, for which it sends every room in full again: 500-700 KB
+            // per step, every step, until the lists were whole. Each step is answered at once (the grown range
+            // has rooms the client has not been sent), so there is no loop to slow down.
 
             // for all lists with total counts > range => increase the range
             let hasSetRanges = false;

@@ -210,6 +210,18 @@ describe("SlidingSyncManager", () => {
                 expect(slidingSync.setListRanges).toHaveBeenCalledWith("spaces", [wantWindows[i]]);
             }
         });
+        // Grown a moment later, the ranges aborted the long-poll already sent - which the server had answered - and
+        // the request sent again from the same position made it send every room in full again.
+        it("grows the ranges at once, while no request is out", async () => {
+            vi.mocked(slidingSync.getListData).mockReturnValue({ joinedCount: 64, roomIndexToRoomId: {} });
+            await (manager as any).startSpidering(slidingSync, 10, 50);
+
+            slidingSync.emit(SlidingSyncEvent.Lifecycle, SlidingSyncState.Complete, null, undefined);
+
+            // No await: before the SDK goes on to build the next request.
+            expect(slidingSync.setListRanges).toHaveBeenCalledWith("untagged", [[0, 20]]);
+        });
+
         it("handles accounts with zero rooms", async () => {
             const gapMs = 1;
             const batchSize = 10;
