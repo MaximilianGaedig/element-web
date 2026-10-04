@@ -30,6 +30,8 @@ import { ModuleApi } from "../modules/Api.ts";
 import { type URLParams } from "./url_utils.ts";
 import { bootMark } from "../utils/bootTimings.ts";
 
+export { showBuildBanner } from "./buildBanner.tsx";
+
 export const rageshakePromise = initRageshake();
 
 let root: Root | undefined;

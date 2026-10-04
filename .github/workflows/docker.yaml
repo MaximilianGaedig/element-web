@@ -16,6 +16,11 @@ jobs:
         permissions:
             id-token: write
             packages: write
+        env:
+            # Pushes (and the registry login) happen for every event except a pull request from a fork: that code is
+            # not ours to publish, and its token is read-only anyway. A same-repo PR image is the preview build
+            # (docs/preview.md); it is tagged below and never gets the sha or latest tags.
+            PUBLISH: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
         steps:
             - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
               with:
@@ -30,6 +35,14 @@ jobs:
               with:
                   install: true
 
+            # GitHub expressions cannot slice a string, so the 7-character head sha is cut in a step.
+            - name: Short sha of the pull request head
+              id: head
+              if: github.event_name == 'pull_request'
+              env:
+                  HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+              run: echo "short=${HEAD_SHA::7}" >> "$GITHUB_OUTPUT"
+
             - name: Docker meta
               id: meta
               uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6
@@ -39,13 +52,15 @@ jobs:
                   tags: |
                       type=ref,event=branch
                       type=ref,event=tag
-                      type=sha,prefix=
+                      type=sha,prefix=,enable=${{ github.event_name != 'pull_request' }}
+                      type=raw,value=pr-${{ github.event.pull_request.number }},enable=${{ github.event_name == 'pull_request' }}
+                      type=raw,value=pr-${{ github.event.pull_request.number }}-${{ steps.head.outputs.short }},enable=${{ github.event_name == 'pull_request' }}
                   flavor: |
-                      latest=${{ contains(github.ref_name, '-rc.') && 'false' || 'auto' }}
+                      latest=${{ (contains(github.ref_name, '-rc.') || github.event_name == 'pull_request') && 'false' || 'auto' }}
 
             - name: Login to GitHub Container Registry
               uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4
-              if: github.event_name != 'pull_request'
+              if: env.PUBLISH == 'true'
               with:
                   registry: ghcr.io
                   username: ${{ github.repository_owner }}
@@ -60,7 +75,7 @@ jobs:
                   # Upstream's Dockerfile now ends with an `element_web_modules` stage that bakes
                   # Element's own modules into the image; the fork publishes the plain app.
                   target: element_web
-                  push: ${{ github.event_name != 'pull_request' }}
+                  push: ${{ env.PUBLISH == 'true' }}
                   platforms: linux/amd64,linux/arm64
                   tags: ${{ steps.meta.outputs.tags }}
                   labels: ${{ steps.meta.outputs.labels }}
