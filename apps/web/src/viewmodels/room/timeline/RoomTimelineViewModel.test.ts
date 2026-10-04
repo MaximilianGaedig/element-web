@@ -1066,6 +1066,23 @@ describe("RoomTimelineViewModel", () => {
                 expect(vm.getSnapshot().unreadMentions).toBe(2);
             });
 
+            /* Seen above the end of the room, a mention left the receipt behind it and came back on every reload. */
+            it("does not offer again, in a later session, a mention already seen", async () => {
+                seedTimeline([makeMessage("$read"), makeMention("$m1", { ts: 3 }), makeMention("$m2", { ts: 4 })]);
+                markReadUpTo("$read");
+                serverCountsHighlights(2);
+                const first = await createStartedViewModel();
+                first.onAnchorReached();
+                const items = first.getSnapshot().items;
+
+                first.onVisibleRangeChanged(indexOfKey(items, "$m1"), indexOfKey(items, "$m1"));
+                expect(first.getSnapshot().unreadMentions).toBe(1);
+                first.dispose();
+
+                const next = await createStartedViewModel();
+                expect(next.getSnapshot().unreadMentions).toBe(1);
+            });
+
             it("counts a message that only a push rule calls a highlight", async () => {
                 seedTimeline([makeMessage("$read"), makeMessage("$rule", { user: BOB })]);
                 markReadUpTo("$read");
@@ -1243,6 +1260,24 @@ describe("RoomTimelineViewModel", () => {
                 const vm = await createStartedViewModel();
 
                 expect(vm.getSnapshot().unreadReactions).toBe(1);
+            });
+
+            /* Reactions to older messages, not in memory, never got the heart. */
+            it("counts a reaction to one of the reader's messages that is not loaded, once fetched", async () => {
+                seedTimeline([makeMessage("$read"), makeReaction("$r1", "$long-ago")]);
+                markReadUpTo("$read");
+                vi.spyOn(client, "fetchRoomEvent").mockResolvedValue({
+                    event_id: "$long-ago",
+                    sender: USER_ID,
+                    origin_server_ts: 1,
+                    type: "m.room.message",
+                    content: { body: "old" },
+                } as any);
+
+                const vm = await createStartedViewModel();
+
+                await vi.waitFor(() => expect(vm.getSnapshot().unreadReactions).toBe(1));
+                expect(client.fetchRoomEvent).toHaveBeenCalledWith(ROOM_ID, "$long-ago");
             });
 
             it("does not count a reaction from before the reader read", async () => {

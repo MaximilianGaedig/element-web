@@ -41,6 +41,7 @@ import { clearRoomNotification } from "../../../utils/notifications";
 import { pendingEventsToShow } from "../../../utils/room/pendingEvents";
 import { hasThreadSummary } from "../../../utils/EventUtils";
 import { getPerMessageProfile } from "../../../utils/bridge/perMessageProfile";
+import { readSeenUnread, rememberSeenUnread } from "../../../utils/timeline/seenUnread";
 
 const DEBUG_TIMELINE = false;
 
@@ -361,6 +362,10 @@ export class RoomTimelineViewModel
 
     /** Whether {@link scanUnread} has run: what was unread on entry is looked for once, not per load. */
     private scannedUnread = false;
+    /** Mentions and reactions seen in this room in this or an earlier session (utils/timeline/seenUnread). */
+    private seenUnread?: Set<string>;
+    /** Messages a reaction was to that are not in memory, being fetched to see whether they are the reader's. */
+    private readonly checkingTargets = new Set<string>();
 
     /**
      * Events that could not be sorted into either of the above because they are encrypted and have
@@ -1319,7 +1324,7 @@ export class RoomTimelineViewModel
     public onJumpToUnreadMention = (scrollNow: ImmediateScroll): void => {
         const target = this.takeOldest(
             [...this.unreadMentions].map(([id, ts]) => ({ id, ts })),
-            (id) => this.unreadMentions.delete(id),
+            (id) => this.forgetMention(id),
         );
         if (target) this.jumpToUnread(target, scrollNow, "onJumpToUnreadMention");
     };
@@ -1328,7 +1333,7 @@ export class RoomTimelineViewModel
     public onJumpToUnreadReaction = (scrollNow: ImmediateScroll): void => {
         const target = this.takeOldest(
             [...this.unreadReactions].map(([id, { ts }]) => ({ id, ts })),
-            (id) => this.unreadReactions.delete(id),
+            (id) => this.forgetReactions(id),
         );
         if (target) this.jumpToUnread(target, scrollNow, "onJumpToUnreadReaction");
     };
@@ -1435,8 +1440,13 @@ export class RoomTimelineViewModel
         }
 
         if (event.getType() === EventType.Reaction) {
+            if (this.seen.has(id)) return;
             const targetId = event.getRelation()?.event_id;
             const target = targetId ? this.opts.room.findEventById(targetId) : undefined;
+            if (targetId && !target) {
+                void this.checkReactionTarget(event, targetId);
+                return;
+            }
             if (!targetId || target?.getSender() !== me) return;
             if (live && this.isOnScreen(targetId)) return;
             const entry = this.unreadReactions.get(targetId) ?? { ts: target.getTs(), reactions: new Set<string>() };
@@ -1447,6 +1457,7 @@ export class RoomTimelineViewModel
 
         // An edit of a message is not a message; the original is what mentions (or does not).
         if (event.isRelation(RelationType.Replace)) return;
+        if (this.seen.has(id)) return;
         if (!this.mentionsReader(event)) return;
         if (!this.shouldIncludeEvent(event, !!SettingsStore.getValue("showHiddenEventsInTimeline"))) return;
         // Arriving while the reader is at the bottom of the room it is open in, it is read as it comes.
@@ -1473,6 +1484,51 @@ export class RoomTimelineViewModel
         return false;
     }
 
+    private get seen(): Set<string> {
+        this.seenUnread ??= readSeenUnread(this.opts.room.roomId);
+        return this.seenUnread;
+    }
+
+    /** A mention is no longer news: kept as seen for later sessions too. */
+    private forgetMention(id: string): boolean {
+        if (!this.unreadMentions.delete(id)) return false;
+        rememberSeenUnread(this.opts.room.roomId, this.seen, [id]);
+        return true;
+    }
+
+    /** Nor are the reactions to this message of the reader's. */
+    private forgetReactions(targetId: string): boolean {
+        const entry = this.unreadReactions.get(targetId);
+        if (!entry) return false;
+        this.unreadReactions.delete(targetId);
+        rememberSeenUnread(this.opts.room.roomId, this.seen, entry.reactions);
+        return true;
+    }
+
+    /**
+     * A reaction to a message that is not in memory: whether it is one of the reader's can only be told by
+     * fetching it. Without this, reactions to older messages never got the heart button.
+     */
+    private async checkReactionTarget(reaction: MatrixEvent, targetId: string): Promise<void> {
+        if (this.checkingTargets.has(targetId)) return;
+        this.checkingTargets.add(targetId);
+        try {
+            const raw = await this.opts.client.fetchRoomEvent(this.opts.room.roomId, targetId);
+            if (this.isDisposed || raw.sender !== this.opts.client.getSafeUserId()) return;
+            const entry = this.unreadReactions.get(targetId) ?? {
+                ts: raw.origin_server_ts ?? 0,
+                reactions: new Set<string>(),
+            };
+            entry.reactions.add(reaction.getId()!);
+            this.unreadReactions.set(targetId, entry);
+            this.publishUnreadCounts();
+        } catch {
+            // Gone or not visible to us: nothing to jump to.
+        } finally {
+            this.checkingTargets.delete(targetId);
+        }
+    }
+
     /** What is in rows `startIndex` to `endIndex` has been seen: it is no longer unread. */
     private markSeen(items: TimelineItem[], startIndex: number, endIndex: number): void {
         if (this.unreadMentions.size === 0 && this.unreadReactions.size === 0) return;
@@ -1480,8 +1536,8 @@ export class RoomTimelineViewModel
         for (let i = Math.max(0, startIndex); i <= endIndex && i < items.length; i++) {
             const item = items[i];
             if (item.kind !== "event") continue;
-            changed = this.unreadMentions.delete(item.key) || changed;
-            changed = this.unreadReactions.delete(item.key) || changed;
+            changed = this.forgetMention(item.key) || changed;
+            changed = this.forgetReactions(item.key) || changed;
         }
         if (changed) this.publishUnreadCounts();
     }
