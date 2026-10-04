@@ -78,7 +78,7 @@ allowBuilds:
     # Our own branch of the SDK, which carries the offline-start changes that used to be a patch here
     # (see the fork's "Start from the cache without waiting on the network"). Keyed by the exact commit,
     # which is also what apps/web/package.json pins, so both move together and a build stays reproducible.
-    "matrix-js-sdk@https://codeload.github.com/MaximilianGaedig/matrix-js-sdk/tar.gz/d7e2db66428e88b349cfaeeb3d399bf99e2623ca": true
+    "matrix-js-sdk@https://codeload.github.com/MaximilianGaedig/matrix-js-sdk/tar.gz/e266cc4403cc4beae331dc3118b3475f3084d840": true
     # Element Call's React component is a git dependency on the `component` directory of the
     # element-call repository, whose `prepare` script builds it on install (nothing is published yet).
     # pnpm matches git-hosted packages by repository URL, not by bare name.
