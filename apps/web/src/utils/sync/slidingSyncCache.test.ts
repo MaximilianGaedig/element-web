@@ -323,6 +323,37 @@ describe("SlidingSyncCacheStore", () => {
         expect(first!.rooms["!r0:example.org"]).toMatchObject({ initial: true, limited: true, prev_batch: undefined });
     });
 
+    // A space has no messages, so no bump_stamp: by recency it came last, and the space bar filled in late.
+    it("hands the next session every space with the first screen", async () => {
+        const store = new SlidingSyncCacheStore(ME);
+        const sync = new FakeSlidingSync();
+        store.record(sync as unknown as SlidingSync, client);
+        for (let i = 0; i < FIRST_ROOMS + 5; i++) {
+            const roomId = `!r${i}:example.org`;
+            rooms.set(roomId, { roomId, accountData: new Map(), tags: {} });
+            describeRoom(sync, roomId, { bump_stamp: i + 1, timeline: [message(`$${i}`)] });
+        }
+        const spaceId = "!space:example.org";
+        rooms.set(spaceId, { roomId: spaceId, accountData: new Map(), tags: {} });
+        describeRoom(sync, spaceId, {
+            required_state: [
+                {
+                    type: "m.room.create",
+                    state_key: "",
+                    content: { type: "m.space" },
+                    sender: ME,
+                    event_id: "$create",
+                    origin_server_ts: 1,
+                },
+            ],
+        });
+        await store.save(client);
+
+        const first = await new SlidingSyncCacheStore(ME).loadFirst();
+
+        expect(Object.keys(first!.rooms)).toContain(spaceId);
+    });
+
     it("keeps the message the server sent for the chat list, and hands it on now and in the next session", async () => {
         const store = new SlidingSyncCacheStore(ME);
         const sync = new FakeSlidingSync();
