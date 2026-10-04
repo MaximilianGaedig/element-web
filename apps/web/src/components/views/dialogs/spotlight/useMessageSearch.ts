@@ -44,6 +44,8 @@ export interface MessageSearch {
     /** There are more pages to ask for. */
     hasMore: boolean;
     failed: boolean;
+    /** How many messages matched in all, as the server or index counted them; absent until it says. */
+    count?: number;
     loadMore(this: void): void;
 }
 
@@ -158,6 +160,7 @@ export function useMessageSearch(
         loadingMore,
         hasMore,
         failed,
+        count: results?.count,
         loadMore,
     };
 }

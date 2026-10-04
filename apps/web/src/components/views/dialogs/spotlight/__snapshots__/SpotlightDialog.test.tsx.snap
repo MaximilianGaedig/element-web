@@ -3,27 +3,13 @@
 exports[`Spotlight Dialog > metaspaces > should show Home metaspace 1`] = `
 <DocumentFragment>
   <div
-    id="mx_SpotlightDialog_keyboardPrompt"
-  >
-    <span>
-      Use 
-      <kbd>
-        ↓
-      </kbd>
-      <kbd>
-        ↑
-      </kbd>
-       to scroll
-    </span>
-  </div>
-  <div
     data-focus-guard="true"
     style="width: 1px; height: 0px; padding: 0px; overflow: hidden; position: fixed; top: 1px; left: 1px;"
     tabindex="0"
   />
   <div
     aria-label="Search Dialog"
-    class="mx_SpotlightDialog mx_Dialog_fixedWidth"
+    class="mx_SpotlightDialog"
     data-focus-lock-disabled="false"
     role="dialog"
     tabindex="-1"
@@ -32,22 +18,142 @@ exports[`Spotlight Dialog > metaspaces > should show Home metaspace 1`] = `
       class="mx_Dialog_header"
     />
     <div
-      class="mx_SpotlightDialog_searchBox mx_textinput"
+      class="mx_SpotlightDialog_header"
     >
-      <input
-        aria-activedescendant="mx_SpotlightDialog_button_result_Home"
-        aria-describedby="mx_SpotlightDialog_keyboardPrompt"
-        aria-label="Search"
-        aria-owns="mx_SpotlightDialog_content"
-        autocapitalize="off"
-        autocomplete="off"
-        autocorrect="off"
-        enterkeyhint="search"
-        placeholder="Search"
-        spellcheck="false"
-        type="text"
-        value="home"
-      />
+      <div
+        class="mx_SpotlightDialog_column mx_SpotlightDialog_bar"
+      >
+        <div
+          class="mx_SpotlightDialog_searchBox mx_textinput"
+        >
+          <svg
+            aria-hidden="true"
+            class="mx_SpotlightDialog_searchIcon"
+            fill="currentColor"
+            height="1em"
+            viewBox="0 0 24 24"
+            width="1em"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M15.05 16.463a7.5 7.5 0 1 1 1.414-1.414l3.243 3.244a1 1 0 0 1-1.414 1.414zM16 10.5a5.5 5.5 0 1 0-11 0 5.5 5.5 0 0 0 11 0"
+            />
+          </svg>
+          <input
+            aria-activedescendant="mx_SpotlightDialog_button_result_Home"
+            aria-describedby="mx_SpotlightDialog_keyboardPrompt"
+            aria-label="Search"
+            aria-owns="mx_SpotlightDialog_content"
+            autocapitalize="off"
+            autocomplete="off"
+            autocorrect="off"
+            enterkeyhint="search"
+            placeholder="Search"
+            spellcheck="false"
+            type="text"
+            value="home"
+          />
+          <div
+            aria-label="Clear"
+            class="mx_AccessibleButton mx_SpotlightDialog_clear"
+            role="button"
+            tabindex="-1"
+          >
+            <svg
+              fill="currentColor"
+              height="1em"
+              viewBox="0 0 24 24"
+              width="1em"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M6.293 6.293a1 1 0 0 1 1.414 0L12 10.586l4.293-4.293a1 1 0 1 1 1.414 1.414L13.414 12l4.293 4.293a1 1 0 0 1-1.414 1.414L12 13.414l-4.293 4.293a1 1 0 0 1-1.414-1.414L10.586 12 6.293 7.707a1 1 0 0 1 0-1.414"
+              />
+            </svg>
+          </div>
+        </div>
+        <div
+          aria-label="Close"
+          class="mx_AccessibleButton mx_SpotlightDialog_close"
+          role="button"
+          tabindex="0"
+        >
+          <kbd>
+            Esc
+          </kbd>
+          <svg
+            fill="currentColor"
+            height="1em"
+            viewBox="0 0 24 24"
+            width="1em"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M6.293 6.293a1 1 0 0 1 1.414 0L12 10.586l4.293-4.293a1 1 0 1 1 1.414 1.414L13.414 12l4.293 4.293a1 1 0 0 1-1.414 1.414L12 13.414l-4.293 4.293a1 1 0 0 1-1.414-1.414L10.586 12 6.293 7.707a1 1 0 0 1 0-1.414"
+            />
+          </svg>
+        </div>
+      </div>
+      <div
+        class="mx_SpotlightDialog_column"
+      >
+        <div
+          aria-label="Search filters"
+          class="mx_PillTabs mx_SpotlightDialog_tabs"
+          role="tablist"
+        >
+          <span
+            aria-hidden="true"
+            class="mx_PillTabs_pill"
+            style="transform: translateX(0px); width: 0px;"
+          />
+          <button
+            aria-selected="true"
+            class="mx_PillTabs_tab mx_PillTabs_tab_active"
+            role="tab"
+            tabindex="0"
+            type="button"
+          >
+            All
+          </button>
+          <button
+            aria-selected="false"
+            class="mx_PillTabs_tab"
+            role="tab"
+            tabindex="-1"
+            type="button"
+          >
+            People
+          </button>
+          <button
+            aria-selected="false"
+            class="mx_PillTabs_tab"
+            role="tab"
+            tabindex="-1"
+            type="button"
+          >
+            Messages
+          </button>
+          <button
+            aria-selected="false"
+            class="mx_PillTabs_tab"
+            role="tab"
+            tabindex="-1"
+            type="button"
+          >
+            Public rooms
+          </button>
+          <button
+            aria-selected="false"
+            class="mx_PillTabs_tab"
+            role="tab"
+            tabindex="-1"
+            type="button"
+          >
+            Public spaces
+          </button>
+        </div>
+      </div>
     </div>
     <div
       aria-activedescendant="mx_SpotlightDialog_button_result_Home"
@@ -56,25 +162,74 @@ exports[`Spotlight Dialog > metaspaces > should show Home metaspace 1`] = `
       role="listbox"
     >
       <div
-        aria-labelledby="mx_SpotlightDialog_section_spaces"
-        class="mx_SpotlightDialog_section mx_SpotlightDialog_results"
-        role="group"
+        class="mx_SpotlightDialog_column"
       >
-        <h4
-          id="mx_SpotlightDialog_section_spaces"
+        <div
+          aria-labelledby="mx_SpotlightDialog_section_spaces"
+          class="mx_SpotlightDialog_section mx_SpotlightDialog_results"
+          role="group"
         >
-          Spaces you're in
-        </h4>
-        <div>
-          <li
-            aria-selected="true"
-            class="mx_AccessibleButton mx_SpotlightDialog_option"
-            id="mx_SpotlightDialog_button_result_Home"
-            role="option"
-            tabindex="-1"
+          <h4
+            id="mx_SpotlightDialog_section_spaces"
           >
-            <div
-              class="mx_SpotlightDialog_metaspaceResult"
+            Spaces you're in
+          </h4>
+          <div>
+            <li
+              aria-selected="true"
+              class="mx_AccessibleButton mx_SpotlightDialog_option"
+              id="mx_SpotlightDialog_button_result_Home"
+              role="option"
+              tabindex="-1"
+            >
+              <div
+                class="mx_SpotlightDialog_metaspaceResult"
+              >
+                <svg
+                  fill="currentColor"
+                  height="1em"
+                  viewBox="0 0 24 24"
+                  width="1em"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    clip-rule="evenodd"
+                    d="M16 11v8h3V9.177l-7-3.889-7 3.889V19h3v-8zm-6 10H5a2 2 0 0 1-2-2V9.177a2 2 0 0 1 1.029-1.748l7-3.89a2 2 0 0 1 1.942 0l7 3.89A2 2 0 0 1 21 9.177V19a2 2 0 0 1-2 2h-5v-8h-4z"
+                    fill-rule="evenodd"
+                  />
+                </svg>
+              </div>
+              Home
+              <div
+                class="mx_SpotlightDialog_option--endAdornment"
+              >
+                <kbd
+                  aria-hidden="true"
+                  class="mx_SpotlightDialog_enterPrompt"
+                >
+                  ↵
+                </kbd>
+              </div>
+            </li>
+          </div>
+        </div>
+        <div
+          aria-labelledby="mx_SpotlightDialog_section_settings"
+          class="mx_SpotlightDialog_section mx_SpotlightDialog_results"
+          role="group"
+        >
+          <h4
+            id="mx_SpotlightDialog_section_settings"
+          >
+            Settings
+          </h4>
+          <div>
+            <li
+              aria-selected="false"
+              class="mx_AccessibleButton mx_SpotlightDialog_option"
+              id="mx_SpotlightDialog_button_result_settings_USER_PREFERENCES_TAB_Show all rooms in Home"
+              role="option"
+              tabindex="-1"
             >
               <svg
                 fill="currentColor"
@@ -84,216 +239,64 @@ exports[`Spotlight Dialog > metaspaces > should show Home metaspace 1`] = `
                 xmlns="http://www.w3.org/2000/svg"
               >
                 <path
-                  clip-rule="evenodd"
-                  d="M16 11v8h3V9.177l-7-3.889-7 3.889V19h3v-8zm-6 10H5a2 2 0 0 1-2-2V9.177a2 2 0 0 1 1.029-1.748l7-3.89a2 2 0 0 1 1.942 0l7 3.89A2 2 0 0 1 21 9.177V19a2 2 0 0 1-2 2h-5v-8h-4z"
-                  fill-rule="evenodd"
+                  d="M16 12a4 4 0 1 1-8 0 4 4 0 0 1 8 0m-2 0a2 2 0 1 0-4 0 2 2 0 0 0 4 0"
+                />
+                <path
+                  d="M11.312 2h1.376A2.31 2.31 0 0 1 15 4.312v.247l.002.003c.01.014.031.033.064.047.03.013.056.013.07.01h.002l.177-.177a2.31 2.31 0 0 1 3.27 0l.973.974a2.31 2.31 0 0 1 0 3.269l-.177.177v.003a.13.13 0 0 0 .01.07.15.15 0 0 0 .047.063l.003.002h.247A2.31 2.31 0 0 1 22 11.312v1.376A2.31 2.31 0 0 1 19.688 15h-.247l-.003.002a.15.15 0 0 0-.047.064.13.13 0 0 0-.01.07v.002l.177.177a2.31 2.31 0 0 1 0 3.27l-.974.973a2.31 2.31 0 0 1-3.269 0l-.177-.177h-.003a.13.13 0 0 0-.07.01.15.15 0 0 0-.063.047l-.002.003v.247A2.31 2.31 0 0 1 12.688 22h-1.376A2.31 2.31 0 0 1 9 19.688v-.247l-.002-.003a.15.15 0 0 0-.064-.047.13.13 0 0 0-.07-.01h-.002l-.177.177a2.31 2.31 0 0 1-3.27 0l-.973-.974a2.31 2.31 0 0 1 0-3.269l.177-.177v-.003a.14.14 0 0 0-.01-.07.15.15 0 0 0-.047-.063L4.559 15h-.247A2.31 2.31 0 0 1 2 12.688v-1.376A2.31 2.31 0 0 1 4.312 9h.247l.003-.002a.15.15 0 0 0 .047-.064.14.14 0 0 0 .01-.07v-.002l-.177-.177a2.31 2.31 0 0 1 0-3.27l.974-.973a2.31 2.31 0 0 1 3.269 0l.177.177h.003a.14.14 0 0 0 .07-.01.15.15 0 0 0 .063-.047L9 4.559v-.247A2.31 2.31 0 0 1 11.312 2M11 4.312v.257c0 .893-.59 1.593-1.299 1.887-.716.297-1.622.21-2.248-.418l-.182-.182a.31.31 0 0 0-.441 0l-.974.974a.31.31 0 0 0 0 .44l.182.183c.627.626.715 1.531.418 2.248C6.162 10.41 5.462 11 4.569 11h-.257a.31.31 0 0 0-.312.312v1.376c0 .172.14.312.312.312h.257c.893 0 1.593.59 1.887 1.299.297.716.21 1.622-.418 2.248l-.182.182a.31.31 0 0 0 0 .441l.974.973a.31.31 0 0 0 .44 0l.183-.181c.626-.627 1.532-.715 2.248-.418.709.294 1.299.994 1.299 1.887v.257c0 .172.14.312.312.312h1.376c.172 0 .312-.14.312-.312v-.257c0-.893.59-1.593 1.299-1.887.716-.297 1.622-.21 2.249.418l.181.181c.122.122.32.122.441 0l.973-.973a.31.31 0 0 0 0-.44l-.181-.183c-.627-.626-.715-1.532-.418-2.248.294-.709.994-1.299 1.887-1.299h.257c.172 0 .312-.14.312-.312v-1.376a.31.31 0 0 0-.312-.312h-.257c-.893 0-1.593-.59-1.887-1.299-.297-.717-.21-1.622.418-2.248l.181-.182a.31.31 0 0 0 0-.441l-.973-.974a.31.31 0 0 0-.44 0l-.183.182c-.626.627-1.532.715-2.248.418C13.59 6.162 13 5.462 13 4.569v-.257A.31.31 0 0 0 12.688 4h-1.376a.31.31 0 0 0-.312.312"
                 />
               </svg>
-            </div>
-            Home
-            <div
-              class="mx_SpotlightDialog_option--endAdornment"
-            >
-              <kbd
-                aria-hidden="true"
-                class="mx_SpotlightDialog_enterPrompt"
+              Show all rooms in Home
+              <span
+                class="mx_SpotlightDialog_result_details"
               >
-                ↵
-              </kbd>
-            </div>
-          </li>
+                Preferences
+              </span>
+              <div
+                class="mx_SpotlightDialog_option--endAdornment"
+              >
+                <kbd
+                  aria-hidden="true"
+                  class="mx_SpotlightDialog_enterPrompt"
+                >
+                  ↵
+                </kbd>
+              </div>
+            </li>
+          </div>
         </div>
       </div>
-      <div
-        aria-labelledby="mx_SpotlightDialog_section_settings"
-        class="mx_SpotlightDialog_section mx_SpotlightDialog_results"
-        role="group"
-      >
-        <h4
-          id="mx_SpotlightDialog_section_settings"
-        >
-          Settings
-        </h4>
-        <div>
-          <li
-            aria-selected="false"
-            class="mx_AccessibleButton mx_SpotlightDialog_option"
-            id="mx_SpotlightDialog_button_result_settings_USER_PREFERENCES_TAB_Show all rooms in Home"
-            role="option"
-            tabindex="-1"
-          >
-            <svg
-              fill="currentColor"
-              height="1em"
-              viewBox="0 0 24 24"
-              width="1em"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                d="M16 12a4 4 0 1 1-8 0 4 4 0 0 1 8 0m-2 0a2 2 0 1 0-4 0 2 2 0 0 0 4 0"
-              />
-              <path
-                d="M11.312 2h1.376A2.31 2.31 0 0 1 15 4.312v.247l.002.003c.01.014.031.033.064.047.03.013.056.013.07.01h.002l.177-.177a2.31 2.31 0 0 1 3.27 0l.973.974a2.31 2.31 0 0 1 0 3.269l-.177.177v.003a.13.13 0 0 0 .01.07.15.15 0 0 0 .047.063l.003.002h.247A2.31 2.31 0 0 1 22 11.312v1.376A2.31 2.31 0 0 1 19.688 15h-.247l-.003.002a.15.15 0 0 0-.047.064.13.13 0 0 0-.01.07v.002l.177.177a2.31 2.31 0 0 1 0 3.27l-.974.973a2.31 2.31 0 0 1-3.269 0l-.177-.177h-.003a.13.13 0 0 0-.07.01.15.15 0 0 0-.063.047l-.002.003v.247A2.31 2.31 0 0 1 12.688 22h-1.376A2.31 2.31 0 0 1 9 19.688v-.247l-.002-.003a.15.15 0 0 0-.064-.047.13.13 0 0 0-.07-.01h-.002l-.177.177a2.31 2.31 0 0 1-3.27 0l-.973-.974a2.31 2.31 0 0 1 0-3.269l.177-.177v-.003a.14.14 0 0 0-.01-.07.15.15 0 0 0-.047-.063L4.559 15h-.247A2.31 2.31 0 0 1 2 12.688v-1.376A2.31 2.31 0 0 1 4.312 9h.247l.003-.002a.15.15 0 0 0 .047-.064.14.14 0 0 0 .01-.07v-.002l-.177-.177a2.31 2.31 0 0 1 0-3.27l.974-.973a2.31 2.31 0 0 1 3.269 0l.177.177h.003a.14.14 0 0 0 .07-.01.15.15 0 0 0 .063-.047L9 4.559v-.247A2.31 2.31 0 0 1 11.312 2M11 4.312v.257c0 .893-.59 1.593-1.299 1.887-.716.297-1.622.21-2.248-.418l-.182-.182a.31.31 0 0 0-.441 0l-.974.974a.31.31 0 0 0 0 .44l.182.183c.627.626.715 1.531.418 2.248C6.162 10.41 5.462 11 4.569 11h-.257a.31.31 0 0 0-.312.312v1.376c0 .172.14.312.312.312h.257c.893 0 1.593.59 1.887 1.299.297.716.21 1.622-.418 2.248l-.182.182a.31.31 0 0 0 0 .441l.974.973a.31.31 0 0 0 .44 0l.183-.181c.626-.627 1.532-.715 2.248-.418.709.294 1.299.994 1.299 1.887v.257c0 .172.14.312.312.312h1.376c.172 0 .312-.14.312-.312v-.257c0-.893.59-1.593 1.299-1.887.716-.297 1.622-.21 2.249.418l.181.181c.122.122.32.122.441 0l.973-.973a.31.31 0 0 0 0-.44l-.181-.183c-.627-.626-.715-1.532-.418-2.248.294-.709.994-1.299 1.887-1.299h.257c.172 0 .312-.14.312-.312v-1.376a.31.31 0 0 0-.312-.312h-.257c-.893 0-1.593-.59-1.887-1.299-.297-.717-.21-1.622.418-2.248l.181-.182a.31.31 0 0 0 0-.441l-.973-.974a.31.31 0 0 0-.44 0l-.183.182c-.626.627-1.532.715-2.248.418C13.59 6.162 13 5.462 13 4.569v-.257A.31.31 0 0 0 12.688 4h-1.376a.31.31 0 0 0-.312.312"
-              />
-            </svg>
-            Show all rooms in Home
-            <span
-              class="mx_SpotlightDialog_result_details"
-            >
-              Preferences
-            </span>
-            <div
-              class="mx_SpotlightDialog_option--endAdornment"
-            >
-              <kbd
-                aria-hidden="true"
-                class="mx_SpotlightDialog_enterPrompt"
-              >
-                ↵
-              </kbd>
-            </div>
-          </li>
-        </div>
-      </div>
-      <div
-        aria-labelledby="mx_SpotlightDialog_section_otherSearches"
-        class="mx_SpotlightDialog_section mx_SpotlightDialog_otherSearches"
-        role="group"
-      >
-        <h4
-          id="mx_SpotlightDialog_section_otherSearches"
-        >
-          Use "home" to search
-        </h4>
-        <div>
-          <li
-            aria-selected="false"
-            class="mx_AccessibleButton mx_SpotlightDialog_option"
-            id="mx_SpotlightDialog_button_explorePublicSpaces"
-            role="option"
-            tabindex="-1"
-          >
-            <svg
-              fill="currentColor"
-              height="1em"
-              viewBox="0 0 24 24"
-              width="1em"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                d="M6 21q-1.65 0-2.825-1.175T2 17t1.175-2.825T6 13t2.825 1.175T10 17t-1.175 2.825T6 21m12 0q-1.65 0-2.825-1.175T14 17t1.175-2.825T18 13t2.825 1.175T22 17t-1.175 2.825T18 21M6 19q.824 0 1.412-.587Q8 17.825 8 17t-.588-1.412A1.93 1.93 0 0 0 6 15q-.824 0-1.412.588A1.93 1.93 0 0 0 4 17q0 .824.588 1.413Q5.175 19 6 19m12 0q.824 0 1.413-.587Q20 17.825 20 17t-.587-1.412A1.93 1.93 0 0 0 18 15q-.824 0-1.413.588A1.93 1.93 0 0 0 16 17q0 .824.587 1.413Q17.176 19 18 19m-6-8q-1.65 0-2.825-1.175T8 7t1.175-2.825T12 3t2.825 1.175T16 7t-1.175 2.825T12 11m0-2q.825 0 1.412-.588Q14 7.826 14 7q0-.824-.588-1.412A1.93 1.93 0 0 0 12 5q-.825 0-1.412.588A1.93 1.93 0 0 0 10 7q0 .824.588 1.412Q11.175 9 12 9"
-              />
-            </svg>
-            Public spaces
-            <div
-              class="mx_SpotlightDialog_option--endAdornment"
-            >
-              <kbd
-                aria-hidden="true"
-                class="mx_SpotlightDialog_enterPrompt"
-              >
-                ↵
-              </kbd>
-            </div>
-          </li>
-          <li
-            aria-selected="false"
-            class="mx_AccessibleButton mx_SpotlightDialog_option"
-            id="mx_SpotlightDialog_button_explorePublicRooms"
-            role="option"
-            tabindex="-1"
-          >
-            <svg
-              fill="currentColor"
-              height="1em"
-              viewBox="0 0 24 24"
-              width="1em"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                d="m8.566 17-.944 4.094q-.086.406-.372.656t-.687.25q-.543 0-.887-.469a1.18 1.18 0 0 1-.2-1.031l.801-3.5H3.158q-.572 0-.916-.484a1.27 1.27 0 0 1-.2-1.078 1.12 1.12 0 0 1 1.116-.938H6.85l1.145-5h-3.12q-.57 0-.915-.484a1.27 1.27 0 0 1-.2-1.078A1.12 1.12 0 0 1 4.875 7h3.691l.945-4.094q.085-.406.372-.656.286-.25.686-.25.544 0 .887.469.345.468.2 1.031l-.8 3.5h4.578l.944-4.094q.085-.406.372-.656.286-.25.687-.25.543 0 .887.469t.2 1.031L17.723 7h3.119q.573 0 .916.484.343.485.2 1.079a1.12 1.12 0 0 1-1.116.937H17.15l-1.145 5h3.12q.57 0 .915.484.343.485.2 1.079a1.12 1.12 0 0 1-1.116.937h-3.691l-.944 4.094q-.087.406-.373.656t-.686.25q-.544 0-.887-.469a1.18 1.18 0 0 1-.2-1.031l.8-3.5zm.573-2.5h4.578l1.144-5h-4.578z"
-              />
-            </svg>
-            Public rooms
-            <div
-              class="mx_SpotlightDialog_option--endAdornment"
-            >
-              <kbd
-                aria-hidden="true"
-                class="mx_SpotlightDialog_enterPrompt"
-              >
-                ↵
-              </kbd>
-            </div>
-          </li>
-          <li
-            aria-selected="false"
-            class="mx_AccessibleButton mx_SpotlightDialog_option"
-            id="mx_SpotlightDialog_button_startChat"
-            role="option"
-            tabindex="-1"
-          >
-            <svg
-              fill="currentColor"
-              height="1em"
-              viewBox="0 0 24 24"
-              width="1em"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                d="M9.175 13.825Q10.35 15 12 15t2.825-1.175T16 11t-1.175-2.825T12 7 9.175 8.175 8 11t1.175 2.825m4.237-1.412A1.93 1.93 0 0 1 12 13q-.825 0-1.412-.588A1.93 1.93 0 0 1 10 11q0-.825.588-1.412A1.93 1.93 0 0 1 12 9q.825 0 1.412.588Q14 10.175 14 11t-.588 1.412"
-              />
-              <path
-                d="M22 12c0 5.523-4.477 10-10 10S2 17.523 2 12 6.477 2 12 2s10 4.477 10 10m-2 0a8 8 0 1 0-16 0 8 8 0 0 0 16 0"
-              />
-              <path
-                d="M16.23 18.792a13 13 0 0 0-1.455-.455 11.6 11.6 0 0 0-5.55 0q-.73.18-1.455.455a8 8 0 0 1-1.729-1.454q1.336-.618 2.709-.95A13.8 13.8 0 0 1 12 16q1.65 0 3.25.387 1.373.333 2.709.95a8 8 0 0 1-1.73 1.455"
-              />
-            </svg>
-            People
-            <div
-              class="mx_SpotlightDialog_option--endAdornment"
-            >
-              <kbd
-                aria-hidden="true"
-                class="mx_SpotlightDialog_enterPrompt"
-              >
-                ↵
-              </kbd>
-            </div>
-          </li>
-          <li
-            aria-selected="false"
-            class="mx_AccessibleButton mx_SpotlightDialog_option"
-            id="mx_SpotlightDialog_button_searchMessages"
-            role="option"
-            tabindex="-1"
-          >
-            <svg
-              fill="currentColor"
-              height="1em"
-              viewBox="0 0 24 24"
-              width="1em"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                d="m1.5 21.25 1.45-4.95a10.2 10.2 0 0 1-.712-2.1A10.2 10.2 0 0 1 2 12q0-2.075.788-3.9a10.1 10.1 0 0 1 2.137-3.175q1.35-1.35 3.175-2.137A9.7 9.7 0 0 1 12 2q2.075 0 3.9.788a10.1 10.1 0 0 1 3.175 2.137q1.35 1.35 2.137 3.175A9.7 9.7 0 0 1 22 12a9.7 9.7 0 0 1-.788 3.9 10.1 10.1 0 0 1-2.137 3.175q-1.35 1.35-3.175 2.137A9.7 9.7 0 0 1 12 22q-1.125 0-2.2-.238a10.2 10.2 0 0 1-2.1-.712L2.75 22.5a.94.94 0 0 1-1-.25.94.94 0 0 1-.25-1m2.45-1.2 3.2-.95a1 1 0 0 1 .275-.062q.15-.013.275-.013.225 0 .438.038.212.036.412.137a7.4 7.4 0 0 0 1.675.6Q11.1 20 12 20q3.35 0 5.675-2.325T20 12t-2.325-5.675T12 4 6.325 6.325 4 12q0 .9.2 1.775t.6 1.675q.176.325.188.688t-.088.712z"
-              />
-            </svg>
-            Messages
-            <div
-              class="mx_SpotlightDialog_option--endAdornment"
-            >
-              <kbd
-                aria-hidden="true"
-                class="mx_SpotlightDialog_enterPrompt"
-              >
-                ↵
-              </kbd>
-            </div>
-          </li>
-        </div>
-      </div>
+    </div>
+    <div
+      id="mx_SpotlightDialog_keyboardPrompt"
+    >
+      <span>
+        <span>
+          Use 
+          <kbd>
+            ↓
+          </kbd>
+          <kbd>
+            ↑
+          </kbd>
+           to scroll
+        </span>
+      </span>
+      <span>
+        <span>
+          <kbd>
+            ↵
+          </kbd>
+           to open
+        </span>
+      </span>
+      <span>
+        <span>
+          <kbd>
+            Esc
+          </kbd>
+           to close
+        </span>
+      </span>
     </div>
   </div>
   <div

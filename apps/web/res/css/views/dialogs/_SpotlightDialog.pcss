@@ -6,52 +6,45 @@ SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only OR LicenseRef-Element-Com
 Please see LICENSE files in the repository root for full details.
 */
 
+/*
+ * The search is a screen of its own on every size, as Telegram's, Slack's and GitHub's are, not a window over
+ * the chat list. The glass border, the rounded box and the drawer other dialogs become on a handheld are all
+ * dropped (hence the !important: they override Compound's and the handheld dialog rules).
+ */
 .mx_SpotlightDialog_wrapper {
     .mx_Dialog_border {
-        /* Disable the glass border as this dialog wasn't designed with it in mind */
-        display: contents;
+        display: contents !important;
     }
 
     .mx_Dialog {
-        /* !important because it's overriding compound  */
-        width: fit-content !important;
-        border-radius: 8px !important;
-        height: 60% !important;
-        overflow-y: initial;
-        position: relative;
-        padding: 0;
-        contain: unset; /* needed for #mx_SpotlightDialog_keyboardPrompt to not be culled */
+        position: fixed !important;
+        inset: 0 !important;
+        width: 100% !important;
+        max-width: none !important;
+        height: 100dvh !important;
+        max-height: none !important;
+        margin: 0 !important;
+        padding: var(--tg-safe-top, 0px) 0 0 !important;
+        box-sizing: border-box;
+        overflow: hidden;
+        border-radius: 0 !important;
+        border: none !important;
+        box-shadow: none !important;
+        background-color: var(--cpd-color-bg-canvas-default);
+        contain: unset;
+        animation: mx_SpotlightDialog_in 0.16s ease-out;
+    }
+}
 
-        #mx_SpotlightDialog_keyboardPrompt {
-            position: absolute;
-            padding: var(--cpd-space-2x);
-            border-radius: 8px;
-            background-color: $background;
-            top: -60px; /* relative to the top of the modal */
-            left: 50%;
-            transform: translateX(-50%);
-            font-size: $font-12px;
-            line-height: $font-15px;
-            color: $secondary-content;
-
-            kbd {
-                display: inline-block;
-                padding: 2px var(--cpd-space-1x);
-                margin: 0 var(--cpd-space-1x);
-                border-radius: 6px;
-                background-color: $quinary-content;
-                vertical-align: middle;
-                color: $tertiary-content;
-                /* To avoid any styling inherent with <kbd> elements */
-                font-family: inherit;
-                font-weight: inherit;
-                font-size: inherit;
-            }
-        }
+@keyframes mx_SpotlightDialog_in {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
     }
 }
 
 .mx_SpotlightDialog {
+    width: 100%;
     height: 100%;
     display: flex;
     flex-direction: column;
@@ -60,90 +53,207 @@ Please see LICENSE files in the repository root for full details.
         display: none;
     }
 
+    /* One column of reading width, centred, for the header rows and the results alike. */
+    .mx_SpotlightDialog_column {
+        width: 100%;
+        max-width: 760px;
+        margin: 0 auto;
+        padding: 0 var(--cpd-space-4x);
+        box-sizing: border-box;
+    }
+
+    .mx_SpotlightDialog_header {
+        flex: none;
+        display: flex;
+        flex-direction: column;
+        gap: var(--cpd-space-2x);
+        padding: var(--cpd-space-4x) 0 var(--cpd-space-3x);
+        border-bottom: 1px solid var(--cpd-color-separator-primary);
+    }
+
+    .mx_SpotlightDialog_bar {
+        display: flex;
+        align-items: center;
+        gap: var(--cpd-space-3x);
+    }
+
     .mx_SpotlightDialog_searchBox {
+        flex: 1;
+        min-width: 0;
+        display: flex;
+        align-items: center;
+        gap: var(--cpd-space-2x);
+        height: 44px;
         margin: 0;
-        border: none;
-        border-radius: 8px 8px 0 0;
-        padding: var(--cpd-space-3x) var(--cpd-space-4x);
-        border-bottom: 1px solid $system;
+        padding: 0 var(--cpd-space-2x) 0 var(--cpd-space-3x);
+        box-sizing: border-box;
+        border: 1px solid transparent;
+        border-radius: 22px;
+        background-color: var(--cpd-color-bg-subtle-secondary);
+        transition: border-color 0.12s ease-out;
 
-        > .mx_SpotlightDialog_filter {
-            display: flex;
-            align-content: center;
-            align-items: center;
-            border-radius: 8px;
-            margin-right: var(--cpd-space-2x);
-            background-color: $quinary-content;
-            vertical-align: middle;
-            color: $primary-content;
-            position: relative;
-            padding: var(--cpd-space-1x) var(--cpd-space-2x) var(--cpd-space-1x) 37px;
+        &:focus-within {
+            border-color: var(--cpd-color-border-interactive-hovered);
+            background-color: var(--cpd-color-bg-canvas-default);
+        }
 
-            > svg {
-                color: $secondary-content;
-                width: 18px;
-                height: 18px;
-                position: absolute;
-                left: var(--cpd-space-2x);
-                top: 50%;
-                transform: translateY(-50%);
-            }
-
-            .mx_SpotlightDialog_filter--close {
-                display: inline-block;
-                width: 14px;
-                height: 14px;
-                padding: 1px;
-                background: $system;
-                border-radius: 8px;
-                margin-left: var(--cpd-space-2x);
-                text-align: center;
-                line-height: 16px;
-                color: $secondary-content;
-
-                svg {
-                    color: $secondary-content;
-                    width: inherit;
-                    height: inherit;
-                }
-            }
+        > .mx_SpotlightDialog_searchIcon {
+            flex: none;
+            width: 20px;
+            height: 20px;
+            color: var(--cpd-color-icon-secondary);
         }
 
         > input {
+            flex: 1;
+            min-width: 0;
             display: block;
             box-sizing: border-box;
-            background-color: transparent;
-            width: 100%;
-            height: 32px;
+            height: 100%;
+            margin: 0;
             padding: 0;
-            color: $tertiary-content;
-            font-weight: normal;
-            font-size: $font-15px;
-            line-height: $font-24px;
+            border: none;
+            background-color: transparent;
+            color: var(--cpd-color-text-primary);
+            font: var(--cpd-font-body-lg-regular);
+
+            &::placeholder {
+                color: var(--cpd-color-text-secondary);
+            }
         }
 
         > .mx_Spinner {
-            flex-grow: 0;
+            flex: none;
             width: unset;
             height: unset;
-            margin-left: var(--cpd-space-4x);
         }
 
-        &:not(:focus-within) + #mx_SpotlightDialog_content {
-            /* Inhibit the styling if focus is not within the input which handles keyboard accessibility */
-            --mx_SpotlightDialog_option_selectedBgColor: transparent;
+        > .mx_SpotlightDialog_clear {
+            flex: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            color: var(--cpd-color-icon-secondary);
 
-            /* Hide the enter prompt as in this state pressing enter would not actuate that option */
-            .mx_SpotlightDialog_enterPrompt {
-                visibility: hidden;
+            svg {
+                width: 18px;
+                height: 18px;
+            }
+
+            &:hover {
+                background-color: var(--cpd-color-bg-subtle-primary);
+                color: var(--cpd-color-icon-primary);
             }
         }
     }
 
+    /* Inhibit the selection styling while the focus is not in the field, which is what handles the keyboard. */
+    .mx_SpotlightDialog_header:not(:has(.mx_SpotlightDialog_searchBox:focus-within)) + #mx_SpotlightDialog_content {
+        --mx_SpotlightDialog_option_selectedBgColor: transparent;
+
+        /* Hide the enter prompt as in this state pressing enter would not actuate that option */
+        .mx_SpotlightDialog_enterPrompt {
+            visibility: hidden;
+        }
+    }
+
+    .mx_SpotlightDialog_cancel {
+        flex: none;
+        color: var(--cpd-color-text-action-accent);
+        font: var(--cpd-font-body-lg-medium);
+    }
+
+    .mx_SpotlightDialog_close {
+        flex: none;
+        display: flex;
+        align-items: center;
+        gap: var(--cpd-space-2x);
+        height: 36px;
+        padding: 0 var(--cpd-space-2x);
+        border-radius: 18px;
+        color: var(--cpd-color-icon-secondary);
+
+        kbd {
+            padding: 2px var(--cpd-space-1-5x);
+            border-radius: 6px;
+            background-color: var(--cpd-color-bg-subtle-secondary);
+            color: var(--cpd-color-text-secondary);
+            font: var(--cpd-font-body-xs-medium);
+        }
+
+        svg {
+            width: 24px;
+            height: 24px;
+        }
+
+        &:hover {
+            background-color: var(--cpd-color-bg-subtle-secondary);
+            color: var(--cpd-color-icon-primary);
+        }
+    }
+
+    .mx_SpotlightDialog_chipRow {
+        display: flex;
+        align-items: center;
+        gap: var(--cpd-space-2x);
+        overflow-x: auto;
+        overscroll-behavior-x: contain;
+        scrollbar-width: none;
+        /* Room for the chips' focus rings, which the scrolling row would clip. */
+        padding: 2px 0;
+
+        &::-webkit-scrollbar {
+            display: none;
+        }
+
+        > button {
+            flex: none;
+        }
+    }
+
+    .mx_SpotlightDialog_chipDivider {
+        flex: none;
+        width: 1px;
+        height: 20px;
+        margin: 0 var(--cpd-space-1x);
+        background-color: var(--cpd-color-separator-primary);
+    }
+
+    #mx_SpotlightDialog_keyboardPrompt {
+        flex: none;
+        display: flex;
+        justify-content: center;
+        gap: var(--cpd-space-6x);
+        padding: var(--cpd-space-2x) var(--cpd-space-4x);
+        border-top: 1px solid var(--cpd-color-separator-primary);
+        color: var(--cpd-color-text-secondary);
+        font: var(--cpd-font-body-xs-regular);
+
+        kbd {
+            display: inline-block;
+            min-width: 12px;
+            padding: 1px var(--cpd-space-1x);
+            margin: 0 2px;
+            border-radius: 4px;
+            background-color: var(--cpd-color-bg-subtle-secondary);
+            color: var(--cpd-color-text-secondary);
+            text-align: center;
+            /* To avoid any styling inherent with <kbd> elements */
+            font-family: inherit;
+            font-weight: var(--cpd-font-weight-medium);
+            font-size: inherit;
+        }
+    }
+
     #mx_SpotlightDialog_content {
-        height: 100%;
+        flex: 1;
+        min-height: 0;
         overflow-y: auto;
-        padding: var(--cpd-space-4x);
+        overscroll-behavior: contain;
+        padding: var(--cpd-space-3x) 0 calc(var(--cpd-space-6x) + var(--tg-safe-bottom, 0px));
 
         ul {
             padding: 0;
@@ -151,38 +261,48 @@ Please see LICENSE files in the repository root for full details.
         }
 
         .mx_SpotlightDialog_section {
+            /* Held at the top while its group scrolls under it, as Telegram's search headings are. */
             > h4,
-            > .mx_SpotlightDialog_sectionHeader > h4 {
-                font-weight: var(--cpd-font-weight-semibold);
-                font-size: $font-12px;
-                line-height: $font-15px;
-                color: $secondary-content;
+            > .mx_SpotlightDialog_sectionHeader {
+                position: sticky;
+                top: calc(-1 * var(--cpd-space-3x));
+                z-index: 1;
                 margin: 0;
+                padding: var(--cpd-space-2x) var(--cpd-space-2x);
+                background-color: var(--cpd-color-bg-canvas-default);
             }
 
-            > h4 {
-                margin-bottom: var(--cpd-space-2x);
+            > h4,
+            > .mx_SpotlightDialog_sectionHeader > h4 {
+                font: var(--cpd-font-body-sm-semibold);
+                color: var(--cpd-color-text-secondary);
+                margin: 0;
             }
 
             .mx_SpotlightDialog_sectionHeader {
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
-                margin-bottom: var(--cpd-space-2x);
 
                 .mx_SpotlightDialog_options {
                     display: flex;
                     gap: var(--cpd-space-1x);
                 }
+
+                .mx_SpotlightDialog_showAll {
+                    font: var(--cpd-font-body-sm-semibold);
+                    color: var(--cpd-color-text-action-accent);
+                    text-decoration: none;
+                }
             }
 
             & + .mx_SpotlightDialog_section {
-                margin-top: var(--cpd-space-6x);
+                margin-top: var(--cpd-space-4x);
             }
         }
 
         .mx_SpotlightDialog_option {
-            border-radius: 8px;
+            border-radius: 12px;
             overflow: hidden;
             text-overflow: ellipsis;
 
@@ -227,9 +347,11 @@ Please see LICENSE files in the repository root for full details.
         .mx_SpotlightDialog_otherSearches,
         .mx_SpotlightDialog_hiddenResults {
             .mx_SpotlightDialog_option {
-                --mx_SpotlightDialog_option_selectedBgColor: $system;
+                --mx_SpotlightDialog_option_selectedBgColor: var(--cpd-color-bg-subtle-secondary);
 
-                padding: 6px var(--cpd-space-1x);
+                min-height: 48px;
+                box-sizing: border-box;
+                padding: var(--cpd-space-2x);
                 font-size: $font-15px;
                 line-height: $font-24px;
                 color: $primary-content;
@@ -455,78 +577,30 @@ Please see LICENSE files in the repository root for full details.
     }
 }
 
-/* ---- Messages group and its filter chips ---------------------------------------------------------------- */
+/* ---- Messages, empty states, and the handheld ---------------------------------------------------------- */
 
-.mx_SpotlightDialog.mx_SpotlightDialog {
-    .mx_SpotlightDialog_chip {
-        flex: none;
-        min-height: 32px;
-        padding: 0 var(--cpd-space-3x);
-        border: 1px solid var(--cpd-color-border-interactive-secondary);
-        border-radius: 16px;
-        background: transparent;
-        color: var(--cpd-color-text-primary);
-        font: inherit;
-        font-size: $font-13px;
-        white-space: nowrap;
-        cursor: pointer;
-
-        &.mx_SpotlightDialog_chip_on {
-            border-color: transparent;
-            background: var(--cpd-color-bg-accent-rest);
-            color: var(--cpd-color-text-on-solid-primary);
-        }
-    }
-
-    .mx_SpotlightDialog_chipRow {
-        display: flex;
-        gap: var(--cpd-space-2x);
-        overflow-x: auto;
-        scrollbar-width: none;
-        padding: var(--cpd-space-1x) var(--cpd-space-4x);
-
-        &::-webkit-scrollbar {
-            display: none;
-        }
-    }
-
-    .mx_SpotlightDialog_tabs {
-        display: flex;
-        gap: var(--cpd-space-2x);
-        overflow-x: auto;
-        scrollbar-width: none;
-        padding: var(--cpd-space-2x) var(--cpd-space-4x);
-        border-bottom: 1px solid $system;
-
-        &::-webkit-scrollbar {
-            display: none;
-        }
-    }
-
-    .mx_SpotlightDialog_cancel {
-        flex: none;
-        margin-left: var(--cpd-space-3x);
-        color: var(--cpd-color-text-action-accent);
-        font-size: $font-15px;
-    }
-
-    .mx_SpotlightDialog_messagesNote {
-        margin: var(--cpd-space-4x);
-        color: $secondary-content;
-        font-size: $font-13px;
-        text-align: center;
-    }
-
-    .mx_SpotlightDialog_message {
+.mx_SpotlightDialog.mx_SpotlightDialog #mx_SpotlightDialog_content {
+    .mx_SpotlightDialog_results .mx_SpotlightDialog_option.mx_SpotlightDialog_message {
+        /* A chat list row, as Telegram draws a message hit: the chat's avatar, its name and the date, and
+           under them who said it and the words that matched. */
+        align-items: center;
         gap: var(--cpd-space-3x);
+        min-height: 68px;
+        white-space: normal;
 
         > .mx_BaseAvatar {
             flex: none;
+            width: 48px;
+            height: 48px;
+            margin: 0;
         }
 
         .mx_SpotlightDialog_message_text {
             flex: 1;
             min-width: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
         }
 
         .mx_SpotlightDialog_message_head {
@@ -539,32 +613,40 @@ Please see LICENSE files in the repository root for full details.
             flex: 1;
             min-width: 0;
             overflow: hidden;
+            white-space: nowrap;
             text-overflow: ellipsis;
-            font-weight: var(--cpd-font-weight-semibold);
+            font: var(--cpd-font-body-md-semibold);
+            color: var(--cpd-color-text-primary);
         }
 
         .mx_SpotlightDialog_message_date {
             flex: none;
-            color: $secondary-content;
-            font-size: $font-12px;
+            font: var(--cpd-font-body-xs-regular);
+            color: var(--cpd-color-text-secondary);
         }
 
         .mx_SpotlightDialog_message_line {
             overflow: hidden;
+            white-space: nowrap;
             text-overflow: ellipsis;
-            color: $secondary-content;
-            font-size: $font-13px;
-            line-height: $font-20px;
+            font: var(--cpd-font-body-sm-regular);
+            color: var(--cpd-color-text-secondary);
 
             .mx_SpotlightDialog_message_sender {
-                color: $primary-content;
+                color: var(--cpd-color-text-primary);
             }
 
             mark {
-                background: none;
+                border-radius: 3px;
+                padding: 0 1px;
+                background-color: var(--cpd-color-bg-accent-subtle, var(--cpd-color-bg-subtle-secondary));
                 color: var(--cpd-color-text-action-accent);
                 font-weight: var(--cpd-font-weight-semibold);
             }
+        }
+
+        .mx_SpotlightDialog_option--endAdornment {
+            align-self: center;
         }
     }
 
@@ -572,13 +654,15 @@ Please see LICENSE files in the repository root for full details.
         display: flex;
         align-items: center;
         gap: var(--cpd-space-3x);
-        padding: 6px var(--cpd-space-1x);
+        min-height: 68px;
+        padding: var(--cpd-space-2x);
+        box-sizing: border-box;
         list-style: none;
 
         .mx_SpotlightDialog_skeletonAvatar {
             flex: none;
-            width: 40px;
-            height: 40px;
+            width: 48px;
+            height: 48px;
             border-radius: 50%;
         }
 
@@ -589,24 +673,85 @@ Please see LICENSE files in the repository root for full details.
             gap: var(--cpd-space-2x);
 
             > span {
-                height: 10px;
-                border-radius: 5px;
+                height: 12px;
+                border-radius: 6px;
 
                 &:first-child {
-                    width: 40%;
+                    width: 35%;
+                }
+
+                &:last-child {
+                    width: 75%;
                 }
             }
         }
 
         .mx_SpotlightDialog_skeletonAvatar,
         .mx_SpotlightDialog_skeletonLines > span {
-            background: $quinary-content;
+            background-color: var(--cpd-color-bg-subtle-primary);
             animation: mx_SpotlightDialog_pulse 1.2s ease-in-out infinite;
         }
     }
 
+    .mx_SpotlightDialog_messagesNote {
+        margin: var(--cpd-space-4x);
+        color: var(--cpd-color-text-secondary);
+        font: var(--cpd-font-body-sm-regular);
+        text-align: center;
+    }
+
     .mx_SpotlightDialog_messagesEnd {
         min-height: 1px;
+    }
+
+    .mx_SpotlightDialog_results .mx_SpotlightDialog_option.mx_SpotlightDialog_noResults {
+        justify-content: center;
+        white-space: normal;
+
+        &:hover {
+            background-color: transparent;
+        }
+
+        .mx_SpotlightDialog_option--endAdornment {
+            display: none;
+        }
+    }
+}
+
+.mx_SpotlightDialog_emptyState {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--cpd-space-2x);
+    padding: var(--cpd-space-16x) var(--cpd-space-6x) var(--cpd-space-8x);
+    text-align: center;
+
+    .mx_SpotlightDialog_emptyState_icon {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 56px;
+        height: 56px;
+        margin-bottom: var(--cpd-space-2x);
+        border-radius: 50%;
+        background-color: var(--cpd-color-bg-subtle-secondary);
+        color: var(--cpd-color-icon-secondary);
+
+        svg {
+            width: 28px;
+            height: 28px;
+        }
+    }
+
+    .mx_SpotlightDialog_emptyState_title {
+        font: var(--cpd-font-heading-sm-semibold);
+        color: var(--cpd-color-text-primary);
+    }
+
+    .mx_SpotlightDialog_emptyState_description {
+        max-width: 320px;
+        font: var(--cpd-font-body-md-regular);
+        color: var(--cpd-color-text-secondary);
     }
 }
 
@@ -617,98 +762,52 @@ Please see LICENSE files in the repository root for full details.
 }
 
 @media (prefers-reduced-motion: reduce) {
+    .mx_SpotlightDialog_wrapper .mx_Dialog,
     .mx_SpotlightDialog .mx_SpotlightDialog_messageSkeleton * {
-        animation: none;
+        animation: none !important;
     }
 }
 
 /*
- * On a handheld the search is a screen of its own, as Telegram's is: the field and Cancel at the top under the
- * notch, the filter tabs under it, the groups scrolling below with their headings held at the top, and the
- * list clear of the home indicator. The window the desktop gets (a 60%-high rounded box with a keyboard hint
- * above it) and the drawer the other dialogs become there are both dropped.
+ * On a handheld: Cancel instead of the close button, no keyboard hints, taller rows for a thumb, and the
+ * horizontal "Recently viewed" strip scrollable by touch.
  */
-html[data-tg-screen="mobile"] {
-    .mx_SpotlightDialog_wrapper {
-        .mx_Dialog_border {
-            display: contents !important;
-        }
-
-        .mx_Dialog {
-            width: 100% !important;
-            max-width: none;
-            height: 100dvh !important;
-            border-radius: 0 !important;
-            padding-top: var(--tg-safe-top, 0px);
-            box-sizing: border-box;
-            background-color: var(--cpd-color-bg-canvas-default);
-        }
-
-        #mx_SpotlightDialog_keyboardPrompt {
-            display: none;
-        }
+.mx_SpotlightDialog.mx_SpotlightDialog_handheld {
+    .mx_SpotlightDialog_header {
+        padding-top: var(--cpd-space-2x);
     }
 
-    .mx_SpotlightDialog_handheld {
-        .mx_SpotlightDialog_searchBox {
-            align-items: center;
-            border-radius: 0;
-            padding: var(--cpd-space-2x) var(--cpd-space-4x);
+    .mx_SpotlightDialog_column {
+        padding: 0 var(--cpd-space-3x);
+    }
 
-            > input {
-                height: 44px;
-                font-size: 1rem;
-            }
+    #mx_SpotlightDialog_keyboardPrompt,
+    .mx_SpotlightDialog_enterPrompt,
+    .mx_SpotlightDialog_option--endAdornment kbd {
+        display: none !important;
+    }
+
+    .mx_SpotlightDialog_searchBox > input {
+        /* 16px or more keeps iOS from zooming into the field when it takes the focus. */
+        font-size: 1rem;
+    }
+
+    #mx_SpotlightDialog_content {
+        .mx_SpotlightDialog_results .mx_SpotlightDialog_option {
+            min-height: 56px;
         }
 
-        .mx_SpotlightDialog_enterPrompt,
-        .mx_SpotlightDialog_option--endAdornment kbd {
-            display: none !important;
-        }
-
-        #mx_SpotlightDialog_content {
-            padding: 0;
-            padding-bottom: var(--tg-safe-bottom, 0px);
-            overscroll-behavior: contain;
-
-            .mx_SpotlightDialog_section {
-                padding: 0 var(--cpd-space-2x);
-
-                /* Held at the top while its group scrolls, over the rows that pass under it. */
-                > h4,
-                > .mx_SpotlightDialog_sectionHeader {
-                    position: sticky;
-                    top: 0;
-                    z-index: 1;
-                    margin: 0;
-                    padding: var(--cpd-space-2x) var(--cpd-space-2x);
-                    background: var(--cpd-color-bg-canvas-default);
-                }
-
-                & + .mx_SpotlightDialog_section {
-                    margin-top: var(--cpd-space-2x);
-                }
+        .mx_SpotlightDialog_recentlyViewed {
+            > div {
+                overflow-x: auto;
+                scrollbar-width: none;
+                padding-bottom: var(--cpd-space-1x);
             }
 
             .mx_SpotlightDialog_option {
-                min-height: 56px;
-                padding: var(--cpd-space-2x);
-                border-radius: 12px;
-            }
-
-            .mx_SpotlightDialog_recentlyViewed {
-                > div {
-                    overflow-x: auto;
-                    scrollbar-width: none;
-                    padding-bottom: var(--cpd-space-1x);
-                }
-
-                .mx_SpotlightDialog_option {
-                    min-height: 0;
-                    width: 72px;
-                    height: auto;
-                    min-width: 72px;
-                }
+                width: 72px;
+                min-width: 72px;
+                height: auto;
             }
         }
     }
