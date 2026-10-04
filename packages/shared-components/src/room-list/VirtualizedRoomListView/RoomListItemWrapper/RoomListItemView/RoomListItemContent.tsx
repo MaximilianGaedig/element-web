@@ -100,7 +100,8 @@ export const RoomListItemContent = memo(function RoomListItemContent({
                                 className={styles.previewThumbnail}
                                 src={item.messagePreviewThumbnail}
                                 alt=""
-                                loading="lazy"
+                                // Not lazy: the list's scroll box clips the rows rendered ahead, so a lazy image
+                                // would only start loading once its row is on screen.
                                 decoding="async"
                             />
                         )}

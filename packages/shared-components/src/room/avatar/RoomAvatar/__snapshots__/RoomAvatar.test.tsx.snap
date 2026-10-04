@@ -17,7 +17,6 @@ exports[`RoomAvatarView > renders a clickable avatar 1`] = `
       class="_image_va14e_43"
       data-type="round"
       height="36px"
-      loading="lazy"
       referrerpolicy="no-referrer"
       src="/static/element.png"
       width="36px"

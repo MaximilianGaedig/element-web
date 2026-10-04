@@ -136,6 +136,15 @@ describe("<RoomListItemView />", () => {
         expect(screen.queryByTestId("preview-reply-icon")).toBeNull();
     });
 
+    it("loads its pictures as soon as the row renders, not once it scrolls into view", () => {
+        // The list renders rows ahead of the scroll inside a clipping scroll box, where a lazy image only starts
+        // loading once its row is on screen and shows nothing until then.
+        const { container } = render(<Default messagePreviewThumbnail="https://example.org/thumb.png" />);
+        const images = [...container.querySelectorAll("img")];
+        expect(images.length).toBeGreaterThan(0);
+        for (const img of images) expect(img).not.toHaveAttribute("loading");
+    });
+
     it("should hide hover menu when showMoreOptionsMenu is false", () => {
         const { container } = render(<WithoutHoverMenu />);
         expect(container.querySelector('[aria-label="More Options"]')).toBeNull();
