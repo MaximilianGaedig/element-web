@@ -16,15 +16,15 @@ import { Action } from "../../../../../dispatcher/actions";
 import { useScopedRoomContext } from "../../../../../contexts/ScopedRoomContext.tsx";
 
 interface EmojiProps {
-    menuPosition: MenuProps;
+    getMenuPosition: () => MenuProps | undefined;
 }
 
-export function Emoji({ menuPosition }: EmojiProps): JSX.Element {
+export function Emoji({ getMenuPosition }: EmojiProps): JSX.Element {
     const roomContext = useScopedRoomContext("timelineRenderingType");
 
     return (
         <EmojiButton
-            menuPosition={menuPosition}
+            getMenuPosition={getMenuPosition}
             addEmoji={(emoji) => {
                 dis.dispatch<ComposerInsertPayload>({
                     action: Action.ComposerInsert,

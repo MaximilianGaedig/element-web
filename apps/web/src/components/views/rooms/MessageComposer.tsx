@@ -591,7 +591,11 @@ export class MessageComposer extends React.Component<IProps, IState> {
         return this.state.showStickersButton && !isLocalRoom(this.props.room);
     }
 
-    private getMenuPosition(): MenuProps | undefined {
+    /**
+     * Where the composer's menus open (emoji, stickers, more). Asked for by the menu that is opening, not on
+     * every render: measuring the composer here forced a layout each time it rendered - on every chat switch.
+     */
+    private getMenuPosition = (): MenuProps | undefined => {
         if (this.ref.current) {
             const hasFormattingButtons = this.state.isWysiwygLabEnabled && this.state.isRichTextEnabled;
             const contentRect = this.ref.current.getBoundingClientRect();
@@ -608,7 +612,7 @@ export class MessageComposer extends React.Component<IProps, IState> {
             );
             return aboveLeftOf(fixedRect);
         }
-    }
+    };
 
     /** Starts the recording the held microphone asked for, and says whether one is now running. */
     private beginHeldRecording = async (): Promise<boolean> => {
@@ -684,12 +688,11 @@ export class MessageComposer extends React.Component<IProps, IState> {
         }
 
         const controls: ReactNode[] = [];
-        const menuPosition = this.getMenuPosition();
 
         const canSendMessages = this.context.canSendMessages && !this.context.tombstone;
         let composer: ReactNode;
         if (canSendMessages) {
-            if (this.state.isWysiwygLabEnabled && menuPosition) {
+            if (this.state.isWysiwygLabEnabled) {
                 composer = (
                     <SendWysiwygComposer
                         key="controls_input"
@@ -699,7 +702,7 @@ export class MessageComposer extends React.Component<IProps, IState> {
                         isRichTextEnabled={this.state.isRichTextEnabled}
                         initialContent={this.state.initialComposerContent}
                         e2eStatus={this.props.e2eStatus}
-                        menuPosition={menuPosition}
+                        getMenuPosition={this.getMenuPosition}
                         placeholder={this.renderPlaceholderText()}
                         eventRelation={this.props.relation}
                     />
@@ -785,7 +788,7 @@ export class MessageComposer extends React.Component<IProps, IState> {
                 threadId={threadId}
                 isStickerPickerOpen={this.state.isStickerPickerOpen}
                 setStickerPickerOpen={this.setStickerPickerOpen}
-                menuPosition={menuPosition}
+                getMenuPosition={this.getMenuPosition}
                 key="stickers"
             />,
         );
@@ -815,7 +818,7 @@ export class MessageComposer extends React.Component<IProps, IState> {
             haveRecording: this.state.haveRecording,
             isMenuOpen: this.state.isMenuOpen,
             isStickerPickerOpen: this.state.isStickerPickerOpen,
-            menuPosition: menuPosition,
+            getMenuPosition: this.getMenuPosition,
             relation: this.props.relation,
             onRecordStartEndClick: this.onRecordStartEndClick,
             setStickerPickerOpen: this.setStickerPickerOpen,

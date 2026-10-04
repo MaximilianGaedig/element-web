@@ -17,7 +17,7 @@ import AccessibleButton from "../elements/AccessibleButton";
 import WidgetUtils, { type UserWidget } from "../../../utils/WidgetUtils";
 import PersistedElement from "../elements/PersistedElement";
 import { IntegrationManagers } from "../../../integrations/IntegrationManagers";
-import ContextMenu, { ChevronFace } from "../../structures/ContextMenu";
+import ContextMenu, { ChevronFace, type MenuProps } from "../../structures/ContextMenu";
 import { WidgetType } from "../../../widgets/WidgetType";
 import { WidgetMessagingStore } from "../../../stores/widgets/WidgetMessagingStore";
 import { type ActionPayload } from "../../../dispatcher/payloads";
@@ -38,7 +38,8 @@ interface IProps {
     room: Room;
     threadId?: string | null;
     isStickerPickerOpen: boolean;
-    menuPosition?: any;
+    /** Where the menu opens; asked for only when it does. */
+    getMenuPosition?: () => MenuProps | undefined;
     setStickerPickerOpen: (isStickerPickerOpen: boolean) => void;
 }
 
@@ -347,7 +348,7 @@ export default class Stickerpicker extends React.PureComponent<IProps, IState> {
                 menuPaddingRight={0}
                 zIndex={STICKERPICKER_Z_INDEX}
                 mountAsChild={true}
-                {...this.props.menuPosition}
+                {...this.props.getMenuPosition?.()}
             >
                 <GenericElementContextMenu element={this.getStickerpickerContent()} onResize={this.onFinished} />
             </ContextMenu>

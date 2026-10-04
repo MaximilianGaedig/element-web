@@ -53,7 +53,8 @@ interface IProps {
     haveRecording: boolean;
     isMenuOpen: boolean;
     isStickerPickerOpen: boolean;
-    menuPosition?: MenuProps;
+    /** Where the menus open; asked for only when one does. */
+    getMenuPosition?: () => MenuProps | undefined;
     onRecordStartEndClick: () => void;
     relation?: IEventRelation;
     setStickerPickerOpen: (isStickerPickerOpen: boolean) => void;
@@ -193,7 +194,7 @@ const MessageComposerButtons: React.FC<IProps> = (props: IProps) => {
             {slot !== "inline" && props.isMenuOpen && (
                 <IconizedContextMenu
                     onFinished={props.toggleButtonMenu}
-                    {...(props.telegram ? telegramMenuPosition(moreButton.current) : props.menuPosition)}
+                    {...(props.telegram ? telegramMenuPosition(moreButton.current) : props.getMenuPosition?.())}
                     wrapperClassName="mx_MessageComposer_Menu"
                     compact={true}
                 >
@@ -218,7 +219,7 @@ function emojiButton(props: IProps): ReactElement {
         <EmojiButton
             key="emoji_button"
             addEmoji={props.addEmoji}
-            menuPosition={props.menuPosition}
+            getMenuPosition={props.getMenuPosition}
             className="mx_MessageComposer_button"
         />
     );
@@ -318,7 +319,7 @@ function showLocationButton(props: IProps, room: Room, matrixClient: MatrixClien
             roomId={room.roomId}
             relation={props.relation}
             sender={sender}
-            menuPosition={props.menuPosition}
+            getMenuPosition={props.getMenuPosition}
         />
     ) : null;
 }

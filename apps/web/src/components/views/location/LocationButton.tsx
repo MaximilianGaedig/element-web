@@ -19,11 +19,12 @@ import LocationShareMenu from "./LocationShareMenu";
 export interface IProps {
     roomId: string;
     sender: RoomMember;
-    menuPosition?: MenuProps;
+    /** Where the menu opens; asked for only when it does. */
+    getMenuPosition?: () => MenuProps | undefined;
     relation?: IEventRelation;
 }
 
-const LocationButton: React.FC<IProps> = ({ roomId, sender, menuPosition, relation }) => {
+const LocationButton: React.FC<IProps> = ({ roomId, sender, getMenuPosition, relation }) => {
     const overflowMenuCloser = useContext(OverflowMenuContext);
     const [menuDisplayed, button, openMenu, closeMenu] = useContextMenu();
 
@@ -34,7 +35,8 @@ const LocationButton: React.FC<IProps> = ({ roomId, sender, menuPosition, relati
 
     let contextMenu: ReactNode = null;
     if (menuDisplayed) {
-        const position = menuPosition ?? (button.current && aboveLeftOf(button.current.getBoundingClientRect())) ?? {};
+        const position =
+            getMenuPosition?.() ?? (button.current && aboveLeftOf(button.current.getBoundingClientRect())) ?? {};
 
         contextMenu = (
             <LocationShareMenu

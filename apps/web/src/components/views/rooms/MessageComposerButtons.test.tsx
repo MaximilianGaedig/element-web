@@ -33,7 +33,7 @@ describe("MessageComposerButtons", () => {
         addEmoji: () => false,
         haveRecording: false,
         isStickerPickerOpen: false,
-        menuPosition: undefined,
+        getMenuPosition: () => undefined,
         onRecordStartEndClick: () => {},
         setStickerPickerOpen: () => {},
         toggleButtonMenu: () => {},

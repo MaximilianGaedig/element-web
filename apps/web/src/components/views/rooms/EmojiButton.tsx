@@ -17,17 +17,18 @@ import { EmojiPickerWithRecents } from "../../../emojipicker/EmojiPickerWithRece
 
 interface IEmojiButtonProps {
     addEmoji: (unicode: string) => boolean;
-    menuPosition?: MenuProps;
+    /** Where the menu opens; asked for only when it does. */
+    getMenuPosition?: () => MenuProps | undefined;
     className?: string;
 }
 
-export function EmojiButton({ addEmoji, menuPosition, className }: IEmojiButtonProps): JSX.Element {
+export function EmojiButton({ addEmoji, getMenuPosition, className }: IEmojiButtonProps): JSX.Element {
     const overflowMenuCloser = useContext(OverflowMenuContext);
     const [menuDisplayed, button, openMenu, closeMenu] = useContextMenu();
 
     let contextMenu: React.ReactElement | null = null;
     if (menuDisplayed && button.current) {
-        const position = menuPosition ?? aboveLeftOf(button.current.getBoundingClientRect());
+        const position = getMenuPosition?.() ?? aboveLeftOf(button.current.getBoundingClientRect());
         const onFinished = (): void => {
             closeMenu();
             overflowMenuCloser?.();

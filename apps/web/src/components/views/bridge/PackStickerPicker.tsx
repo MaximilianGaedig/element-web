@@ -294,7 +294,7 @@ export default function PackStickerPicker(props: Props): JSX.Element {
                     menuPaddingRight={0}
                     zIndex={STICKERPICKER_Z_INDEX}
                     mountAsChild={true}
-                    {...props.menuPosition}
+                    {...props.getMenuPosition?.()}
                 >
                     <PackStickerPickerPanel packs={current} onSend={onSend} />
                 </ContextMenu>

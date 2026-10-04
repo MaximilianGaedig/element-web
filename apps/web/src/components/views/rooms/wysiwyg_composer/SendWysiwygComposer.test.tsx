@@ -83,7 +83,7 @@ describe("SendWysiwygComposer", () => {
                             onSend={onSend}
                             disabled={disabled}
                             isRichTextEnabled={isRichTextEnabled}
-                            menuPosition={aboveLeftOf({ top: 0, bottom: 0, right: 0 })}
+                            getMenuPosition={() => aboveLeftOf({ top: 0, bottom: 0, right: 0 })}
                             placeholder={placeholder}
                             e2eStatus={e2eStatus}
                         />

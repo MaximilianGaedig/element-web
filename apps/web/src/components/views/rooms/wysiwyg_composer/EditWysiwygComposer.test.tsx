@@ -372,7 +372,7 @@ describe("EditWysiwygComposer", () => {
                     <RoomUploadContextProvider>
                         <EditWysiwygComposer editorStateTransfer={editorStateTransfer} />
                     </RoomUploadContextProvider>
-                    <Emoji menuPosition={{ chevronFace: ChevronFace.Top }} />
+                    <Emoji getMenuPosition={() => ({ chevronFace: ChevronFace.Top })} />
                 </ScopedRoomContextProvider>
             </MatrixClientContext.Provider>,
         );

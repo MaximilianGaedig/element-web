@@ -41,7 +41,7 @@ export interface SendWysiwygComposerProps {
     e2eStatus?: E2EStatus;
     onChange: (content: string) => void;
     onSend: () => void;
-    menuPosition: MenuProps;
+    getMenuPosition: () => MenuProps | undefined;
     eventRelation?: IEventRelation;
 }
 
@@ -49,7 +49,7 @@ export interface SendWysiwygComposerProps {
 export default function SendWysiwygComposer({
     isRichTextEnabled,
     e2eStatus,
-    menuPosition,
+    getMenuPosition,
     externalControls = false,
     ...props
 }: SendWysiwygComposerProps): JSX.Element {
@@ -78,7 +78,7 @@ export default function SendWysiwygComposer({
             <Composer
                 className="mx_SendWysiwygComposer"
                 leftComponent={externalControls ? undefined : leftIcon}
-                rightComponent={externalControls ? undefined : <Emoji menuPosition={menuPosition} />}
+                rightComponent={externalControls ? undefined : <Emoji getMenuPosition={getMenuPosition} />}
                 {...props}
             >
                 {(ref, composerFunctions) => (
