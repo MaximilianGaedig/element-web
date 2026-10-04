@@ -176,6 +176,17 @@ function isSpace(cached: CachedRoom): boolean {
     );
 }
 
+/** Room account data saying the reader marked the room unread (MSC2867, stable and unstable names). */
+const MARKED_UNREAD_TYPES = new Set(["m.marked_unread", "com.famedly.marked_unread"]);
+
+/**
+ * Whether a cached room adds to the unread badges. The badges are summed over every room, so one of these
+ * replayed after the first screen made them count up on every reload, though nothing had changed.
+ */
+function countsAsUnread(cached: CachedRoom): boolean {
+    return (cached.notification_count ?? 0) > 0 || (cached.highlight_count ?? 0) > 0;
+}
+
 function asRoomData(cached: CachedRoom): MSC3575RoomData {
     const room = fromNewestMessage(cached);
     return { ...room, name: room.name ?? "", initial: true, limited: true, num_live: 0, prev_batch: room.prev_batch };
@@ -388,6 +399,7 @@ export class SlidingSyncCacheStore implements SlidingSyncCache {
     public async save(client: MatrixClient): Promise<void> {
         const roomAccountData: Record<string, { type: string; content: object }[]> = {};
         const favourite = new Set<string>();
+        const markedUnread = new Set<string>();
         for (const roomId of this.rooms.keys()) {
             const room = client.getRoom(roomId);
             if (!room) continue;
@@ -397,12 +409,25 @@ export class SlidingSyncCacheStore implements SlidingSyncCache {
             }));
             if (events.length) roomAccountData[roomId] = events;
             if (room.tags["m.favourite"]) favourite.add(roomId);
+            if (
+                events.some(
+                    (event) => MARKED_UNREAD_TYPES.has(event.type) && (event.content as { unread?: boolean }).unread,
+                )
+            ) {
+                markedUnread.add(roomId);
+            }
         }
         const byRecency = [...this.rooms.entries()].sort(([, a], [, b]) => (b.bump_stamp ?? 0) - (a.bump_stamp ?? 0));
         const first: Record<string, MSC3575RoomData> = {};
         const rest: Record<string, MSC3575RoomData> = {};
         byRecency.forEach(([roomId, room], index) => {
-            const toFirst = index < FIRST_ROOMS || favourite.has(roomId) || !!room.invite_state || isSpace(room);
+            const toFirst =
+                index < FIRST_ROOMS ||
+                favourite.has(roomId) ||
+                !!room.invite_state ||
+                isSpace(room) ||
+                countsAsUnread(room) ||
+                markedUnread.has(roomId);
             (toFirst ? first : rest)[roomId] = asRoomData(room);
         });
         const global = [...this.globalAccountData.values()];

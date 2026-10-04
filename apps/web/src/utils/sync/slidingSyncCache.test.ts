@@ -354,6 +354,40 @@ describe("SlidingSyncCacheStore", () => {
         expect(Object.keys(first!.rooms)).toContain(spaceId);
     });
 
+    // The badges are summed from every room: rooms with unread counts arriving in later batches made them count up
+    // on every reload, though nothing had changed (MEO-140).
+    it("hands the next session every room with something unread with the first screen", async () => {
+        const store = new SlidingSyncCacheStore(ME);
+        const sync = new FakeSlidingSync();
+        store.record(sync as unknown as SlidingSync, client);
+        for (let i = 0; i < FIRST_ROOMS + 5; i++) {
+            const roomId = `!r${i}:example.org`;
+            rooms.set(roomId, { roomId, accountData: new Map(), tags: {} });
+            describeRoom(sync, roomId, { bump_stamp: 100 + i, timeline: [message(`$${i}`)] });
+        }
+        const counted = "!counted:example.org";
+        const mentioned = "!mentioned:example.org";
+        const marked = "!marked:example.org";
+        const read = "!read:example.org";
+        for (const roomId of [counted, mentioned, marked, read]) {
+            rooms.set(roomId, { roomId, accountData: new Map(), tags: {} });
+        }
+        rooms.get(marked)!.accountData.set("m.marked_unread", {
+            getType: () => "m.marked_unread",
+            getContent: () => ({ unread: true }),
+        });
+        describeRoom(sync, counted, { bump_stamp: 1, notification_count: 3, timeline: [message("$c")] });
+        describeRoom(sync, mentioned, { bump_stamp: 1, highlight_count: 1, timeline: [message("$m")] });
+        describeRoom(sync, marked, { bump_stamp: 1, timeline: [message("$k")] });
+        describeRoom(sync, read, { bump_stamp: 1, notification_count: 0, timeline: [message("$r")] });
+        await store.save(client);
+
+        const firstIds = Object.keys((await new SlidingSyncCacheStore(ME).loadFirst())!.rooms);
+
+        expect(firstIds).toEqual(expect.arrayContaining([counted, mentioned, marked]));
+        expect(firstIds).not.toContain(read);
+    });
+
     it("keeps the message the server sent for the chat list, and hands it on now and in the next session", async () => {
         const store = new SlidingSyncCacheStore(ME);
         const sync = new FakeSlidingSync();
