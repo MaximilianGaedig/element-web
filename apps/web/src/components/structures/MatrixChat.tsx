@@ -1150,7 +1150,17 @@ export default class MatrixChat extends React.PureComponent<IProps, IState> {
 
     /** Fork: the Stream (MEO-44), a page in the room's place beside the chats. Behind its labs flag. */
     private viewStream(): void {
-        if (this.state.view !== Views.LOGGED_IN || !SettingsStore.getValue("feature_stream")) return;
+        /*
+         * Not `this.state.view`: a link to the Stream is followed at start-up in the same tick that queues the
+         * change to the logged-in view, before that change is applied, and returning there left no page at all.
+         * Having a client is what the Stream needs; the change of view below goes through either way.
+         */
+        if (!MatrixClientPeg.get()) return;
+        // Without the feature the link leads home, rather than to nothing.
+        if (!SettingsStore.getValue("feature_stream")) {
+            this.viewHome();
+            return;
+        }
         this.setStateForNewView({ view: Views.LOGGED_IN, currentRoomId: null });
         this.setPage(PageType.Stream);
         setRoomListPanelView("rooms");

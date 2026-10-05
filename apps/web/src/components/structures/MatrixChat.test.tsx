@@ -1048,14 +1048,13 @@ describe("<MatrixChat />", () => {
                     expect(await screen.findByRole("heading", { name: "Stream page" })).toBeInTheDocument();
                 });
 
-                it("stays where it is when the feature is off", async () => {
+                it("goes home instead when the feature is off", async () => {
                     withStream(false);
                     await getComponentAndWaitForReady();
 
                     act(() => defaultDispatcher.dispatch({ action: Action.ViewStream }));
 
-                    // The dispatch is handled synchronously; give a lazy page the chance to appear anyway.
-                    await act(() => Promise.resolve());
+                    await waitFor(() => expect(defaultProps.onNewScreen).toHaveBeenLastCalledWith("home", false));
                     expect(screen.queryByRole("heading", { name: "Stream page" })).toBeNull();
                 });
             });
