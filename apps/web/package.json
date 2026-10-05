@@ -114,6 +114,7 @@
         "tesseract.js": "^7.0.0",
         "tesseract.js-core": "^7.0.0",
         "ua-parser-js": "1.0.40",
+        "vaul": "^1.1.2",
         "what-input": "^5.2.10",
         "zxing-wasm": "^3.1.4"
     },

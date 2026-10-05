@@ -44,6 +44,36 @@ describe("Modal", () => {
         expect(screen.getByRole("link")).toBeInTheDocument();
     });
 
+    /* On a phone the desktop window restyled as a drawer was squished and showed past the screen's edge. */
+    it("opens a dialog as a drawer on a phone, and closes it when the outside is tapped", async () => {
+        document.documentElement.dataset.tgScreen = "mobile";
+        const onFinished = vi.fn();
+        try {
+            Modal.createDialog(
+                QuestionDialog,
+                { title: "Drawer question", description: "?" },
+                undefined,
+                false,
+                false,
+                {
+                    onBeforeClose: async () => true,
+                },
+            ).finished.then(onFinished);
+            await flushPromises();
+
+            expect(await screen.findByText("Drawer question")).toBeInTheDocument();
+            expect(document.querySelector(".mx_TgDrawer")).not.toBeNull();
+            expect(document.querySelector(".mx_Dialog_wrapper")).toBeNull();
+
+            screen.getByTestId("dialog-background").dispatchEvent(new MouseEvent("pointerdown", { bubbles: true }));
+            screen.getByTestId("dialog-background").click();
+            await vi.waitFor(() => expect(onFinished).toHaveBeenCalled());
+        } finally {
+            delete document.documentElement.dataset.tgScreen;
+            Modal.forceCloseAllModals();
+        }
+    });
+
     it("forceCloseAllModals should close all open modals", () => {
         Modal.createDialog(QuestionDialog, {
             title: "Test dialog",

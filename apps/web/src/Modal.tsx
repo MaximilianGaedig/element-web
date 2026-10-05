@@ -12,6 +12,7 @@ import { createRoot, type Root } from "react-dom/client";
 import classNames from "classnames";
 import { TypedEventEmitter } from "matrix-js-sdk/src/matrix";
 import { Glass, TooltipProvider } from "@vector-im/compound-web";
+import { Drawer } from "vaul";
 import { I18nContext, LinkedTextContext } from "@element-hq/web-shared-components";
 
 import defaultDispatcher from "./dispatcher/dispatcher";
@@ -475,26 +476,58 @@ export class ModalManager extends TypedEventEmitter<ModalManagerEvent, HandlerMa
                 mx_Dialog_wrapperWithStaticUnder: this.staticModal,
             });
 
+            /*
+             * On a phone a dialog is a drawer (vaul): full width from the bottom edge, with a handle, dragged
+             * down or tapped outside to close, and the page behind it held still. It used to be the desktop
+             * window restyled in CSS, which left it squished and let parts of it show past the screen's edge.
+             * Media viewers and spinners are not drawers.
+             */
+            const asDrawer =
+                document.documentElement.dataset.tgScreen === "mobile" &&
+                !/\bmx_Dialog_(lightbox|spinner)\b/.test(modal.className ?? "");
+            const frame = asDrawer ? (
+                <Drawer.Root
+                    open
+                    onOpenChange={(open) => {
+                        if (!open) this.onBackgroundClick();
+                    }}
+                    repositionInputs={false}
+                >
+                    <Drawer.Portal container={getOrCreateContainer(DIALOG_CONTAINER_ID)}>
+                        <Drawer.Overlay data-testid="dialog-background" className="mx_TgDrawer_overlay" />
+                        <Drawer.Content
+                            className={classNames("mx_TgDrawer", modal.className)}
+                            aria-describedby={undefined}
+                        >
+                            <Drawer.Handle className="mx_TgDrawer_handle" />
+                            {/* The dialog inside carries its own heading; this only satisfies the drawer's own labelling. */}
+                            <Drawer.Title className="mx_TgDrawer_title" />
+                            <div className="mx_Dialog mx_TgDrawer_body">{modal.elem}</div>
+                        </Drawer.Content>
+                    </Drawer.Portal>
+                </Drawer.Root>
+            ) : (
+                <div className={classes}>
+                    <Glass className="mx_Dialog_border">
+                        <div className="mx_Dialog">{modal.elem}</div>
+                    </Glass>
+                    {/* We break the rule here as this is a mouse-only interaction */}
+                    {/* oxlint-disable-next-line jsx-a11y/click-events-have-key-events */}
+                    <div
+                        data-testid="dialog-background"
+                        className="mx_Dialog_background"
+                        onClick={this.onBackgroundClick}
+                    />
+                </div>
+            );
+
             const dialog = (
                 <StrictMode>
                     <SDKContext.Provider value={window.mxSdkContext}>
                         {/* Provide I18nContext and LinkedTextContext for shared-components used inside dialogs rendered in a separate root. */}
                         <I18nContext.Provider value={window.mxModuleApi.i18n}>
                             <LinkedTextContext.Provider value={LinkedTextConfiguration}>
-                                <TooltipProvider>
-                                    <div className={classes}>
-                                        <Glass className="mx_Dialog_border">
-                                            <div className="mx_Dialog">{modal.elem}</div>
-                                        </Glass>
-                                        {/* We break the rule here as this is a mouse-only interaction */}
-                                        {/* oxlint-disable-next-line jsx-a11y/click-events-have-key-events */}
-                                        <div
-                                            data-testid="dialog-background"
-                                            className="mx_Dialog_background"
-                                            onClick={this.onBackgroundClick}
-                                        />
-                                    </div>
-                                </TooltipProvider>
+                                <TooltipProvider>{frame}</TooltipProvider>
                             </LinkedTextContext.Provider>
                         </I18nContext.Provider>
                     </SDKContext.Provider>

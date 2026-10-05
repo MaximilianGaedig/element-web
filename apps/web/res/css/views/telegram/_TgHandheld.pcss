@@ -415,3 +415,60 @@ html[data-tg-screen="mobile"] {
         bottom: var(--mx-room-list-toast-bottom);
     }
 }
+
+/*
+ * Handheld dialogs are vaul drawers (Modal.tsx): full width from the bottom edge, a handle to drag them down
+ * by, the page behind held still. vaul moves the drawer itself (transform while dragging, its own slide in and
+ * out), so nothing here animates it; this only places and paints it.
+ */
+.mx_TgDrawer_overlay {
+    position: fixed;
+    inset: 0;
+    z-index: var(--dialog-zIndex-standard-background);
+    background-color: $dialog-backdrop-color;
+}
+
+.mx_TgDrawer {
+    position: fixed;
+    inset-inline: 0;
+    bottom: 0;
+    z-index: var(--dialog-zIndex-standard);
+    display: flex;
+    flex-direction: column;
+    max-height: calc(100dvh - var(--tg-safe-top, 0px) - 1.5rem);
+    padding-bottom: var(--tg-safe-bottom, env(safe-area-inset-bottom, 0px));
+    border-radius: var(--tg-border-radius-big, 0.75rem) var(--tg-border-radius-big, 0.75rem) 0 0;
+    background-color: var(--cpd-color-bg-canvas-default);
+    box-shadow: 0 -0.25rem 1.5rem rgb(0 0 0 / 12%);
+    outline: none;
+}
+
+.mx_TgDrawer_handle {
+    flex: none;
+    margin: var(--cpd-space-2x) auto var(--cpd-space-1x);
+}
+
+/* The drawer's label for assistive technology; the dialog inside has its own visible heading. */
+.mx_TgDrawer_title {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+}
+
+/* The dialog is the drawer's body: its own window frame (width cap, corners, shadow) would squeeze it. */
+.mx_TgDrawer .mx_Dialog.mx_TgDrawer_body {
+    position: static;
+    flex: 1;
+    min-height: 0;
+    width: 100%;
+    max-width: 100%;
+    max-height: none;
+    box-sizing: border-box;
+    overflow-y: auto;
+    padding: var(--cpd-space-2x) var(--cpd-space-4x) var(--cpd-space-4x);
+    border-radius: 0;
+    box-shadow: none;
+    background-color: transparent;
+}
