@@ -157,7 +157,7 @@ interface ContactsHeader {
 }
 
 /** A row of the people list. */
-type ContactsEntry = { kind: "me" } | { kind: "duplicates" } | { kind: "person"; person: Person };
+type ContactsEntry = { kind: "me" } | { kind: "duplicates" } | { kind: "person"; person: Person } | { kind: "end" };
 
 /** What the people list's rows show beyond the rows themselves. */
 interface ContactsListContext {
@@ -1546,7 +1546,11 @@ export function ContactsView({ tab, onFinished }: Props): JSX.Element {
             header: { letter: section.letter },
             items: section.items.map((person): ContactsEntry => ({ kind: "person", person })),
         }));
-        return [...(top.length ? [{ header: { letter: "" }, items: top }] : []), ...lettered];
+        const groups = [...(top.length ? [{ header: { letter: "" }, items: top }] : []), ...lettered];
+        // Room after the last row for the bar floating over the column, inside the list's own scroller: the
+        // names pass under the bar, and the last of them can still be scrolled clear of it.
+        groups.at(-1)?.items.push({ kind: "end" });
+        return groups;
     }, [query, showDuplicates, shown, sections]);
     useEffect(() => {
         // Each group is its heading followed by its rows in the list's flat order.
@@ -1627,6 +1631,8 @@ export function ContactsView({ tab, onFinished }: Props): JSX.Element {
                         onToggle={toggle}
                     />
                 );
+            case "end":
+                return <div className="mx_Contacts_end" aria-hidden="true" />;
         }
     };
 
@@ -1919,7 +1925,7 @@ export function ContactsView({ tab, onFinished }: Props): JSX.Element {
                                     context={listContext}
                                     getItemKey={entryKey}
                                     getHeaderKey={(header) => `letter:${header.letter}`}
-                                    isItemFocusable={() => true}
+                                    isItemFocusable={(entry) => entry.kind !== "end"}
                                     isGroupHeaderFocusable={() => false}
                                     getGroupHeaderComponent={(_index, header) =>
                                         header.letter ? (

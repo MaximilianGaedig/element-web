@@ -215,6 +215,11 @@ Please see LICENSE files in the repository root for full details.
         height: 1px;
     }
 
+    /* The room left after the last row for the bar floating over the column (see ContactsView). */
+    .mx_Contacts_end {
+        height: var(--mx-room-list-toast-bottom, 6rem);
+    }
+
     /*
      * A full-width row with a hairline under the words, which is the shape of a grouped list: the rounded
      * pill this used to be made every name look like a separate control rather than one list to read down.
@@ -777,6 +782,14 @@ Please see LICENSE files in the repository root for full details.
      * which is what its glass is for, and the last row can still be brought clear of it.
      */
     padding-bottom: var(--mx-room-list-toast-bottom, 6rem);
+
+    /*
+     * The people list scrolls inside its virtualised list, so the room for the bar is its last row instead:
+     * kept here it was a blank band under the bar that no name passed through.
+     */
+    &.mx_Contacts_list_virtual {
+        padding-bottom: 0;
+    }
 }
 
 /*
