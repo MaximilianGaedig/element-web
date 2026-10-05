@@ -1183,7 +1183,7 @@ exports[`RoomView > should hide the composer when hideComposer=true 1`] = `
         class="mx_RoomView_body mx_MainSplit_timeline"
         data-bubble-timeline="true"
         data-layout="group"
-        style="--tg-header-bottom: 0px; --tg-plates-bottom: 0px; --tg-header-block: 0px; --tg-composer-height: 0px; --tg-composer-block: 0px;"
+        style="--tg-header-bottom: 0px; --tg-plates-bottom: 0px; --tg-header-block: 0px; --tg-composer-height: 0px; --tg-composer-block: 0px; --tg-header-inline-end: 0px; --tg-composer-inline-end: 0px;"
       >
         <header
           class="_flex mx_RoomHeader light-panel"
@@ -1381,7 +1381,13 @@ exports[`RoomView > should hide the composer when hideComposer=true 1`] = `
               </div>
               <div
                 class="_cover"
-              />
+              >
+                <div
+                  class="_typography _font-body-sm-regular mx_NewTimelinePanel_empty"
+                >
+                  No messages here yet
+                </div>
+              </div>
             </div>
           </div>
         </main>
@@ -1437,7 +1443,7 @@ exports[`RoomView > should hide the header when hideHeader=true 1`] = `
         class="mx_RoomView_body mx_MainSplit_timeline"
         data-bubble-timeline="true"
         data-layout="group"
-        style="--tg-header-bottom: 0px; --tg-plates-bottom: 0px; --tg-header-block: 0px; --tg-composer-height: 0px; --tg-composer-block: 0px;"
+        style="--tg-header-bottom: 0px; --tg-plates-bottom: 0px; --tg-header-block: 0px; --tg-composer-height: 0px; --tg-composer-block: 0px; --tg-header-inline-end: 0px; --tg-composer-inline-end: 0px;"
       >
         <div
           class="_scrollbar mx_AutoHideScrollbar mx_AuxPanel"
@@ -1469,7 +1475,13 @@ exports[`RoomView > should hide the header when hideHeader=true 1`] = `
               </div>
               <div
                 class="_cover"
-              />
+              >
+                <div
+                  class="_typography _font-body-sm-regular mx_NewTimelinePanel_empty"
+                >
+                  No messages here yet
+                </div>
+              </div>
             </div>
           </div>
         </main>
@@ -1786,7 +1798,7 @@ exports[`RoomView > should hide the pinned message banner when hidePinnedMessage
         class="mx_RoomView_body mx_MainSplit_timeline"
         data-bubble-timeline="true"
         data-layout="group"
-        style="--tg-header-bottom: 0px; --tg-plates-bottom: 0px; --tg-header-block: 0px; --tg-composer-height: 0px; --tg-composer-block: 0px;"
+        style="--tg-header-bottom: 0px; --tg-plates-bottom: 0px; --tg-header-block: 0px; --tg-composer-height: 0px; --tg-composer-block: 0px; --tg-header-inline-end: 0px; --tg-composer-inline-end: 0px;"
       >
         <header
           class="_flex mx_RoomHeader light-panel"
@@ -1984,7 +1996,13 @@ exports[`RoomView > should hide the pinned message banner when hidePinnedMessage
               </div>
               <div
                 class="_cover"
-              />
+              >
+                <div
+                  class="_typography _font-body-sm-regular mx_NewTimelinePanel_empty"
+                >
+                  No messages here yet
+                </div>
+              </div>
             </div>
           </div>
         </main>
@@ -2301,7 +2319,7 @@ exports[`RoomView > should hide the right panel when hideRightPanel=true 1`] = `
         class="mx_RoomView_body mx_MainSplit_timeline"
         data-bubble-timeline="true"
         data-layout="group"
-        style="--tg-header-bottom: 0px; --tg-plates-bottom: 0px; --tg-header-block: 0px; --tg-composer-height: 0px; --tg-composer-block: 0px;"
+        style="--tg-header-bottom: 0px; --tg-plates-bottom: 0px; --tg-header-block: 0px; --tg-composer-height: 0px; --tg-composer-block: 0px; --tg-header-inline-end: 0px; --tg-composer-inline-end: 0px;"
       >
         <header
           class="_flex mx_RoomHeader light-panel"
@@ -2499,7 +2517,13 @@ exports[`RoomView > should hide the right panel when hideRightPanel=true 1`] = `
               </div>
               <div
                 class="_cover"
-              />
+              >
+                <div
+                  class="_typography _font-body-sm-regular mx_NewTimelinePanel_empty"
+                >
+                  No messages here yet
+                </div>
+              </div>
             </div>
           </div>
         </main>
@@ -2846,7 +2870,7 @@ exports[`RoomView > video rooms > should render joined video room view 1`] = `
         class="mx_RoomView_body mx_MainSplit_call"
         data-bubble-timeline="true"
         data-layout="group"
-        style="--tg-header-bottom: 0px; --tg-plates-bottom: 0px; --tg-header-block: 0px; --tg-composer-height: 0px; --tg-composer-block: 0px;"
+        style="--tg-header-bottom: 0px; --tg-plates-bottom: 0px; --tg-header-block: 0px; --tg-composer-height: 0px; --tg-composer-block: 0px; --tg-header-inline-end: 0px; --tg-composer-inline-end: 0px;"
       >
         <header
           class="_flex mx_RoomHeader light-panel"
