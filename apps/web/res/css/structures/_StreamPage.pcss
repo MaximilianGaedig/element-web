@@ -48,16 +48,10 @@ Please see LICENSE files in the repository root for full details.
     display: flex;
     align-items: center;
     gap: var(--cpd-space-2x);
-    width: calc(100% - 2 * var(--cpd-space-4x));
     margin: 0 var(--cpd-space-4x) var(--cpd-space-1x);
     padding: var(--cpd-space-1x) var(--cpd-space-2x);
-    border: none;
     border-radius: var(--cpd-space-2x);
     background-color: var(--cpd-color-bg-subtle-secondary);
-    color: var(--cpd-color-text-primary);
-    font: var(--cpd-font-body-sm-semibold);
-    text-align: start;
-    cursor: pointer;
 
     &:hover {
         background-color: var(--cpd-color-bg-subtle-primary);
@@ -65,10 +59,18 @@ Please see LICENSE files in the repository root for full details.
 }
 
 .mx_StreamPage_recipientName {
+    flex: 1;
     min-width: 0;
+    padding: 0;
+    border: none;
+    background: none;
+    color: var(--cpd-color-text-primary);
+    font: var(--cpd-font-body-sm-semibold);
+    text-align: start;
     overflow: hidden;
     white-space: nowrap;
     text-overflow: ellipsis;
+    cursor: pointer;
 }
 
 .mx_StreamPage_loading {

@@ -148,7 +148,12 @@ export class StreamViewModel
         this.disposables.track(() => {
             if (this.rebuildTimer !== null) window.clearTimeout(this.rebuildTimer);
         });
-        this.rebuild();
+        /*
+         * The first rows are published just after the view has mounted rather than in it, as the room timeline's
+         * are. The shared timeline places its first rows once, from its mount; rows already there at mount are
+         * lost when React runs the mount twice (StrictMode in development), and the list stays hidden.
+         */
+        this.scheduleRebuild();
     }
 
     /** The message behind a row, its room and whether it opens a run; undefined for other rows. */

@@ -46,6 +46,13 @@ describe("StreamViewModel", () => {
         return room;
     }
 
+    /** The view model, once it has published its first rows (just after it is created). */
+    function open(): StreamViewModel {
+        const model = new StreamViewModel({ client });
+        vi.advanceTimersByTime(16);
+        return model;
+    }
+
     /** The event rows as "room:ts", with a | before each run's first message. */
     function rows(model: StreamViewModel): string[] {
         return model
@@ -77,9 +84,21 @@ describe("StreamViewModel", () => {
         addLive(a, message(a, 1000), message(a, 3000), message(a, 4000));
         addLive(b, message(b, 2000), message(b, 5000));
 
-        vm = new StreamViewModel({ client });
+        vm = open();
 
         expect(rows(vm)).toEqual(["|!a:x:1000", "|!b:x:2000", "|!a:x:3000", "!a:x:4000", "|!b:x:5000"]);
+    });
+
+    it("publishes its first rows just after it is created, not while the view is mounting", () => {
+        const a = makeRoom("!a:x");
+        addLive(a, message(a, 1000));
+
+        vm = new StreamViewModel({ client });
+        // The shared timeline places the rows it is first given once; given at mount, a second mount loses them.
+        expect(vm.getSnapshot().items).toEqual([]);
+
+        vi.advanceTimersByTime(16);
+        expect(rows(vm)).toEqual(["|!a:x:1000"]);
     });
 
     it("does not show a room's older messages while another room's messages of that time are not loaded", () => {
@@ -88,7 +107,7 @@ describe("StreamViewModel", () => {
         addLive(quiet, message(quiet, 1000));
         addLive(busy, message(busy, 5000), message(busy, 6000));
 
-        vm = new StreamViewModel({ client });
+        vm = open();
 
         // The busy room's history before 5000 is not loaded, so 1000 cannot be placed yet.
         expect(rows(vm)).toEqual(["|!busy:x:5000", "!busy:x:6000"]);
@@ -106,7 +125,7 @@ describe("StreamViewModel", () => {
             return false;
         });
 
-        vm = new StreamViewModel({ client });
+        vm = open();
 
         await vi.waitFor(() => expect(rows(vm!)).toEqual(["|!busy:x:900", "|!quiet:x:1000", "|!busy:x:5000"]));
         expect(client.paginateEventTimeline).toHaveBeenCalledWith(busy.getLiveTimeline(), {
@@ -149,7 +168,7 @@ describe("StreamViewModel", () => {
         });
         addLive(a, target, reaction, encryptedEdit, topic);
 
-        vm = new StreamViewModel({ client });
+        vm = open();
 
         expect(rows(vm)).toEqual(["|!a:x:1000"]);
     });
@@ -161,7 +180,7 @@ describe("StreamViewModel", () => {
         addLive(a, message(a, 1000));
         addLive(aside, message(aside, 2000));
 
-        vm = new StreamViewModel({ client });
+        vm = open();
 
         expect(rows(vm)).toEqual(["|!a:x:1000"]);
     });
@@ -169,7 +188,7 @@ describe("StreamViewModel", () => {
     it("adds a new message once the burst it came in has been taken in", () => {
         const a = makeRoom("!a:x");
         addLive(a, message(a, 1000));
-        vm = new StreamViewModel({ client });
+        vm = open();
 
         const next = message(a, 2000);
         addLive(a, next);
@@ -184,7 +203,7 @@ describe("StreamViewModel", () => {
         const a = makeRoom("!a:x");
         const b = makeRoom("!b:x");
         addLive(a, message(a, 1000));
-        vm = new StreamViewModel({ client });
+        vm = open();
         const before = vm.getSnapshot().items.find((i) => i.kind === "event");
 
         const next = message(b, 2000);

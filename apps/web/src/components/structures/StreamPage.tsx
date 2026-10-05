@@ -5,7 +5,7 @@ SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only OR LicenseRef-Element-Com
 Please see LICENSE files in the repository root for full details.
 */
 
-import React, { memo, useCallback, useContext, useRef, type JSX, type ReactNode } from "react";
+import React, { memo, Suspense, useCallback, useContext, useRef, type JSX, type ReactNode } from "react";
 import { EventType, KnownMembership, type MatrixEvent, type Room } from "matrix-js-sdk/src/matrix";
 import { InlineSpinner } from "@vector-im/compound-web";
 import { TimelineView, useCreateAutoDisposedViewModel, type TimelineItem } from "@element-hq/web-shared-components";
@@ -42,13 +42,16 @@ function openRoomAt(event: MatrixEvent): void {
 
 /** The bar over a run of messages from one room: which conversation they are in, and the way into it. */
 function RecipientBar({ room, first }: { room: Room; first: MatrixEvent }): JSX.Element {
+    // The avatar is outside the button: it can carry controls of its own, and a button may not hold another.
     return (
-        <button type="button" className="mx_StreamPage_recipientBar" onClick={() => openRoomAt(first)}>
+        <div className="mx_StreamPage_recipientBar">
             <BridgedRoomAvatar room={room}>
                 <RoomAvatar room={room} size="24px" />
             </BridgedRoomAvatar>
-            <span className="mx_StreamPage_recipientName">{room.name}</span>
-        </button>
+            <button type="button" className="mx_StreamPage_recipientName" onClick={() => openRoomAt(first)}>
+                {room.name}
+            </button>
+        </div>
     );
 }
 
@@ -74,21 +77,28 @@ const StreamRow = memo(function StreamRow({
     roomContext,
     isTwelveHour,
 }: StreamRowProps): JSX.Element {
+    /*
+     * A boundary per row: a tile whose parts are still loading would otherwise suspend up to the page's own
+     * boundary, which hides the whole timeline and drops its effects while it is placing the first rows, and
+     * it then never shows them.
+     */
     return (
         <div className="mx_StreamPage_row" data-run-start={runStart || undefined}>
-            {runStart && <RecipientBar room={room} first={event} />}
-            <ScopedRoomContextProvider {...roomContext}>
-                <LegacyEventTileAdapter
-                    mxEvent={event}
-                    continuation={item.continuation}
-                    lastInSection={item.lastInSection}
-                    layout={Layout.Group}
-                    showReactions
-                    showUrlPreview={false}
-                    showReadReceipts={false}
-                    isTwelveHour={isTwelveHour}
-                />
-            </ScopedRoomContextProvider>
+            <Suspense fallback={null}>
+                {runStart && <RecipientBar room={room} first={event} />}
+                <ScopedRoomContextProvider {...roomContext}>
+                    <LegacyEventTileAdapter
+                        mxEvent={event}
+                        continuation={item.continuation}
+                        lastInSection={item.lastInSection}
+                        layout={Layout.Group}
+                        showReactions
+                        showUrlPreview={false}
+                        showReadReceipts={false}
+                        isTwelveHour={isTwelveHour}
+                    />
+                </ScopedRoomContextProvider>
+            </Suspense>
         </div>
     );
 });
@@ -167,7 +177,9 @@ export function StreamPage(): JSX.Element {
                 case "date-separator": {
                     const room = vm.getRow(firstEventAfter(item.key))?.room;
                     return room ? (
-                        <DateSeparatorWrapper key={item.key} roomId={room.roomId} ts={item.ts} labelOnly />
+                        <Suspense key={item.key} fallback={null}>
+                            <DateSeparatorWrapper roomId={room.roomId} ts={item.ts} labelOnly />
+                        </Suspense>
                     ) : null;
                 }
                 case "loading":
