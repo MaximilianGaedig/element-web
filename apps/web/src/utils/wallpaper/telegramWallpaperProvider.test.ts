@@ -29,10 +29,14 @@ vi.mock("../../MatrixClientPeg", () => ({ MatrixClientPeg: { get: () => ({}) } }
 vi.mock("../../customisations/Media", () => ({
     mediaFromMxc: (mxc: string) => ({ srcHttp: `https://hs.example/media/${mxc.slice("mxc://".length)}` }),
 }));
+// The login does not name its bridge's API, as on the deployment; the server's list of bridges does.
 vi.mock("../bridgeLogins", () => ({
-    bridgeLoginsIn: () => [
-        { network: "whatsapp", provisioningUrl: "https://wa.example/_matrix/provision" },
-        { network: "telegram", provisioningUrl: "https://tg.example/_matrix/provision" },
+    bridgeLoginsIn: () => [{ network: "WhatsApp" }, { network: "Telegram" }],
+}));
+vi.mock("../bridge/knownBridges", () => ({
+    knownBridges: () => [
+        { network: "WhatsApp", provisioningUrl: "https://wa.example/_matrix/provision" },
+        { network: "Telegram", provisioningUrl: "https://tg.example/_matrix/provision" },
     ],
 }));
 vi.mock("../bridge/provisioning", () => ({ requestBridge: bridge.request }));

@@ -12,6 +12,8 @@ import { MatrixClientPeg } from "../../MatrixClientPeg";
 import { mediaFromMxc } from "../../customisations/Media";
 import { bridgeLoginsIn } from "../bridgeLogins";
 import { requestBridge } from "../bridge/provisioning";
+import { networkKeyOf } from "../bridge/bridgeCommands";
+import { knownBridges } from "../bridge/knownBridges";
 import {
     notifyWallpapersChanged,
     type MountedWallpaper,
@@ -65,10 +67,15 @@ function stored(): BridgedWallpaper[] {
 function load(): void {
     if (loading) return;
     const client = MatrixClientPeg.get();
-    const login = client && bridgeLoginsIn(client).find((l) => l.network === "telegram" && l.provisioningUrl);
-    if (!client || !login?.provisioningUrl) return;
+    if (!client) return;
+    const isTelegram = (network: string): boolean => networkKeyOf(network) === "telegram";
+    const login = bridgeLoginsIn(client).find((l) => isTelegram(l.network));
+    // The login names the bridge's API when it says; otherwise the server's list of bridges does.
+    const provisioningUrl =
+        login?.provisioningUrl ?? (login && knownBridges(client).find((b) => isTelegram(b.network))?.provisioningUrl);
+    if (!provisioningUrl) return;
     loading = true;
-    requestBridge<{ wallpapers: BridgedWallpaper[] }>(client, login.provisioningUrl, "v3/wallpapers")
+    requestBridge<{ wallpapers: BridgedWallpaper[] }>(client, provisioningUrl, "v3/wallpapers")
         .then(({ wallpapers: fresh }) => {
             wallpapers = fresh;
             localStorage.setItem(STORAGE_KEY, JSON.stringify(fresh));
