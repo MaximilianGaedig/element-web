@@ -30,6 +30,20 @@ const SAMPLE_RATE = 16_000;
 /** Small enough to fetch on a phone, good enough to trust with a name or a number. */
 const MODEL = "onnx-community/whisper-base";
 
+/**
+ * The runtime that runs the model, served by us.
+ *
+ * Left to itself transformers.js fetches it from a CDN and imports it from a `blob:` URL, and the app's
+ * content policy allows scripts from neither: every transcript failed with "no available backend found".
+ * Webpack emits both files with the build (the factory under a `.js` name, see webpack.config.ts) and
+ * these are their URLs. The `.asyncify` build is the one transformers.js picks, and the one that also
+ * runs on the GPU.
+ */
+export const RUNTIME_FILES = {
+    mjs: new URL("onnxruntime-web/ort-wasm-simd-threaded.asyncify.mjs", import.meta.url).href,
+    wasm: new URL("onnxruntime-web/ort-wasm-simd-threaded.asyncify.wasm", import.meta.url).href,
+};
+
 type Transcriber = ((audio: Float32Array, options?: object) => Promise<{ text: string } | Array<{ text: string }>>) & {
     /** Gives back the model's sessions and their memory. */
     dispose?: () => Promise<unknown>;
@@ -90,7 +104,13 @@ async function bestDevice(): Promise<"webgpu" | "wasm"> {
 /** The one engine while transcripts are being asked for: loading it is most of the cost of a short one. */
 async function getTranscriber(): Promise<Transcriber> {
     const loading = (transcriber ??= (async () => {
-        const { pipeline } = await import("@huggingface/transformers");
+        const { env, pipeline } = await import("@huggingface/transformers");
+        // Our own copy of the runtime, imported from its URL: its cache would hand it over as a `blob:`
+        // URL, which the content policy refuses to run.
+        env.useWasmCache = false;
+        // Set up by transformers.js itself whenever it runs in a browser.
+        const wasm = env.backends.onnx.wasm;
+        if (wasm) wasm.wasmPaths = { ...RUNTIME_FILES };
         const device = await bestDevice();
         const engine = await pipeline("automatic-speech-recognition", MODEL, {
             // Quantised: a quarter of the size, and no worse at speech at this size.

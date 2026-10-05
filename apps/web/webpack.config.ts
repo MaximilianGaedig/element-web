@@ -191,6 +191,9 @@ export default (env: string, argv: Record<string, any>): webpack.Configuration =
                               // issues with some Unicode characters found within)
                               // https://github.com/terser/terser/issues/1677
                               "widgets/element-call/",
+                              // The speech runtime's loader: already minified, and a module, which Terser
+                              // reads as a script and fails on (see the rule that emits it).
+                              "onnxruntime/",
                           ],
                       }),
                       new CssMinimizerPlugin(),
@@ -280,6 +283,15 @@ export default (env: string, argv: Record<string, any>): webpack.Configuration =
                     resourceQuery: /raw/,
                     // Instruct Webpack to emit the file source as a string
                     type: "asset/source",
+                },
+                {
+                    // The speech runtime's loader, which transcribe.ts imports from its URL. Emitted as `.js`:
+                    // the server sends `.mjs` as application/octet-stream, and a browser refuses to run a
+                    // module with that type.
+                    test: /ort-wasm-simd-threaded\.asyncify\.mjs$/,
+                    dependency: "url",
+                    type: "asset/resource",
+                    generator: { filename: "onnxruntime/[contenthash].js" },
                 },
                 {
                     test: /\.js$/,

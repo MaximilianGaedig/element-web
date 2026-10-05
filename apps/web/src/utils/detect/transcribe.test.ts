@@ -12,8 +12,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const pipeline = vi.fn();
 const dispose = vi.fn();
 const run = vi.fn();
+/** The settings transformers.js starts with in a browser: the runtime from a CDN, through its cache. */
+const env = {
+    useWasmCache: true,
+    backends: { onnx: { wasm: { wasmPaths: {} as unknown } } },
+};
 
-vi.mock("@huggingface/transformers", () => ({ pipeline }));
+vi.mock("@huggingface/transformers", () => ({ pipeline, env }));
 
 describe("transcribing a voice message", () => {
     let transcribe: typeof import("./transcribe");
@@ -25,6 +30,11 @@ describe("transcribing a voice message", () => {
         run.mockReset().mockResolvedValue({ text: " hello there " });
         dispose.mockReset().mockResolvedValue(undefined);
         pipeline.mockReset().mockImplementation(async () => Object.assign(run, { dispose }));
+        env.useWasmCache = true;
+        env.backends.onnx.wasm.wasmPaths = {
+            mjs: "https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/ort-wasm-simd-threaded.asyncify.mjs",
+            wasm: "https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/ort-wasm-simd-threaded.asyncify.wasm",
+        };
 
         // The browser's decoder and resampler, neither of which the test environment has.
         vi.stubGlobal(
@@ -52,6 +62,25 @@ describe("transcribing a voice message", () => {
 
     it("says what was said", async () => {
         expect(await transcribe.transcribe(new ArrayBuffer(8))).toBe("hello there");
+    });
+
+    // The app's content policy runs scripts from this origin only: the runtime from a CDN, or from the
+    // `blob:` URL transformers.js's cache makes of it, failed every transcript.
+    it("runs the model on the runtime served with the app, imported from its own URL", async () => {
+        let settings: unknown;
+        pipeline.mockImplementation(async () => {
+            settings = structuredClone(env);
+            return Object.assign(run, { dispose });
+        });
+
+        expect(await transcribe.transcribe(new ArrayBuffer(8))).toBe("hello there");
+
+        expect(transcribe.RUNTIME_FILES.mjs).toMatch(/\/ort-wasm-simd-threaded\.asyncify\.mjs$/);
+        expect(transcribe.RUNTIME_FILES.wasm).toMatch(/\/ort-wasm-simd-threaded\.asyncify\.wasm$/);
+        expect(settings).toEqual({
+            useWasmCache: false,
+            backends: { onnx: { wasm: { wasmPaths: transcribe.RUNTIME_FILES } } },
+        });
     });
 
     // Whisper is a model of tens of megabytes plus the runtime it runs in. Kept for the session, one
