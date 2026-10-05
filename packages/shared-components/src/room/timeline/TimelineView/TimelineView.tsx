@@ -697,8 +697,10 @@ export function TimelineView({
         if (!scroller) return;
         let idleTimeout: number | undefined;
         const onScroll = (): void => {
-            atEndRef.current =
-                scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight <= AT_BOTTOM_THRESHOLD_PX;
+            const virtualizer = virtualizerRef.current;
+            const totalSize = virtualizer?.getTotalSize() ?? scroller.scrollHeight;
+            const viewportHeight = virtualizer?.scrollRect?.height ?? scroller.clientHeight;
+            atEndRef.current = totalSize - scroller.scrollTop - viewportHeight <= AT_BOTTOM_THRESHOLD_PX;
             // Only once the reader is the one scrolling. Placing the timeline scrolls it repeatedly as
             // rows are measured, and reading that as scrolling puts the floating date on screen for the
             // first moment of every room opened - which is the one time nothing has moved.
