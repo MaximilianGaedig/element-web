@@ -91,6 +91,17 @@ const PREFETCH_SCREENS = 2;
 const REVEAL_TIMEOUT_MS = 1000;
 
 /**
+ * TanStack invokes measureElement from the React ref callback before a
+ * ResizeObserver entry exists. Measure that newly mounted row once; subsequent
+ * measurements use the observer's border box without another layout read.
+ */
+const measureTimelineRow = (element: Element, entry: ResizeObserverEntry | undefined): number => {
+    if (entry) return Math.round(entry.borderBoxSize?.[0]?.blockSize ?? entry.contentRect.height);
+
+    return element.getBoundingClientRect().height;
+};
+
+/**
  * How long the floating date keeps showing after the last scroll event, in milliseconds.
  *
  * Telegram Web's value: its timeline carries an `is-scrolling` class that it drops 1350ms
@@ -420,6 +431,7 @@ export function TimelineView({
         // row as it renders and remembers the result by key, reusing it as rows are added,
         // trimmed or reloaded, so we do not need a size cache of our own.
         estimateSize: () => ESTIMATED_ITEM_HEIGHT,
+        measureElement: measureTimelineRow,
         getItemKey,
         // Room kept clear for whatever floats over the list; part of its extent, so scrolling to
         // the bottom really reaches the bottom.
@@ -446,10 +458,6 @@ export function TimelineView({
         // Because of this, never set transform or height on a row in JSX below — it would
         // fight with what TanStack writes.
         directDomUpdates: true,
-        // New rows use the estimated height until ResizeObserver supplies their real size.
-        // Synchronously reading every newly mounted row forces layout during room changes
-        // and scrolling, which is the work this virtualizer is meant to keep off that path.
-        useCachedMeasurements: true,
         // The list's DOM height is exactly the virtualizer's measured extent. Use that
         // cached value for scroll clamping rather than repeatedly forcing scrollHeight.
         useVirtualScrollExtent: true,
