@@ -648,13 +648,22 @@ export function TimelineView({
                         setRevealed(true);
                     }
                     vm.onAnchorReached();
+                    /*
+                     * What is on screen is reported as it changes, and nothing moves once the rows are in place: a
+                     * list that fits the window is never reported at all, so the view model never learns what is
+                     * being read. Report it once now, on the next frame, when the cleared anchor has been rendered.
+                     */
+                    coldRafRef.current = requestAnimationFrame(() => {
+                        coldRafRef.current = undefined;
+                        reportVisibleState(virtualizer);
+                    });
                     return;
                 }
                 coldRafRef.current = requestAnimationFrame(tick);
             };
             coldRafRef.current = requestAnimationFrame(tick);
         },
-        [virtualizer, vm],
+        [virtualizer, vm, reportVisibleState],
     );
 
     useLayoutEffect(() => {

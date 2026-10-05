@@ -192,6 +192,20 @@ describe("<TimelineView />", () => {
         expect(end).toBeGreaterThan(start);
     });
 
+    // Nothing moves after a list that fits the window is placed; without this report the view model never
+    // learns what is on screen, and nothing in it is ever read (MEO-44, the Stream's read receipts).
+    it("reports what is on screen once placed, when nothing moves afterwards", async () => {
+        const { vm, actions, update } = makeFakeVm({
+            items: eventItems(5),
+            pendingAnchor: { targetKey: "evt-4", align: "end" },
+        });
+        actions.onAnchorReached.mockImplementation(() => update({ pendingAnchor: null }));
+        renderTimeline(vm);
+
+        await waitFor(() => expect(actions.onAnchorReached).toHaveBeenCalled(), { timeout: 5000 });
+        await waitFor(() => expect(actions.onVisibleRangeChanged).toHaveBeenCalledWith(0, 4, 4));
+    });
+
     it("re-renders when the view model pushes a new snapshot", async () => {
         const { vm, update } = makeFakeVm({ items: eventItems(5) });
         renderTimeline(vm);
