@@ -958,6 +958,26 @@ describe("RoomTimelineViewModel", () => {
             expect(vm.getSnapshot().canJumpToReadMarker).toBe("below");
         });
 
+        /* The jump back up to the marker stayed for the whole visit, after everything below it was read. */
+        it("stops offering the jump once the reader has read past the marker", async () => {
+            seedTimeline([
+                makeMessage("$a", { user: "@other:x" }),
+                makeMessage("$b", { user: "@other:x" }),
+                makeMessage("$c", { user: "@other:x" }),
+                makeMessage("$d", { user: "@other:x" }),
+            ]);
+            room.addAccountData([
+                new MatrixEvent({ type: EventType.FullyRead, room_id: ROOM_ID, content: { event_id: "$a" } }),
+            ]);
+            const vm = await createStartedViewModel();
+            vm.onAnchorReached();
+            const items = vm.getSnapshot().items;
+
+            vm.onVisibleRangeChanged(indexOfKey(items, "$d"), indexOfKey(items, "$d"));
+
+            expect(vm.getSnapshot().canJumpToReadMarker).toBe(false);
+        });
+
         it("scrolls straight to the marker when it is already loaded", async () => {
             seedTimeline([makeMessage("$a"), makeMessage("$b"), makeMessage("$c"), makeMessage("$d")]);
             room.addAccountData([
@@ -1183,6 +1203,25 @@ describe("RoomTimelineViewModel", () => {
 
                 // Back up above what was read: it stays read (the count used to climb back to 3).
                 vm.onVisibleRangeChanged(indexOfKey(items, "$read"), indexOfKey(items, "$read"));
+                expect(vm.getSnapshot().numUnreadMessages).toBe(1);
+            });
+
+            /* Opened partway up a room with one unread message, the button said 41. */
+            it("does not count what the reader's receipt already covers", async () => {
+                seedTimeline([
+                    makeMessage("$top", { user: BOB }),
+                    makeMessage("$u1", { user: BOB }),
+                    makeMessage("$u2", { user: BOB }),
+                    makeMessage("$new", { user: BOB }),
+                ]);
+                vi.spyOn(room, "getEventReadUpTo").mockReturnValue("$u2");
+                const vm = await createStartedViewModel();
+                vm.onAnchorReached();
+                vm.onAtBottomStateChange(false);
+                const items = vm.getSnapshot().items;
+
+                vm.onVisibleRangeChanged(indexOfKey(items, "$top"), indexOfKey(items, "$top"));
+
                 expect(vm.getSnapshot().numUnreadMessages).toBe(1);
             });
 

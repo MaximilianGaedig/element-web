@@ -1103,6 +1103,10 @@ export class RoomTimelineViewModel
                 .map((ev, i) => [ev.getId(), i]),
         );
         const seenAt = this.seenUpToId ? (position.get(this.seenUpToId) ?? -1) : -1;
+        // And what the reader's receipt already covers: opened partway up a room with one unread message,
+        // the button counted every message below the screen, 41 of them.
+        const readUpTo = room.getEventReadUpTo(me, true);
+        const receiptAt = readUpTo ? (position.get(readUpTo) ?? -1) : -1;
         let count = 0;
         for (let i = Math.max(this.readableEndArrayIndex, marker) + 1; i < items.length; i++) {
             const item = items[i];
@@ -1110,7 +1114,8 @@ export class RoomTimelineViewModel
             const event = room.findEventById(item.key);
             // Read on screen earlier in this session, then scrolled back above: still read. The count went up
             // again every time the reader scrolled back up past what they had already read.
-            if (event && seenAt >= 0 && (position.get(item.key) ?? -1) <= seenAt) continue;
+            const at = position.get(item.key) ?? -1;
+            if (event && Math.max(seenAt, receiptAt) >= 0 && at <= Math.max(seenAt, receiptAt)) continue;
             if (event && event.getSender() !== me && eventTriggersUnreadCount(client, event)) count++;
         }
         if (!atLiveEnd) count = Math.max(count, room.getUnreadNotificationCount(NotificationCountType.Total));
@@ -1662,6 +1667,15 @@ export class RoomTimelineViewModel
      */
     private computeCanJumpToReadMarker(items: TimelineItem[]): "above" | "below" | false {
         if (!this.frozenMarkerEventId) return false;
+        // Read past it already: nothing above is unread any more, as in Telegram. The button stayed for the
+        // whole visit, offering to go back to what had just been read.
+        // Only a marker in the loaded room: one older than all of it has unread, unseen messages after it.
+        if (this.seenUpToId) {
+            const live = this.opts.room.getLiveTimeline().getEvents();
+            const markerAt = live.findIndex((ev) => ev.getId() === this.frozenMarkerEventId);
+            const seenAt = live.findIndex((ev) => ev.getId() === this.seenUpToId);
+            if (markerAt >= 0 && seenAt > markerAt) return false;
+        }
 
         const events = this.timelineWindow.getEvents();
         const markerInWindow = events.some((e) => e.getId() === this.frozenMarkerEventId);
