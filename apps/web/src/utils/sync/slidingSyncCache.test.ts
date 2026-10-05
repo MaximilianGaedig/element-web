@@ -480,6 +480,35 @@ describe("SlidingSyncCacheStore", () => {
         expect((await new SlidingSyncCacheStore(ME).loadFirst())?.pos).toBe("8");
     });
 
+    // A room kept without its creation event counts as version 1, and the room offered an upgrade; a resumed
+    // connection would never send the event again.
+    it("has the next session start a new connection while a joined room is kept without its creation", async () => {
+        const store = new SlidingSyncCacheStore(ME);
+        const sync = new FakeSlidingSync();
+        store.record(sync as unknown as SlidingSync, client);
+        rooms.set("!whole:example.org", { roomId: "!whole:example.org", accountData: new Map(), tags: {} });
+        rooms.set("!invited:example.org", { roomId: "!invited:example.org", accountData: new Map(), tags: {} });
+        describeRoom(sync, "!whole:example.org", { required_state: [state("m.room.create")] });
+        describeRoom(sync, "!invited:example.org", { invite_state: [state("m.room.name")] });
+        sync.emit(SlidingSyncEvent.Lifecycle, SlidingSyncState.Complete, { pos: "8" });
+        await store.save(client);
+        // Rooms with all they need, and invites, which come with no state of their own: the connection carries on.
+        expect((await new SlidingSyncCacheStore(ME).loadFirst())?.pos).toBe("8");
+
+        // Described only by what changed, as a resumed connection does, with nothing kept of it before.
+        rooms.set("!partial:example.org", { roomId: "!partial:example.org", accountData: new Map(), tags: {} });
+        sync.emit(SlidingSyncEvent.RoomData, "!partial:example.org", update({ timeline: [message("$1")] }));
+        await store.save(client);
+        const next = await new SlidingSyncCacheStore(ME).loadFirst();
+        expect(next?.pos).toBeUndefined();
+        // The rooms are still shown at once.
+        expect(Object.keys(next?.rooms ?? {}).sort()).toEqual([
+            "!invited:example.org",
+            "!partial:example.org",
+            "!whole:example.org",
+        ]);
+    });
+
     it("keeps every kind of a room's state but members it does not need", async () => {
         const store = new SlidingSyncCacheStore(ME);
         const sync = new FakeSlidingSync();

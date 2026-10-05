@@ -187,6 +187,18 @@ function countsAsUnread(cached: CachedRoom): boolean {
     return (cached.notification_count ?? 0) > 0 || (cached.highlight_count ?? 0) > 0;
 }
 
+/**
+ * Whether a joined room is kept without its creation event. Every room has one, and the server sends it with a
+ * room's first description on a connection; a room kept without it lost it on the way, and the connection will
+ * not send it again. Without it the room counts as version 1, and Element offers to upgrade it.
+ */
+function lacksCreation(cached: CachedRoom): boolean {
+    return (
+        !cached.invite_state &&
+        !cached.required_state.some((event) => event.type === EventType.RoomCreate && event.state_key === "")
+    );
+}
+
 function asRoomData(cached: CachedRoom): MSC3575RoomData {
     const room = fromNewestMessage(cached);
     return { ...room, name: room.name ?? "", initial: true, limited: true, num_live: 0, prev_batch: room.prev_batch };
@@ -431,13 +443,19 @@ export class SlidingSyncCacheStore implements SlidingSyncCache {
             (toFirst ? first : rest)[roomId] = asRoomData(room);
         });
         const global = [...this.globalAccountData.values()];
+        // A resumed connection sends only what changed, so a room kept incomplete would stay incomplete: the
+        // next session then starts a new connection, which describes every room in full.
+        const incomplete = [...this.rooms.values()].filter(lacksCreation).length;
+        if (incomplete) {
+            logger.warn(`Sliding sync cache: ${incomplete} rooms kept without their creation event; resyncing next`);
+        }
         try {
             await write(
                 {
                     [this.key("first")]: {
                         rooms: first,
                         accountData: { global, rooms: roomAccountData },
-                        pos: this.pos,
+                        pos: incomplete ? undefined : this.pos,
                     } satisfies SlidingSyncSnapshot,
                     [this.key("rest")]: rest,
                 },
