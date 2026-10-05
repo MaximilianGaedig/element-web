@@ -11,6 +11,7 @@ import dis from "../../../dispatcher/dispatcher";
 import { useSettingValue } from "../../../hooks/useSettings";
 import { useTheme } from "../../../hooks/useTheme";
 import { getCustomTheme } from "../../../theme";
+import { useLowPower } from "../../../utils/telegram/tgLayout/appearance";
 import { resolveWallpaper, type WallpaperRef } from "../../../utils/wallpaper/wallpaperProviders";
 
 interface Props {
@@ -67,8 +68,9 @@ export function useChatWallpaper(): { wallpaper: WallpaperRef | null; dark: bool
     return { wallpaper: (dark ? setting?.dark : setting?.light) ?? null, dark };
 }
 
-/** The chat's wallpaper, behind the timeline. */
+/** The chat's wallpaper, behind the timeline. Saving power, it stays still: drawn once, it costs nothing more. */
 export function RoomChatWallpaper(): JSX.Element | null {
     const { wallpaper } = useChatWallpaper();
-    return <ChatWallpaper wallpaper={wallpaper} animateOnSend />;
+    const lowPower = useLowPower();
+    return <ChatWallpaper wallpaper={wallpaper} animateOnSend={!lowPower} />;
 }

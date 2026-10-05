@@ -18,6 +18,7 @@ import ThemeWatcher from "../../../settings/watchers/ThemeWatcher";
 import { WALLPAPER_PROVIDERS } from "../../../utils/wallpaper/wallpaperProviders";
 import { type WallpaperProvider } from "../../../utils/wallpaper/WallpaperProvider";
 import { ChatWallpaperPanel } from "../settings/ChatWallpaperPanel";
+import { lowPower } from "../../../utils/lowPower";
 import { RoomChatWallpaper } from "./ChatWallpaper";
 
 // tweb's renderer draws on a 2D canvas, which the test DOM does not have.
@@ -75,6 +76,14 @@ describe("ChatWallpaper", () => {
 
         unmount();
         expect(destroy).toHaveBeenCalled();
+    });
+
+    it("stays still when a message is sent while saving power", () => {
+        vi.spyOn(lowPower, "isOn").mockReturnValue(true);
+        wallpaper = { light: "fake:day", dark: null };
+        render(<RoomChatWallpaper />);
+        act(() => dis.dispatch({ action: "message_sent" }, true));
+        expect(onMessageSent).not.toHaveBeenCalled();
     });
 
     it("draws the dark theme's own wallpaper", () => {
