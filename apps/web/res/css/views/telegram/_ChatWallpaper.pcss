@@ -1,0 +1,100 @@
+/*
+Copyright 2026 New Vector Ltd.
+
+SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only OR LicenseRef-Element-Commercial
+Please see LICENSE files in the repository root for full details.
+*/
+
+/*
+ * The chat wallpaper (components/views/telegram/ChatWallpaper.tsx), drawn by a provider into a box that fills
+ * its parent. In the chat it sits behind everything in the room body: the body becomes its own stacking context
+ * so the wallpaper can go under the timeline without going under the room's own background, and the glass header
+ * and composer blur it as they do the messages.
+ */
+.mx_RoomView_body:has(> .mx_ChatWallpaper) {
+    position: relative;
+    isolation: isolate;
+
+    > .mx_ChatWallpaper {
+        z-index: -1;
+    }
+}
+
+.mx_ChatWallpaper {
+    /* Telegram draws its doodle pattern at 500px plus 40% of the window's height, centred and repeated. */
+    --ChatWallpaper-pattern-size: auto calc(500px + 40vh);
+
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+    contain: strict;
+
+    /* Night: the gradient shows only through the pattern, on black. */
+    &[data-dark] {
+        background-color: #000;
+    }
+}
+
+/* The gradient is 50 pixels square; stretched it is a smooth blend. */
+.mx_ChatWallpaper_gradient {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+}
+
+.mx_ChatWallpaper_gradient_masked {
+    mask-size: var(--ChatWallpaper-pattern-size);
+    mask-position: center;
+    mask-repeat: repeat;
+}
+
+.mx_ChatWallpaper_pattern {
+    position: absolute;
+    inset: 0;
+    background-size: var(--ChatWallpaper-pattern-size);
+    background-position: center;
+    background-repeat: repeat;
+    mix-blend-mode: soft-light;
+}
+
+/* The pattern is black doodles; over a dark gradient they are lightened instead. */
+.mx_ChatWallpaper_pattern_inverted {
+    filter: invert(1);
+}
+
+/* The picker in Appearance settings: each wallpaper drawn small, as itself. */
+.mx_ChatWallpaperPanel {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--cpd-space-2x);
+}
+
+.mx_ChatWallpaperPanel_choice {
+    position: relative;
+    width: 4rem;
+    height: 6rem;
+    padding: 0;
+    overflow: hidden;
+    border: 2px solid var(--cpd-color-border-interactive-secondary);
+    border-radius: var(--cpd-space-2x);
+    background-color: var(--cpd-color-bg-canvas-default);
+    color: var(--cpd-color-text-secondary);
+    font: var(--cpd-font-body-sm-regular);
+    cursor: pointer;
+
+    &[aria-checked="true"] {
+        border-color: var(--cpd-color-border-interactive-primary);
+    }
+
+    /* The pattern at the size the chat draws it would show one doodle; a swatch shows what the chat would. */
+    .mx_ChatWallpaper {
+        --ChatWallpaper-pattern-size: auto 10rem;
+    }
+
+    &:focus-visible {
+        outline: 2px solid var(--cpd-color-border-focused);
+        outline-offset: 2px;
+    }
+}

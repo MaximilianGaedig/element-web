@@ -23,6 +23,9 @@
             // `MatrixClient` is one type (mirrors the webpack aliases).
             "matrix-js-sdk": ["./node_modules/matrix-js-sdk/src/matrix.ts"],
             "matrix-js-sdk/lib/*": ["./node_modules/matrix-js-sdk/src/*"],
+            // tweb ships TypeScript sources written against its own compiler settings and path aliases, so
+            // they are not checked here: its modules resolve to the declarations of what Element Web uses.
+            "tweb/src/*": ["./src/@types/tweb/*"],
             "test-utils-rtl": ["./src/test/test-utils/vitest-matrix-react"],
             "test-utils": ["./src/test/test-utils"],
             "test-utils/*": ["./src/test/test-utils/*"]

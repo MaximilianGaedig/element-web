@@ -106,6 +106,8 @@ export default (env: string, argv: Record<string, any>): webpack.Configuration =
     // don't have to call them over and over. We also resolve to the package.json instead of the src
     // directory, so we don't have to rely on an index.js or similar file existing.
     const jsSdkSrcDir = path.join(getPackageRoot("matrix-js-sdk"), "src");
+    // tweb (Telegram Web K) is used as a library for the chat wallpaper: it ships its TypeScript sources only.
+    const twebSrcDir = path.join(getPackageRoot("tweb"), "src");
 
     // The Element Call component's stylesheet is not scoped to the component: it carries a `normalize` layer,
     // `:root` variables and its own copy of the compound design tokens. Folded into the app-wide `styles`
@@ -285,6 +287,15 @@ export default (env: string, argv: Record<string, any>): webpack.Configuration =
                     use: ["source-map-loader"],
                 },
                 {
+                    // tweb's sources import each other by its own path aliases; resolve them only for its files.
+                    include: twebSrcDir,
+                    resolve: {
+                        alias: {
+                            "@helpers": path.join(twebSrcDir, "helpers"),
+                        },
+                    },
+                },
+                {
                     test: /\.(ts|js)x?$/,
                     include: (f: string) => {
                         // our own source needs babel-ing
@@ -295,6 +306,9 @@ export default (env: string, argv: Record<string, any>): webpack.Configuration =
                         // path, these could be anywhere thanks to linking. We must also not
                         // include node modules inside these modules, so we add 'src'.
                         if (f.startsWith(jsSdkSrcDir)) return true;
+
+                        // The tweb modules the chat wallpaper imports are TypeScript sources.
+                        if (f.startsWith(twebSrcDir)) return true;
 
                         // Some of the syntax in this package is not understood by
                         // either webpack or our babel setup.
@@ -904,6 +918,11 @@ function getAssetOutputPath(url: string, resourcePath: string): string {
 
     if (isFontSource) {
         outputDir = "fonts";
+    }
+
+    if (resourcePath.includes(`${path.sep}tweb${path.sep}`)) {
+        // tweb's assets (the chat wallpaper pattern) live outside any `res`-like directory.
+        outputDir = path.join("img", "tweb");
     }
 
     if (isMobileGuide) {

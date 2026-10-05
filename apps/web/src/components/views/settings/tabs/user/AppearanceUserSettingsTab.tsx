@@ -23,6 +23,7 @@ import { LayoutSwitcher } from "../../LayoutSwitcher";
 import FontScalingPanel from "../../FontScalingPanel";
 import { ThemeChoicePanel } from "../../ThemeChoicePanel";
 import ImageSizePanel from "../../ImageSizePanel";
+import { ChatWallpaperPanel } from "../../ChatWallpaperPanel";
 import SettingsTab from "../SettingsTab";
 import { SettingsSection } from "../../shared/SettingsSection";
 import { SettingsSubsection } from "../../shared/SettingsSubsection";
@@ -141,6 +142,7 @@ export default class AppearanceUserSettingsTab extends React.Component<EmptyObje
                             <SettingsFlag name="roomListReadersOnOthers" level={SettingLevel.ACCOUNT} />
                         </Form.Root>
                     </SettingsSubsection>
+                    <ChatWallpaperPanel />
                     <FontScalingPanel />
                     {this.renderAdvancedSection()}
                     <ImageSizePanel />

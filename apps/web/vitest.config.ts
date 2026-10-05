@@ -59,6 +59,11 @@ export default defineProject({
                 find: "./recorderWorkletFactory",
                 replacement: resolve("./__mocks__/empty.js"),
             },
+            // tweb's sources (the chat wallpaper) import each other by its own path aliases.
+            {
+                find: /^@helpers\/(.*)$/,
+                replacement: resolve("tweb/package.json").replace(/package\.json$/, "src/helpers/$1"),
+            },
             // Stub out legacy modules so we don't need to build them first
             {
                 find: "../modules.js",

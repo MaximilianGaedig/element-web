@@ -280,6 +280,7 @@ export interface Settings {
     "readReceiptsStyle": IBaseSetting<"avatars" | "ticks">;
     "roomListReadersOnOthers": IBaseSetting<boolean>;
     "bubbleTail": IBaseSetting<"none" | "telegram" | "imessage">;
+    "chatWallpaper": IBaseSetting<{ light: string | null; dark: string | null }>;
     "enableSyntaxHighlightLanguageDetection": IBaseSetting<boolean>;
     "expandCodeByDefault": IBaseSetting<boolean>;
     "showCodeLineNumbers": IBaseSetting<boolean>;
@@ -996,6 +997,13 @@ export const SETTINGS: Settings = {
             { value: "on", label: _td("settings|low_power_on") },
             { value: "off", label: _td("settings|low_power_off") },
         ],
+    },
+    "chatWallpaper": {
+        // A wallpaper for each kind of theme, as Telegram keeps one per theme: `<provider>:<preset>` (see
+        // utils/wallpaper/wallpaperProviders.ts), or null for the theme's plain background.
+        supportedLevels: LEVELS_ACCOUNT_SETTINGS,
+        displayName: _td("settings|chat_wallpaper"),
+        default: { light: null, dark: null },
     },
     "bubbleTail": {
         supportedLevels: LEVELS_ACCOUNT_SETTINGS,

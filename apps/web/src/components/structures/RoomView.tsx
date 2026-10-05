@@ -88,6 +88,7 @@ import RoomPreviewCard from "../views/rooms/RoomPreviewCard";
 import RoomUpgradeWarningBar from "../views/rooms/RoomUpgradeWarningBar";
 import AuxPanel from "../views/rooms/AuxPanel";
 import { TgChatChrome } from "../views/telegram/TgChatChrome";
+import { RoomChatWallpaper } from "../views/telegram/ChatWallpaper";
 import RoomHeader from "../views/rooms/RoomHeader/RoomHeader";
 import BulkActionsBar from "../views/rooms/BulkActionsBar";
 import { MessageSelectionStore } from "../../stores/MessageSelectionStore";
@@ -2906,6 +2907,8 @@ export class RoomView extends React.Component<IRoomProps, IRoomState> {
                                 data-layout={this.state.layout}
                                 data-bubble-timeline={this.state.bubbleTimeline || undefined}
                             >
+                                {/* Wallpapers are drawn for the bubbles, which stand out from them; plain rows would not. */}
+                                {this.state.bubbleTimeline && <RoomChatWallpaper />}
                                 {!this.props.hideHeader && (
                                     <RoomHeader room={this.state.room} extraButtons={<>{extraButtons}</>} />
                                 )}

@@ -83,6 +83,8 @@ allowBuilds:
     # element-call repository, whose `prepare` script builds it on install (nothing is published yet).
     # pnpm matches git-hosted packages by repository URL, not by bare name.
     "@element-hq/element-call-component@git+https://github.com/element-hq/element-call.git": true
+    # Telegram Web K, used for its chat wallpaper renderer: its only script is a check that pnpm is installing it
+    "tweb@https://codeload.github.com/morethanwords/tweb/tar.gz/e55552763f3dcca269230bb7487213bbaf82ff6a": false
     # Installs the CLI, which we do not need
     "@sentry/cli": false
     # Installs nx cloud client, which we do not need
@@ -159,6 +161,22 @@ overrides:
     "@types/react": "catalog:"
     "@types/react-dom": "catalog:"
     caniuse-lite: 1.0.30001810
+    # tweb is used only for its chat wallpaper renderer (src/components/chat/gradientRenderer.ts), which needs
+    # none of its runtime dependencies.
+    "tweb>@tiptap/core": "-"
+    "tweb>@tiptap/extension-bold": "-"
+    "tweb>@tiptap/extension-code-block": "-"
+    "tweb>@tiptap/extension-document": "-"
+    "tweb>@tiptap/extension-hard-break": "-"
+    "tweb>@tiptap/extension-italic": "-"
+    "tweb>@tiptap/extension-list": "-"
+    "tweb>@tiptap/extension-strike": "-"
+    "tweb>@tiptap/extension-table": "-"
+    "tweb>@tiptap/extension-text": "-"
+    "tweb>@tiptap/extension-underline": "-"
+    "tweb>@tiptap/extensions": "-"
+    "tweb>@tiptap/pm": "-"
+    "tweb>temml": "-"
 
     # Make sure we only have one instance of the widget API in the build;
     # failure to do so results in (unspecified) breakage in downstream builds

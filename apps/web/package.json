@@ -113,6 +113,7 @@
         "tar-js": "^0.3.0",
         "tesseract.js": "^7.0.0",
         "tesseract.js-core": "^7.0.0",
+        "tweb": "github:morethanwords/tweb#e55552763f3dcca269230bb7487213bbaf82ff6a",
         "ua-parser-js": "1.0.40",
         "vaul": "^1.1.2",
         "what-input": "^5.2.10",
