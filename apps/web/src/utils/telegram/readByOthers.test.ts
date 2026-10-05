@@ -45,6 +45,15 @@ describe("whether somebody else has read our message", () => {
         expect(events.map((ev) => isReadByOthers(room, ev))).toEqual([true, true, false]);
     });
 
+    it("does not count a later backfilled event as read because its timestamp is older", () => {
+        const receiptEvent = event("$receipt", 200);
+        const backfilledMessage = event("$backfill", 100);
+        const room = roomWith([receiptEvent, backfilledMessage], { $receipt: ["@ada:e"] });
+
+        expect(isReadByOthers(room, receiptEvent)).toBe(true);
+        expect(isReadByOthers(room, backfilledMessage)).toBe(false);
+    });
+
     it("does not count our own receipt, or a bridge bot's", () => {
         const room = roomWith(events, { $3: ["@me:e", "@bot:e"] }, ["@bot:e"]);
         expect(events.map((ev) => isReadByOthers(room, ev))).toEqual([false, false, false]);
