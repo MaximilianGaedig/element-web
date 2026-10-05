@@ -31,8 +31,9 @@ export interface StreamSource {
     /** The messages to show, in the room's own order (oldest first). */
     events: StreamSourceEvent[];
     /**
-     * The timestamp of the first loaded event in the room's order, shown or not; undefined when nothing
-     * is loaded. The room's own order is used rather than the smallest timestamp: it is where paging
+     * The latest time a message in the room's unloaded history could have: the timestamp of the first loaded
+     * event in the room's order (shown or not), or the room's last message if that is earlier. Undefined when
+     * nothing is loaded. The room's own order is used rather than the smallest timestamp: it is where paging
      * back continues from.
      */
     oldestLoadedTs?: number;

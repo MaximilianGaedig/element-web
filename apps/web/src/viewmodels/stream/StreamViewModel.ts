@@ -39,6 +39,10 @@ const CONTINUATION_MAX_INTERVAL = 5 * 60 * 1000;
 const INITIAL_FILL = 40;
 /** How many more messages one reach of the top tries to bring in. */
 const PAGE_FILL = 30;
+/** How many loads in a row that bring no messages the list goes through on its own before waiting for the reader. */
+const MAX_EMPTY_LOADS = 3;
+/** How many pages in a row that add nothing to a room leave it out of loading. */
+const MAX_EMPTY_PAGES = 3;
 /** How many messages each room is asked for per page. */
 const ROOM_PAGE_SIZE = 30;
 /** How many rooms are paged at once: enough to move the bound, few enough not to flood the server. */
@@ -46,8 +50,8 @@ const ROOMS_PER_ROUND = 4;
 /** How many rounds one reach of the top may take, so a stretch where nothing was said ends. */
 const MAX_ROUNDS = 6;
 /**
- * How many times the list pages back on its own to fill the first screen. Past that it waits for the reader
- * to scroll up: an account whose rooms say little would otherwise page every room it has.
+ * How many times the list pages back on its own to fill the first screen before showing it. Past that it shows
+ * what it has: an account whose rooms say little would otherwise page every room it has.
  */
 const MAX_AUTO_FILLS = 2;
 /** How long changes are gathered before the list is rebuilt: one sync touches many rooms at once. */
@@ -109,8 +113,10 @@ export class StreamViewModel
 {
     private readonly rows = new Map<string, StreamRowInfo>();
     private readonly itemCache = new Map<string, TimelineItem>();
-    /** Rooms that failed to page; left out of paging until the Stream is opened again, so one bad room cannot loop. */
+    /** Rooms that failed to page or whose pages do not move them; left out until the Stream is opened again. */
     private readonly failedRooms = new Set<string>();
+    /** Pages in a row, per room, that added no events. */
+    private readonly emptyPages = new Map<string, number>();
     private sources: StreamSource[] = [];
     private bound = -Infinity;
     private rebuildTimer: number | null = null;
@@ -118,6 +124,10 @@ export class StreamViewModel
     private built = false;
     private autoFills = 0;
     private isAtBottom = true;
+    /** The top of the list is on screen: the view does not ask again while it stays there, so loading carries on. */
+    private atTop = false;
+    /** Loads in a row, since the reader last reached the top, that brought no messages. */
+    private emptyLoads = 0;
     /** The newest message's time when the reader left the bottom; what arrives after it counts as new. */
     private leftBottomAtTs: number | null = null;
 
@@ -209,7 +219,7 @@ export class StreamViewModel
             sources.push({
                 roomId: room.roomId,
                 events: [],
-                oldestLoadedTs: events.length ? events[0].getTs() : undefined,
+                oldestLoadedTs: hiddenUpTo(room, events),
                 canPaginateBack:
                     !this.failedRooms.has(room.roomId) && timeline.getPaginationToken(Direction.Backward) !== null,
             });
@@ -259,7 +269,21 @@ export class StreamViewModel
         }
         this.pruneCache(items);
 
-        const canPage = sources.some((s) => s.canPaginateBack && s.oldestLoadedTs !== undefined);
+        const canPage = this.canPage();
+        if (!this.built && entries.length < INITIAL_FILL && canPage) {
+            /*
+             * Too few for a first screen: fill it before showing anything, as the room timeline does. The view
+             * keeps the reader at the newest message by adjusting the scroll position as rows land above, and a
+             * list shorter than the window has none to adjust, so rows added after it is shown would leave the
+             * reader far above the newest message.
+             */
+            if (!this.paging && this.autoFills < MAX_AUTO_FILLS) {
+                this.autoFills++;
+                void this.pageBack(INITIAL_FILL - entries.length);
+                return;
+            }
+            if (this.paging) return;
+        }
         const first = !this.built && items.length > 0;
         if (first) this.built = true;
         this.snapshot.merge({
@@ -275,11 +299,11 @@ export class StreamViewModel
             logger.info(
                 `Stream: rebuilt ${entries.length} messages from ${rooms.length} rooms in ${Math.round(took)} ms`,
             );
+    }
 
-        if (entries.length < INITIAL_FILL && canPage && !this.paging && this.autoFills < MAX_AUTO_FILLS) {
-            this.autoFills++;
-            void this.pageBack(INITIAL_FILL - entries.length);
-        }
+    /** Whether any room has older history to load that can move the list back. */
+    private canPage(): boolean {
+        return this.sources.some((s) => s.canPaginateBack && s.oldestLoadedTs !== undefined);
     }
 
     /** The same item object as last time when nothing about it changed, so rows that did not change are not redrawn. */
@@ -329,7 +353,20 @@ export class StreamViewModel
             }
         } finally {
             this.paging = false;
-            if (!this.isDisposed) this.rebuild();
+            if (!this.isDisposed) {
+                this.rebuild();
+                /*
+                 * A stretch where the rooms paged said nothing that is shown (only changes to the rooms) adds no
+                 * rows, so the view, still at the top, has no reason to ask again. Carry on while the reader is
+                 * there and there is more to load.
+                 */
+                const added = this.rows.size - before;
+                this.emptyLoads = added > 0 ? 0 : this.emptyLoads + 1;
+                // Not without end: after a few loads that brought nothing, wait for the reader to scroll again.
+                if (this.built && this.atTop && added < wanted && this.emptyLoads < MAX_EMPTY_LOADS && this.canPage()) {
+                    window.setTimeout(() => void this.pageBack(PAGE_FILL), 0);
+                }
+            }
             // What decides whether paging should move to the server (MEO-44): pages taken and the time they took.
             logger.info(
                 `Stream: paged back ${requests} room pages in ${Math.round(performance.now() - started)} ms, ` +
@@ -341,13 +378,31 @@ export class StreamViewModel
     private async pageRoom(roomId: string): Promise<void> {
         const room = this.props.client.getRoom(roomId);
         if (!room) return;
+        const timeline = room.getLiveTimeline();
+        const firstBefore = timeline.getEvents()[0]?.getId();
         try {
-            await this.props.client.paginateEventTimeline(room.getLiveTimeline(), {
-                backwards: true,
-                limit: ROOM_PAGE_SIZE,
-            });
+            await this.props.client.paginateEventTimeline(timeline, { backwards: true, limit: ROOM_PAGE_SIZE });
         } catch (e) {
             logger.warn(`Stream: could not page back ${roomId}`, e);
+            this.failedRooms.add(roomId);
+            return;
+        }
+        if (room.getLiveTimeline() !== timeline) return;
+        /*
+         * A page that adds nothing can be a step on the way (from the stored history over to the server's), but
+         * a room whose pages keep adding nothing would be asked for again on every round, holding the list up for
+         * good. Seen on a real account (MEO-44): the stored history handed back the same few positions in turn,
+         * so the token changed on every page and nothing was ever added. Leave such a room out until the Stream
+         * is opened again.
+         */
+        if (timeline.getEvents()[0]?.getId() !== firstBefore) {
+            this.emptyPages.delete(roomId);
+            return;
+        }
+        const empty = (this.emptyPages.get(roomId) ?? 0) + 1;
+        this.emptyPages.set(roomId, empty);
+        if (empty >= MAX_EMPTY_PAGES && timeline.getPaginationToken(Direction.Backward) !== null) {
+            logger.warn(`Stream: paging back ${roomId} adds nothing; leaving it out`);
             this.failedRooms.add(roomId);
         }
     }
@@ -355,6 +410,7 @@ export class StreamViewModel
     // ── TimelineViewActions ───────────────────────────────────────────
 
     public onStartReached = (): void => {
+        this.emptyLoads = 0;
         void this.pageBack(PAGE_FILL);
     };
 
@@ -365,8 +421,11 @@ export class StreamViewModel
         this.snapshot.merge({ pendingAnchor: null });
     };
 
-    /** No read receipts from the Stream (see the class comment), so nothing to track. */
-    public onVisibleRangeChanged = (): void => {};
+    /** No read receipts from the Stream (see the class comment); only whether the top of the list is showing. */
+    public onVisibleRangeChanged = (startIndex: number): void => {
+        // The first row may be the loading spinner, the second the first message.
+        this.atTop = startIndex <= 1;
+    };
 
     public onAtBottomStateChange = (atBottom: boolean): void => {
         this.isAtBottom = atBottom;
@@ -393,6 +452,23 @@ export class StreamViewModel
     public onMarkAllAsRead = (): void => {};
     public onJumpToUnreadMention = (): void => {};
     public onJumpToUnreadReaction = (): void => {};
+}
+
+/** Below this a bump_stamp is a position in the server's stream, not a time: 2001-09-09 in milliseconds. */
+const MIN_TIMESTAMP = 1_000_000_000_000;
+
+/**
+ * How recent a message the room's unloaded history could hold: its oldest loaded event, or the time of its last
+ * message if that is earlier. Most bridged chats' latest events are changes to the room (a bridge re-syncing a
+ * chat's details), not messages; counting those as the room's position held the list at today until every
+ * one of 600 rooms had been paged once (MEO-44, on a real account). Our server sends the time of the room's
+ * last message as `bump_stamp`; a stream position instead (other servers) is not a time and is not used.
+ */
+function hiddenUpTo(room: Room, events: MatrixEvent[]): number | undefined {
+    if (!events.length) return undefined;
+    const oldest = events[0].getTs();
+    const bump = room.getBumpStamp();
+    return bump !== undefined && bump >= MIN_TIMESTAMP && bump < oldest ? bump : oldest;
 }
 
 function continues(prev: { sender: string; ts: number }, next: { sender: string; ts: number }): boolean {
