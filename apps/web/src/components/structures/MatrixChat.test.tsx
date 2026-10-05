@@ -89,6 +89,9 @@ vi.mock("../../settings/watchers/ThemeWatcher");
 vi.mock("../../theme");
 
 // The settings page's sections are tested on their own; here it only matters which one is asked for.
+vi.mock("./StreamPage", () => ({
+    StreamPage: () => <h1>Stream page</h1>,
+}));
 vi.mock("../../components/views/settings/UserSettingsPage", () => ({
     __esModule: true,
     default: ({ section }: { section?: string }) => <h1>Settings page: {section ?? "first"}</h1>,
@@ -1012,6 +1015,48 @@ describe("<MatrixChat />", () => {
                     act(() => defaultDispatcher.dispatch({ action: Action.ViewHomePage }));
 
                     await waitFor(() => expect(roomListPanelView()).toBe("rooms"));
+                });
+            });
+
+            /* The Stream (MEO-44): a page in the room's place, behind its labs flag. */
+            describe("the Stream", () => {
+                const withStream = (enabled: boolean): void => {
+                    const getValue = SettingsStore.getValue.bind(SettingsStore);
+                    vi.spyOn(SettingsStore, "getValue").mockImplementation(((name: string, ...rest: unknown[]) =>
+                        name === "feature_stream"
+                            ? enabled
+                            : (getValue as (...a: unknown[]) => unknown)(
+                                  name,
+                                  ...rest,
+                              )) as typeof SettingsStore.getValue);
+                };
+
+                it("opens the Stream as the page when the feature is on", async () => {
+                    withStream(true);
+                    await getComponentAndWaitForReady();
+
+                    act(() => defaultDispatcher.dispatch({ action: Action.ViewStream }));
+
+                    await screen.findByRole("heading", { name: "Stream page" });
+                    expect(defaultProps.onNewScreen).toHaveBeenLastCalledWith("stream", false);
+                });
+
+                it("opens it from a link", async () => {
+                    withStream(true);
+                    await getComponentAndWaitForReady({ initialScreenAfterLogin: { screen: "stream", params: {} } });
+
+                    expect(await screen.findByRole("heading", { name: "Stream page" })).toBeInTheDocument();
+                });
+
+                it("stays where it is when the feature is off", async () => {
+                    withStream(false);
+                    await getComponentAndWaitForReady();
+
+                    act(() => defaultDispatcher.dispatch({ action: Action.ViewStream }));
+
+                    // The dispatch is handled synchronously; give a lazy page the chance to appear anyway.
+                    await act(() => Promise.resolve());
+                    expect(screen.queryByRole("heading", { name: "Stream page" })).toBeNull();
                 });
             });
 

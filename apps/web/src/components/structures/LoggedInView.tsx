@@ -81,6 +81,8 @@ import { type UserSettingsPageProps } from "../views/settings/UserSettingsPage";
  * the settings are first opened rather than with the page around them, which every start goes through.
  */
 const UserSettingsPage = lazy(() => import("../views/settings/UserSettingsPage"));
+/** The Stream (MEO-44), behind a labs flag: loaded when first opened, not with every start. */
+const StreamPage = lazy(() => import("./StreamPage").then((m) => ({ default: m.StreamPage })));
 
 // We need to fetch each pinned message individually (if we don't already have it)
 // so each pinned message may trigger a request. Limit the number per room for sanity.
@@ -843,6 +845,14 @@ class LoggedInView extends React.Component<IProps, IState> {
                 );
                 break;
 
+            case PageTypes.Stream:
+                pageElement = (
+                    <Suspense fallback={null}>
+                        <StreamPage />
+                    </Suspense>
+                );
+                break;
+
             case PageTypes.UserView:
                 if (!!this.props.currentUserId) {
                     pageElement = (
@@ -904,13 +914,16 @@ class LoggedInView extends React.Component<IProps, IState> {
                     chatOpen={
                         this.props.page_type === PageTypes.RoomView ||
                         this.props.page_type === PageTypes.UserView ||
+                        this.props.page_type === PageTypes.Stream ||
                         // A section of the settings is a page over their list as a chat is over the chats.
                         (this.props.page_type === PageTypes.Settings && !!this.props.settingsSection)
                     }
                     chatKey={
                         this.props.page_type === PageTypes.Settings
                             ? `settings/${this.props.settingsSection ?? ""}`
-                            : (this.props.currentRoomId ?? this.props.currentUserId ?? undefined)
+                            : this.props.page_type === PageTypes.Stream
+                              ? "stream"
+                              : (this.props.currentRoomId ?? this.props.currentUserId ?? undefined)
                     }
                     onBack={this.onTgBack}
                 >

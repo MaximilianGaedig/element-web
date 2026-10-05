@@ -233,6 +233,7 @@ export interface Settings {
     "feature_retention": IFeature;
     "feature_new_timeline": IFeature;
     "feature_ask_to_join": IFeature;
+    "feature_stream": IFeature;
     "feature_notifications": IFeature;
     "feature_msc4362_encrypted_state_events": IFeature;
     "feature_user_status": IFeature;
@@ -769,6 +770,15 @@ export const SETTINGS: Settings = {
         displayName: _td("settings|tac_only_notifications"),
         default: true,
         controller: new AnalyticsController("WebSettingsNotificationsTACOnlyNotificationsToggle"),
+    },
+    "feature_stream": {
+        isFeature: true,
+        labsGroup: LabGroup.Messaging,
+        default: false,
+        displayName: _td("labs|stream"),
+        description: _td("labs|stream_description"),
+        supportedLevels: LEVELS_DEVICE_ONLY_SETTINGS_WITH_CONFIG_PRIORITISED,
+        supportedLevelsAreOrdered: true,
     },
     "feature_ask_to_join": {
         isFeature: true,

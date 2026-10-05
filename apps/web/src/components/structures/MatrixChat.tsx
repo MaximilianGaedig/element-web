@@ -810,6 +810,9 @@ export default class MatrixChat extends React.PureComponent<IProps, IState> {
                 viewUserDeviceSettings();
                 break;
             }
+            case Action.ViewStream:
+                this.viewStream();
+                break;
             case Action.ViewUserSettings: {
                 const tabPayload = payload as OpenToTabPayload;
                 this.viewSettings(tabPayload.initialTabId as UserTab | undefined, tabPayload.props);
@@ -1143,6 +1146,15 @@ export default class MatrixChat extends React.PureComponent<IProps, IState> {
         });
         this.setPage(PageType.HomePage);
         this.notifyNewScreen("home");
+    }
+
+    /** Fork: the Stream (MEO-44), a page in the room's place beside the chats. Behind its labs flag. */
+    private viewStream(): void {
+        if (this.state.view !== Views.LOGGED_IN || !SettingsStore.getValue("feature_stream")) return;
+        this.setStateForNewView({ view: Views.LOGGED_IN, currentRoomId: null });
+        this.setPage(PageType.Stream);
+        setRoomListPanelView("rooms");
+        this.notifyNewScreen("stream");
     }
 
     /**
@@ -1999,6 +2011,8 @@ export default class MatrixChat extends React.PureComponent<IProps, IState> {
                 action: Action.ViewUserSettings,
                 initialTabId: screen.slice("settings/".length) || undefined,
             });
+        } else if (screen === "stream") {
+            dis.dispatch({ action: Action.ViewStream });
         } else if (screen === "welcome") {
             dis.dispatch({
                 action: "view_welcome_page",

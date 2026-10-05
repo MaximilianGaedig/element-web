@@ -1,0 +1,89 @@
+/*
+Copyright 2026 New Vector Ltd.
+
+SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only OR LicenseRef-Element-Commercial
+Please see LICENSE files in the repository root for full details.
+*/
+
+/* The Stream (MEO-44): every chat's messages in one list, each run under a bar naming its chat. */
+
+.mx_StreamPage {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+    background-color: var(--cpd-color-bg-canvas-default);
+}
+
+/* The same header as a settings section's, so the pages beside the column match. */
+.mx_StreamPage_header {
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    gap: var(--cpd-space-2x);
+    min-height: 56px;
+    padding: 0 var(--cpd-space-6x);
+    border-bottom: 1px solid var(--cpd-color-separator-primary);
+    box-sizing: border-box;
+}
+
+.mx_StreamPage_title {
+    margin: 0;
+    font: var(--cpd-font-heading-sm-semibold);
+    color: var(--cpd-color-text-primary);
+}
+
+.mx_StreamPage_timeline {
+    flex: 1;
+    min-height: 0;
+}
+
+/* Space above each run, so where one chat ends and the next begins reads at a glance. */
+.mx_StreamPage_row[data-run-start] {
+    padding-top: var(--cpd-space-3x);
+}
+
+/* The chat a run is from: its avatar and name, and the way into it. */
+.mx_StreamPage_recipientBar {
+    display: flex;
+    align-items: center;
+    gap: var(--cpd-space-2x);
+    width: calc(100% - 2 * var(--cpd-space-4x));
+    margin: 0 var(--cpd-space-4x) var(--cpd-space-1x);
+    padding: var(--cpd-space-1x) var(--cpd-space-2x);
+    border: none;
+    border-radius: var(--cpd-space-2x);
+    background-color: var(--cpd-color-bg-subtle-secondary);
+    color: var(--cpd-color-text-primary);
+    font: var(--cpd-font-body-sm-semibold);
+    text-align: start;
+    cursor: pointer;
+
+    &:hover {
+        background-color: var(--cpd-color-bg-subtle-primary);
+    }
+}
+
+.mx_StreamPage_recipientName {
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.mx_StreamPage_loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 32px;
+    overflow: hidden;
+}
+
+.mx_StreamPage_empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: var(--cpd-color-text-secondary);
+    font: var(--cpd-font-body-md-regular);
+}

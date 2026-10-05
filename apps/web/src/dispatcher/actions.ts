@@ -38,6 +38,11 @@ export enum Action {
     ViewUserSettings = "view_user_settings",
 
     /**
+     * Fork: open the Stream, every room's messages merged by time (MEO-44). No payload.
+     */
+    ViewStream = "view_stream",
+
+    /**
      * Open the user device settings. No additional payload information required.
      */
     ViewUserDeviceSettings = "view_user_device_settings",

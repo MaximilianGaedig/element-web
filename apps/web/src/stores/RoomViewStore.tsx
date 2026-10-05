@@ -236,6 +236,8 @@ export class RoomViewStore extends EventEmitter {
             case Action.ViewHomePage:
             // Fork: the settings are a page in the room's place, not a dialog over it (MatrixChat.viewSettings).
             case Action.ViewUserSettings:
+            // Fork: so is the Stream; a reply from it then opens the message's room rather than staying put.
+            case Action.ViewStream:
                 this.setState({
                     roomId: null,
                     roomAlias: null,

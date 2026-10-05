@@ -424,6 +424,16 @@ describe("RoomViewStore", function () {
         expect(roomViewStore.getRoomId()).toBeNull();
     });
 
+    /* The Stream is a page in the room's place: a reply from it must open the message's room, not stay put. */
+    it("removes the roomId on ViewStream", async () => {
+        dis.dispatch({ action: Action.ViewRoom, room_id: roomId });
+        await untilDispatch(Action.ActiveRoomChanged, dis);
+
+        dis.dispatch({ action: Action.ViewStream });
+        await untilEmission(roomViewStore, UPDATE_EVENT);
+        expect(roomViewStore.getRoomId()).toBeNull();
+    });
+
     it("when viewing a call without a broadcast, it should not raise an error", async () => {
         const call = { presented: false } as Call;
         const getCallSpy = vi.spyOn(CallStore.instance, "getCall").mockReturnValue(call);

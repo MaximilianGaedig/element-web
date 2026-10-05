@@ -9,6 +9,7 @@ import React, { useState, useCallback, useContext } from "react";
 import { Flex, RoomListHeaderView, useCreateAutoDisposedViewModel } from "@element-hq/web-shared-components";
 import { IconButton } from "@vector-im/compound-web";
 import FoundIcon from "@vector-im/compound-design-tokens/assets/web/icons/list-bulleted";
+import StreamIcon from "@vector-im/compound-design-tokens/assets/web/icons/threads";
 
 import { shouldShowComponent } from "../../../../customisations/helpers/UIComponents";
 import { UIComponent } from "../../../../settings/UIFeature";
@@ -27,6 +28,9 @@ import { RoomListHeaderViewModel } from "../../../../viewmodels/room-list/RoomLi
 import { useMatrixClientContext } from "../../../../contexts/MatrixClientContext";
 import { SDKContext } from "../../../../contexts/SDKContext.ts";
 import { useConnectionStatus } from "../../../../hooks/useConnectionStatus";
+import { useFeatureEnabled } from "../../../../hooks/useSettings";
+import dis from "../../../../dispatcher/dispatcher";
+import { Action } from "../../../../dispatcher/actions";
 
 /**
  * The panel of the room list
@@ -68,6 +72,7 @@ export const RoomListPanel: React.FC = () => {
     );
 
     const panelView = useRoomListPanelView();
+    const streamEnabled = useFeatureEnabled("feature_stream");
     const matrixClient = useMatrixClientContext();
     const connectionStatus = useConnectionStatus(matrixClient);
     const vm = useCreateAutoDisposedViewModel(
@@ -119,6 +124,17 @@ export const RoomListPanel: React.FC = () => {
                         actions={
                             <>
                                 <HistoryStatusMini />
+                                {/* Fork: the Stream (MEO-44), every chat's messages in one list; a labs feature. */}
+                                {streamEnabled && (
+                                    <IconButton
+                                        size="28px"
+                                        style={{ padding: "4px" }}
+                                        onClick={() => dis.dispatch({ action: Action.ViewStream })}
+                                        tooltip={_t("stream|open")}
+                                    >
+                                        <StreamIcon color="var(--cpd-color-icon-secondary)" aria-hidden />
+                                    </IconButton>
+                                )}
                                 <IconButton
                                     size="28px"
                                     style={{ padding: "4px" }}

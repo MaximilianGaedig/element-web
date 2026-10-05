@@ -14,6 +14,8 @@ enum PageType {
     UserView = "user_view",
     /** Fork: the user's settings, a section of them beside the column that lists them. */
     Settings = "settings",
+    /** Fork: the Stream, every room's messages merged by time (MEO-44). */
+    Stream = "stream",
 }
 
 export default PageType;

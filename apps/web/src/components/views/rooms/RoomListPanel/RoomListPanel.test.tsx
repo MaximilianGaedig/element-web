@@ -22,6 +22,9 @@ import { LandmarkNavigation } from "../../../../accessibility/LandmarkNavigation
 import { ReleaseAnnouncementStore } from "../../../../stores/ReleaseAnnouncementStore";
 import { collectImports } from "../../../../utils/importOverview";
 import { HistoryStatusChip, setHistoryStatusOpen } from "../../telegram/TgHistoryChip";
+import SettingsStore from "../../../../settings/SettingsStore";
+import defaultDispatcher from "../../../../dispatcher/dispatcher";
+import { Action } from "../../../../dispatcher/actions";
 
 vi.mock("../../../../customisations/helpers/UIComponents", () => ({
     shouldShowComponent: vi.fn(),
@@ -107,6 +110,44 @@ describe("<RoomListPanel />", () => {
         renderComponent();
         expect(screen.queryByRole("button", { name: "Search Ctrl K" })).toBeNull();
         expect(screen.queryByRole("button", { name: "Explore rooms" })).toBeNull();
+    });
+
+    /* The Stream (MEO-44) is a labs feature: its button is there only while the feature is on. */
+    describe("the Stream button", () => {
+        const spies: Array<{ mockRestore(): void }> = [];
+        afterEach(() => spies.splice(0).forEach((spy) => spy.mockRestore()));
+
+        const withStream = (enabled: boolean): void => {
+            const getValue = SettingsStore.getValue.bind(SettingsStore);
+            spies.push(
+                vi
+                    .spyOn(SettingsStore, "getValue")
+                    .mockImplementation(((name: string, ...rest: unknown[]) =>
+                        name === "feature_stream"
+                            ? enabled
+                            : (getValue as (...a: unknown[]) => unknown)(
+                                  name,
+                                  ...rest,
+                              )) as typeof SettingsStore.getValue),
+            );
+        };
+
+        it("opens the Stream", async () => {
+            withStream(true);
+            const dispatch = vi.spyOn(defaultDispatcher, "dispatch");
+            spies.push(dispatch);
+            renderComponent();
+
+            await userEvent.click(screen.getByRole("button", { name: "Stream: every chat in one list" }));
+
+            expect(dispatch).toHaveBeenCalledWith({ action: Action.ViewStream });
+        });
+
+        it("is not there while the feature is off", () => {
+            withStream(false);
+            renderComponent();
+            expect(screen.queryByRole("button", { name: "Stream: every chat in one list" })).toBeNull();
+        });
     });
 
     describe("the bridges' status, once every import is done", () => {
