@@ -5,13 +5,13 @@ SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only OR LicenseRef-Element-Com
 Please see LICENSE files in the repository root for full details.
 */
 
-import React, { type JSX } from "react";
+import React, { type JSX, useEffect } from "react";
 
 import { _t } from "../../../languageHandler";
 import SettingsStore from "../../../settings/SettingsStore";
 import { SettingLevel } from "../../../settings/SettingLevel";
 import { useSettingValue } from "../../../hooks/useSettings";
-import { ChatWallpaper, useChatWallpaper } from "../telegram/ChatWallpaper";
+import { ChatWallpaper, useChatWallpaper, useWallpapersVersion } from "../telegram/ChatWallpaper";
 import { WALLPAPER_PROVIDERS, wallpaperRef, type WallpaperRef } from "../../../utils/wallpaper/wallpaperProviders";
 import { SettingsSubsection } from "./shared/SettingsSubsection";
 
@@ -22,10 +22,15 @@ import { SettingsSubsection } from "./shared/SettingsSubsection";
 export function ChatWallpaperPanel(): JSX.Element {
     const { wallpaper: current, dark } = useChatWallpaper();
     const setting = useSettingValue("chatWallpaper");
+    useWallpapersVersion();
+    // Providers that have to ask for their wallpapers (the Telegram account's, through its bridge) ask now.
+    useEffect(() => {
+        for (const provider of WALLPAPER_PROVIDERS) provider.load?.();
+    }, []);
     const choices = WALLPAPER_PROVIDERS.flatMap((provider) =>
         provider
             .presets()
-            .filter((preset) => preset.dark === dark)
+            .filter((preset) => preset.dark === undefined || preset.dark === dark)
             .map((preset) => wallpaperRef(provider, preset)),
     );
 

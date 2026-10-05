@@ -6,24 +6,17 @@ Please see LICENSE files in the repository root for full details.
 */
 
 /*
- * Telegram's chat wallpapers, from tweb (Telegram Web K, GPL-3.0) used as a library: its gradient renderer, its
- * Telegram iOS theme presets and its doodle pattern are imported, not copied. What is here is only how the layers
- * are put together, which in tweb lives in a Solid component tied to its theme store
- * (src/components/chat/bubbles/chatBackground.tsx).
+ * The wallpapers every Telegram app ships, from tweb (Telegram Web K, GPL-3.0) used as a library: its Telegram iOS
+ * theme presets and its one bundled doodle pattern are imported, not copied, and drawn by telegramLayers.ts. The
+ * account's own wallpapers, with Telegram's other patterns, come from the bridge (telegramWallpaperProvider.ts).
  */
 
-import ChatBackgroundGradientRenderer from "tweb/src/components/chat/gradientRenderer";
 import { getAccentPresetsForBase, presetToThemeSettings, type BaseThemeName } from "tweb/src/config/themePresets";
 import { getColorsFromWallPaper } from "tweb/src/helpers/color";
 import patternUrl from "tweb/public/assets/img/pattern.svg";
 
 import { type MountedWallpaper, type WallpaperPreset, type WallpaperProvider } from "./WallpaperProvider";
-
-/**
- * How the doodle pattern sits on the gradient. Light themes lay it over the gradient in soft light; Night shows the
- * gradient only through the pattern, on black; Night Tinted ("Dark") lays a lightened pattern over its dark gradient.
- */
-type PatternMode = "soft-light" | "mask" | "inverted";
+import { mountTelegramWallpaper, type PatternMode } from "./telegramLayers";
 
 interface TwebPreset extends WallpaperPreset {
     colors: string;
@@ -66,40 +59,14 @@ export const twebWallpaperProvider: WallpaperProvider = {
         const preset = twebPresets().find((p) => p.id === presetId);
         if (!preset) return undefined;
 
-        let created: ReturnType<typeof ChatBackgroundGradientRenderer.create>;
-        try {
-            created = ChatBackgroundGradientRenderer.create(preset.colors);
-        } catch {
-            // The renderer draws on a 2D canvas, which a browser may refuse (fingerprinting protection, no
-            // memory); the chat is then left on the theme's background rather than failing with it.
-            return undefined;
-        }
-        const { gradientRenderer, canvas } = created;
-        canvas.className = "mx_ChatWallpaper_gradient";
-        const pattern = document.createElement("div");
-        pattern.className = `mx_ChatWallpaper_pattern mx_ChatWallpaper_pattern_${preset.pattern}`;
-        // Set here, not through a custom property: a url() in one would resolve against the stylesheet.
-        pattern.style.backgroundImage = `url("${patternUrl}")`;
-        // A Night wallpaper is its colours seen through thin lines: at a swatch's size that is black. Show the colours.
-        if (preset.pattern === "mask" && !options?.swatch) {
-            // tweb dims the gradient that shows through the pattern, never below 0.3.
-            canvas.style.opacity = String(Math.max(0.3, preset.intensity * 0.5));
-            canvas.style.maskImage = `url("${patternUrl}")`;
-            canvas.classList.add("mx_ChatWallpaper_gradient_masked");
-            host.dataset.dark = "true";
-            host.append(canvas);
-        } else {
-            pattern.style.opacity = String(preset.intensity);
-            host.append(canvas, pattern);
-        }
-        return {
-            onMessageSent: () => gradientRenderer.toNextPosition(),
-            destroy: () => {
-                gradientRenderer.cleanup();
-                canvas.remove();
-                pattern.remove();
-                delete host.dataset.dark;
+        return mountTelegramWallpaper(
+            host,
+            {
+                colors: preset.colors,
+                intensity: preset.intensity,
+                pattern: { url: patternUrl, mode: preset.pattern },
             },
-        };
+            options?.swatch,
+        );
     },
 };

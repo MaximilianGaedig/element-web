@@ -5,7 +5,7 @@ SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only OR LicenseRef-Element-Com
 Please see LICENSE files in the repository root for full details.
 */
 
-import React, { type JSX, useEffect, useRef } from "react";
+import React, { type JSX, useEffect, useRef, useSyncExternalStore } from "react";
 
 import dis from "../../../dispatcher/dispatcher";
 import { useSettingValue } from "../../../hooks/useSettings";
@@ -13,6 +13,12 @@ import { useTheme } from "../../../hooks/useTheme";
 import { getCustomTheme } from "../../../theme";
 import { useLowPower } from "../../../utils/telegram/tgLayout/appearance";
 import { resolveWallpaper, type WallpaperRef } from "../../../utils/wallpaper/wallpaperProviders";
+import { onWallpapersChanged, wallpapersVersion } from "../../../utils/wallpaper/WallpaperProvider";
+
+/** Re-renders when a provider's presets change: one that had to ask for them can draw once they arrive. */
+export function useWallpapersVersion(): number {
+    return useSyncExternalStore(onWallpapersChanged, wallpapersVersion);
+}
 
 interface Props {
     /** The wallpaper to draw, as the setting stores it; nothing is drawn for null or an unknown one. */
@@ -28,9 +34,11 @@ interface Props {
 export function ChatWallpaper({ wallpaper, animateOnSend, swatch, className }: Props): JSX.Element | null {
     const host = useRef<HTMLDivElement>(null);
     const resolved = resolveWallpaper(wallpaper);
+    const version = useWallpapersVersion();
     useEffect(() => {
         const found = resolveWallpaper(wallpaper);
         if (!found || !host.current) return;
+        found.provider.load?.();
         const mounted = found.provider.mount(host.current, found.presetId, { swatch });
         if (!mounted) return;
         const token = animateOnSend
@@ -42,7 +50,7 @@ export function ChatWallpaper({ wallpaper, animateOnSend, swatch, className }: P
             if (token) dis.unregister(token);
             mounted.destroy();
         };
-    }, [wallpaper, animateOnSend, swatch]);
+    }, [wallpaper, animateOnSend, swatch, version]);
 
     if (!resolved) return null;
     return <div className={className ? `mx_ChatWallpaper ${className}` : "mx_ChatWallpaper"} ref={host} aria-hidden />;

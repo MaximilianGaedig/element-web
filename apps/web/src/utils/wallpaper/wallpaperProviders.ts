@@ -7,9 +7,10 @@ Please see LICENSE files in the repository root for full details.
 
 import { type WallpaperPreset, type WallpaperProvider } from "./WallpaperProvider";
 import { twebWallpaperProvider } from "./twebWallpaperProvider";
+import { telegramWallpaperProvider } from "./telegramWallpaperProvider";
 
 /** Every wallpaper source, in the order a picker lists them. Another source is one more entry here. */
-export const WALLPAPER_PROVIDERS: WallpaperProvider[] = [twebWallpaperProvider];
+export const WALLPAPER_PROVIDERS: WallpaperProvider[] = [twebWallpaperProvider, telegramWallpaperProvider];
 
 /** A stored wallpaper reference: `<provider id>:<preset id>`. */
 export type WallpaperRef = string;
