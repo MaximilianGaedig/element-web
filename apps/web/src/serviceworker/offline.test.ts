@@ -133,6 +133,55 @@ describe("a new build", () => {
 });
 
 /*
+ * A wallpaper's pattern is half a megabyte that most never use, so it is not in the manifest: the page asks
+ * for it once the wallpaper is chosen. The next build's clean-up then threw it away with the old build's files,
+ * and the chosen wallpaper lost its pattern offline until it was fetched again.
+ */
+describe("files downloaded on use", () => {
+    it("are kept when a new build replaces the old one, unlike other files no manifest names", async () => {
+        vi.stubEnv("NODE_ENV", "production");
+        const scope = "https://chat.example.org/";
+        vi.stubGlobal("self", { registration: { scope } });
+        const held = new Map<string, Response>();
+        const key = (k: string | Request): string => new URL(typeof k === "string" ? k : k.url, scope).href;
+        const cache = {
+            match: async (k: string | Request) => held.get(key(k))?.clone(),
+            put: async (k: string | Request, r: Response) => void held.set(key(k), r),
+            delete: async (k: string | Request) => held.delete(key(k)),
+            keys: async () => [...held.keys()].map((url) => new Request(url)),
+        };
+        vi.stubGlobal("caches", { open: async () => cache });
+        const build = { hash: "one" };
+        vi.stubGlobal(
+            "fetch",
+            vi.fn(async (input: string | Request) => {
+                const path = key(input).slice(scope.length);
+                if (path === "offline-manifest.json") {
+                    return Response.json({
+                        version: build.hash,
+                        hash: build.hash,
+                        files: [`bundles/${build.hash}/a.js`],
+                    });
+                }
+                if (path === "") return new Response(`<html>${build.hash}</html>`);
+                return new Response("file");
+            }),
+        );
+
+        await syncAppCache();
+        await cache.put("img/tweb/pattern.70a38a1.svg", new Response("pattern"));
+        await cache.put("img/gone.1234abcd.svg", new Response("old"));
+        build.hash = "two";
+        await syncAppCache();
+        build.hash = "three";
+        await syncAppCache();
+
+        expect(await (await cache.match("img/tweb/pattern.70a38a1.svg"))?.text()).toBe("pattern");
+        expect(await cache.match("img/gone.1234abcd.svg")).toBeUndefined();
+    });
+});
+
+/*
  * The app asks for `config.<domain>.json` before it reads `config.json`, on every load. Most deployments
  * have no such file, and "there is none" was never kept: each start waited for the server to say 404
  * again - the only request of a warm start that left the machine - before using the config it already had.

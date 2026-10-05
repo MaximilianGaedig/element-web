@@ -23,6 +23,8 @@ Please see LICENSE files in the repository root for full details.
  * next to the production build. `?build=prod` brings the production build back.
  */
 
+import { isOnDemandAsset } from "./onDemandAssets";
+
 // v2: v1 kept every file it had ever cached under the same name (see isContentNamed), so it is
 // thrown away rather than repaired - it cannot say which of its files are the stale ones.
 export const APP_CACHE = "element-app-v2";
@@ -118,7 +120,6 @@ export function classifyAppRequest(request: Request, scope: string): AppRequestK
     return "build";
 }
 
-/** Runtime entries (not build files): kept when a new build replaces the old one. */
 /**
  * Whether a build file's name changes when its content does: a bundle under its build's hash, or a
  * file with a content hash in its name (`index-Bz16m3ir.js`).
@@ -135,6 +136,7 @@ export function isContentNamed(path: string): boolean {
     return !!hash && (/\d/.test(hash) || (/[a-z]/.test(hash) && /[A-Z]/.test(hash)));
 }
 
+/** Runtime entries (not build files, or build files taken in on use): kept when a new build replaces the old one. */
 function isRuntimeEntry(url: string, scope: string): boolean {
     const path = new URL(url).pathname.slice(new URL(scope).pathname.length);
     return (
@@ -143,7 +145,8 @@ function isRuntimeEntry(url: string, scope: string): boolean {
         /^config(\.[^/]+)?\.json$/.test(path) ||
         path === "manifest.json" ||
         path === "version" ||
-        path.startsWith("i18n/")
+        path.startsWith("i18n/") ||
+        isOnDemandAsset(path)
     );
 }
 

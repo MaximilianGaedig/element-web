@@ -7,18 +7,22 @@ Please see LICENSE files in the repository root for full details.
 
 import webpack, { type Compiler } from "webpack";
 
+import { isOnDemandAsset } from "./src/serviceworker/onDemandAssets.ts";
+
 /** Where the service worker finds the list; keep in sync with src/serviceworker/offline.ts. */
 export const OFFLINE_MANIFEST = "offline-manifest.json";
 
 /**
  * Emitted files the service worker downloads so every part of the app works without a network: the code,
  * styles, WASM, workers, fonts, images, embedded Element Call and Jitsi, and the helper pages. Left out are
- * source maps and every translation but English (the user's own language is cached on first use).
+ * source maps, every translation but English (the user's own language is cached on first use) and the files
+ * only one of the reader's choices needs (see isOnDemandAsset).
  */
 function isOfflineAsset(name: string): boolean {
     if (/\.(map|LICENSE\.txt)$/.test(name) || name.startsWith("..")) return false;
     if (/^(index\.html|sw\.js|version|config.*\.json|offline-manifest\.json)$/.test(name)) return false;
     if (/^(\.well-known|decoder-ring)\/|^apple-app-site-association$/.test(name)) return false;
+    if (isOnDemandAsset(name)) return false;
     if (name.startsWith("i18n/")) return /^i18n\/(languages\.json|en_EN\.[^/]+\.json)$/.test(name);
     return true;
 }
