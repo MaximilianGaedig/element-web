@@ -207,9 +207,12 @@ Please see LICENSE files in the repository root for full details.
         }
     }
 
-    /* The group the reader's own card is in has no letter, so its heading takes no room. */
+    /*
+     * The group the reader's own card is in has no letter, so its heading takes next to no room. Not none:
+     * the virtualised list cannot place a row of no height, and stopped drawing at it - the list was empty.
+     */
     .mx_Contacts_topGroup {
-        height: 0;
+        height: 1px;
     }
 
     /*
