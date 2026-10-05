@@ -67,6 +67,36 @@ describe("useRoomMemberCount", () => {
         room = new Room("!room:server", cli, cli.getSafeUserId());
     });
 
+    /* A bridged group counted the bridge's bot as one of its people. */
+    it("leaves the bridge's bot out of the count", () => {
+        const member = (userId: string): MatrixEvent =>
+            new MatrixEvent({
+                type: "m.room.member",
+                state_key: userId,
+                sender: userId,
+                room_id: room.roomId,
+                content: { membership: KnownMembership.Join },
+                event_id: `$${userId}`,
+            });
+        room.currentState.setStateEvents([
+            member("@ada:server"),
+            member("@bob:server"),
+            member("@bot:server"),
+            new MatrixEvent({
+                type: "m.bridge",
+                state_key: "net",
+                sender: "@bot:server",
+                room_id: room.roomId,
+                content: { bridgebot: "@bot:server" },
+                event_id: "$bridge",
+            }),
+        ]);
+
+        const { result } = render(room);
+
+        expect(result.current).toBe(2);
+    });
+
     it("should update on RoomState.Members events", async () => {
         const { result } = render(room);
 

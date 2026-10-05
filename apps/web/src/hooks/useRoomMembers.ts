@@ -12,6 +12,8 @@ import { type Membership } from "matrix-js-sdk/src/types";
 import { throttle } from "lodash";
 
 import { useTypedEventEmitter } from "./useEventEmitter";
+import { getFunctionalMembers } from "../utils/room/getFunctionalMembers";
+import { getBridgeBots } from "../utils/bridge/bridgeInfo";
 
 // Hook to simplify watching Matrix Room joined members
 export const useRoomMembers = (room: Room, throttleWait = 250): RoomMember[] => {
@@ -51,18 +53,35 @@ type RoomMemberCountOpts = {
  * @param opts The options.
  * @returns the room member count.
  */
+/**
+ * How many people are in the room, the bridges' bots and other service accounts left out: they are the
+ * plumbing that brings the other network's people in, not people in the chat, and counting them put every
+ * bridged group one higher than its own network says (and made a bridged one-to-one chat look like a group).
+ * A service account whose membership is not loaded is taken to be in the room, as a bridge's bot always is.
+ */
+export function peopleCount(room: Room, includeInvited: boolean): number {
+    const total = includeInvited ? room.getInvitedAndJoinedMemberCount() : room.getJoinedMemberCount();
+    const service = new Set([...getFunctionalMembers(room), ...getBridgeBots(room)]);
+    let present = 0;
+    for (const userId of service) {
+        const membership = room.getMember(userId)?.membership;
+        if (membership === undefined || membership === "join" || (includeInvited && membership === "invite")) {
+            present++;
+        }
+    }
+    return Math.max(total - present, Math.min(total, 1));
+}
+
 export const useRoomMemberCount = (
     room: Room,
     { throttleWait, includeInvited }: RoomMemberCountOpts = { throttleWait: 250, includeInvited: false },
 ): number => {
-    const [count, setCount] = useState<number>(
-        includeInvited ? room.getInvitedAndJoinedMemberCount() : room.getJoinedMemberCount(),
-    );
+    const [count, setCount] = useState<number>(() => peopleCount(room, !!includeInvited));
     const throttledUpdate = useMemo(
         () =>
             throttle(
                 () => {
-                    setCount(includeInvited ? room.getInvitedAndJoinedMemberCount() : room.getJoinedMemberCount());
+                    setCount(peopleCount(room, !!includeInvited));
                 },
                 throttleWait,
                 { leading: true, trailing: true },
