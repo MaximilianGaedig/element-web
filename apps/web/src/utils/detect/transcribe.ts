@@ -90,12 +90,18 @@ function holdTranscriber(): () => void {
     };
 }
 
-/** Whether the device has a GPU to do this on, which decides how long it takes rather than whether. */
+/**
+ * Whether the device has a GPU to do this on, which decides how long it takes rather than whether.
+ *
+ * The GPU runs the half-precision model, which needs its `shader-f16` feature: without it the model
+ * failed to load ("does not support fp16") instead of running on the CPU.
+ */
 async function bestDevice(): Promise<"webgpu" | "wasm"> {
-    const gpu = (navigator as { gpu?: { requestAdapter(): Promise<unknown> } }).gpu;
+    const gpu = (navigator as { gpu?: { requestAdapter(): Promise<{ features?: ReadonlySet<string> } | null> } }).gpu;
     if (!gpu) return "wasm";
     try {
-        return (await gpu.requestAdapter()) ? "webgpu" : "wasm";
+        const adapter = await gpu.requestAdapter();
+        return adapter?.features?.has("shader-f16") ? "webgpu" : "wasm";
     } catch {
         return "wasm";
     }

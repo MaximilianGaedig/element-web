@@ -83,6 +83,37 @@ describe("transcribing a voice message", () => {
         });
     });
 
+    describe("on a device with a GPU", () => {
+        const withGpu = (features: string[]): void => {
+            Object.defineProperty(navigator, "gpu", {
+                configurable: true,
+                value: { requestAdapter: async () => ({ features: new Set(features) }) },
+            });
+        };
+        afterEach(() => {
+            delete (navigator as { gpu?: unknown }).gpu;
+        });
+
+        it("runs the half-precision model on it", async () => {
+            withGpu(["shader-f16"]);
+            await transcribe.transcribe(new ArrayBuffer(8));
+            expect(pipeline).toHaveBeenCalledWith(expect.anything(), expect.anything(), {
+                device: "webgpu",
+                dtype: "fp16",
+            });
+        });
+
+        // Asked to, the runtime refused to load the model at all ("does not support fp16").
+        it("runs on the CPU where the GPU has no half precision", async () => {
+            withGpu([]);
+            await transcribe.transcribe(new ArrayBuffer(8));
+            expect(pipeline).toHaveBeenCalledWith(expect.anything(), expect.anything(), {
+                device: "wasm",
+                dtype: "q8",
+            });
+        });
+    });
+
     // Whisper is a model of tens of megabytes plus the runtime it runs in. Kept for the session, one
     // transcript in the morning was that much memory until the tab was closed.
     it("lets the model go once nothing has been transcribed for a while", async () => {
