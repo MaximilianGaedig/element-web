@@ -469,7 +469,18 @@ html[data-floating-bars] {
         }
     }
 
+    /* Big enough to hit with a finger: 18px read as a dot under the button rather than a control. */
     .mx_TopUnreadMessagesBar_markAsRead {
+        width: 1.75rem;
+        height: 1.75rem;
+        margin: 0.375rem auto 0;
+        border-radius: 50%;
+
+        svg {
+            width: 1rem;
+            height: 1rem;
+        }
+
         border: none;
         background-color: var(--tg-glass-background);
         backdrop-filter: var(--tg-glass-backdrop);
