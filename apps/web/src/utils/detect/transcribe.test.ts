@@ -18,7 +18,24 @@ const env = {
     backends: { onnx: { wasm: { wasmPaths: {} as unknown } } },
 };
 
-vi.mock("@huggingface/transformers", () => ({ pipeline, env }));
+/** The model's languages and their tokens, and how likely it finds each to come first. */
+const LANGUAGES: Record<string, number> = { "<|en|>": 1, "<|de|>": 2, "<|pl|>": 3 };
+let languageScores = [0, 5, 1, 2];
+const processor = vi.fn(async () => ({ input_features: "features" }));
+const model = Object.assign(
+    vi.fn(async () => ({ logits: { dims: [1, 1, 4], data: Float32Array.from(languageScores) } })),
+    { generation_config: { decoder_start_token_id: 0, is_multilingual: true, lang_to_id: LANGUAGES } },
+);
+const engine = (): object => Object.assign(run, { dispose, processor, model });
+class Tensor {
+    public constructor(
+        public type: string,
+        public data: BigInt64Array,
+        public dims: number[],
+    ) {}
+}
+
+vi.mock("@huggingface/transformers", () => ({ pipeline, env, Tensor }));
 
 describe("transcribing a voice message", () => {
     let transcribe: typeof import("./transcribe");
@@ -29,7 +46,9 @@ describe("transcribing a voice message", () => {
         vi.resetModules();
         run.mockReset().mockResolvedValue({ text: " hello there " });
         dispose.mockReset().mockResolvedValue(undefined);
-        pipeline.mockReset().mockImplementation(async () => Object.assign(run, { dispose }));
+        pipeline.mockReset().mockImplementation(async () => engine());
+        model.mockClear();
+        languageScores = [0, 5, 1, 2];
         env.useWasmCache = true;
         env.backends.onnx.wasm.wasmPaths = {
             mjs: "https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/ort-wasm-simd-threaded.asyncify.mjs",
@@ -66,11 +85,28 @@ describe("transcribing a voice message", () => {
 
     // The app's content policy runs scripts from this origin only: the runtime from a CDN, or from the
     // `blob:` URL transformers.js's cache makes of it, failed every transcript.
+    // Left to choose, transformers.js transcribes as English: a Polish message came out as "The".
+    it("transcribes in the language the message is spoken in", async () => {
+        languageScores = [0, 1, 2, 7];
+        await transcribe.transcribe(new ArrayBuffer(8));
+        expect(model).toHaveBeenCalledWith({
+            input_features: "features",
+            decoder_input_ids: expect.objectContaining({ data: BigInt64Array.from([0n]), dims: [1, 1] }),
+        });
+        expect(run).toHaveBeenCalledWith(expect.any(Float32Array), expect.objectContaining({ language: "pl" }));
+    });
+
+    it("takes the language it is given without working it out", async () => {
+        await transcribe.transcribe(new ArrayBuffer(8), "de");
+        expect(model).not.toHaveBeenCalled();
+        expect(run).toHaveBeenCalledWith(expect.any(Float32Array), expect.objectContaining({ language: "de" }));
+    });
+
     it("runs the model on the runtime served with the app, imported from its own URL", async () => {
         let settings: unknown;
         pipeline.mockImplementation(async () => {
             settings = structuredClone(env);
-            return Object.assign(run, { dispose });
+            return engine();
         });
 
         expect(await transcribe.transcribe(new ArrayBuffer(8))).toBe("hello there");

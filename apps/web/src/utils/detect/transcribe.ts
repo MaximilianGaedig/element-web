@@ -14,8 +14,8 @@ Please see LICENSE files in the repository root for full details.
  * here that needs the network, and it needs it once.
  *
  * "base" rather than "tiny": tiny mishears names and numbers badly enough that a transcript is worse
- * than none, and these are messages people are going to trust. It is asked for a language rather than
- * being told one - these chats are in Polish, German and English by turns.
+ * than none, and these are messages people are going to trust. The language is worked out from each
+ * message rather than set - these chats are in Polish, German and English by turns.
  *
  * Asked for, never automatic: a minute of audio is a few seconds of work and a warm phone, and most
  * voice messages get listened to instead. What is worked out once is sent to the server (mediaText.ts),
@@ -44,10 +44,29 @@ export const RUNTIME_FILES = {
     wasm: new URL("onnxruntime-web/ort-wasm-simd-threaded.asyncify.wasm", import.meta.url).href,
 };
 
+/** The model's one step from the start of a transcript: a score for every token that could come next. */
+interface LanguageScores {
+    logits: { dims: number[]; data: ArrayLike<number> };
+}
+
 type Transcriber = ((audio: Float32Array, options?: object) => Promise<{ text: string } | Array<{ text: string }>>) & {
     /** Gives back the model's sessions and their memory. */
     dispose?: () => Promise<unknown>;
+    /** Turns audio into what the model reads. */
+    processor: (audio: Float32Array) => Promise<{ input_features: unknown }>;
+    /** The model itself, run one step at a time. */
+    model: ((inputs: { input_features: unknown; decoder_input_ids: unknown }) => Promise<LanguageScores>) & {
+        generation_config: {
+            decoder_start_token_id: number;
+            is_multilingual?: boolean;
+            /** `<|pl|>` and the like, to their tokens. */
+            lang_to_id?: Record<string, number>;
+        };
+    };
 };
+
+/** Builds the model's input tensors; from the library, which is loaded with the model. */
+let makeTokens: ((ids: number[]) => unknown) | undefined;
 
 /**
  * How long the model is kept after the last transcript.
@@ -110,7 +129,8 @@ async function bestDevice(): Promise<"webgpu" | "wasm"> {
 /** The one engine while transcripts are being asked for: loading it is most of the cost of a short one. */
 async function getTranscriber(): Promise<Transcriber> {
     const loading = (transcriber ??= (async () => {
-        const { env, pipeline } = await import("@huggingface/transformers");
+        const { env, pipeline, Tensor } = await import("@huggingface/transformers");
+        makeTokens = (ids) => new Tensor("int64", BigInt64Array.from(ids, BigInt), [1, ids.length]);
         // Our own copy of the runtime, imported from its URL: its cache would hand it over as a `blob:`
         // URL, which the content policy refuses to run.
         env.useWasmCache = false;
@@ -123,7 +143,9 @@ async function getTranscriber(): Promise<Transcriber> {
             dtype: device === "webgpu" ? "fp16" : "q8",
             device,
         });
-        return engine;
+        // The library types its model only as a generic one; the parts of whisper read here are described
+        // by Transcriber.
+        return engine as unknown as Transcriber;
     })());
     // A model that could not be fetched (offline, the first time) is not the model: without this the
     // failure is what every later request is handed until the page is reloaded.
@@ -155,15 +177,46 @@ async function samplesOf(audio: ArrayBuffer): Promise<Float32Array> {
 }
 
 /**
+ * The language a piece of audio is spoken in, as whisper hears its first half minute.
+ *
+ * Without one, transformers.js transcribes as English: a Polish message came out as "The", and a German
+ * one as English words that went round in a loop. Whisper decides the language with the first step of a
+ * transcript, the token after its start, which is one of its languages: the likeliest of those is it.
+ */
+async function spokenLanguage(engine: Transcriber, samples: Float32Array): Promise<string | undefined> {
+    const config = engine.model.generation_config;
+    if (!config.is_multilingual || !config.lang_to_id || !makeTokens) return undefined;
+    const { input_features } = await engine.processor(samples.subarray(0, 30 * SAMPLE_RATE));
+    const { logits } = await engine.model({
+        input_features,
+        decoder_input_ids: makeTokens([config.decoder_start_token_id]),
+    });
+    // The scores for the token after the last one given.
+    const vocabulary = logits.dims[logits.dims.length - 1];
+    const offset = logits.data.length - vocabulary;
+    let best: string | undefined;
+    let bestScore = -Infinity;
+    for (const [token, id] of Object.entries(config.lang_to_id)) {
+        const score = logits.data[offset + id];
+        if (score > bestScore) {
+            bestScore = score;
+            best = token.slice(2, -2);
+        }
+    }
+    return best;
+}
+
+/**
  * What was said in a piece of audio, or nothing where it could not be worked out.
  *
- * `language` is a hint, not an instruction: left out, whisper decides, which is what a chat that
- * switches language between messages needs.
+ * `language` is the language it is spoken in, where that is known: left out, it is worked out from the
+ * audio (spokenLanguage), which is what a chat that switches language between messages needs.
  */
 export async function transcribe(audio: ArrayBuffer, language?: string): Promise<string | undefined> {
     const letGo = holdTranscriber();
     try {
         const [engine, samples] = await Promise.all([getTranscriber(), samplesOf(audio)]);
+        language ??= await spokenLanguage(engine, samples);
         const result = await engine(samples, {
             // Long audio in half-minute pieces with a little overlap, which is how whisper is meant to
             // be given anything longer than it can hold at once.
