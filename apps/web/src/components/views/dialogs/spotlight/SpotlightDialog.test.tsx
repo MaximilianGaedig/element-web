@@ -533,6 +533,25 @@ describe("Spotlight Dialog", () => {
         });
     });
 
+    it("finds the chat with someone whose exact Matrix ID is typed, though the directory lists no one", async () => {
+        // A bridge's bot answers a profile lookup but no directory search, and the room's
+        // name does not fuzzy-match the ID - typing the ID used to find nothing at all.
+        vi.mocked(mockedClient.getProfileInfo).mockResolvedValue({
+            displayname: "Alice",
+            avatar_url: undefined,
+        });
+        render(<SpotlightDialog initialText={testDMUserId} onFinished={() => null} />);
+        // profile lookup and directory search are debounced
+        vi.advanceTimersByTime(200);
+        await flushPromisesWithFakeTimers();
+
+        await waitFor(() => {
+            const content = document.querySelector("#mx_SpotlightDialog_content")!;
+            const options = content.querySelectorAll("li.mx_SpotlightDialog_option");
+            expect(options[0]).toHaveTextContent(testDM.name);
+        });
+    });
+
     it("don't sort the order of users sent by the server", async () => {
         const serverList = [
             { user_id: "@user2:server", display_name: "User Beta", avatar_url: "mxc://2/avatar" },

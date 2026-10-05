@@ -223,6 +223,7 @@ const toRoomResult = (room: Room): IRoomResult => {
     if (otherUserId) {
         const otherMembers = room.getMembers().filter((it) => it.userId !== myUserId);
         const query = [
+            otherUserId.toLowerCase(),
             ...otherMembers.map((it) => it.name.toLowerCase()),
             ...otherMembers.map((it) => it.userId.toLowerCase()),
         ].filter(Boolean);
