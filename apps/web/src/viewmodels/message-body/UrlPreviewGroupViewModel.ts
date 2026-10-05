@@ -36,6 +36,27 @@ function dedupeBundledPreviews<T extends { matched_url?: unknown }>(bundle: read
     });
 }
 
+/**
+ * The bundle with a `matched_url` on every entry that can have one. MSC4095 requires it, but Beeper's original
+ * format - which the mautrix bridges still send - only names the page in `og:url`, and every such entry was
+ * dropped: a Messenger link arrived with its preview bundled and showed none. The page's URL stands in when the
+ * text contains it, and otherwise the text's only link does for a bundle of one.
+ */
+function withMatchedUrls<T extends { "matched_url"?: unknown; "og:url"?: unknown }>(
+    bundle: readonly T[],
+    body: unknown,
+): T[] {
+    const text = typeof body === "string" ? body : "";
+    const links = text.match(/https?:\/\/\S+/g) ?? [];
+    return bundle.map((entry) => {
+        if (typeof entry?.matched_url === "string") return entry;
+        const ogUrl = entry?.["og:url"];
+        if (typeof ogUrl === "string" && text.includes(ogUrl)) return { ...entry, matched_url: ogUrl };
+        if (bundle.length === 1 && links.length === 1) return { ...entry, matched_url: links[0] };
+        return entry;
+    });
+}
+
 export enum PreviewVisibility {
     /** Preview is entirely hidden and cannot be changed. */
     Hidden,
@@ -224,7 +245,7 @@ export class UrlPreviewGroupViewModel
                 const allowServerFallback = urlPreviewKind !== "bundledonly";
                 previews = (
                     await Promise.all(
-                        dedupeBundledPreviews(bundledPreviews)
+                        dedupeBundledPreviews(withMatchedUrls(bundledPreviews, messageContent.body))
                             .slice(0, this.limitPreviews ? MAX_PREVIEWS_WHEN_LIMITED : undefined)
                             .map((preview) =>
                                 this.fetcher
@@ -261,7 +282,9 @@ export class UrlPreviewGroupViewModel
         const previewBundle = this.props.mxEvent.getContent<RoomMessageEventContent>()["com.beeper.linkpreviews"];
 
         if (urlPreviewBundleEnabled && Array.isArray(previewBundle)) {
-            this.links = dedupeBundledPreviews(previewBundle).map((entry) => entry.matched_url);
+            this.links = dedupeBundledPreviews(
+                withMatchedUrls(previewBundle, this.props.mxEvent.getContent().body),
+            ).map((entry) => entry.matched_url);
             return this.computeSnapshot();
         }
 

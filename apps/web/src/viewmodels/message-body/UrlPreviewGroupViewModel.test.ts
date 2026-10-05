@@ -317,6 +317,25 @@ describe("UrlPreviewGroupViewModel", () => {
             expect(client.getUrlPreview).not.toHaveBeenCalled();
         });
 
+        /* A Messenger link arrived with its preview bundled the way mautrix sends it, and showed none. */
+        it("should render a bundled preview that names its page only in og:url, as the bridges send it", async () => {
+            const { matched_url: url, ...withoutMatchedUrl } = BUNDLE_PREVIEW_ONE;
+            const { vm, client } = getViewModel({
+                urlPreviewKind: "preferbundled",
+                content: {
+                    msgtype: MsgType.Text,
+                    body: url,
+                    [BUNDLED_LINK_PREVIEWS]: [{ ...withoutMatchedUrl, "og:url": url }],
+                },
+            });
+            const msg = document.createElement("div");
+            msg.innerHTML = `<a href="${url}">${url}</a>`;
+            await vm.updateEventElement(msg);
+
+            expect(vm.getSnapshot().previews).toMatchObject([{ link: url, title: "Bundled one" }]);
+            expect(client.getUrlPreview).not.toHaveBeenCalled();
+        });
+
         // Reply quotes, the thread list, ... create the view model with visible=false.
         it("should not render bundled previews while previews are hidden", async () => {
             const { vm } = getViewModel({
