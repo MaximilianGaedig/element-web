@@ -91,6 +91,17 @@ const PREFETCH_SCREENS = 2;
 const REVEAL_TIMEOUT_MS = 1000;
 
 /**
+ * TanStack invokes measureElement from the React ref callback before a
+ * ResizeObserver entry exists. Measure that newly mounted row once; subsequent
+ * measurements use the observer's border box without another layout read.
+ */
+const measureTimelineRow = (element: Element, entry: ResizeObserverEntry | undefined): number => {
+    if (entry) return Math.round(entry.borderBoxSize?.[0]?.blockSize ?? entry.contentRect.height);
+
+    return element.getBoundingClientRect().height;
+};
+
+/**
  * How long the floating date keeps showing after the last scroll event, in milliseconds.
  *
  * Telegram Web's value: its timeline carries an `is-scrolling` class that it drops 1350ms
@@ -264,6 +275,10 @@ export function TimelineView({
             if (phaseRef.current !== "live" || snapshotRef.current.pendingAnchor !== null) return;
             const itemCount = itemsRef.current.length;
             const visibleRange = v.range;
+            // TanStack memoizes the visible range, but each getter still materializes its
+            // virtual item array. This callback uses the same rows for read tracking,
+            // sticky-date selection, and edge prefetch, so materialize them once.
+            const rendered = v.getVirtualItems();
 
             // Which rows are on screen, given as positions in the items array; and the last of them
             // whose end is in view, above anything floating over the end of the list.
@@ -271,7 +286,7 @@ export function TimelineView({
                 const top = (v.scrollOffset ?? 0) + paddingStartRef.current;
                 const bottom = (v.scrollOffset ?? 0) + (v.scrollRect?.height ?? 0) - paddingEndRef.current;
                 let readableEnd = -1;
-                for (const row of v.getVirtualItems()) {
+                for (const row of rendered) {
                     if (row.end > top && row.end <= bottom + 1 && row.index > readableEnd) readableEnd = row.index;
                 }
                 if (
@@ -318,7 +333,6 @@ export function TimelineView({
             // Telegram, where each day's date is sticky within its own day, the next day's
             // separator pushes the pinned date up and out rather than replacing it on the spot.
             const startIndex = visibleRange?.startIndex ?? 0;
-            const rendered = v.getVirtualItems();
             const box = stickyDateRef.current?.box();
             const edge = scrollOffset + (box?.top ?? 0);
             let pinned = false;
@@ -354,9 +368,8 @@ export function TimelineView({
             // reader gets there - within PREFETCH_SCREENS of it - so the history is in place by the
             // time they scroll up to it, as in Telegram, rather than loading once they have hit the
             // top. Either end also counts once its very row is among those rendered.
-            const renderedItems = v.getVirtualItems();
-            const firstRenderedIndex = renderedItems.length ? renderedItems[0].index : -1;
-            const lastRenderedIndex = renderedItems.length ? renderedItems[renderedItems.length - 1].index : -1;
+            const firstRenderedIndex = rendered.length ? rendered[0].index : -1;
+            const lastRenderedIndex = rendered.length ? rendered[rendered.length - 1].index : -1;
             const prefetch = viewportHeight * PREFETCH_SCREENS;
             const nearStart = firstRenderedIndex === 0 || (viewportHeight > 0 && scrollOffset < prefetch);
             if (nearStart) {
@@ -418,6 +431,7 @@ export function TimelineView({
         // row as it renders and remembers the result by key, reusing it as rows are added,
         // trimmed or reloaded, so we do not need a size cache of our own.
         estimateSize: () => ESTIMATED_ITEM_HEIGHT,
+        measureElement: measureTimelineRow,
         getItemKey,
         // Room kept clear for whatever floats over the list; part of its extent, so scrolling to
         // the bottom really reaches the bottom.
@@ -444,6 +458,9 @@ export function TimelineView({
         // Because of this, never set transform or height on a row in JSX below — it would
         // fight with what TanStack writes.
         directDomUpdates: true,
+        // The list's DOM height is exactly the virtualizer's measured extent. Use that
+        // cached value for scroll clamping rather than repeatedly forcing scrollHeight.
+        useVirtualScrollExtent: true,
         // Called on every TanStack update; we use it to report what is on screen upwards.
         onChange: reportVisibleState,
     });

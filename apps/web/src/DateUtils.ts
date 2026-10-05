@@ -19,12 +19,38 @@ export const HOUR_MS = MINUTE_MS * 60;
 export const DAY_MS = HOUR_MS * 24;
 
 /**
+ * Intl.DateTimeFormat is expensive to construct and date formatting runs once per visible message.
+ * Keep a small LRU keyed by locale and options so repeated timeline rows share the formatter.
+ */
+const DATE_TIME_FORMATTER_CACHE_SIZE = 32;
+const dateTimeFormatters = new Map<string, Intl.DateTimeFormat>();
+
+function getDateTimeFormatter(locale: string, options: Intl.DateTimeFormatOptions): Intl.DateTimeFormat {
+    const key = `${locale}:${JSON.stringify(options)}`;
+    let formatter = dateTimeFormatters.get(key);
+    if (formatter) {
+        // Refresh the insertion order to keep this a small LRU across locale/timezone changes.
+        dateTimeFormatters.delete(key);
+        dateTimeFormatters.set(key, formatter);
+        return formatter;
+    }
+
+    formatter = new Intl.DateTimeFormat(locale, options);
+    if (dateTimeFormatters.size >= DATE_TIME_FORMATTER_CACHE_SIZE) {
+        const oldest = dateTimeFormatters.keys().next().value;
+        if (oldest !== undefined) dateTimeFormatters.delete(oldest);
+    }
+    dateTimeFormatters.set(key, formatter);
+    return formatter;
+}
+
+/**
  * Returns array of 7 weekday names, from Sunday to Saturday, internationalised to the user's language.
  * @param weekday - format desired "short" | "long" | "narrow"
  */
 export function getDaysArray(weekday: Intl.DateTimeFormatOptions["weekday"] = "short"): string[] {
     const sunday = 1672574400000; // 2023-01-01 12:00 UTC
-    const dateTimeFormat = new Intl.DateTimeFormat(getUserLanguage(), { weekday, timeZone: "UTC" });
+    const dateTimeFormat = getDateTimeFormatter(getUserLanguage(), { weekday, timeZone: "UTC" });
     return [...Array(7).keys()].map((day) => dateTimeFormat.format(sunday + day * DAY_MS));
 }
 
@@ -57,7 +83,7 @@ export function formatDate(date: Date, showTwelveHour = false, locale?: string):
         return formatTime(date, showTwelveHour, _locale);
     } else if (now.getTime() - date.getTime() < 6 * DAY_MS) {
         // Time is within the last 6 days (or in the future)
-        return new Intl.DateTimeFormat(_locale, {
+        return getDateTimeFormatter(_locale, {
             ...getTwelveHourOptions(showTwelveHour),
             weekday: "short",
             hour: "numeric",
@@ -65,7 +91,7 @@ export function formatDate(date: Date, showTwelveHour = false, locale?: string):
             timeZone: getUserTimezone(),
         }).format(date);
     } else if (now.getFullYear() === date.getFullYear()) {
-        return new Intl.DateTimeFormat(_locale, {
+        return getDateTimeFormatter(_locale, {
             ...getTwelveHourOptions(showTwelveHour),
             weekday: "short",
             month: "short",
@@ -86,7 +112,7 @@ export function formatDate(date: Date, showTwelveHour = false, locale?: string):
  * @param locale - the locale string to use, in BCP 47 format, defaulting to user's selected application locale
  */
 export function formatFullDateNoTime(date: Date, locale?: string): string {
-    return new Intl.DateTimeFormat(locale ?? getUserLanguage(), {
+    return getDateTimeFormatter(locale ?? getUserLanguage(), {
         weekday: "short",
         month: "short",
         day: "numeric",
@@ -106,7 +132,7 @@ export function formatFullDateNoTime(date: Date, locale?: string): string {
  * @param locale - the locale string to use, in BCP 47 format, defaulting to user's selected application locale
  */
 export function formatFullDate(date: Date, showTwelveHour = false, showSeconds = true, locale?: string): string {
-    return new Intl.DateTimeFormat(locale ?? getUserLanguage(), {
+    return getDateTimeFormatter(locale ?? getUserLanguage(), {
         ...getTwelveHourOptions(showTwelveHour),
         weekday: "short",
         month: "short",
@@ -130,7 +156,7 @@ export function formatFullDate(date: Date, showTwelveHour = false, showSeconds =
  * @param locale - the locale string to use, in BCP 47 format, defaulting to user's selected application locale
  */
 export function formatFullTime(date: Date, showTwelveHour = false, locale?: string): string {
-    return new Intl.DateTimeFormat(locale ?? getUserLanguage(), {
+    return getDateTimeFormatter(locale ?? getUserLanguage(), {
         ...getTwelveHourOptions(showTwelveHour),
         hour: "numeric",
         minute: "2-digit",
@@ -150,7 +176,7 @@ export function formatFullTime(date: Date, showTwelveHour = false, locale?: stri
  * @param locale - the locale string to use, in BCP 47 format, defaulting to user's selected application locale
  */
 export function formatTime(date: Date, showTwelveHour = false, locale?: string): string {
-    return new Intl.DateTimeFormat(locale ?? getUserLanguage(), {
+    return getDateTimeFormatter(locale ?? getUserLanguage(), {
         ...getTwelveHourOptions(showTwelveHour),
         hour: "numeric",
         minute: "2-digit",
@@ -233,7 +259,7 @@ export function formatFullDateNoDayISO(date: Date): string {
  * @param locale - the locale string to use, in BCP 47 format, defaulting to user's selected application locale
  */
 export function formatFullDateNoDayNoTime(date: Date, locale?: string): string {
-    return new Intl.DateTimeFormat(locale ?? getUserLanguage(), {
+    return getDateTimeFormatter(locale ?? getUserLanguage(), {
         year: "numeric",
         month: "numeric",
         day: "numeric",
@@ -255,7 +281,7 @@ export function formatRelativeTime(date: Date, showTwelveHour = false, locale?: 
     if (withinCurrentDay(date, now)) {
         return formatTime(date, showTwelveHour, _locale);
     }
-    return new Intl.DateTimeFormat(_locale, {
+    return getDateTimeFormatter(_locale, {
         month: "short",
         day: "numeric",
         year: withinCurrentYear(date, now) ? undefined : "numeric",
@@ -314,7 +340,7 @@ export function formatPreciseDuration(durationMs: number): string {
  * @returns {string} formattedDate
  */
 export const formatLocalDateShort = (timestamp: number, locale?: string): string =>
-    new Intl.DateTimeFormat(locale ?? getUserLanguage(), {
+    getDateTimeFormatter(locale ?? getUserLanguage(), {
         day: "2-digit",
         month: "2-digit",
         year: "2-digit",
