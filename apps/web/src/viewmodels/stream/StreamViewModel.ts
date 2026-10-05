@@ -11,6 +11,7 @@ import {
     EventType,
     KnownMembership,
     MatrixEventEvent,
+    ReceiptType,
     RelationType,
     RoomEvent,
     type MatrixClient,
@@ -28,6 +29,9 @@ import {
 } from "@element-hq/web-shared-components";
 
 import { wantsDateSeparator } from "../../DateUtils";
+import SettingsStore from "../../settings/SettingsStore";
+import UserActivity from "../../UserActivity";
+import Timer from "../../utils/Timer";
 import { isRoomVisible } from "../../stores/room-list-v3/isRoomVisible";
 import { DefaultTagID } from "../../stores/room-list-v3/skip-list/tag";
 import { mergeStream, roomsToPaginate, streamBound, type StreamSource } from "./streamMerge";
@@ -56,6 +60,13 @@ const MAX_ROUNDS = 6;
 const MAX_AUTO_FILLS = 2;
 /** How long changes are gathered before the list is rebuilt: one sync touches many rooms at once. */
 const REBUILD_DELAY_MS = 16;
+
+/**
+ * How long a message has to stay fully on screen, with the list at rest, before its room counts as read up to it.
+ * Longer than a chat's own (200 ms there): here the reader is skimming many conversations, and a bridged contact
+ * is told "seen" by it.
+ */
+const READ_DWELL_MS = 1000;
 
 const POLL_START_TYPES = new Set(["m.poll.start", "org.matrix.msc3381.poll.start"]);
 
@@ -104,8 +115,9 @@ export interface StreamViewModelProps {
  * the list from reaching further back (see streamMerge). The pages land in the room itself, so opening the
  * room afterwards finds them already there.
  *
- * Reading the Stream does not mark rooms as read and sends no receipts: a message scrolled past here has
- * not been answered, and a bridged contact must not be told it was seen.
+ * Reading here marks rooms as read the way reading a chat does, but only for what was actually read: a room's
+ * receipt moves to its last message that stayed fully on screen while the list was at rest (READ_DWELL_MS), so
+ * scrolling past a conversation does not tell its people it was seen.
  */
 export class StreamViewModel
     extends BaseViewModel<TimelineViewSnapshot, StreamViewModelProps>
@@ -126,6 +138,13 @@ export class StreamViewModel
     private isAtBottom = true;
     /** The top of the list is on screen: the view does not ask again while it stays there, so loading carries on. */
     private atTop = false;
+    /** Per room, the last message fully on screen in the latest visible range: what would be marked read. */
+    private readable = new Map<string, MatrixEvent>();
+    private readTimer: number | null = null;
+    /** The last visible range the view reported: start, end, and the last row fully on screen. */
+    private lastRange: [number, number, number] | null = null;
+    /** Waiting for the reader to be back before marking anything read. */
+    private awayTimer: Timer | null = null;
     /** Loads in a row, since the reader last reached the top, that brought no messages. */
     private emptyLoads = 0;
     /** The newest message's time when the reader left the bottom; what arrives after it counts as new. */
@@ -157,6 +176,8 @@ export class StreamViewModel
         listen(MatrixEventEvent.Decrypted, this.onDecrypted);
         this.disposables.track(() => {
             if (this.rebuildTimer !== null) window.clearTimeout(this.rebuildTimer);
+            if (this.readTimer !== null) window.clearTimeout(this.readTimer);
+            this.awayTimer?.abort();
         });
         /*
          * The first rows are published just after the view has mounted rather than in it, as the room timeline's
@@ -418,14 +439,77 @@ export class StreamViewModel
     public onEndReached = (): void => {};
 
     public onAnchorReached = (): void => {
+        if (this.snapshot.current.pendingAnchor === null) return;
         this.snapshot.merge({ pendingAnchor: null });
+        // What is on screen once the list is placed starts being read now.
+        if (this.lastRange) this.onVisibleRangeChanged(...this.lastRange);
     };
 
-    /** No read receipts from the Stream (see the class comment); only whether the top of the list is showing. */
-    public onVisibleRangeChanged = (startIndex: number): void => {
+    /**
+     * Tracks whether the top of the list is showing, and what is read: every range change restarts the wait, so
+     * only what stays fully on screen while the list is at rest counts.
+     */
+    public onVisibleRangeChanged = (startIndex: number, endIndex: number, readableEndIndex = endIndex): void => {
         // The first row may be the loading spinner, the second the first message.
         this.atTop = startIndex <= 1;
+        this.lastRange = [startIndex, endIndex, readableEndIndex];
+        // Still being placed, not read: the view does not report again once it is, so onAnchorReached does.
+        if (this.snapshot.current.pendingAnchor !== null) return;
+        const items = this.snapshot.current.items;
+        const readable = new Map<string, MatrixEvent>();
+        for (let i = Math.max(0, startIndex); i <= readableEndIndex && i < items.length; i++) {
+            const row = items[i].kind === "event" ? this.rows.get(items[i].key) : undefined;
+            if (row) readable.set(row.room.roomId, row.event);
+        }
+        this.readable = readable;
+        if (this.readTimer !== null) window.clearTimeout(this.readTimer);
+        this.readTimer = window.setTimeout(() => {
+            this.readTimer = null;
+            this.markRead();
+        }, READ_DWELL_MS);
     };
+
+    /** Moves each room's receipt to what was read in it, if that is further on than where it is. */
+    private markRead(): void {
+        if (this.isDisposed || this.readable.size === 0) return;
+        // Nothing is read by someone who is not there: a message arriving at the end while they are away is on
+        // screen and unread. Marked once they are back, as a chat does.
+        if (!UserActivity.sharedInstance().userActiveRecently()) {
+            if (this.awayTimer) return;
+            const timer = new Timer(READ_DWELL_MS);
+            this.awayTimer = timer;
+            UserActivity.sharedInstance().timeWhileActiveRecently(timer);
+            timer.finished().then(
+                () => {
+                    if (this.awayTimer !== timer) return;
+                    this.awayTimer = null;
+                    this.markRead();
+                },
+                () => {
+                    if (this.awayTimer === timer) this.awayTimer = null;
+                },
+            );
+            return;
+        }
+        const me = this.props.client.getSafeUserId();
+        for (const [roomId, read] of this.readable) {
+            const room = this.props.client.getRoom(roomId);
+            if (!room) continue;
+            const live = room.getLiveTimeline().getEvents();
+            const readAt = live.indexOf(read);
+            if (readAt < 0) continue;
+            const target = receiptTarget(live, readAt);
+            // Never back: the server takes any receipt as the room read up to it.
+            const receiptAt = live.findIndex((ev) => ev.getId() === room.getEventReadUpTo(me, true));
+            if (receiptAt >= live.indexOf(target)) continue;
+            const type = SettingsStore.getValue("sendReadReceipts", roomId)
+                ? ReceiptType.Read
+                : ReceiptType.ReadPrivate;
+            this.props.client.sendReadReceipt(target, type).catch((e) => {
+                logger.warn(`Stream: could not mark ${roomId} read`, e);
+            });
+        }
+    }
 
     public onAtBottomStateChange = (atBottom: boolean): void => {
         this.isAtBottom = atBottom;
@@ -452,6 +536,21 @@ export class StreamViewModel
     public onMarkAllAsRead = (): void => {};
     public onJumpToUnreadMention = (): void => {};
     public onJumpToUnreadReaction = (): void => {};
+}
+
+/**
+ * The event a room's receipt goes to when it is read up to `live[readAt]`: that message, or, when it is the
+ * room's last message, the room's newest event. What follows it is then only what the Stream does not show (a
+ * bridge's status, joins), which can still count as unread on the server and would leave the room unread for
+ * good; the room's own timeline does the same.
+ */
+function receiptTarget(live: MatrixEvent[], readAt: number): MatrixEvent {
+    for (let i = readAt + 1; i < live.length; i++) if (isStreamMessage(live[i])) return live[readAt];
+    for (let i = live.length - 1; i > readAt; i--) {
+        const id = live[i].getId();
+        if (id && !id.startsWith("~") && live[i].status === null) return live[i];
+    }
+    return live[readAt];
 }
 
 /** Below this a bump_stamp is a position in the server's stream, not a time: 2001-09-09 in milliseconds. */

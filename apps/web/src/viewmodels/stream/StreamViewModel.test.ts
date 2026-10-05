@@ -20,6 +20,8 @@ import {
 } from "matrix-js-sdk/src/matrix";
 import { createTestClient, mkEvent, mkMessage } from "test-utils";
 
+import SettingsStore from "../../settings/SettingsStore";
+import UserActivity from "../../UserActivity";
 import { StreamViewModel } from "./StreamViewModel";
 
 const ME = "@userId:matrix.org";
@@ -53,6 +55,19 @@ describe("StreamViewModel", () => {
         return model;
     }
 
+    /** Reports every row as fully on screen, as the view does once it has scrolled. */
+    function showAll(model: StreamViewModel): void {
+        const last = model.getSnapshot().items.length - 1;
+        model.onVisibleRangeChanged(0, last, last);
+    }
+
+    /** The receipts sent, as "room:ts:type". */
+    function receipts(): string[] {
+        return vi
+            .mocked(client.sendReadReceipt)
+            .mock.calls.map(([event, type]) => `${event!.getRoomId()}:${event!.getTs()}:${type}`);
+    }
+
     /** The event rows as "room:ts", with a | before each run's first message. */
     function rows(model: StreamViewModel): string[] {
         return model
@@ -66,6 +81,7 @@ describe("StreamViewModel", () => {
 
     beforeEach(() => {
         vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+        vi.spyOn(UserActivity.sharedInstance(), "userActiveRecently").mockReturnValue(true);
         client = createTestClient();
         rooms = [];
         vi.mocked(client.getRooms).mockImplementation(() => rooms);
@@ -76,6 +92,7 @@ describe("StreamViewModel", () => {
         vm?.dispose();
         vm = undefined;
         vi.useRealTimers();
+        vi.restoreAllMocks();
     });
 
     it("merges the rooms' messages by time, each run under its room", () => {
@@ -170,7 +187,7 @@ describe("StreamViewModel", () => {
         vm = open();
         expect(rows(vm).at(0)).toBe("|!busy:x:5000");
 
-        vm.onVisibleRangeChanged(0);
+        vm.onVisibleRangeChanged(0, 5);
         vm.onStartReached();
 
         await vi.waitFor(() => {
@@ -303,5 +320,119 @@ describe("StreamViewModel", () => {
         vi.advanceTimersByTime(16);
 
         expect(vm.getSnapshot().items.find((i) => i.kind === "event")).toBe(before);
+    });
+
+    describe("read receipts", () => {
+        it("marks each room read up to its last message that stayed fully on screen with the list at rest", () => {
+            const a = makeRoom("!a:x");
+            const b = makeRoom("!b:x");
+            addLive(a, message(a, 1000), message(a, 3000));
+            addLive(b, message(b, 2000), message(b, 4000));
+            vm = open();
+            vm.onAnchorReached();
+
+            // Rows 0-4: the date, a 1000, b 2000, a 3000, b 4000. Only up to a 3000 is fully on screen.
+            vm.onVisibleRangeChanged(0, 4, 3);
+            vi.advanceTimersByTime(900);
+            expect(receipts()).toEqual([]);
+
+            vi.advanceTimersByTime(100);
+            expect(receipts()).toEqual(["!a:x:3000:m.read", "!b:x:2000:m.read"]);
+        });
+
+        it("starts reading what was on screen when the list was placed", () => {
+            const a = makeRoom("!a:x");
+            addLive(a, message(a, 1000));
+            vm = open();
+
+            // Reported while the view is still placing the first rows; it does not report again afterwards.
+            showAll(vm);
+            vi.advanceTimersByTime(1000);
+            expect(receipts()).toEqual([]);
+
+            vm.onAnchorReached();
+            vi.advanceTimersByTime(1000);
+            expect(receipts()).toEqual(["!a:x:1000:m.read"]);
+        });
+
+        it("marks nothing read while the list is moving", () => {
+            const a = makeRoom("!a:x");
+            addLive(a, message(a, 1000), message(a, 2000));
+            vm = open();
+            vm.onAnchorReached();
+
+            for (let i = 0; i < 5; i++) {
+                showAll(vm);
+                vi.advanceTimersByTime(500);
+            }
+            expect(receipts()).toEqual([]);
+        });
+
+        it("does not move a receipt back", () => {
+            const a = makeRoom("!a:x");
+            const first = message(a, 1000);
+            const later = message(a, 2000);
+            addLive(a, first, later);
+            vi.spyOn(a, "getEventReadUpTo").mockReturnValue(later.getId()!);
+            vm = open();
+            vm.onAnchorReached();
+
+            vm.onVisibleRangeChanged(0, 1, 1); // only the first message
+            vi.advanceTimersByTime(1000);
+
+            expect(receipts()).toEqual([]);
+        });
+
+        it("waits for the reader to be back before marking anything read", () => {
+            vi.mocked(UserActivity.sharedInstance().userActiveRecently).mockReturnValue(false);
+            const timeWhileActive = vi.spyOn(UserActivity.sharedInstance(), "timeWhileActiveRecently");
+            const a = makeRoom("!a:x");
+            addLive(a, message(a, 1000));
+            vm = open();
+            vm.onAnchorReached();
+
+            showAll(vm);
+            vi.advanceTimersByTime(1000);
+
+            expect(receipts()).toEqual([]);
+            expect(timeWhileActive).toHaveBeenCalled();
+        });
+
+        it("reads past what the Stream does not show after a room's last message", () => {
+            const a = makeRoom("!a:x");
+            const status = mkEvent({
+                type: "com.example.bridge_status",
+                room: a.roomId,
+                user: ALICE,
+                ts: 2000,
+                event: true,
+                content: {},
+            });
+            addLive(a, message(a, 1000), status);
+            vm = open();
+            vm.onAnchorReached();
+
+            showAll(vm);
+            vi.advanceTimersByTime(1000);
+
+            expect(receipts()).toEqual(["!a:x:2000:m.read"]);
+        });
+
+        it("sends a private receipt when the reader does not send read receipts", () => {
+            const getValue = SettingsStore.getValue.bind(SettingsStore);
+            vi.spyOn(SettingsStore, "getValue").mockImplementation(((name: string, ...rest: unknown[]) =>
+                name === "sendReadReceipts"
+                    ? false
+                    : (getValue as (...a: unknown[]) => unknown)(name, ...rest)) as typeof SettingsStore.getValue);
+            const a = makeRoom("!a:x");
+            addLive(a, message(a, 1000));
+            vm = open();
+            vm.onAnchorReached();
+
+            showAll(vm);
+            vi.advanceTimersByTime(1000);
+
+            expect(receipts()).toEqual(["!a:x:1000:m.read.private"]);
+        });
     });
 });

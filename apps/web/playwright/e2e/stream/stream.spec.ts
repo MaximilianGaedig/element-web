@@ -118,4 +118,37 @@ test.describe("Stream", () => {
             bodies.findIndex((body) => body.startsWith("busy")),
         );
     });
+
+    test.describe("read receipts", () => {
+        test.use({ botCreateOpts: { displayName: "BotBob", autoAcceptInvites: true } });
+
+        test("marks a chat read once its message has been on screen with the list at rest", async ({
+            page,
+            app,
+            user,
+            bot,
+        }) => {
+            const garden = await app.client.createRoom({ name: "Garden" });
+            await app.client.inviteUser(garden, bot.credentials!.userId);
+            await bot.joinRoom(garden);
+            const { event_id: said } = await bot.sendMessage(garden, "the tomatoes are ripe");
+
+            await dismissToasts(page);
+            await openStream(page);
+            await expect(
+                page.locator(".mx_StreamPage .mx_EventTile", { hasText: "the tomatoes are ripe" }),
+            ).toBeVisible();
+
+            // The reader's receipt in the room moves to the message read in the Stream.
+            await expect
+                .poll(() =>
+                    page.evaluate(
+                        ({ roomId, userId }) =>
+                            window.mxMatrixClientPeg.get()!.getRoom(roomId)!.getEventReadUpTo(userId, true),
+                        { roomId: garden, userId: user.userId },
+                    ),
+                )
+                .toBe(said);
+        });
+    });
 });
