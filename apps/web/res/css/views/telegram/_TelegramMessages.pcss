@@ -33,6 +33,26 @@ Please see LICENSE files in the repository root for full details.
     --event-tile-bubble-hover-background: transparent;
 }
 
+/*
+ * A selected message (the one a permalink or a search result jumped to) is flashed, as Telegram does, and
+ * then settles. The shared EventTileView keeps its full-row highlight for as long as the message stays
+ * selected, which in a bubble chat is a grey band across the whole column that never goes away. Its class
+ * is hashed by the CSS module, so it is matched by name.
+ */
+@keyframes mx_TgSelectedFlash {
+    from {
+        background: var(--event-tile-bubble-selected-background);
+    }
+
+    to {
+        background: transparent;
+    }
+}
+
+[data-bubble-timeline="true"] .mx_EventTile[class*="stateSelected"]::before {
+    animation: mx_TgSelectedFlash 2s ease-out forwards;
+}
+
 [data-bubble-timeline="true"] .mx_EventTile[data-testid="event-tile"].mx_EventTile_tgTime {
     --TgTime-text-size: calc(var(--cpd-font-size-body-md) - 4px);
     --TgTime-status-size: calc(var(--cpd-font-size-body-md) + 3px);
