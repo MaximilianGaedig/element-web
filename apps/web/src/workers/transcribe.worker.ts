@@ -14,7 +14,9 @@ Please see LICENSE files in the repository root for full details.
  * memory in one go.
  */
 
-import { pipeline } from "@huggingface/transformers";
+import { pipeline, Tensor } from "@huggingface/transformers";
+
+import { detectLanguage, type LanguageDetector } from "../utils/detect/whisperLanguage";
 
 /** Small enough to fetch on a phone, good enough to trust with a name or a number. */
 const MODEL = "onnx-community/whisper-base";
@@ -28,7 +30,8 @@ export interface Request {
 
 export type Response = { seq: number; text: string } | { seq: number; error: string };
 
-type Transcriber = (audio: Float32Array, options?: object) => Promise<{ text: string } | Array<{ text: string }>>;
+type Transcriber = ((audio: Float32Array, options?: object) => Promise<{ text: string } | Array<{ text: string }>>) &
+    Pick<LanguageDetector, "processor" | "model">;
 
 const ctx: Worker = self as any;
 
@@ -49,11 +52,12 @@ async function bestDevice(): Promise<"webgpu" | "wasm"> {
 function getTranscriber(): Promise<Transcriber> {
     const loading = (transcriber ??= (async () => {
         const device = await bestDevice();
-        return await pipeline("automatic-speech-recognition", MODEL, {
+        // The library's own types are far wider (and null where ours are not): this is the part used here.
+        return (await pipeline("automatic-speech-recognition", MODEL, {
             // Quantised: a quarter of the size, and no worse at speech at this size.
             dtype: device === "webgpu" ? "fp16" : "q8",
             device,
-        });
+        })) as unknown as Transcriber;
     })());
     // A model that could not be fetched (offline, the first time) is not the model: without this the
     // failure is what every later request is handed until the worker is replaced.
@@ -63,16 +67,36 @@ function getTranscriber(): Promise<Transcriber> {
     return loading;
 }
 
+/**
+ * The language to ask for when nobody said: transformers.js would otherwise force English, which turns
+ * Polish or German speech into English-sounding nonsense. A failed guess is left to that default.
+ */
+async function detect(engine: Transcriber, samples: Float32Array): Promise<string | undefined> {
+    try {
+        return await detectLanguage(
+            {
+                processor: engine.processor,
+                model: engine.model,
+                makePrompt: (token) => new Tensor("int64", BigInt64Array.from([BigInt(token)]), [1, 1]),
+            },
+            samples,
+        );
+    } catch {
+        return undefined;
+    }
+}
+
 ctx.addEventListener("message", async (event: MessageEvent<Request>): Promise<void> => {
     const { seq, samples, language } = event.data;
     try {
         const engine = await getTranscriber();
+        const spoken = language ?? (await detect(engine, samples));
         const result = await engine(samples, {
             // Long audio in half-minute pieces with a little overlap, which is how whisper is meant to
             // be given anything longer than it can hold at once.
             chunk_length_s: 30,
             stride_length_s: 5,
-            ...(language ? { language } : {}),
+            ...(spoken ? { language: spoken } : {}),
         });
         const text = (Array.isArray(result) ? result.map((part) => part.text).join(" ") : result.text).trim();
         ctx.postMessage({ seq, text } satisfies Response);

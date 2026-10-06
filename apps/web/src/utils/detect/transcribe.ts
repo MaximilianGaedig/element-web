@@ -128,8 +128,8 @@ async function samplesOf(audio: ArrayBuffer): Promise<Float32Array> {
 /**
  * What was said in a piece of audio, or nothing where it could not be worked out.
  *
- * `language` is a hint, not an instruction: left out, whisper decides, which is what a chat that
- * switches language between messages needs.
+ * `language` is a hint, not an instruction: left out, the worker works it out from the audio itself
+ * (whisperLanguage.ts), which is what a chat that switches language between messages needs.
  */
 export async function transcribe(audio: ArrayBuffer, language?: string): Promise<string | undefined> {
     const letGo = holdTranscriber();
