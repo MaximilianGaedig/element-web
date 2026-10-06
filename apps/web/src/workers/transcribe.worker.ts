@@ -18,16 +18,17 @@ import { pipeline, Tensor } from "@huggingface/transformers";
 
 import { detectLanguage, type LanguageDetector } from "../utils/detect/whisperLanguage";
 
-/** Small enough to fetch on a phone, good enough to trust with a name or a number. */
-const MODEL = "onnx-community/whisper-base";
+/**
+ * Small rather than base: base turned a Polish voice message into nonsense, small reads it. About a
+ * quarter of a gigabyte to fetch once (the browser keeps it), and it is let go again when idle.
+ */
+const MODEL = "onnx-community/whisper-small";
 
 export interface Request {
     seq: number;
     /** Mono, 16 kHz samples. */
     samples: Float32Array;
     language?: string;
-    /** The languages the speaker could be using, which a guessed language is chosen among. */
-    among?: string[];
 }
 
 export type Response = { seq: number; text: string } | { seq: number; error: string };
@@ -73,7 +74,7 @@ function getTranscriber(): Promise<Transcriber> {
  * The language to ask for when nobody said: transformers.js would otherwise force English, which turns
  * Polish or German speech into English-sounding nonsense. A failed guess is left to that default.
  */
-async function detect(engine: Transcriber, samples: Float32Array, among?: string[]): Promise<string | undefined> {
+async function detect(engine: Transcriber, samples: Float32Array): Promise<string | undefined> {
     try {
         return await detectLanguage(
             {
@@ -82,7 +83,6 @@ async function detect(engine: Transcriber, samples: Float32Array, among?: string
                 makePrompt: (token) => new Tensor("int64", BigInt64Array.from([BigInt(token)]), [1, 1]),
             },
             samples,
-            among,
         );
     } catch {
         return undefined;
@@ -90,10 +90,10 @@ async function detect(engine: Transcriber, samples: Float32Array, among?: string
 }
 
 ctx.addEventListener("message", async (event: MessageEvent<Request>): Promise<void> => {
-    const { seq, samples, language, among } = event.data;
+    const { seq, samples, language } = event.data;
     try {
         const engine = await getTranscriber();
-        const spoken = language ?? (await detect(engine, samples, among));
+        const spoken = language ?? (await detect(engine, samples));
         const result = await engine(samples, {
             // Long audio in half-minute pieces with a little overlap, which is how whisper is meant to
             // be given anything longer than it can hold at once.

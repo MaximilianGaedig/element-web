@@ -28,14 +28,12 @@ class FakeWorker {
         seq,
         samples,
         language,
-        among,
     }: {
         seq: number;
         samples: Float32Array;
         language?: string;
-        among?: string[];
     }): void => {
-        void Promise.resolve(run(samples, language, among)).then(
+        void Promise.resolve(run(samples, language)).then(
             (result: { text: string }) => this.onmessage?.({ data: { seq, text: result.text.trim() } }),
             (error: Error) => this.onmessage?.({ data: { seq, error: error.message } }),
         );
@@ -139,23 +137,7 @@ describe("transcribing a voice message", () => {
 
     it("hands the language hint to the worker", async () => {
         await transcribe.transcribe(new ArrayBuffer(8), "pl");
-        expect(run).toHaveBeenCalledWith(expect.any(Float32Array), "pl", expect.any(Array));
-    });
-
-    it("limits a guessed language to the browser's languages and English", async () => {
-        vi.stubGlobal("navigator", { languages: ["pl-PL", "de", "en-GB"] });
-        await transcribe.transcribe(new ArrayBuffer(8));
-
-        const among = run.mock.calls[0][2] as string[];
-        expect(among).toEqual(expect.arrayContaining(["pl", "de", "en"]));
-        expect(new Set(among).size).toBe(among.length);
-    });
-
-    it("always allows English, and nothing the user has not set", () => {
-        vi.stubGlobal("navigator", { languages: ["ro"] });
-        expect(transcribe.likelyLanguages()).toContain("en");
-        expect(transcribe.likelyLanguages()).toContain("ro");
-        expect(transcribe.likelyLanguages()).not.toContain("pl");
+        expect(run).toHaveBeenCalledWith(expect.any(Float32Array), "pl");
     });
 
     it("starts a new worker after the worker died", async () => {

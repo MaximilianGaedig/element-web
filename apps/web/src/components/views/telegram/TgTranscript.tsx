@@ -8,7 +8,7 @@ Please see LICENSE files in the repository root for full details.
 /*
  * What a voice message said, under the voice message, the way Telegram puts it there.
  *
- * Three states and no more: nothing yet, working, and the words. What the server already knows is shown
+ * Three states and no more: nothing yet, working, and the words (which can be worked out again). What the server already knows is shown
  * straight away and costs nothing - somebody's device worked it out once, or the pass over the history
  * did - and only a message nobody has transcribed yet offers the button. What this device works out goes
  * back to the server, so the next device to open this chat simply reads it.
@@ -84,13 +84,23 @@ export function TgTranscript({ mxEvent }: Props): JSX.Element | null {
         }
     }, [mxEvent, roomId, eventId]);
 
-    if (text) return <p className="mx_TgTranscript">{text}</p>;
     if (working) {
         return (
             <p className="mx_TgTranscript mx_TgTranscript_working">
                 <Spinner size={16} as="span" />
                 {_t("timeline|transcript|working")}
             </p>
+        );
+    }
+
+    if (text) {
+        return (
+            <div className="mx_TgTranscript">
+                {text}{" "}
+                <AccessibleButton kind="link" className="mx_TgTranscript_redo" onClick={run}>
+                    {_t("timeline|transcript|redo")}
+                </AccessibleButton>
+            </div>
         );
     }
 
