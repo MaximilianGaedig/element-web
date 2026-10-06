@@ -24,6 +24,7 @@ Please see LICENSE files in the repository root for full details.
 
 import { logger } from "matrix-js-sdk/src/logger";
 
+import { getCurrentLanguage } from "../../languageHandler";
 import transcribeWorkerFactory from "../../workers/transcribeWorkerFactory";
 import { type Request, type Response } from "../../workers/transcribe.worker";
 
@@ -94,13 +95,25 @@ function getWorker(): Worker {
     return created;
 }
 
+/**
+ * The languages a voice message could be in: what the browser is set to, the app's language, and English.
+ * Offered to the detection as its only choices, since over all ninety-nine a short clip can tie between
+ * related languages; anyone whose chats use another language adds it to the browser's language list.
+ */
+export function likelyLanguages(): string[] {
+    const tags = [...(navigator.languages ?? []), getCurrentLanguage(), "en"];
+    return [...new Set(tags.filter(Boolean).map((tag) => tag.toLowerCase().split(/[-_]/)[0]))];
+}
+
 /** Runs the model over the samples, in the worker. */
 function recognise(samples: Float32Array, language?: string): Promise<string> {
     const deferred = Promise.withResolvers<string>();
     const id = seq++;
     pending.set(id, deferred);
     // Handed over rather than copied: nothing here wants the samples again.
-    getWorker().postMessage({ seq: id, samples, language } satisfies Request, [samples.buffer]);
+    getWorker().postMessage({ seq: id, samples, language, among: likelyLanguages() } satisfies Request, [
+        samples.buffer,
+    ]);
     return deferred.promise;
 }
 
