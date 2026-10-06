@@ -259,6 +259,16 @@ describe("ContactCard", () => {
         expect(screen.getByText("Video call on WhatsApp")).toBeInTheDocument();
     });
 
+    // Voice is the call: with one chat to ring it is one tap, as video beside it always was.
+    it("rings the one chat there is by voice straight away", async () => {
+        const onCall = vi.fn();
+        render(<ContactCard person={person()} onBack={() => {}} onMessage={() => {}} onCall={onCall} />);
+
+        await userEvent.click(screen.getByRole("button", { name: "Call" }));
+        expect(onCall).toHaveBeenCalledWith(expect.objectContaining({ name: "Ada Klein" }), "!sig:e", false);
+        expect(screen.queryByText("Voice call on Signal")).not.toBeInTheDocument();
+    });
+
     it("calls in the chat that was chosen, not simply the first", async () => {
         const onCall = vi.fn();
         const p = person();

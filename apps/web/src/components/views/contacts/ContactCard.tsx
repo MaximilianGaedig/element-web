@@ -566,7 +566,24 @@ export function ContactCard({
                          * A chat is the honest unit: no bridge declares whether it carries calls, but a call
                          * placed in a chat goes over Matrix and that chat's bridge takes it from there.
                          */}
-                        {reachable.length > 0 && (
+                        {/*
+                         * With one chat to ring there is nothing to ask: the button calls, by voice, as the video
+                         * button beside it does by video. Two taps for a voice call and one for video had it the
+                         * wrong way round.
+                         */}
+                        {reachable.length === 1 && (
+                            <button
+                                type="button"
+                                className="mx_ContactCard_action"
+                                onClick={() => onCall?.(person, reachable[0].roomId!, false)}
+                            >
+                                <span className="mx_ContactCard_actionMark">
+                                    <VoiceCallIcon width="24" height="24" aria-hidden />
+                                </span>
+                                {_t("contacts|call")}
+                            </button>
+                        )}
+                        {reachable.length > 1 && (
                             <Menu
                                 className="mx_Contacts_menu"
                                 open={calling}
