@@ -5,148 +5,57 @@ SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only OR LicenseRef-Element-Com
 Please see LICENSE files in the repository root for full details.
 */
 
-// @vitest-environment happy-dom
-
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { type MatrixClient } from "matrix-js-sdk/src/matrix";
 
-const run = vi.fn();
-const terminate = vi.fn();
-/** Workers made, in order: what the page starts and ends, so a test can see the model come and go. */
-const made: object[] = [];
-
-/** The page's end of the transcriber worker, answering each request with whatever `run` gives. */
-class FakeWorker {
-    public onmessage?: (event: { data: unknown }) => void;
-    public onerror?: (event: { message: string }) => void;
-    public terminate = terminate;
-
-    public constructor() {
-        made.push(this);
-    }
-
-    public postMessage = ({
-        seq,
-        samples,
-        language,
-    }: {
-        seq: number;
-        samples: Float32Array;
-        language?: string;
-    }): void => {
-        void Promise.resolve(run(samples, language)).then(
-            (result: { text: string }) => this.onmessage?.({ data: { seq, text: result.text.trim() } }),
-            (error: Error) => this.onmessage?.({ data: { seq, error: error.message } }),
-        );
-    };
-}
-
-vi.mock("../../workers/transcribeWorkerFactory", () => ({ default: () => new FakeWorker() }));
+import { canTranscribe, transcribe } from "./transcribe";
 
 describe("transcribing a voice message", () => {
-    let transcribe: typeof import("./transcribe");
+    const client = {
+        getHomeserverUrl: () => "https://hs.example.org",
+        getAccessToken: () => "secret-token",
+        isRoomEncrypted: (roomId: string) => roomId === "!encrypted:example.org",
+    } as unknown as MatrixClient;
+    const fetchMock = vi.fn();
 
-    beforeEach(async () => {
-        vi.useFakeTimers();
-        // The model is module state: a fresh module is a fresh session.
-        vi.resetModules();
-        run.mockReset().mockResolvedValue({ text: " hello there " });
-        terminate.mockReset();
-        made.length = 0;
-
-        // The browser's decoder and resampler, neither of which the test environment has.
-        vi.stubGlobal(
-            "AudioContext",
-            class {
-                public decodeAudioData = vi.fn().mockResolvedValue({ duration: 1 });
-                public close = vi.fn().mockResolvedValue(undefined);
-            },
-        );
-        vi.stubGlobal(
-            "OfflineAudioContext",
-            class {
-                public destination = {};
-                public createBufferSource = (): object => ({ connect: vi.fn(), start: vi.fn() });
-                public startRendering = vi.fn().mockResolvedValue({ getChannelData: () => new Float32Array(16) });
-            },
-        );
-        transcribe = await import("./transcribe");
+    beforeEach(() => {
+        fetchMock.mockReset().mockResolvedValue(Response.json({ text: " Czekaj, muszę zapytać szefa. " }));
+        vi.stubGlobal("fetch", fetchMock);
     });
 
-    afterEach(() => {
-        vi.unstubAllGlobals();
-        vi.useRealTimers();
+    afterEach(() => vi.unstubAllGlobals());
+
+    it("sends the audio to the homeserver's transcriber as the signed-in user and returns the words", async () => {
+        const audio = new Blob(["ogg"], { type: "audio/ogg" });
+
+        expect(await transcribe(client, audio)).toBe("Czekaj, muszę zapytać szefa.");
+
+        const [url, init] = fetchMock.mock.calls[0];
+        expect(url).toBe("https://hs.example.org/_mxg/transcribe");
+        expect(init.method).toBe("POST");
+        expect(init.headers).toEqual({ Authorization: "Bearer secret-token" });
+        const body = init.body as FormData;
+        expect(body.get("file")).toBeInstanceOf(Blob);
+        expect(body.get("model")).toBe("deepdml/faster-whisper-large-v3-turbo-ct2");
     });
 
-    it("says what was said", async () => {
-        expect(await transcribe.transcribe(new ArrayBuffer(8))).toBe("hello there");
+    it("gives nothing back for audio with no words in it", async () => {
+        fetchMock.mockResolvedValue(Response.json({ text: "  " }));
+        expect(await transcribe(client, new Blob(["ogg"]))).toBeUndefined();
     });
 
-    // Whisper is a model of tens of megabytes plus the runtime it runs in. Kept for the session, one
-    // transcript in the morning was that much memory until the tab was closed.
-    it("lets the model go once nothing has been transcribed for a while", async () => {
-        await transcribe.transcribe(new ArrayBuffer(8));
-        expect(made).toHaveLength(1);
-        expect(terminate).not.toHaveBeenCalled();
-        expect(transcribe.transcriberLoaded()).toBe(true);
-
-        await vi.advanceTimersByTimeAsync(transcribe.MODEL_IDLE_MS);
-
-        expect(terminate).toHaveBeenCalledTimes(1);
-        expect(transcribe.transcriberLoaded()).toBe(false);
-        expect(vi.getTimerCount()).toBe(0);
+    it("says why when the server could not do it", async () => {
+        fetchMock.mockResolvedValue(Response.json({ detail: "Failed to decode audio." }, { status: 415 }));
+        await expect(transcribe(client, new Blob(["ogg"]))).rejects.toThrow("Failed to decode audio.");
     });
 
-    it("loads the model again for the next message", async () => {
-        await transcribe.transcribe(new ArrayBuffer(8));
-        await vi.advanceTimersByTimeAsync(transcribe.MODEL_IDLE_MS);
-
-        expect(await transcribe.transcribe(new ArrayBuffer(8))).toBe("hello there");
-        expect(made).toHaveLength(2);
+    it("falls back to the status when the server's answer is not a reason", async () => {
+        fetchMock.mockResolvedValue(new Response("<html>", { status: 502 }));
+        await expect(transcribe(client, new Blob(["ogg"]))).rejects.toThrow("HTTP 502");
     });
 
-    it("keeps the model while messages keep being transcribed", async () => {
-        for (let i = 0; i < 10; i++) {
-            await transcribe.transcribe(new ArrayBuffer(8));
-            await vi.advanceTimersByTimeAsync(transcribe.MODEL_IDLE_MS - 1);
-        }
-
-        expect(made).toHaveLength(1);
-        expect(terminate).not.toHaveBeenCalled();
-    });
-
-    it("does not let the model go under a transcript that is still being worked out", async () => {
-        const working = Promise.withResolvers<{ text: string }>();
-        run.mockReturnValue(working.promise);
-
-        const slow = transcribe.transcribe(new ArrayBuffer(8));
-        await vi.advanceTimersByTimeAsync(transcribe.MODEL_IDLE_MS * 3);
-        expect(terminate).not.toHaveBeenCalled();
-
-        working.resolve({ text: "late" });
-        expect(await slow).toBe("late");
-        await vi.advanceTimersByTimeAsync(transcribe.MODEL_IDLE_MS);
-        expect(terminate).toHaveBeenCalledTimes(1);
-    });
-
-    it("gives nothing back, and asks again next time, when the model could not be loaded", async () => {
-        run.mockRejectedValueOnce(new Error("offline"));
-        expect(await transcribe.transcribe(new ArrayBuffer(8))).toBeUndefined();
-
-        expect(await transcribe.transcribe(new ArrayBuffer(8))).toBe("hello there");
-    });
-
-    it("hands the language hint to the worker", async () => {
-        await transcribe.transcribe(new ArrayBuffer(8), "pl");
-        expect(run).toHaveBeenCalledWith(expect.any(Float32Array), "pl");
-    });
-
-    it("starts a new worker after the worker died", async () => {
-        await transcribe.transcribe(new ArrayBuffer(8));
-        const [first] = made as FakeWorker[];
-        first.onerror?.({ message: "out of memory" });
-        expect(transcribe.transcriberLoaded()).toBe(false);
-
-        await transcribe.transcribe(new ArrayBuffer(8));
-        expect(made).toHaveLength(2);
+    it("does not send an encrypted room's audio anywhere", () => {
+        expect(canTranscribe(client, "!plain:example.org")).toBe(true);
+        expect(canTranscribe(client, "!encrypted:example.org")).toBe(false);
     });
 });

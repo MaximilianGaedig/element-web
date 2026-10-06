@@ -33,7 +33,6 @@ import { chatHistoryKept } from "./chatHistory";
 import { profileFactsKept } from "./contacts/people";
 import { barcodeReaderRunning, barcodeResultsKept } from "./detect/barcodes";
 import { ocrEngineRunning, ocrResultsKept } from "./detect/ocr";
-import { transcriberLoaded } from "./detect/transcribe";
 import { presenceClockListeners } from "./presence/clock";
 import { biographiesKept } from "./profile/biography";
 
@@ -72,7 +71,6 @@ export interface MemoryReport {
         /** zxing's reader, where the browser has none of its own: ~21 MB while it runs. */
         barcodeReaderRunning: boolean;
         /** Whether the speech model is loaded. */
-        transcriberLoaded: boolean;
         /** Audio playbacks alive, and how many of them voice-message queues are holding. */
         playbacks: number;
         queuedVoicePlaybacks: number;
@@ -264,7 +262,6 @@ export async function memoryReport(client: MatrixClient | null = MatrixClientPeg
             ocrEngineRunning: ocrEngineRunning(),
             barcodeResults: barcodeResultsKept(),
             barcodeReaderRunning: barcodeReaderRunning(),
-            transcriberLoaded: transcriberLoaded(),
             playbacks: PlaybackManager.instance.instanceCount,
             queuedVoicePlaybacks: PlaybackQueue.retainedPlaybackCount,
             uploadedMedia: uploadedMediaCacheStats(),

@@ -25,6 +25,7 @@ import AccessibleButton from "../elements/AccessibleButton";
 import { MatrixClientPeg } from "../../../MatrixClientPeg";
 import Spinner from "../elements/Spinner";
 import { MediaEventHelper } from "../../../utils/MediaEventHelper";
+import { canTranscribe, transcribe } from "../../../utils/detect/transcribe";
 
 interface Props {
     mxEvent: MatrixEvent;
@@ -63,12 +64,7 @@ export function TgTranscript({ mxEvent }: Props): JSX.Element | null {
              * encrypts it - which is how this failed silently.
              */
             const helper = new MediaEventHelper(mxEvent);
-            const blob = await helper.sourceBlob.value;
-            const [{ transcribe }, audio] = await Promise.all([
-                import("../../../utils/detect/transcribe"),
-                blob.arrayBuffer(),
-            ]);
-            const said = await transcribe(audio);
+            const said = await transcribe(MatrixClientPeg.safeGet(), await helper.sourceBlob.value);
             setText(said ?? _t("timeline|transcript|nothing_said"));
             if (said) {
                 const { saveMediaText } = await import("../../../utils/detect/mediaText");
@@ -83,6 +79,10 @@ export function TgTranscript({ mxEvent }: Props): JSX.Element | null {
             setWorking(false);
         }
     }, [mxEvent, roomId, eventId]);
+
+    // An encrypted room's audio is never sent to be transcribed, so there is nothing to offer there.
+    const client = MatrixClientPeg.get();
+    if (!working && !text && !failed && !(client && roomId && canTranscribe(client, roomId))) return null;
 
     if (working) {
         return (
@@ -106,12 +106,12 @@ export function TgTranscript({ mxEvent }: Props): JSX.Element | null {
 
     if (failed) {
         return (
-            <p className="mx_TgTranscript mx_TgTranscript_failed">
+            <div className="mx_TgTranscript mx_TgTranscript_failed">
                 {failed}
                 <AccessibleButton kind="link" onClick={run}>
                     {_t("action|try_again")}
                 </AccessibleButton>
-            </p>
+            </div>
         );
     }
 

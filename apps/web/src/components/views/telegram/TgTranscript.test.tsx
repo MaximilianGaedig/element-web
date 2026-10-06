@@ -16,12 +16,15 @@ import userEvent from "@testing-library/user-event";
 import { stubClient } from "test-utils";
 import { TgTranscript } from "./TgTranscript";
 
-const storedMediaText = vi.fn();
-const saveMediaText = vi.fn();
-const transcribe = vi.fn();
+const { storedMediaText, saveMediaText, transcribe, canTranscribe } = vi.hoisted(() => ({
+    storedMediaText: vi.fn(),
+    saveMediaText: vi.fn(),
+    transcribe: vi.fn(),
+    canTranscribe: vi.fn(),
+}));
 
 vi.mock("../../../utils/detect/mediaText", () => ({ storedMediaText, saveMediaText }));
-vi.mock("../../../utils/detect/transcribe", () => ({ transcribe }));
+vi.mock("../../../utils/detect/transcribe", () => ({ transcribe, canTranscribe }));
 vi.mock("../../../utils/MediaEventHelper", () => ({
     MediaEventHelper: class {
         public sourceBlob = { value: Promise.resolve(new Blob(["audio"])) };
@@ -36,6 +39,7 @@ describe("<TgTranscript />", () => {
         storedMediaText.mockReset().mockResolvedValue({ transcript: "the old words" });
         saveMediaText.mockReset().mockResolvedValue(undefined);
         transcribe.mockReset().mockResolvedValue("the new words");
+        canTranscribe.mockReset().mockReturnValue(true);
     });
 
     it("shows what the server already knows", async () => {
@@ -59,5 +63,34 @@ describe("<TgTranscript />", () => {
             "transcript",
             "the new words",
         );
+    });
+
+    it("offers to transcribe a message nobody has transcribed", async () => {
+        storedMediaText.mockResolvedValue(undefined);
+        render(<TgTranscript mxEvent={event} />);
+
+        await userEvent.click(await screen.findByRole("button", { name: "Transcribe" }));
+
+        expect(await screen.findByText("the new words")).toBeInTheDocument();
+        expect(transcribe).toHaveBeenCalledWith(expect.anything(), expect.any(Blob));
+    });
+
+    it("says why when the server could not transcribe it", async () => {
+        storedMediaText.mockResolvedValue(undefined);
+        transcribe.mockRejectedValue(new Error("Failed to decode audio."));
+        render(<TgTranscript mxEvent={event} />);
+
+        await userEvent.click(await screen.findByRole("button", { name: "Transcribe" }));
+
+        expect(await screen.findByText(/Failed to decode audio\./)).toBeInTheDocument();
+    });
+
+    it("offers nothing in a room whose audio may not be sent", async () => {
+        storedMediaText.mockResolvedValue(undefined);
+        canTranscribe.mockReturnValue(false);
+        const { container } = render(<TgTranscript mxEvent={event} />);
+
+        await vi.waitFor(() => expect(storedMediaText).toHaveBeenCalled());
+        expect(container).toBeEmptyDOMElement();
     });
 });

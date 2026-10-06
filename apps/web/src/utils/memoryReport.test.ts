@@ -69,7 +69,6 @@ describe("memoryReport", () => {
                 ocrEngineRunning: false,
                 barcodeResults: expect.any(Number),
                 barcodeReaderRunning: false,
-                transcriberLoaded: false,
                 playbacks: expect.any(Number),
                 queuedVoicePlaybacks: expect.any(Number),
                 uploadedMedia: { entries: 0, bytes: 0 },
