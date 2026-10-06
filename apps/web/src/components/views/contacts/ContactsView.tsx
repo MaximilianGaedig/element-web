@@ -107,7 +107,6 @@ import { Action } from "../../../dispatcher/actions";
 import { type OpenToTabPayload } from "../../../dispatcher/payloads/OpenToTabPayload";
 import { UserTab } from "../dialogs/UserTab";
 import { type ViewRoomPayload } from "../../../dispatcher/payloads/ViewRoomPayload";
-import { CallType } from "matrix-js-sdk/src/webrtc/call";
 import { type MatrixClient } from "matrix-js-sdk/src/matrix";
 import { SDKContextClass } from "../../../contexts/SDKContextClass.ts";
 import { type ViewUserPayload } from "../../../dispatcher/payloads/ViewUserPayload";
@@ -1274,19 +1273,7 @@ export function ContactsView({ tab, onFinished }: Props): JSX.Element {
     );
 
     /** Ringing back, in the chat the call was in - which is the network it was on. */
-    const callBack = useCallback((call: Call, video: boolean): void => {
-        dis.dispatch<ViewRoomPayload>({
-            action: Action.ViewRoom,
-            room_id: call.roomId,
-            metricsTrigger: undefined,
-        });
-        void SDKContextClass.instance.legacyCallHandler.placeCall(
-            call.roomId,
-            video ? CallType.Video : CallType.Voice,
-            undefined,
-            true,
-        );
-    }, []);
+    const callBack = useCallback((call: Call, video: boolean): void => callInRoom(call.roomId, video), []);
 
     /** Writing instead of ringing: the same chat, without placing anything. */
     const messageCaller = useCallback((call: Call): void => {

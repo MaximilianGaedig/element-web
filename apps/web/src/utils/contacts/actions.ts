@@ -17,6 +17,9 @@ import dis from "../../dispatcher/dispatcher";
 import { Action } from "../../dispatcher/actions";
 import { type ViewRoomPayload } from "../../dispatcher/payloads/ViewRoomPayload";
 import { SDKContextClass } from "../../contexts/SDKContextClass";
+import { MatrixClientPeg } from "../../MatrixClientPeg";
+import { placeCall } from "../room/placeCall";
+import { preferredCallPlatform } from "../room/callPlatform";
 import { DirectoryMember, startDmOnFirstMessage } from "../direct-messages";
 import { type Person } from "./people";
 
@@ -57,16 +60,21 @@ export function messagePerson(client: MatrixClient, person: Person, mxid?: strin
  *
  * Viewed first, then placed: a call belongs to a room, and the room has to be the one on screen for the
  * call UI to have anywhere to live. Which network it goes over is decided by which chat this is - that
- * chat's bridge carries it - so the choice was already made where the chat was picked.
+ * chat's bridge carries it - so the choice was already made where the chat was picked. Rung the way its
+ * header rings it (callPlatform): forcing the legacy 1:1 call rang nobody in a chat whose bridge takes
+ * MatrixRTC calls, as the Messenger bridge does.
  */
 export function callInRoom(roomId: string, video: boolean): void {
+    const client = MatrixClientPeg.safeGet();
+    const room = client.getRoom(roomId);
     openRoom(roomId);
-    // Forced through Matrix calling, as the room header does for a bridged DM: those rooms carry the
-    // bridge bot as a third member, which the handler counting members cannot tell from a group.
-    void SDKContextClass.instance.legacyCallHandler.placeCall(
-        roomId,
+    if (!room) return;
+    void placeCall(
+        SDKContextClass.instance.legacyCallHandler,
+        room,
         video ? CallType.Video : CallType.Voice,
+        preferredCallPlatform(room),
         undefined,
-        true,
+        !video,
     );
 }

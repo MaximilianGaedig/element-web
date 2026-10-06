@@ -6,7 +6,7 @@ SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only OR LicenseRef-Element-Com
 Please see LICENSE files in the repository root for full details.
 */
 
-import { EventType, type Room } from "matrix-js-sdk/src/matrix";
+import { type Room } from "matrix-js-sdk/src/matrix";
 import { CallType } from "matrix-js-sdk/src/webrtc/call";
 import { type ReactNode, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { logger as rootLogger } from "matrix-js-sdk/src/logger";
@@ -40,7 +40,7 @@ import { LocalRoom, LocalRoomState } from "../../models/LocalRoom";
 import { useScopedRoomContext } from "../../contexts/ScopedRoomContext";
 import { SDKContext } from "../../contexts/SDKContext.ts";
 import SdkConfig from "../../SdkConfig";
-import { getBridgeInfo } from "../../utils/bridge/bridgeInfo";
+import { isLegacyOnlyBridge } from "../../utils/room/callPlatform";
 
 const logger = rootLogger.getChild("useRoomCall");
 
@@ -174,13 +174,9 @@ export const useRoomCall = (
     ]);
 
     const mayCreateElementCalls = mayCreateElementCallState && serverIsConfiguredForElementCall;
-    // A bridge that takes MatrixRTC calls says so by letting portal members send call memberships
-    // explicitly (the portal's state_default otherwise keeps them out); other portals keep legacy calls.
-    const legacyOnlyBridge = useRoomState(room, () => {
-        if (!getBridgeInfo(room)) return false;
-        const pl = room.currentState.getStateEvents(EventType.RoomPowerLevels, "")?.getContent();
-        return pl?.events?.[ElementCallMemberEventType.name] === undefined;
-    });
+    // Bridged chats whose bridge only takes legacy 1:1 calls (utils/room/callPlatform, shared with the places
+    // that ring a chat without its header).
+    const legacyOnlyBridge = useRoomState(room, () => isLegacyOnlyBridge(room));
 
     // The options provided to the RoomHeader.
     // If there are multiple options, the user will be prompted to choose.
