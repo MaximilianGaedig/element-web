@@ -8,7 +8,7 @@ Please see LICENSE files in the repository root for full details.
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { type MatrixClient } from "matrix-js-sdk/src/matrix";
 
-import { canTranscribe, transcribe } from "./transcribe";
+import { transcribe } from "./transcribe";
 
 describe("transcribing a voice message", () => {
     const client = {
@@ -52,10 +52,5 @@ describe("transcribing a voice message", () => {
     it("falls back to the status when the server's answer is not a reason", async () => {
         fetchMock.mockResolvedValue(new Response("<html>", { status: 502 }));
         await expect(transcribe(client, new Blob(["ogg"]))).rejects.toThrow("HTTP 502");
-    });
-
-    it("does not send an encrypted room's audio anywhere", () => {
-        expect(canTranscribe(client, "!plain:example.org")).toBe(true);
-        expect(canTranscribe(client, "!encrypted:example.org")).toBe(false);
     });
 });

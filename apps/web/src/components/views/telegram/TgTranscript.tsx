@@ -25,7 +25,7 @@ import AccessibleButton from "../elements/AccessibleButton";
 import { MatrixClientPeg } from "../../../MatrixClientPeg";
 import Spinner from "../elements/Spinner";
 import { MediaEventHelper } from "../../../utils/MediaEventHelper";
-import { canTranscribe, transcribe } from "../../../utils/detect/transcribe";
+import { transcribe } from "../../../utils/detect/transcribe";
 
 interface Props {
     mxEvent: MatrixEvent;
@@ -79,10 +79,6 @@ export function TgTranscript({ mxEvent }: Props): JSX.Element | null {
             setWorking(false);
         }
     }, [mxEvent, roomId, eventId]);
-
-    // An encrypted room's audio is never sent to be transcribed, so there is nothing to offer there.
-    const client = MatrixClientPeg.get();
-    if (!working && !text && !failed && !(client && roomId && canTranscribe(client, roomId))) return null;
 
     if (working) {
         return (

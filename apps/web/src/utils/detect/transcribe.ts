@@ -16,8 +16,8 @@ Please see LICENSE files in the repository root for full details.
  * these chats - Polish, German and English by turns - need.
  *
  * Asked for, never automatic. What is worked out once is sent to the server (mediaText.ts), so nobody's
- * device ever asks twice. A room that is encrypted is never sent: the audio would otherwise be handed to a
- * third party, which is what encryption is there to prevent.
+ * device ever asks twice - except in an encrypted room, where the words stay on this device (mediaText.ts
+ * skips those rooms). The audio itself does go to Groq there too, because the person asked for it.
  */
 
 import { type MatrixClient } from "matrix-js-sdk/src/matrix";
@@ -26,14 +26,6 @@ const PATH = "/_mxg/transcribe";
 
 /** Groq's name for whisper large-v3-turbo. */
 const MODEL = "whisper-large-v3-turbo";
-
-/**
- * Whether this room's voice messages may be sent to the server to be transcribed. An encrypted room's
- * audio is not.
- */
-export function canTranscribe(client: MatrixClient, roomId: string): boolean {
-    return !client.isRoomEncrypted(roomId);
-}
 
 /**
  * What was said in a piece of audio, or nothing where there were no words in it.
