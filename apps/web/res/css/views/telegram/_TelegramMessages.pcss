@@ -273,10 +273,12 @@ Please see LICENSE files in the repository root for full details.
     }
 
     /* Delivered and read are both double ticks, so the colour is what tells them apart —
-       as in WhatsApp. Delivered keeps the outgoing tick colour; read goes accent. Telegram
-       itself has no delivered state, so on Telegram chats this stays the read mark only. */
+       as in WhatsApp. Delivered keeps the outgoing tick colour (green); read turns blue.
+       (Compound's accent and success tokens are both green-900, so an accent override would
+       be invisible here - info-primary is the one distinct hue.) Telegram itself has no
+       delivered state, so on Telegram chats this stays the read mark only. */
     .mx_TelegramTime[data-send-state="read"] {
-        --TgTime-status-color: var(--cpd-color-icon-accent-primary);
+        --TgTime-status-color: var(--cpd-color-icon-info-primary);
     }
 }
 
