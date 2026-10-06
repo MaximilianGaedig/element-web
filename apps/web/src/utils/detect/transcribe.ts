@@ -6,30 +6,30 @@ Please see LICENSE files in the repository root for full details.
 */
 
 /*
- * What a voice message said, in words, worked out by the homeserver's own whisper.
+ * What a voice message said, in words, worked out by Groq's hosted whisper through the homeserver.
  *
- * The audio goes to the account's own server (`/_mxg/transcribe`, which hands it to a whisper container
- * after checking the Matrix access token) and the words come back. Nothing leaves the account's own
- * infrastructure and no other key is involved. Whisper large-v3-turbo runs there because small and base
- * misheard Polish badly enough to be worse than nothing, and a phone or laptop cannot run it: it took
- * minutes on a laptop GPU. It decides the language itself, which these chats - Polish, German and English
- * by turns - need.
+ * The audio goes to the account's own server (`/_mxg/transcribe`), which checks the Matrix access token,
+ * adds the Groq key it holds and passes the audio to Groq; the words come back. The key never reaches a
+ * browser. Whisper large-v3-turbo does it because small and base misheard Polish badly enough to be worse
+ * than nothing, and neither a phone, a laptop GPU nor the homeserver's CPU could run it in useful time
+ * (minutes, minutes and fifty seconds for a six-second message). It decides the language itself, which
+ * these chats - Polish, German and English by turns - need.
  *
  * Asked for, never automatic. What is worked out once is sent to the server (mediaText.ts), so nobody's
- * device ever asks twice. A room that is encrypted is never sent: the server could not read that audio,
- * and handing it over would undo what encryption was for.
+ * device ever asks twice. A room that is encrypted is never sent: the audio would otherwise be handed to a
+ * third party, which is what encryption is there to prevent.
  */
 
 import { type MatrixClient } from "matrix-js-sdk/src/matrix";
 
 const PATH = "/_mxg/transcribe";
 
-/** The model the server's whisper loads; the server downloads it the first time it is asked for. */
-const MODEL = "deepdml/faster-whisper-large-v3-turbo-ct2";
+/** Groq's name for whisper large-v3-turbo. */
+const MODEL = "whisper-large-v3-turbo";
 
 /**
  * Whether this room's voice messages may be sent to the server to be transcribed. An encrypted room's
- * audio is not, and a server that has no transcriber answers 404 (see {@link transcribe}).
+ * audio is not.
  */
 export function canTranscribe(client: MatrixClient, roomId: string): boolean {
     return !client.isRoomEncrypted(roomId);

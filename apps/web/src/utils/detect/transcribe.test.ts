@@ -36,7 +36,7 @@ describe("transcribing a voice message", () => {
         expect(init.headers).toEqual({ Authorization: "Bearer secret-token" });
         const body = init.body as FormData;
         expect(body.get("file")).toBeInstanceOf(Blob);
-        expect(body.get("model")).toBe("deepdml/faster-whisper-large-v3-turbo-ct2");
+        expect(body.get("model")).toBe("whisper-large-v3-turbo");
     });
 
     it("gives nothing back for audio with no words in it", async () => {
