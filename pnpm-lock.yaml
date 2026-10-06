@@ -334,7 +334,7 @@ packageExtensionsChecksum: sha256-kCJccFy7l6HmjcpzmxV958fHndI9zZq246f1ttgkURI=
 
 patchedDependencies:
   '@arcmantle/vite-plugin-import-css-sheet': 8019aa9feca17db6bab3483612b4150c911d70b58fddc52bf2d7258a1484a747
-  '@tanstack/virtual-core@3': 71da5da1ddec893afd6cfd513e81996f92820a7a2aa1004d2e19dfc1c984d7d7
+  '@tanstack/virtual-core@3': 1ea1e654a03fa4c74344c933a7c526022c1ccaeb698ca3fd0a9ab99c0f597e7a
   '@types/auto-launch': b60dc9846a11a1684ce52c55493f29ea398d3dc44b88f66ab44e9843d6c01538
   '@vector-im/compound-web@10.1.0': 6bf43ec0781df44cb0c64efbacdf18204457efe599734842fb2a22584c61c2ed
   '@vector-im/matrix-wysiwyg': 7bdf6150f2905bc2f055a6bcaa7b9d78fa7ffde82e800bcc454ac7b0096bd65e
@@ -13976,7 +13976,7 @@ snapshots:
 
   '@babel/plugin-syntax-typescript@7.29.7(@babel/core@7.29.7)':
     dependencies:
-      '@babel/core': 7.29.7(supports-color@10.2.2)
+      '@babel/core': 7.29.7(supports-color@7.2.0)
       '@babel/helper-plugin-utils': 7.29.7
 
   '@babel/plugin-syntax-unicode-sets-regex@7.18.6(@babel/core@7.29.7)':
@@ -18128,11 +18128,11 @@ snapshots:
 
   '@tanstack/react-virtual@3.14.13(react-dom@19.2.8)(react@19.2.8)':
     dependencies:
-      '@tanstack/virtual-core': 3.17.11(patch_hash=71da5da1ddec893afd6cfd513e81996f92820a7a2aa1004d2e19dfc1c984d7d7)
+      '@tanstack/virtual-core': 3.17.11(patch_hash=1ea1e654a03fa4c74344c933a7c526022c1ccaeb698ca3fd0a9ab99c0f597e7a)
       react: 19.2.8
       react-dom: 19.2.8(react@19.2.8)
 
-  '@tanstack/virtual-core@3.17.11(patch_hash=71da5da1ddec893afd6cfd513e81996f92820a7a2aa1004d2e19dfc1c984d7d7)': {}
+  '@tanstack/virtual-core@3.17.11(patch_hash=1ea1e654a03fa4c74344c933a7c526022c1ccaeb698ca3fd0a9ab99c0f597e7a)': {}
 
   '@tesseract.js-data/eng@1.0.0': {}
 

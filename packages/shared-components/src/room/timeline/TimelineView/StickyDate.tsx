@@ -5,7 +5,7 @@
  * Please see LICENSE files in the repository root for full details.
  */
 
-import React, { forwardRef, useImperativeHandle, useRef, useState, type ReactNode } from "react";
+import React, { forwardRef, useImperativeHandle, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import classNames from "classnames";
 
 import styles from "./TimelineView.module.css";
@@ -42,6 +42,45 @@ export const StickyDate = forwardRef<StickyDateHandle, StickyDateProps>(function
         shift: 0,
     });
     const element = useRef<HTMLDivElement>(null);
+    const box = useRef<{ top: number; height: number } | null>(null);
+
+    // Keep layout reads out of the virtualizer's scroll callback. That callback can run
+    // several times per frame; offsetTop/offsetHeight there forced a synchronous layout
+    // for every update. Measure when the label or its surrounding layout changes instead.
+    useLayoutEffect(() => {
+        const el = element.current;
+        if (!el) return;
+
+        const measureTop = (): void => {
+            const top = Number.parseFloat(getComputedStyle(el).top);
+            box.current = { top: Number.isFinite(top) ? top : 0, height: box.current?.height ?? el.offsetHeight };
+        };
+        measureTop();
+
+        const resizeObserver = new ResizeObserver(([entry]) => {
+            if (!entry) return;
+            const height = entry.borderBoxSize?.[0]?.blockSize ?? entry.contentRect.height;
+            const top = box.current?.top ?? 0;
+            box.current = { top, height };
+        });
+        resizeObserver.observe(el);
+
+        // Telegram's floating header updates the inherited top inset on an ancestor style
+        // when its measured height changes. That need not resize this absolutely positioned
+        // label, so watch the short ancestor chain for those infrequent layout updates.
+        const mutationObserver = new MutationObserver(measureTop);
+        for (let node: Element | null = el; node; node = node.parentElement) {
+            mutationObserver.observe(node, { attributes: true, attributeFilter: ["style"] });
+        }
+        window.addEventListener("resize", measureTop);
+
+        return () => {
+            resizeObserver.disconnect();
+            mutationObserver.disconnect();
+            window.removeEventListener("resize", measureTop);
+        };
+    }, [state.ts]);
+
     useImperativeHandle(
         ref,
         () => ({
@@ -53,8 +92,7 @@ export const StickyDate = forwardRef<StickyDateHandle, StickyDateProps>(function
                 });
             },
             box() {
-                const el = element.current;
-                return el ? { top: el.offsetTop, height: el.offsetHeight } : null;
+                return box.current;
             },
         }),
         [],

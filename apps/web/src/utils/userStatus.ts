@@ -139,7 +139,10 @@ function cacheFor(client: MatrixClient): Map<string, { value: Promise<UserStatus
 const STATUS_TTL_MS = 5 * 60_000;
 const STATUS_RETRY_MS = 30_000;
 
-/** Forgets the statuses fetched with this client, so the next ask goes to the server (tests sharing a client). */
+/**
+ * @knipignore - exported for tests
+ * Forgets the statuses fetched with this client, so the next ask goes to the server (tests sharing a client).
+ */
 export function clearUserStatusCache(client: MatrixClient): void {
     statusCaches.delete(client);
 }

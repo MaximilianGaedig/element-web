@@ -127,7 +127,7 @@ export const telegramWallpaperProvider: WallpaperProvider = {
     },
 };
 
-/** Forgets the stored list and the session's request; for tests. */
+/** @knipignore - exported for tests. Forgets the stored list and the session's request. */
 export function resetTelegramWallpapers(): void {
     wallpapers = undefined;
     loading = false;

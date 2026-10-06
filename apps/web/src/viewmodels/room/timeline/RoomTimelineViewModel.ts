@@ -253,6 +253,23 @@ export class RoomTimelineViewModel
      */
     private baseItems: TimelineItem[] = [];
 
+    /**
+     * Scroll-time unread lookup. The timeline and item rows only change when the room
+     * publishes new data, while visible-range updates happen for every scroll frame.
+     * Keep the expensive event lookups and unread classification on the data path.
+     */
+    private unreadIndex: {
+        items: TimelineItem[];
+        events: MatrixEvent[];
+        eventCount: number;
+        markerId: string | null;
+        positions: Map<string, number>;
+        eventRows: Array<{ itemIndex: number; timelineIndex: number }>;
+        prefix: number[];
+        positionedPrefix: number[];
+        markerIndex: number;
+    } | null = null;
+
     /** Whether the leading (backward) pagination spinner is currently shown. */
     private backwardSpinnerVisible = false;
 
@@ -1094,30 +1111,81 @@ export class RoomTimelineViewModel
         const room = this.opts.room;
         const client = this.opts.client;
         const me = client.getSafeUserId();
-        const marker = this.readMarkerEventId ? items.findIndex((item) => item.key === this.readMarkerEventId) : -1;
-        // Positions in the live timeline, once per count rather than once per row: this runs on every scroll.
-        const position = new Map(
-            room
-                .getLiveTimeline()
-                .getEvents()
-                .map((ev, i) => [ev.getId(), i]),
-        );
-        const seenAt = this.seenUpToId ? (position.get(this.seenUpToId) ?? -1) : -1;
+        const events = room.getLiveTimeline().getEvents();
+        let index = this.unreadIndex;
+        if (
+            index?.items !== items ||
+            index.events !== events ||
+            index.eventCount !== events.length ||
+            index.markerId !== this.readMarkerEventId
+        ) {
+            const positions = new Map<string, number>();
+            for (let i = 0; i < events.length; i++) {
+                const id = events[i].getId();
+                if (id) positions.set(id, i);
+            }
+
+            const prefix = new Array<number>(items.length + 1).fill(0);
+            const positionedPrefix = new Array<number>(items.length + 1).fill(0);
+            const eventRows: Array<{ itemIndex: number; timelineIndex: number }> = [];
+            for (let i = 0; i < items.length; i++) {
+                const item = items[i];
+                let eligible = false;
+                let positionedEligible = false;
+                if (item.kind === "event" && !isLocalEchoId(item.key)) {
+                    const timelineIndex = positions.get(item.key);
+                    // Preserve events found in a linked timeline segment. They have no
+                    // live-timeline position, so the old read-through rule counted them
+                    // only when there was no receipt/seen position to compare against.
+                    const event = timelineIndex === undefined ? room.findEventById(item.key) : events[timelineIndex];
+                    if (event) {
+                        eligible = event.getSender() !== me && eventTriggersUnreadCount(client, event);
+                        if (timelineIndex !== undefined) {
+                            eventRows.push({ itemIndex: i, timelineIndex });
+                            positionedEligible = eligible;
+                        }
+                    }
+                }
+                prefix[i + 1] = prefix[i] + Number(eligible);
+                positionedPrefix[i + 1] = positionedPrefix[i] + Number(positionedEligible);
+            }
+
+            index = {
+                items,
+                events,
+                eventCount: events.length,
+                markerId: this.readMarkerEventId,
+                positions,
+                eventRows,
+                prefix,
+                positionedPrefix,
+                markerIndex: this.readMarkerEventId
+                    ? items.findIndex((item) => item.key === this.readMarkerEventId)
+                    : -1,
+            };
+            this.unreadIndex = index;
+        }
+
+        const seenAt = this.seenUpToId ? (index.positions.get(this.seenUpToId) ?? -1) : -1;
         // And what the reader's receipt already covers: opened partway up a room with one unread message,
         // the button counted every message below the screen, 41 of them.
         const readUpTo = room.getEventReadUpTo(me, true);
-        const receiptAt = readUpTo ? (position.get(readUpTo) ?? -1) : -1;
-        let count = 0;
-        for (let i = Math.max(this.readableEndArrayIndex, marker) + 1; i < items.length; i++) {
-            const item = items[i];
-            if (item.kind !== "event" || isLocalEchoId(item.key)) continue;
-            const event = room.findEventById(item.key);
-            // Read on screen earlier in this session, then scrolled back above: still read. The count went up
-            // again every time the reader scrolled back up past what they had already read.
-            const at = position.get(item.key) ?? -1;
-            if (event && Math.max(seenAt, receiptAt) >= 0 && at <= Math.max(seenAt, receiptAt)) continue;
-            if (event && event.getSender() !== me && eventTriggersUnreadCount(client, event)) count++;
+        const receiptAt = readUpTo ? (index.positions.get(readUpTo) ?? -1) : -1;
+        const timelineReadThrough = Math.max(seenAt, receiptAt);
+
+        // Rows and live timeline events share chronological order. Translate the receipt
+        // position to the last represented row, then answer with a prefix subtraction.
+        let low = 0;
+        let high = index.eventRows.length;
+        while (low < high) {
+            const mid = (low + high) >>> 1;
+            if (index.eventRows[mid].timelineIndex <= timelineReadThrough) low = mid + 1;
+            else high = mid;
         }
+        const receiptItemIndex = low > 0 ? index.eventRows[low - 1].itemIndex : -1;
+        const through = Math.max(this.readableEndArrayIndex, index.markerIndex, receiptItemIndex);
+        const prefix = timelineReadThrough >= 0 ? index.positionedPrefix : index.prefix;
+        let count = prefix[items.length] - prefix[Math.min(items.length, through + 1)];
         if (!atLiveEnd) count = Math.max(count, room.getUnreadNotificationCount(NotificationCountType.Total));
         return count;
     }
