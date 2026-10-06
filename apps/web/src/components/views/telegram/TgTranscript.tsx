@@ -82,10 +82,10 @@ export function TgTranscript({ mxEvent }: Props): JSX.Element | null {
 
     if (working) {
         return (
-            <p className="mx_TgTranscript mx_TgTranscript_working">
+            <div className="mx_TgTranscript mx_TgTranscript_working">
                 <Spinner size={16} as="span" />
                 {_t("timeline|transcript|working")}
-            </p>
+            </div>
         );
     }
 

@@ -8,37 +8,53 @@ Please see LICENSE files in the repository root for full details.
 /*
  * What a voice message said, under the voice message (TgTranscript.tsx).
  *
- * Telegram sets a transcript apart from the bubble's own text by a hairline above it and the secondary
- * colour: it is what the machine heard, not what anyone wrote.
+ * It is text inside the bubble, set apart from what anyone wrote by the secondary colour. The voice
+ * message body is an inline span around the player, so it is made a block here for the text to be bounded
+ * by the bubble and wrap in it. The player's own spacing (12px at the sides) is repeated so the text lines
+ * up with the waveform, and the room the time needs at the bottom of the bubble moves from the player to
+ * the text, which is now the last thing in it.
  */
+.mx_MVoiceMessageBody {
+    display: block;
+    min-width: 0;
+    max-width: 100%;
+}
+
+.mx_MVoiceMessageBody:has(.mx_TgTranscript, .mx_TgTranscript_button) .mx_MediaBody {
+    padding-block-end: 0;
+}
+
 .mx_TgTranscript,
 .mx_TgTranscript_button {
-    display: flex;
-    align-items: center;
-    gap: var(--cpd-space-1x);
-    margin: var(--cpd-space-1x) 0 0;
-    padding-block-start: var(--cpd-space-1x);
-    border-block-start: 1px solid var(--cpd-color-border-interactive-secondary);
-    font: var(--cpd-font-body-sm-regular);
+    display: block;
+    box-sizing: border-box;
+    max-width: 100%;
+    margin: 0;
+    padding: 0 var(--cpd-space-3x) calc(var(--TgTime-text-size, 0.75rem) + var(--cpd-space-2x));
+    overflow-wrap: anywhere;
+    font: var(--cpd-font-body-md-regular);
     color: var(--cpd-color-text-secondary);
 }
 
 .mx_TgTranscript {
-    display: block;
     white-space: pre-wrap;
 }
 
 .mx_TgTranscript_button {
     /* A link rather than a button: it is an offer, not the point of the message. */
-    width: 100%;
     color: var(--cpd-color-text-action-accent);
+    text-align: start;
 
     svg {
         width: 1em;
         height: 1em;
+        margin-inline-end: var(--cpd-space-1x);
+        vertical-align: -0.125em;
     }
 }
 
 .mx_TgTranscript_working {
     display: flex;
+    align-items: center;
+    gap: var(--cpd-space-1x);
 }
