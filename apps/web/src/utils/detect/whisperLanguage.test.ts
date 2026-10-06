@@ -40,6 +40,12 @@ describe("detectLanguage", () => {
         expect(await detectLanguage(engine, new Float32Array(16))).toBe("de");
     });
 
+    it("chooses only among the languages it is limited to", async () => {
+        // English scores highest overall, but is not one of the two languages this speaker could be using.
+        const engine = engineScoring([0, 0, 5, 2, 3]);
+        expect(await detectLanguage(engine, new Float32Array(16), ["pl", "de"])).toBe("de");
+    });
+
     it("only listens to the first half minute", async () => {
         const engine = engineScoring([0, 0, 1, 0, 0]);
         await detectLanguage(engine, new Float32Array(16_000 * 90));

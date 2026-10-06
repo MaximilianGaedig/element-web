@@ -40,8 +40,16 @@ function halfToFloat(bits: number): number {
 /**
  * The language code ("pl", "de", ...) whisper hears in the start of this audio, or undefined where the
  * model has no language tokens (an English-only model) or the scores are unusable.
+ *
+ * `among` limits the choice to the languages the speaker could plausibly be using. A short, noisy voice
+ * message is often a near tie between related languages - one in Polish scored Polish 0.20 against
+ * Romanian 0.19 - and with ninety-nine to choose from the wrong one wins often enough to ruin it.
  */
-export async function detectLanguage(engine: LanguageDetector, samples: Float32Array): Promise<string | undefined> {
+export async function detectLanguage(
+    engine: LanguageDetector,
+    samples: Float32Array,
+    among?: readonly string[],
+): Promise<string | undefined> {
     const config = engine.model.generation_config;
     const languages = config.lang_to_id;
     if (!languages) return undefined;
@@ -59,6 +67,7 @@ export async function detectLanguage(engine: LanguageDetector, samples: Float32A
     let best: string | undefined;
     let bestScore = -Infinity;
     for (const [token, id] of Object.entries(languages)) {
+        if (among && !among.includes(token.replace(/^<\||\|>$/g, ""))) continue;
         const raw = logits.data[lastStep + id];
         const score = half ? halfToFloat(raw) : raw;
         if (score > bestScore) {

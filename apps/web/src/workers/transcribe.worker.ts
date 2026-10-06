@@ -21,6 +21,9 @@ import { detectLanguage, type LanguageDetector } from "../utils/detect/whisperLa
 /** Small enough to fetch on a phone, good enough to trust with a name or a number. */
 const MODEL = "onnx-community/whisper-base";
 
+/** What these chats are in, by turns (Polish, German, English): the choices when the language is guessed. */
+const LIKELY_LANGUAGES = ["pl", "de", "en"];
+
 export interface Request {
     seq: number;
     /** Mono, 16 kHz samples. */
@@ -80,6 +83,7 @@ async function detect(engine: Transcriber, samples: Float32Array): Promise<strin
                 makePrompt: (token) => new Tensor("int64", BigInt64Array.from([BigInt(token)]), [1, 1]),
             },
             samples,
+            LIKELY_LANGUAGES,
         );
     } catch {
         return undefined;
