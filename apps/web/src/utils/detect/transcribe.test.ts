@@ -9,33 +9,38 @@ Please see LICENSE files in the repository root for full details.
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const pipeline = vi.fn();
-const dispose = vi.fn();
 const run = vi.fn();
-/** The settings transformers.js starts with in a browser: the runtime from a CDN, through its cache. */
-const env = {
-    useWasmCache: true,
-    backends: { onnx: { wasm: { wasmPaths: {} as unknown } } },
-};
+const terminate = vi.fn();
+/** Workers made, in order: what the page starts and ends, so a test can see the model come and go. */
+const made: object[] = [];
 
-/** The model's languages and their tokens, and how likely it finds each to come first. */
-const LANGUAGES: Record<string, number> = { "<|en|>": 1, "<|de|>": 2, "<|pl|>": 3 };
-let languageScores = [0, 5, 1, 2];
-const processor = vi.fn(async () => ({ input_features: "features" }));
-const model = Object.assign(
-    vi.fn(async () => ({ logits: { dims: [1, 1, 4], data: Float32Array.from(languageScores) } })),
-    { generation_config: { decoder_start_token_id: 0, is_multilingual: true, lang_to_id: LANGUAGES } },
-);
-const engine = (): object => Object.assign(run, { dispose, processor, model });
-class Tensor {
-    public constructor(
-        public type: string,
-        public data: BigInt64Array,
-        public dims: number[],
-    ) {}
+/** The page's end of the transcriber worker, answering each request with whatever `run` gives. */
+class FakeWorker {
+    public onmessage?: (event: { data: unknown }) => void;
+    public onerror?: (event: { message: string }) => void;
+    public terminate = terminate;
+
+    public constructor() {
+        made.push(this);
+    }
+
+    public postMessage = ({
+        seq,
+        samples,
+        language,
+    }: {
+        seq: number;
+        samples: Float32Array;
+        language?: string;
+    }): void => {
+        void Promise.resolve(run(samples, language)).then(
+            (result: { text: string }) => this.onmessage?.({ data: { seq, text: result.text.trim() } }),
+            (error: Error) => this.onmessage?.({ data: { seq, error: error.message } }),
+        );
+    };
 }
 
-vi.mock("@huggingface/transformers", () => ({ pipeline, env, Tensor }));
+vi.mock("../../workers/transcribeWorkerFactory", () => ({ default: () => new FakeWorker() }));
 
 describe("transcribing a voice message", () => {
     let transcribe: typeof import("./transcribe");
@@ -45,15 +50,8 @@ describe("transcribing a voice message", () => {
         // The model is module state: a fresh module is a fresh session.
         vi.resetModules();
         run.mockReset().mockResolvedValue({ text: " hello there " });
-        dispose.mockReset().mockResolvedValue(undefined);
-        pipeline.mockReset().mockImplementation(async () => engine());
-        model.mockClear();
-        languageScores = [0, 5, 1, 2];
-        env.useWasmCache = true;
-        env.backends.onnx.wasm.wasmPaths = {
-            mjs: "https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/ort-wasm-simd-threaded.asyncify.mjs",
-            wasm: "https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/ort-wasm-simd-threaded.asyncify.wasm",
-        };
+        terminate.mockReset();
+        made.length = 0;
 
         // The browser's decoder and resampler, neither of which the test environment has.
         vi.stubGlobal(
@@ -83,84 +81,17 @@ describe("transcribing a voice message", () => {
         expect(await transcribe.transcribe(new ArrayBuffer(8))).toBe("hello there");
     });
 
-    // The app's content policy runs scripts from this origin only: the runtime from a CDN, or from the
-    // `blob:` URL transformers.js's cache makes of it, failed every transcript.
-    // Left to choose, transformers.js transcribes as English: a Polish message came out as "The".
-    it("transcribes in the language the message is spoken in", async () => {
-        languageScores = [0, 1, 2, 7];
-        await transcribe.transcribe(new ArrayBuffer(8));
-        expect(model).toHaveBeenCalledWith({
-            input_features: "features",
-            decoder_input_ids: expect.objectContaining({ data: BigInt64Array.from([0n]), dims: [1, 1] }),
-        });
-        expect(run).toHaveBeenCalledWith(expect.any(Float32Array), expect.objectContaining({ language: "pl" }));
-    });
-
-    it("takes the language it is given without working it out", async () => {
-        await transcribe.transcribe(new ArrayBuffer(8), "de");
-        expect(model).not.toHaveBeenCalled();
-        expect(run).toHaveBeenCalledWith(expect.any(Float32Array), expect.objectContaining({ language: "de" }));
-    });
-
-    it("runs the model on the runtime served with the app, imported from its own URL", async () => {
-        let settings: unknown;
-        pipeline.mockImplementation(async () => {
-            settings = structuredClone(env);
-            return engine();
-        });
-
-        expect(await transcribe.transcribe(new ArrayBuffer(8))).toBe("hello there");
-
-        expect(transcribe.RUNTIME_FILES.mjs).toMatch(/\/ort-wasm-simd-threaded\.asyncify\.mjs$/);
-        expect(transcribe.RUNTIME_FILES.wasm).toMatch(/\/ort-wasm-simd-threaded\.asyncify\.wasm$/);
-        expect(settings).toEqual({
-            useWasmCache: false,
-            backends: { onnx: { wasm: { wasmPaths: transcribe.RUNTIME_FILES } } },
-        });
-    });
-
-    describe("on a device with a GPU", () => {
-        const withGpu = (features: string[]): void => {
-            Object.defineProperty(navigator, "gpu", {
-                configurable: true,
-                value: { requestAdapter: async () => ({ features: new Set(features) }) },
-            });
-        };
-        afterEach(() => {
-            delete (navigator as { gpu?: unknown }).gpu;
-        });
-
-        it("runs the half-precision model on it", async () => {
-            withGpu(["shader-f16"]);
-            await transcribe.transcribe(new ArrayBuffer(8));
-            expect(pipeline).toHaveBeenCalledWith(expect.anything(), expect.anything(), {
-                device: "webgpu",
-                dtype: "fp16",
-            });
-        });
-
-        // Asked to, the runtime refused to load the model at all ("does not support fp16").
-        it("runs on the CPU where the GPU has no half precision", async () => {
-            withGpu([]);
-            await transcribe.transcribe(new ArrayBuffer(8));
-            expect(pipeline).toHaveBeenCalledWith(expect.anything(), expect.anything(), {
-                device: "wasm",
-                dtype: "q8",
-            });
-        });
-    });
-
     // Whisper is a model of tens of megabytes plus the runtime it runs in. Kept for the session, one
     // transcript in the morning was that much memory until the tab was closed.
     it("lets the model go once nothing has been transcribed for a while", async () => {
         await transcribe.transcribe(new ArrayBuffer(8));
-        expect(pipeline).toHaveBeenCalledTimes(1);
-        expect(dispose).not.toHaveBeenCalled();
+        expect(made).toHaveLength(1);
+        expect(terminate).not.toHaveBeenCalled();
         expect(transcribe.transcriberLoaded()).toBe(true);
 
         await vi.advanceTimersByTimeAsync(transcribe.MODEL_IDLE_MS);
 
-        expect(dispose).toHaveBeenCalledTimes(1);
+        expect(terminate).toHaveBeenCalledTimes(1);
         expect(transcribe.transcriberLoaded()).toBe(false);
         expect(vi.getTimerCount()).toBe(0);
     });
@@ -170,7 +101,7 @@ describe("transcribing a voice message", () => {
         await vi.advanceTimersByTimeAsync(transcribe.MODEL_IDLE_MS);
 
         expect(await transcribe.transcribe(new ArrayBuffer(8))).toBe("hello there");
-        expect(pipeline).toHaveBeenCalledTimes(2);
+        expect(made).toHaveLength(2);
     });
 
     it("keeps the model while messages keep being transcribed", async () => {
@@ -179,8 +110,8 @@ describe("transcribing a voice message", () => {
             await vi.advanceTimersByTimeAsync(transcribe.MODEL_IDLE_MS - 1);
         }
 
-        expect(pipeline).toHaveBeenCalledTimes(1);
-        expect(dispose).not.toHaveBeenCalled();
+        expect(made).toHaveLength(1);
+        expect(terminate).not.toHaveBeenCalled();
     });
 
     it("does not let the model go under a transcript that is still being worked out", async () => {
@@ -189,19 +120,33 @@ describe("transcribing a voice message", () => {
 
         const slow = transcribe.transcribe(new ArrayBuffer(8));
         await vi.advanceTimersByTimeAsync(transcribe.MODEL_IDLE_MS * 3);
-        expect(dispose).not.toHaveBeenCalled();
+        expect(terminate).not.toHaveBeenCalled();
 
         working.resolve({ text: "late" });
         expect(await slow).toBe("late");
         await vi.advanceTimersByTimeAsync(transcribe.MODEL_IDLE_MS);
-        expect(dispose).toHaveBeenCalledTimes(1);
+        expect(terminate).toHaveBeenCalledTimes(1);
     });
 
-    it("tries the model again after it failed to load", async () => {
-        pipeline.mockRejectedValueOnce(new Error("offline"));
+    it("gives nothing back, and asks again next time, when the model could not be loaded", async () => {
+        run.mockRejectedValueOnce(new Error("offline"));
         expect(await transcribe.transcribe(new ArrayBuffer(8))).toBeUndefined();
 
         expect(await transcribe.transcribe(new ArrayBuffer(8))).toBe("hello there");
-        expect(pipeline).toHaveBeenCalledTimes(2);
+    });
+
+    it("hands the language hint to the worker", async () => {
+        await transcribe.transcribe(new ArrayBuffer(8), "pl");
+        expect(run).toHaveBeenCalledWith(expect.any(Float32Array), "pl");
+    });
+
+    it("starts a new worker after the worker died", async () => {
+        await transcribe.transcribe(new ArrayBuffer(8));
+        const [first] = made as FakeWorker[];
+        first.onerror?.({ message: "out of memory" });
+        expect(transcribe.transcriberLoaded()).toBe(false);
+
+        await transcribe.transcribe(new ArrayBuffer(8));
+        expect(made).toHaveLength(2);
     });
 });
