@@ -26,13 +26,16 @@ import { detectLanguage, type LanguageDetector } from "../utils/detect/whisperLa
  * about a quarter of a gigabyte. Base turned the same message into nonsense. The model is let go again
  * when idle.
  */
+const TURBO = "onnx-community/whisper-large-v3-turbo";
 const MODELS = {
-    webgpu: {
-        name: "onnx-community/whisper-large-v3-turbo",
-        dtype: { encoder_model: "q4f16", decoder_model_merged: "q4f16" },
-    },
-    wasm: { name: "onnx-community/whisper-small", dtype: "q8" },
+    // Half-precision maths where the GPU has it; without it that variant cannot run, and the same 4-bit
+    // weights are used with full-precision maths (about 760 MB instead of 560).
+    "webgpu-f16": { name: TURBO, device: "webgpu", dtype: { encoder_model: "q4f16", decoder_model_merged: "q4f16" } },
+    "webgpu": { name: TURBO, device: "webgpu", dtype: { encoder_model: "q4", decoder_model_merged: "q4" } },
+    "wasm": { name: "onnx-community/whisper-small", device: "wasm", dtype: "q8" },
 } as const;
+
+type Variant = keyof typeof MODELS;
 
 export interface Request {
     seq: number;
@@ -50,20 +53,24 @@ const ctx: Worker = self as any;
 
 let transcriber: Promise<Transcriber> | undefined;
 
-/** Whether the device has a GPU to do this on, which decides how long it takes rather than whether. */
-async function bestDevice(): Promise<"webgpu" | "wasm"> {
-    const gpu = (navigator as { gpu?: { requestAdapter(): Promise<unknown> } }).gpu;
+/** What the device can run, which decides how long it takes rather than whether. */
+async function bestVariant(): Promise<Variant> {
+    const gpu = (
+        navigator as { gpu?: { requestAdapter(): Promise<{ features: { has(name: string): boolean } } | null> } }
+    ).gpu;
     if (!gpu) return "wasm";
     try {
-        return (await gpu.requestAdapter()) ? "webgpu" : "wasm";
+        const adapter = await gpu.requestAdapter();
+        if (!adapter) return "wasm";
+        return adapter.features.has("shader-f16") ? "webgpu-f16" : "webgpu";
     } catch {
         return "wasm";
     }
 }
 
-/** Loads the model that suits a device. */
-async function load(device: "webgpu" | "wasm"): Promise<Transcriber> {
-    const { name, dtype } = MODELS[device];
+/** Loads one variant of the model. */
+async function load(variant: Variant): Promise<Transcriber> {
+    const { name, dtype, device } = MODELS[variant];
     // The library's own types are far wider (and null where ours are not): this is the part used here.
     return (await pipeline("automatic-speech-recognition", name, { dtype, device })) as unknown as Transcriber;
 }
@@ -71,11 +78,11 @@ async function load(device: "webgpu" | "wasm"): Promise<Transcriber> {
 /** The one engine of this worker: loading it is most of the cost of a short transcript. */
 function getTranscriber(): Promise<Transcriber> {
     const loading = (transcriber ??= (async () => {
-        const device = await bestDevice();
-        if (device === "wasm") return load("wasm");
-        // A GPU the browser lists but cannot run the model on (a driver without fp16, too little memory)
-        // is no reason to give up: the CPU does it, slower.
-        return load("webgpu").catch((error) => {
+        const variant = await bestVariant();
+        if (variant === "wasm") return load("wasm");
+        // A GPU the browser lists but cannot run the model on (a driver that lacks something, too little
+        // memory) is no reason to give up: the CPU does it, slower.
+        return load(variant).catch((error) => {
             logger.warn("Could not load the transcriber on the GPU, using the CPU", error);
             return load("wasm");
         });
