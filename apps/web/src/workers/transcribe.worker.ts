@@ -15,14 +15,24 @@ Please see LICENSE files in the repository root for full details.
  */
 
 import { pipeline, Tensor } from "@huggingface/transformers";
+import { logger } from "matrix-js-sdk/src/logger";
 
 import { detectLanguage, type LanguageDetector } from "../utils/detect/whisperLanguage";
 
 /**
- * Small rather than base: base turned a Polish voice message into nonsense, small reads it. About a
- * quarter of a gigabyte to fetch once (the browser keeps it), and it is let go again when idle.
+ * Which model, by what runs it. On a GPU, large-v3-turbo: it reads a short Polish voice message
+ * correctly where small gets half of it wrong, and in 4-bit weights it is about 560 MB to fetch once
+ * (the browser keeps it). On the CPU that model takes ten seconds for six, so it gets small, which is
+ * about a quarter of a gigabyte. Base turned the same message into nonsense. The model is let go again
+ * when idle.
  */
-const MODEL = "onnx-community/whisper-small";
+const MODELS = {
+    webgpu: {
+        name: "onnx-community/whisper-large-v3-turbo",
+        dtype: { encoder_model: "q4f16", decoder_model_merged: "q4f16" },
+    },
+    wasm: { name: "onnx-community/whisper-small", dtype: "q8" },
+} as const;
 
 export interface Request {
     seq: number;
@@ -51,16 +61,24 @@ async function bestDevice(): Promise<"webgpu" | "wasm"> {
     }
 }
 
+/** Loads the model that suits a device. */
+async function load(device: "webgpu" | "wasm"): Promise<Transcriber> {
+    const { name, dtype } = MODELS[device];
+    // The library's own types are far wider (and null where ours are not): this is the part used here.
+    return (await pipeline("automatic-speech-recognition", name, { dtype, device })) as unknown as Transcriber;
+}
+
 /** The one engine of this worker: loading it is most of the cost of a short transcript. */
 function getTranscriber(): Promise<Transcriber> {
     const loading = (transcriber ??= (async () => {
         const device = await bestDevice();
-        // The library's own types are far wider (and null where ours are not): this is the part used here.
-        return (await pipeline("automatic-speech-recognition", MODEL, {
-            // Quantised: a quarter of the size, and no worse at speech at this size.
-            dtype: device === "webgpu" ? "fp16" : "q8",
-            device,
-        })) as unknown as Transcriber;
+        if (device === "wasm") return load("wasm");
+        // A GPU the browser lists but cannot run the model on (a driver without fp16, too little memory)
+        // is no reason to give up: the CPU does it, slower.
+        return load("webgpu").catch((error) => {
+            logger.warn("Could not load the transcriber on the GPU, using the CPU", error);
+            return load("wasm");
+        });
     })());
     // A model that could not be fetched (offline, the first time) is not the model: without this the
     // failure is what every later request is handed until the worker is replaced.

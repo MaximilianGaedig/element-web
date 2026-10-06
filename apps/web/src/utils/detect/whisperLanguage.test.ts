@@ -40,6 +40,12 @@ describe("detectLanguage", () => {
         expect(await detectLanguage(engine, new Float32Array(16))).toBe("de");
     });
 
+    it("takes half-float scores as they are when the runtime already decoded them", async () => {
+        // A Float16Array hands over real numbers; reading those as raw words would pick the wrong language.
+        const engine = engineScoring([0, 0, 1, -2, 3], "float16");
+        expect(await detectLanguage(engine, new Float32Array(16))).toBe("de");
+    });
+
     it("only listens to the first half minute", async () => {
         const engine = engineScoring([0, 0, 1, 0, 0]);
         await detectLanguage(engine, new Float32Array(16_000 * 90));

@@ -55,7 +55,8 @@ export async function detectLanguage(engine: LanguageDetector, samples: Float32A
 
     const vocabulary = logits.dims[logits.dims.length - 1];
     const lastStep = logits.data.length - vocabulary;
-    const half = logits.type === "float16";
+    // Raw 16-bit words only where the runtime has no half-float array of its own to hand over.
+    const half = logits.type === "float16" && logits.data instanceof Uint16Array;
     let best: string | undefined;
     let bestScore = -Infinity;
     for (const [token, id] of Object.entries(languages)) {
