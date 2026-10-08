@@ -8,7 +8,7 @@ Please see LICENSE files in the repository root for full details.
 
 // @vitest-environment happy-dom
 
-import { vi, describe, it, expect, beforeEach } from "vitest";
+import { vi, describe, it, expect, beforeEach, afterEach } from "vitest";
 import React from "react";
 import { logger } from "matrix-js-sdk/src/logger";
 import { fireEvent, render, type RenderResult } from "test-utils-rtl";
@@ -19,6 +19,7 @@ import { Playback } from "../../../audio/Playback";
 import { type RoomContextType, TimelineRenderingType } from "../../../contexts/RoomContext";
 import { createAudioContext } from "../../../audio/compat";
 import { ScopedRoomContextProvider } from "../../../contexts/ScopedRoomContext.tsx";
+import { PlaybackSpeed } from "../../../audio/PlaybackSpeed";
 
 vi.mock("../../../WorkerManager", () => ({
     WorkerManager: vi.fn(function () {
@@ -34,18 +35,9 @@ vi.mock("../../../audio/compat", () => ({
 }));
 
 describe("<RecordingPlayback />", () => {
-    const mockAudioBufferSourceNode = {
-        addEventListener: vi.fn(),
-        connect: vi.fn(),
-        start: vi.fn(),
-    };
-
     const mockAudioContext = {
         decodeAudioData: vi.fn(),
-        suspend: vi.fn(),
-        resume: vi.fn(),
-        currentTime: 0,
-        createBufferSource: vi.fn().mockReturnValue(mockAudioBufferSourceNode),
+        close: vi.fn().mockResolvedValue(undefined),
     };
 
     const mockAudioBuffer = {
@@ -71,6 +63,40 @@ describe("<RecordingPlayback />", () => {
         mockAudioBuffer.getChannelData.mockClear().mockReturnValue(mockChannelData);
         mockAudioContext.decodeAudioData.mockReset().mockResolvedValue(mockAudioBuffer);
         vi.mocked(createAudioContext).mockReturnValue(mockAudioContext as unknown as AudioContext);
+
+        // A voice message plays through an <audio /> element, which this environment cannot load: a
+        // stand-in that is ready as soon as it is given something to play.
+        const createElement = document.createElement.bind(document);
+        vi.spyOn(document, "createElement").mockImplementation((tag: string, options?: ElementCreationOptions) => {
+            if (tag.toUpperCase() !== "AUDIO") return createElement(tag, options);
+            const element = {
+                duration: 99,
+                currentTime: 0,
+                play: vi.fn().mockResolvedValue(undefined),
+                pause: vi.fn(),
+                load: vi.fn(),
+                remove: vi.fn(),
+                removeAttribute: vi.fn(),
+                addEventListener: vi.fn(),
+                removeEventListener: vi.fn(),
+                onloadeddata: undefined as undefined | null | (() => void),
+                onerror: undefined as undefined | null | (() => void),
+            };
+            Object.defineProperty(element, "src", {
+                set() {
+                    element.onloadeddata?.();
+                },
+                get: () => "blob:audio",
+            });
+            return element as unknown as HTMLElement;
+        });
+        global.URL.createObjectURL = vi.fn().mockReturnValue("blob:audio");
+        global.URL.revokeObjectURL = vi.fn();
+        localStorage.clear();
+    });
+
+    afterEach(() => {
+        vi.mocked(document.createElement).mockRestore();
     });
 
     const getPlayButton = (component: RenderResult) => component.getByTestId("play-pause-button");
@@ -133,6 +159,44 @@ describe("<RecordingPlayback />", () => {
             expect(component.container.querySelector(".mx_Clock")).toBeDefined();
             expect(component.container.querySelector(".mx_Waveform")).toBeDefined();
             expect(component.container.querySelector(".mx_SeekBar")).toBeFalsy();
+        });
+    });
+
+    describe("voice message extras", () => {
+        it("has no dot and no speed button unless asked", () => {
+            const component = getComponent({ playback: new Playback(new ArrayBuffer(8)) });
+
+            expect(component.container.querySelector(".mx_RecordingPlayback_unplayed")).toBeFalsy();
+            expect(component.queryByTestId("playback-speed")).toBeNull();
+        });
+
+        it("shows a dot beside the time of a message nobody has played", () => {
+            const component = getComponent({ playback: new Playback(new ArrayBuffer(8)), unplayed: true });
+
+            expect(component.getByRole("img", { name: "Not played yet" })).toBeInTheDocument();
+        });
+
+        it("moves on to the next speed when the speed button is pressed", () => {
+            const component = getComponent({ playback: new Playback(new ArrayBuffer(8)), showSpeed: true });
+            const button = component.getByTestId("playback-speed");
+            expect(button).toHaveTextContent("1×");
+
+            fireEvent.click(button);
+            expect(button).toHaveTextContent("1.5×");
+            expect(PlaybackSpeed.current).toBe(1.5);
+
+            fireEvent.click(button);
+            fireEvent.click(button);
+            expect(button).toHaveTextContent("1×");
+        });
+
+        it("tells the layout which phase the playback is in, for the speed button to show by", async () => {
+            const playback = new Playback(new ArrayBuffer(8));
+            const component = getComponent({ playback, showSpeed: true });
+            expect(component.getByTestId("recording-playback")).toHaveAttribute("data-playback-phase", "decoding");
+
+            await flushPromises();
+            expect(component.getByTestId("recording-playback")).toHaveAttribute("data-playback-phase", "stopped");
         });
     });
 

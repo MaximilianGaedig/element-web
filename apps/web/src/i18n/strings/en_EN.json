@@ -4509,6 +4509,11 @@
                 "one": "timeline|url_preview|show_n_more",
                 "other": "timeline|url_preview|show_n_more"
             }
+        },
+        "voice_message": {
+            "from": "Voice message from %(name)s",
+            "speed": "Playback speed: %(speed)s",
+            "unplayed": "Not played yet"
         }
     },
     "truncated_list_n_more": {

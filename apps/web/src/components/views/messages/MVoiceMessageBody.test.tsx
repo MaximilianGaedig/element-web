@@ -20,16 +20,23 @@ import type { MediaEventHelper } from "../../../utils/MediaEventHelper";
 import MVoiceMessageBody from "./MVoiceMessageBody";
 import { PlaybackQueue } from "../../../audio/PlaybackQueue";
 import { SDKContextClass } from "../../../contexts/SDKContextClass";
+import { PlaybackSpeed } from "../../../audio/PlaybackSpeed";
+import { ListenedVoiceMessages } from "../../../audio/ListenedVoiceMessages";
+import * as mediaSession from "../../../audio/PlaybackMediaSession";
 
 // A stored transcript is looked up for every voice message with an ID; there is none here.
 vi.mock("../../../utils/detect/mediaText", () => ({ storedMediaText: vi.fn().mockResolvedValue(undefined) }));
 
 describe("<MVvoiceMessageBody />", () => {
     let event: MatrixEvent;
+    let playback: MockedPlayback;
     beforeEach(() => {
-        const playback = new MockedPlayback(PlaybackState.Decoding, 50, 10) as unknown as Playback;
-        vi.spyOn(PlaybackManager.instance, "createPlaybackInstance").mockReturnValue(playback);
+        localStorage.clear();
+        ListenedVoiceMessages.reset();
+        playback = new MockedPlayback(PlaybackState.Decoding, 50, 10);
+        vi.spyOn(PlaybackManager.instance, "createPlaybackInstance").mockReturnValue(playback as unknown as Playback);
 
+        stubClient(); // the transcript under the player looks up what the server already knows
         const matrixClient = createTestClient();
         const room = new Room("!TESTROOM", matrixClient, "@alice:example.org");
         const playbackQueue = new PlaybackQueue(room, SDKContextClass.instance.roomViewStore);
@@ -38,8 +45,10 @@ describe("<MVvoiceMessageBody />", () => {
         vi.spyOn(playbackQueue, "unsortedEnqueue").mockReturnValue(undefined);
 
         event = new MatrixEvent({
+            event_id: "$voice",
             room_id: "!room:server",
             sender: "@alice.example.org",
+            origin_server_ts: Date.now() + 1000,
             type: EventType.RoomMessage,
             content: {
                 "body": "audio name ",
@@ -61,6 +70,64 @@ describe("<MVvoiceMessageBody />", () => {
 
         await act(() => render(<MVoiceMessageBody mxEvent={event} mediaEventHelper={mediaEventHelper} />));
         expect(await screen.findByTestId("recording-playback")).toBeInTheDocument();
+    });
+
+    const mediaEventHelper = {
+        sourceBlob: { value: { arrayBuffer: () => new ArrayBuffer(8) } },
+    } as unknown as MediaEventHelper;
+
+    it("plays at the speed chosen for every voice message, and follows a change", async () => {
+        PlaybackSpeed.set(1.5);
+        await act(() => render(<MVoiceMessageBody mxEvent={event} mediaEventHelper={mediaEventHelper} />));
+        await screen.findByTestId("recording-playback");
+        expect(playback.playbackRate).toBe(1.5);
+
+        act(() => PlaybackSpeed.set(2));
+
+        expect(playback.playbackRate).toBe(2);
+    });
+
+    it("stops following the speed once its tile is gone", async () => {
+        const { unmount } = await act(() =>
+            render(<MVoiceMessageBody mxEvent={event} mediaEventHelper={mediaEventHelper} />),
+        );
+        await screen.findByTestId("recording-playback");
+        unmount();
+
+        PlaybackSpeed.set(2);
+
+        expect(playback.playbackRate).toBe(1);
+    });
+
+    it("shows a dot until the message is played, then not again", async () => {
+        // Somebody else's message that arrived after unplayed messages began to count.
+        localStorage.setItem("mx_voice_message_listened_since", "1");
+        await act(() => render(<MVoiceMessageBody mxEvent={event} mediaEventHelper={mediaEventHelper} />));
+        await screen.findByTestId("recording-playback");
+        expect(screen.getByRole("img", { name: "Not played yet" })).toBeInTheDocument();
+
+        act(() => playback.setState(PlaybackState.Playing));
+
+        expect(screen.queryByRole("img", { name: "Not played yet" })).toBeNull();
+        expect(ListenedVoiceMessages.isUnplayed(event, "@me:example.org")).toBe(false);
+    });
+
+    it("puts the message on the system's media controls, and takes it off when its tile is gone", async () => {
+        const detach = vi.fn();
+        const attach = vi.spyOn(mediaSession, "attachMediaSession").mockReturnValue(detach);
+
+        const { unmount } = await act(() =>
+            render(<MVoiceMessageBody mxEvent={event} mediaEventHelper={mediaEventHelper} />),
+        );
+        await screen.findByTestId("recording-playback");
+        expect(attach).toHaveBeenCalledWith(
+            playback,
+            expect.stringContaining("Voice message from"),
+            expect.any(String),
+        );
+
+        unmount();
+        expect(detach).toHaveBeenCalled();
     });
 
     it("leaves nothing in the room's queue once its tiles are gone", async () => {

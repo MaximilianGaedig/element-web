@@ -14,6 +14,8 @@ import PlaybackClock from "./PlaybackClock";
 import AudioPlayerBase, { type IProps as IAudioPlayerBaseProps } from "./AudioPlayerBase";
 import LegacySeekBar from "./LegacySeekBar";
 import PlaybackWaveform from "./PlaybackWaveform";
+import { PlaybackSpeedButton } from "./PlaybackSpeedButton";
+import { _t } from "../../../languageHandler";
 import { PlaybackState } from "../../../audio/Playback";
 
 export enum PlaybackLayout {
@@ -30,6 +32,10 @@ export enum PlaybackLayout {
 
 interface IProps extends IAudioPlayerBaseProps {
     layout?: PlaybackLayout; // Defaults to Timeline layout
+    /** A dot beside the time, for a voice message that nobody has played yet. Timeline layout only. */
+    unplayed?: boolean;
+    /** The speed button, which shows while the message plays. Timeline layout only. */
+    showSpeed?: boolean;
 }
 
 export default class RecordingPlayback extends AudioPlayerBase<IProps> {
@@ -57,7 +63,18 @@ export default class RecordingPlayback extends AudioPlayerBase<IProps> {
                         ref={this.seekRef}
                     />
                 </div>
-                <PlaybackClock playback={this.props.playback} />
+                <div className="mx_RecordingPlayback_meta">
+                    <PlaybackClock playback={this.props.playback} />
+                    {this.props.unplayed && (
+                        <span
+                            className="mx_RecordingPlayback_unplayed"
+                            role="img"
+                            aria-label={_t("timeline|voice_message|unplayed")}
+                            title={_t("timeline|voice_message|unplayed")}
+                        />
+                    )}
+                    {this.props.showSpeed && <PlaybackSpeedButton className="mx_RecordingPlayback_speed" />}
+                </div>
             </>
         );
     }
@@ -77,6 +94,7 @@ export default class RecordingPlayback extends AudioPlayerBase<IProps> {
         return (
             <MediaBody
                 className="mx_VoiceMessagePrimaryContainer"
+                data-playback-phase={this.state.playbackPhase}
                 onKeyDown={this.onKeyDown}
                 data-testid="recording-playback"
             >

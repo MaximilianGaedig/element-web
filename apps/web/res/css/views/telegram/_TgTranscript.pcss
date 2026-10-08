@@ -8,29 +8,18 @@ Please see LICENSE files in the repository root for full details.
 /*
  * What a voice message said, under the voice message (TgTranscript.tsx).
  *
- * It is text inside the bubble, set apart from what anyone wrote by the secondary colour. The voice
- * message body is an inline span around the player, so it is made a block here for the text to be bounded
- * by the bubble and wrap in it. The player's own spacing (12px at the sides) is repeated so the text lines
- * up with the waveform, and the room the time needs at the bottom of the bubble moves from the player to
- * the text, which is now the last thing in it.
+ * It is text inside the bubble, set apart from what anyone wrote by the secondary colour, and it shares
+ * its last line with the bubble's time the way a text message does: an invisible copy of the time is
+ * floated to the end of the text (the same trick as the message text's, _TelegramMessages.pcss), and the
+ * "Transcribe" link keeps the time's width free at its end.
  */
-.mx_MVoiceMessageBody {
-    display: block;
-    min-width: 0;
-    max-width: 100%;
-}
-
-.mx_MVoiceMessageBody:has(.mx_TgTranscript, .mx_TgTranscript_button) .mx_MediaBody {
-    padding-block-end: 0;
-}
-
 .mx_TgTranscript,
 .mx_TgTranscript_button {
     display: block;
     box-sizing: border-box;
     max-width: 100%;
-    margin: 0;
-    padding: 0 var(--cpd-space-3x) calc(var(--TgTime-text-size, 0.75rem) + var(--cpd-space-2x));
+    margin: var(--cpd-space-1x) 0 0;
+    padding: 0;
     overflow-wrap: anywhere;
     font: var(--cpd-font-body-md-regular);
     color: var(--cpd-color-text-secondary);
@@ -38,10 +27,21 @@ Please see LICENSE files in the repository root for full details.
 
 .mx_TgTranscript {
     white-space: pre-wrap;
+
+    &::after {
+        content: "";
+        float: right;
+        width: var(--TgTime-width, 0);
+        height: var(--TgTime-text-size, 0.75rem);
+        margin-inline-start: 0.1875rem;
+        visibility: hidden;
+        pointer-events: none;
+    }
 }
 
 .mx_TgTranscript_button {
     /* A link rather than a button: it is an offer, not the point of the message. */
+    padding-inline-end: calc(var(--TgTime-width, 0px) + 0.1875rem);
     color: var(--cpd-color-text-action-accent);
     text-align: start;
 
