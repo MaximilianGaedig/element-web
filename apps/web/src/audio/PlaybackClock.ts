@@ -12,43 +12,16 @@ import { type MatrixEvent } from "matrix-js-sdk/src/matrix";
 import { type IDestroyable } from "../utils/IDestroyable";
 
 /**
- * Tracks accurate human-perceptible time for an audio clip, as informed
- * by managed playback. This clock is tightly coupled with the operation
- * of the Playback class, making assumptions about how the provided
- * AudioContext will be used (suspended/resumed to preserve time, etc).
+ * Tracks the position in an audio clip for the Playback that owns it, and tells listeners when it moves.
  *
- * But why do we need a clock? The AudioContext exposes time information,
- * and so does the audio buffer, but not in a way that is useful for humans
- * to perceive. The audio buffer time is often lagged behind the context
- * time due to internal processing delays of the audio API. Additionally,
- * the context's time is tracked from when it was first initialized/started,
- * not related to positioning within the clip. However, the context time
- * is the most accurate time we can use to determine position within the
- * clip if we're fast enough to track the pauses and stops.
+ * The position is read from the element playing the clip, so it is the position that is actually being
+ * heard (including at any playback speed). While nothing is playing the clock is stopped and reads zero;
+ * a paused clip keeps the position it was paused at.
  *
- * As a result, we track every play, pause, stop, and seek event from the
- * Playback class (kinda: it calls us, which is close enough to the same
- * thing). These events are then tracked on the AudioContext time scale,
- * with assumptions that code execution will result in negligible desync
- * of the clock, or at least no perceptible difference in time. It's
- * extremely important that the calling code, and the clock's own code,
- * is extremely fast between the event happening and the clock time being
- * tracked - anything more than a dozen milliseconds is likely to stack up
- * poorly, leading to clock desync.
- *
- * Clock desync can be dangerous for the stability of the playback controls:
- * if the clock thinks the user is somewhere else in the clip, it could
- * inform the playback of the wrong place in time, leading to dead air in
- * the output or, if severe enough, a clock that won't stop running while
- * the audio is paused/stopped. Other examples include the clip stopping at
- * 90% time due to playback ending, the clip playing from the wrong spot
- * relative to the time, and negative clock time.
- *
- * Note that the clip duration is fed to the clock: this is to ensure that
- * we have the most accurate time possible to present.
+ * The clip duration is fed to the clock by the Playback: it may only be known once the clip has been
+ * decoded, and the event's own duration stands in until then.
  */
 export class PlaybackClock implements IDestroyable {
-    private clipStart = 0;
     private stopped = true;
     private lastCheck = 0;
     private observable = new SimpleObservable<number[]>();
@@ -56,7 +29,8 @@ export class PlaybackClock implements IDestroyable {
     private clipDuration = 0;
     private placeholderDuration = 0;
 
-    public constructor(private context: AudioContext) {}
+    /** @param position Where the clip is now, in seconds, as the element playing it says. */
+    public constructor(private position: () => number) {}
 
     public get durationSeconds(): number {
         return this.clipDuration || this.placeholderDuration;
@@ -68,13 +42,10 @@ export class PlaybackClock implements IDestroyable {
     }
 
     public get timeSeconds(): number {
-        // The modulo is to ensure that we're only looking at the most recent clip
-        // time, as the context is long-running and multiple plays might not be
-        // informed to us (if the control is looping, for example). By taking the
-        // remainder of the division operation, we're assuming that playback is
-        // incomplete or stopped, thus giving an accurate position within the active
-        // clip segment.
-        return (this.context.currentTime - this.clipStart) % this.clipDuration || 0;
+        if (this.stopped) return 0;
+        const duration = this.durationSeconds;
+        const now = this.position() || 0;
+        return duration ? Math.min(now, duration) : now;
     }
 
     public get liveData(): SimpleObservable<number[]> {
@@ -99,43 +70,45 @@ export class PlaybackClock implements IDestroyable {
         if (Number.isFinite(durationMs)) this.placeholderDuration = durationMs / 1000;
     }
 
-    /**
-     * Mark the time in the audio context where the clip starts/has been loaded.
-     * This is to ensure the clock isn't skewed into thinking it is ~0.5s into
-     * a clip when the duration is set.
-     */
+    /** The clip is loaded and ready: tells listeners the duration without moving the position. */
     public flagLoadTime(): void {
-        this.clipStart = this.context.currentTime;
+        this.checkTime(true);
     }
 
     public flagStart(): void {
-        if (this.stopped) {
-            this.clipStart = this.context.currentTime;
-            this.stopped = false;
-        }
-
-        if (!this.timerId) {
-            // 100ms interval to make sure the time is as accurate as possible without being overly insane
-            this.timerId = window.setInterval(this.checkTime, 100);
-        }
+        this.stopped = false;
+        // 50ms keeps the waveform and the seek bar moving smoothly without a frame loop.
+        this.timerId ??= window.setInterval(this.checkTime, 50);
+        this.checkTime(true);
     }
 
+    /** Paused: the position is kept, nothing needs polling until it plays again. */
+    public flagPause(): void {
+        this.checkTime(true);
+        this.stopTimer();
+    }
+
+    /** Finished or stopped: back to the start. */
     public flagStop(): void {
         this.stopped = true;
-
-        // Reset the clock time now so that the update going out will trigger components
-        // to check their seek/position information (alongside the clock).
-        this.clipStart = this.context.currentTime;
+        this.stopTimer();
+        // Update now so that components check their seek/position information (alongside the clock).
+        this.checkTime(true);
     }
 
-    public syncTo(contextTime: number, clipTime: number): void {
-        this.clipStart = contextTime - clipTime;
-        this.stopped = false; // count as a mid-stream pause (if we were stopped)
+    /** The clip was moved: count as a pause at the new position, if it was stopped. */
+    public syncTo(): void {
+        this.stopped = false;
         this.checkTime(true);
+    }
+
+    private stopTimer(): void {
+        if (this.timerId) clearInterval(this.timerId);
+        this.timerId = undefined;
     }
 
     public destroy(): void {
         this.observable.close();
-        if (this.timerId) clearInterval(this.timerId);
+        this.stopTimer();
     }
 }

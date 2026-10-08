@@ -45,8 +45,12 @@ export class Playback extends EventEmitter implements IDestroyable, PlaybackInte
      */
     public readonly thumbnailWaveform: number[];
 
-    private readonly context: AudioContext;
-    private source?: AudioBufferSourceNode | MediaElementAudioSourceNode;
+    /**
+     * Only alive while the clip is being decoded for its waveform: the clip is played by an <audio />
+     * element, which unlike a decoded buffer keeps the pitch when the speed changes and holds the clip
+     * compressed rather than as 48,000 floats for every second of it.
+     */
+    private context?: AudioContext;
     private state = PlaybackState.Decoding;
     private audioBuf?: AudioBuffer;
     private element?: HTMLAudioElement;
@@ -55,6 +59,7 @@ export class Playback extends EventEmitter implements IDestroyable, PlaybackInte
     private readonly clock: PlaybackClock;
     private readonly fileSize: number;
     private destroyed = false;
+    private rate = 1;
 
     /**
      * Creates a new playback instance from a buffer.
@@ -69,11 +74,10 @@ export class Playback extends EventEmitter implements IDestroyable, PlaybackInte
         super();
         // Capture the file size early as reading the buffer will result in a 0-length buffer left behind
         this.fileSize = this.buf.byteLength;
-        this.context = createAudioContext();
         this.resampledWaveform = arrayFastResample(seedWaveform ?? DEFAULT_WAVEFORM, PLAYBACK_WAVEFORM_SAMPLES);
         this.thumbnailWaveform = arrayFastResample(seedWaveform ?? DEFAULT_WAVEFORM, THUMBNAIL_WAVEFORM_SAMPLES);
         this.waveformObservable.update(this.resampledWaveform);
-        this.clock = new PlaybackClock(this.context);
+        this.clock = new PlaybackClock(() => this.element?.currentTime ?? 0);
     }
 
     /**
@@ -120,6 +124,16 @@ export class Playback extends EventEmitter implements IDestroyable, PlaybackInte
         return this.currentState === PlaybackState.Playing;
     }
 
+    /** How fast the clip plays, 1 being as recorded. The pitch stays where it was recorded. */
+    public get playbackRate(): number {
+        return this.rate;
+    }
+
+    public setPlaybackRate(rate: number): void {
+        this.rate = rate;
+        if (this.element) this.element.playbackRate = rate;
+    }
+
     public emit(event: PlaybackState, ...args: any[]): boolean {
         this.state = event;
         super.emit(event, ...args);
@@ -131,27 +145,56 @@ export class Playback extends EventEmitter implements IDestroyable, PlaybackInte
         this.destroyed = true;
         // Dev note: It's critical that we call stop() during cleanup to ensure that downstream callers
         // are aware of the final clock position before the user triggered an unload.
-        void this.stop()
-            .catch(() => {})
-            // Closed rather than left suspended: a context holds an audio device and a rendering graph
-            // until it is closed or collected, and a chat's worth of voice messages is a chat's worth of
-            // contexts. After the stop, so the suspend it asks for is not refused by a closed context.
-            .then(() => this.context.close())
-            .catch((e) => logger.warn("Could not close a playback's audio context", e));
+        void this.stop().catch(() => {});
+        this.closeContext();
         this.removeAllListeners();
         this.clock.destroy();
         this.waveformObservable.close();
         if (this.element) {
             this.element.removeEventListener("ended", this.onPlaybackEnd);
             URL.revokeObjectURL(this.element.src);
+            // So the browser lets go of the clip rather than waiting for the element to be collected.
+            this.element.removeAttribute("src");
+            this.element.load();
             this.element.remove();
         }
         // The decoded samples are by far the largest thing here (48,000 floats per second of audio, per
         // channel) and live outside the JS heap. Anything still holding this playback - a closure, a
         // queue - must not be holding them too.
-        this.source = undefined;
         this.audioBuf = undefined;
         this.buf = new ArrayBuffer(0);
+    }
+
+    /**
+     * Closes the decoding context: a context holds an audio device and a rendering graph until it is
+     * closed or collected, and a chat's worth of voice messages is a chat's worth of contexts.
+     */
+    private closeContext(): void {
+        const context = this.context;
+        this.context = undefined;
+        context?.close().catch((e) => logger.warn("Could not close a playback's audio context", e));
+    }
+
+    /** An <audio /> element holding `bytes`, ready to play. */
+    private async loadElement(bytes: ArrayBuffer): Promise<HTMLAudioElement | undefined> {
+        const element = document.createElement("AUDIO") as HTMLAudioElement;
+        const deferred = Promise.withResolvers<unknown>();
+        element.onloadeddata = deferred.resolve;
+        element.onerror = deferred.reject;
+        element.src = URL.createObjectURL(new Blob([bytes]));
+        element.playbackRate = this.rate;
+        element.preservesPitch = true;
+        await deferred.promise; // make sure the audio element is ready for us
+        element.onloadeddata = null;
+        element.onerror = null;
+        if (this.destroyed) {
+            // destroy() ran before there was an element for it to clean up.
+            URL.revokeObjectURL(element.src);
+            element.remove();
+            return undefined;
+        }
+        element.addEventListener("ended", this.onPlaybackEnd);
+        return element;
     }
 
     public async prepare(): Promise<void> {
@@ -164,34 +207,20 @@ export class Playback extends EventEmitter implements IDestroyable, PlaybackInte
 
         this.state = PlaybackState.Preparing;
 
-        // The point where we use an audio element is fairly arbitrary, though we don't want
-        // it to be too low. As of writing, voice messages want to show a waveform but audio
-        // messages do not. Using an audio element means we can't show a waveform preview, so
-        // we try to target the difference between a voice message file and large audio file.
-        // Overall, the point of this is to avoid memory-related issues due to storing a massive
-        // audio buffer in memory, as that can balloon to far greater than the input buffer's
-        // byte length.
-        if (this.buf.byteLength > 5 * 1024 * 1024) {
+        // The bytes the element plays. Whatever is decoded for the waveform is a copy: decodeAudioData
+        // detaches the buffer it is given, so a copy has to be taken before it is called.
+        let playable = this.buf;
+
+        // Voice messages want a waveform, which needs the clip decoded; a big file is more likely music
+        // or a recording than a message, and decoding it balloons to far greater than its byte length, so
+        // those are only played.
+        if (this.buf.byteLength <= 5 * 1024 * 1024) {
             // 5mb
-            logger.log("Audio file too large: processing through <audio /> element");
-            this.element = document.createElement("AUDIO") as HTMLAudioElement;
-            const deferred = Promise.withResolvers<unknown>();
-            this.element.onloadeddata = deferred.resolve;
-            this.element.onerror = deferred.reject;
-            this.element.src = URL.createObjectURL(new Blob([this.buf]));
-            await deferred.promise; // make sure the audio element is ready for us
-            if (this.destroyed) {
-                // destroy() ran before there was an element for it to clean up.
-                URL.revokeObjectURL(this.element.src);
-                this.element.remove();
-                return;
-            }
-        } else {
-            // decodeAudioData detaches the buffer it is given, so the copy the fallback needs has
-            // to be taken before we call it rather than inside the error handler.
-            const fallbackBuf = this.buf.slice(0);
+            playable = this.buf.slice(0);
+            this.context = createAudioContext();
+            const context = this.context;
             try {
-                this.audioBuf = await this.context.decodeAudioData(this.buf);
+                this.audioBuf = await context.decodeAudioData(this.buf);
             } catch (e) {
                 // Nothing to fall back for: the context was closed under the decode.
                 if (this.destroyed) return;
@@ -199,9 +228,11 @@ export class Playback extends EventEmitter implements IDestroyable, PlaybackInte
                 logger.warn("Trying to re-encode to WAV instead...");
 
                 try {
-                    // This error handler is largely for Safari, which doesn't support Opus/Ogg very well.
-                    const wav = await decodeOgg(fallbackBuf);
-                    this.audioBuf = await this.context.decodeAudioData(wav);
+                    // This error handler is largely for Safari, which doesn't support Opus/Ogg very well,
+                    // and there the element needs the re-encoded clip too.
+                    const wav = await decodeOgg(playable);
+                    playable = wav.slice(0);
+                    this.audioBuf = await context.decodeAudioData(wav);
                 } catch (e) {
                     logger.error("Error decoding recording:", e);
                     throw e;
@@ -221,13 +252,21 @@ export class Playback extends EventEmitter implements IDestroyable, PlaybackInte
             );
         }
 
-        // Destroyed while the waveform was being worked out, or while the element was loading.
+        // Destroyed while the waveform was being worked out.
         if (this.destroyed) return;
+
+        const element = await this.loadElement(playable);
+        if (!element) return;
+        this.element = element;
 
         this.waveformObservable.update(this.resampledWaveform);
 
-        this.clock.flagLoadTime(); // must happen first because setting the duration fires a clock update
-        this.clock.durationSeconds = this.element?.duration ?? this.audioBuf!.duration;
+        // The decoded length is the reliable one: an element reports Infinity for some recordings.
+        const duration = this.audioBuf?.duration ?? element.duration;
+        this.audioBuf = undefined;
+        this.closeContext();
+
+        this.clock.durationSeconds = duration;
 
         // Signal that we're not decoding anymore. This is done last to ensure the clock is updated for
         // when the downstream callers try to use it.
@@ -235,56 +274,30 @@ export class Playback extends EventEmitter implements IDestroyable, PlaybackInte
     }
 
     private onPlaybackEnd = async (): Promise<void> => {
-        await this.context.suspend();
+        this.element?.pause();
+        if (this.element) this.element.currentTime = 0;
         this.emit(PlaybackState.Stopped);
         this.clock.flagStop();
     };
 
     public async play(): Promise<void> {
-        // We can't restart a buffer source, so we need to create a new one if we hit the end
-        if (this.state === PlaybackState.Stopped) {
-            this.disconnectSource();
-            this.makeNewSourceBuffer();
-            if (this.element) {
-                await this.element.play();
-            } else {
-                (this.source as AudioBufferSourceNode).start();
-            }
+        const element = this.element;
+        if (!element) return;
+        element.playbackRate = this.rate;
+        try {
+            await element.play();
+        } catch (e) {
+            // Pausing straight after pressing play interrupts the start, which is no failure.
+            if ((e as Error).name !== "AbortError") logger.warn("Could not play a recording", e);
+            return;
         }
-
-        // We use the context suspend/resume functions because it allows us to pause a source
-        // node, but that still doesn't help us when the source node runs out (see above).
-        await this.context.resume();
         this.clock.flagStart();
         this.emit(PlaybackState.Playing);
     }
 
-    private disconnectSource(): void {
-        if (this.element) return; // leave connected, we can (and must) re-use it
-        this.source?.disconnect();
-        this.source?.removeEventListener("ended", this.onPlaybackEnd);
-    }
-
-    private makeNewSourceBuffer(): void {
-        if (this.element && this.source) return; // leave connected, we can (and must) re-use it
-
-        if (this.element) {
-            this.source = this.context.createMediaElementSource(this.element);
-            // A MediaElementAudioSourceNode is not a scheduled source node and never emits "ended",
-            // so the media element has to be listened to instead. Without this, playback of a large
-            // file never returns to Stopped and the clock keeps running past the end of the clip.
-            this.element.addEventListener("ended", this.onPlaybackEnd);
-        } else {
-            this.source = this.context.createBufferSource();
-            this.source.buffer = this.audioBuf ?? null;
-            this.source.addEventListener("ended", this.onPlaybackEnd);
-        }
-
-        this.source.connect(this.context.destination);
-    }
-
     public async pause(): Promise<void> {
-        await this.context.suspend();
+        this.element?.pause();
+        this.clock.flagPause();
         this.emit(PlaybackState.Paused);
     }
 
@@ -298,62 +311,15 @@ export class Playback extends EventEmitter implements IDestroyable, PlaybackInte
     }
 
     public async skipTo(timeSeconds: number): Promise<void> {
-        // Dev note: this function talks a lot about clock desyncs. There is a clock running
-        // independently to the audio context and buffer so that accurate human-perceptible
-        // time can be exposed. The PlaybackClock class has more information, but the short
-        // version is that we need to line up the useful time (clip position) with the context
-        // time, and avoid as many deviations as possible as otherwise the user could see the
-        // wrong time, and we stop playback at the wrong time, etc.
+        const element = this.element;
+        if (!element) return;
 
         timeSeconds = clamp(timeSeconds, 0, this.clock.durationSeconds);
+        element.currentTime = timeSeconds;
+        this.clock.syncTo();
 
-        // Track playing state so we don't cause seeking to start playing the track.
-        const isPlaying = this.isPlaying;
-
-        if (isPlaying) {
-            // Pause first so we can get an accurate measurement of time
-            await this.context.suspend();
-        }
-
-        // We can't simply tell the context/buffer to jump to a time, so we have to
-        // start a whole new buffer and start it from the new time offset.
-        const now = this.context.currentTime;
-        this.disconnectSource();
-        this.makeNewSourceBuffer();
-
-        // We have to resync the clock because it can get confused about where we're
-        // at in the audio clip.
-        this.clock.syncTo(now, timeSeconds);
-
-        // Always start the source to queue it up. We have to do this now (and pause
-        // quickly if we're not supposed to be playing) as otherwise the clock can desync
-        // when it comes time to the user hitting play. After a couple jumps, the user
-        // will have desynced the clock enough to be about 10-15 seconds off, while this
-        // keeps it as close to perfect as humans can perceive.
-        if (this.element) {
-            this.element.currentTime = timeSeconds;
-        } else {
-            (this.source as AudioBufferSourceNode).start(now, timeSeconds);
-        }
-
-        // Dev note: it's critical that the code gap between `this.source.start()` and
-        // `this.pause()` is as small as possible: we do not want to delay *anything*
-        // as that could cause a clock desync, or a buggy feeling as a single note plays
-        // during seeking.
-
-        if (isPlaying) {
-            // If we were playing before, continue the context so the clock doesn't desync.
-            await this.context.resume();
-        } else {
-            // As mentioned above, we'll have to pause the clip if we weren't supposed to
-            // be playing it just yet. If we didn't have this, the audio clip plays but all
-            // the states will be wrong: clock won't advance, pause state doesn't match the
-            // blaring noise leaving the user's speakers, etc.
-            //
-            // Also as mentioned, if the code gap is small enough then this should be
-            // executed immediately after the start time, leaving no feasible time for the
-            // user's speakers to play any sound.
-            await this.pause();
-        }
+        // Seeking a clip that is not playing must not start it, and counts as being paused at the new
+        // spot (a stopped clip has no position to show).
+        if (!this.isPlaying) await this.pause();
     }
 }

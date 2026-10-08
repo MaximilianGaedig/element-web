@@ -69,6 +69,7 @@ export const createTestPlaybackClock = (): PlaybackClock => {
         flagLoadTime: vi.fn(),
         flagStart: vi.fn(),
         flagStop: vi.fn(),
+        flagPause: vi.fn(),
         syncTo: vi.fn(),
         destroy: vi.fn(),
     } as PublicInterface<PlaybackClock> as PlaybackClock;

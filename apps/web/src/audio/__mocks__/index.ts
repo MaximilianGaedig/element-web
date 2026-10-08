@@ -52,6 +52,14 @@ export class MockedPlayback extends EventEmitter {
         return this.waveformObservable;
     }
 
+    public playbackRate = 1;
+    public setPlaybackRate: Mock<Playback["setPlaybackRate"]> = vi.fn((rate: number) => {
+        this.playbackRate = rate;
+    });
+    public play: Mock<Playback["play"]> = vi.fn();
+    public pause: Mock<Playback["pause"]> = vi.fn();
+    public stop: Mock<Playback["stop"]> = vi.fn();
+
     public prepare: Mock<Playback["prepare"]> = vi.fn().mockResolvedValue(undefined);
     public skipTo: Mock<Playback["skipTo"]> = vi.fn();
     public toggle: Mock<Playback["toggle"]> = vi.fn();
