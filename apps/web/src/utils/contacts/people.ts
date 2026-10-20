@@ -33,6 +33,7 @@ import { getBridgeBots, getBridgeInfo, getBridgedDmUserId } from "../bridge/brid
 import { type ContactDetail, type IdentityKey, identityDetails, identityKeys } from "./identity";
 import DMRoomMap from "../DMRoomMap";
 import { type ContactCard, allCards, cardFor, cardLabel, fullName } from "./card";
+import { loadAddressBook } from "./addressBook";
 import { cardFromProfile } from "./publish";
 import { type PublishedIdentity } from "./networkHandle";
 
@@ -733,6 +734,8 @@ export async function allPeople(
     const [fromBridges, fromChats] = await Promise.all([
         ask ? bridgeContacts(client, fresh) : [],
         contactsFromChats(client, ask),
+        // The reader's own cards, from their room: read when the list is, not synced to every device.
+        loadAddressBook(client, { fresh }),
     ]);
     // People asked for by name who are in neither: a group's member the reader has no chat with.
     const known = new Set([...fromBridges, ...fromChats].map((account) => account.mxid));

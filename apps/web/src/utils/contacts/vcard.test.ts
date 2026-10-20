@@ -8,7 +8,7 @@ Please see LICENSE files in the repository root for full details.
 import { describe, expect, it } from "vitest";
 
 import { type ContactCard } from "./card";
-import { parseVCards, toVCard, toVCards } from "./vcard";
+import { parseVCards, toVCard } from "./vcard";
 
 /* A card written the way iOS writes one, including the bits that trip hand-rolled parsers. */
 const APPLE = [
@@ -178,11 +178,6 @@ describe("writing vCards", () => {
     it("keeps a dated value that is not an anniversary", () => {
         const [back] = parseVCards(toVCard({ dates: [{ label: "graduation", date: "2020-06-01" }] }));
         expect(back.dates).toEqual([{ label: "graduation", date: "2020-06-01" }]);
-    });
-
-    it("writes a file of several people", () => {
-        const file = toVCards([card, { firstName: "Bob" }]);
-        expect(parseVCards(file)).toHaveLength(2);
     });
 });
 

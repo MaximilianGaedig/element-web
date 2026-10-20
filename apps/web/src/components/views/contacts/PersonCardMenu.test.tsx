@@ -138,7 +138,10 @@ describe("PersonCardMenu", () => {
         render(<PersonCardMenu client={client} person={ada} onChanged={onChanged} />);
 
         props().onExport!(ada);
-        expect(share).toHaveBeenCalledWith("Ada Klein.vcf", expect.stringContaining("BEGIN:VCARD"));
+        // After the picture, if there is one, has been fetched to go inside it.
+        await waitFor(() =>
+            expect(share).toHaveBeenCalledWith("Ada Klein.vcf", expect.stringContaining("BEGIN:VCARD")),
+        );
 
         props().onSend!(ada);
         await waitFor(() => expect(send).toHaveBeenCalled());

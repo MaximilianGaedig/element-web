@@ -14,9 +14,9 @@ Please see LICENSE files in the repository root for full details.
  *
  * The fields are the ones a phone's address book has, because that is where these cards come from and go
  * back to: vCard is the interchange format (see vcard.ts) and its shape is what iOS, Android, Outlook and
- * every CardDAV server agree on. Stored in account data against every one of a person's Matrix IDs, the
- * same way their nickname and colour are, so it follows the account rather than the browser and survives
- * a merge being rebuilt in another order.
+ * every CardDAV server agree on. Stored in the reader's address book room (addressBook.ts), found through
+ * every one of a person's Matrix IDs, so it follows the account rather than the browser and survives a
+ * merge being rebuilt in another order.
  *
  * What a network published is never written here. The card is the reader's own layer over it: the two are
  * shown together and only this one can be edited, so a bridge correcting a name can never quietly discard
@@ -26,9 +26,7 @@ Please see LICENSE files in the repository root for full details.
 import { type MatrixClient } from "matrix-js-sdk/src/matrix";
 
 import { type Person } from "./people";
-
-/** Where the reader's own cards are kept. */
-export const CARD_EVENT_TYPE = "im.mxg.contact_cards";
+import { type EditSource, heldCards, saveCardFor } from "./addressBook";
 
 /**
  * A value with the label its owner gave it.
@@ -124,9 +122,9 @@ export interface ContactCard {
     /**
      * A picture the reader chose, as an mxc: URI.
      *
-     * Uploaded to the reader's own media rather than kept as data in account data: a photo inlined there
-     * would be sent to every device on every sync, and account data is not the place for a megabyte per
-     * contact. Shown in front of whatever the networks publish, because a picture the reader picked is the
+     * Uploaded to the reader's own media rather than kept as data in the card: a photo inlined there is
+     * read with every card, and an imported vCard's own PHOTO line is moved to media on the way in
+     * (photos.ts). Shown in front of whatever the networks publish, because a picture the reader picked is the
      * one they mean.
      */
     photoUrl?: string;
@@ -137,6 +135,7 @@ export interface ContactCard {
      * A card from another address book carries that address book's own properties, and dropping them would
      * make exporting a contact that came from elsewhere a quiet way to strip half of what its own app looks
      * for. They are never shown and never edited - only carried - so nothing here has to understand them.
+     * Nothing over a kilobyte is carried (photos.ts): an inline photo goes to media, and other blobs are dropped.
      */
     extra?: string[];
 }
@@ -162,16 +161,9 @@ export const RELATED_LABELS = [
     "other",
 ];
 
-interface Stored {
-    /** One card per Matrix ID; several IDs of one person point at the same card. */
-    cards?: Record<string, ContactCard>;
-}
-
-const stored = (client: MatrixClient): Stored => client.getAccountData(CARD_EVENT_TYPE)?.getContent<Stored>() ?? {};
-
 /** The card the reader has written for this person, if they have written one. */
 export function cardFor(client: MatrixClient, person: Person): ContactCard | undefined {
-    const cards = stored(client).cards ?? {};
+    const cards = heldCards(client);
     for (const account of person.accounts) {
         /*
          * By Matrix ID for somebody with a chat, and by the card's own key for somebody who is only a
@@ -191,27 +183,31 @@ export function isEmpty(card: ContactCard): boolean {
     );
 }
 
+/** The ids a person's card is found under: each Matrix ID, or the card's own key when that is all they have. */
+export const cardIdsOf = (person: Pick<Person, "accounts">): string[] =>
+    person.accounts
+        .map((account) => account.mxid ?? (account.remoteId.startsWith("vcard:") ? account.remoteId : undefined))
+        .filter((id): id is string => !!id);
+
 /**
  * Writes the card against every one of their Matrix IDs, or clears it when it says nothing.
  *
  * Against all of them for the same reason a nickname is written that way: one person is several accounts,
- * and a card against only the first would be lost the moment the merge was rebuilt in another order.
+ * and a card against only the first would be lost the moment the merge was rebuilt in another order. One
+ * card in the room, and the other ids pointing at it; the version it replaces stays in the room's history,
+ * marked with `source`.
  */
-export async function saveCard(client: MatrixClient, person: Person, card: ContactCard): Promise<void> {
-    const cards = { ...stored(client).cards };
-    const empty = isEmpty(card);
-    for (const account of person.accounts) {
-        // Against their Matrix ID, or against the card's own key when that is all they have.
-        const key = account.mxid ?? (account.remoteId.startsWith("vcard:") ? account.remoteId : undefined);
-        if (!key) continue;
-        if (empty) delete cards[key];
-        else cards[key] = card;
-    }
-    await client.setAccountData(CARD_EVENT_TYPE, { cards });
+export async function saveCard(
+    client: MatrixClient,
+    person: Person,
+    card: ContactCard,
+    source: EditSource = "edit",
+): Promise<void> {
+    await saveCardFor(client, cardIdsOf(person), isEmpty(card) ? undefined : card, source);
 }
 
-/** Every card the reader has written, for handing the whole address book to something else. */
-export const allCards = (client: MatrixClient): Record<string, ContactCard> => stored(client).cards ?? {};
+/** Every card the reader has written, by every id it is found under, for handing the whole book to something else. */
+export const allCards = (client: MatrixClient): Record<string, ContactCard> => heldCards(client);
 
 /**
  * What to call a card in a list: its name, or else whatever it has that a person would recognise it by -
@@ -248,5 +244,5 @@ export function fullName(card: ContactCard): string {
 export async function saveLooseCard(client: MatrixClient, card: ContactCard): Promise<void> {
     if (isEmpty(card)) return;
     const key = `vcard:${fullName(card) || card.nickname || card.phones?.[0]?.value || Date.now().toString(36)}`;
-    await client.setAccountData(CARD_EVENT_TYPE, { cards: { ...stored(client).cards, [key]: card } });
+    await saveCardFor(client, [key], card, "edit");
 }

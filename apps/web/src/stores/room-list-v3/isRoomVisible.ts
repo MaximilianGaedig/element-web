@@ -8,6 +8,7 @@
 import { type Room } from "matrix-js-sdk/src/matrix";
 
 import { isLocalRoom } from "../../utils/localRoom/isLocalRoom";
+import { isAddressBookRoom } from "../../utils/contacts/bookRoom";
 
 /**
  * Determines whether a room should be visible in the room list
@@ -21,6 +22,9 @@ export function isRoomVisible(room?: Room): boolean {
 
     // local rooms shouldn't show up anywhere
     if (isLocalRoom(room)) return false;
+
+    // the reader's address book is kept in a room of its own (utils/contacts/addressBook.ts): storage, not a chat
+    if (isAddressBookRoom(room)) return false;
 
     return true; // default
 }

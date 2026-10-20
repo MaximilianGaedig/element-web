@@ -50,6 +50,11 @@ declare module "matrix-js-sdk/src/types" {
             status: string;
         };
         "m.room.bot.options": IContent;
+
+        // The reader's address book room (utils/contacts/addressBook.ts): a card per state key, and the
+        // reader's other Matrix IDs pointing at the card that is theirs. Empty content is a cleared one.
+        "im.mxg.contact_card": { card?: object; source?: string; ts?: number };
+        "im.mxg.contact_alias": { card?: string };
     }
 
     export interface TimelineEvents {
@@ -79,6 +84,14 @@ declare module "matrix-js-sdk/src/types" {
         "im.mxg.contact_cards": { cards?: Record<string, unknown> };
         "im.mxg.contact_tags": { tags?: { id: string; name: string; members: string[] }[] };
         "im.mxg.contact_history": { history?: Record<string, { ts: number; source: string; was: unknown }[]> };
+        // Where the address book room is (utils/contacts/addressBook.ts); `pending` while the cards are moved in.
+        "im.mxg.contacts_room": {
+            room_id?: string;
+            pending?: boolean;
+            backup?: string;
+            moved_ts?: number;
+            moved_hash?: string;
+        };
         // Analytics account data event
         "im.vector.analytics": {
             id: string;
