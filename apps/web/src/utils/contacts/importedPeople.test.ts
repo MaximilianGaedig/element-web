@@ -8,7 +8,7 @@ Please see LICENSE files in the repository root for full details.
 import { describe, expect, it, vi } from "vitest";
 import { type MatrixClient } from "matrix-js-sdk/src/matrix";
 
-import { CARD_EVENT_TYPE } from "./card";
+import { LEGACY_CARDS_TYPE } from "./addressBook";
 import { accountId, allPeople, groupAccounts, withReaderNames } from "./people";
 import DMRoomMap from "../DMRoomMap";
 
@@ -17,7 +17,7 @@ const clientWith = (cards: Record<string, unknown>): MatrixClient =>
         getSafeUserId: () => "@me:e",
         getVisibleRooms: () => [],
         getRooms: () => [],
-        getAccountData: (type: string) => (type === CARD_EVENT_TYPE ? { getContent: () => ({ cards }) } : undefined),
+        getAccountData: (type: string) => (type === LEGACY_CARDS_TYPE ? { getContent: () => ({ cards }) } : undefined),
     }) as unknown as MatrixClient;
 
 describe("people who are only a card", () => {

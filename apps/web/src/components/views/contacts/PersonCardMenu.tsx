@@ -26,7 +26,8 @@ import { callInRoom, messagePerson } from "../../../utils/contacts/actions";
 import { isFavourite, setFavourite } from "../../../utils/contacts/favourites";
 import { contactTags, setInTag } from "../../../utils/contacts/tags";
 import { cardFor } from "../../../utils/contacts/card";
-import { cardForExport, shareVCard, toVCard } from "../../../utils/contacts/vcard";
+import { cardForExport, shareVCard } from "../../../utils/contacts/vcard";
+import { vCardWithPhoto } from "../../../utils/contacts/photos";
 
 interface Props {
     client: MatrixClient;
@@ -100,18 +101,22 @@ export function PersonCardMenu({ client, person, onChanged }: Props): JSX.Elemen
                 }
                 void client.setIgnoredUsers([...next]).then(onChanged);
             }}
-            onExport={(who) => void shareVCard(`${who.name}.vcf`, toVCard(cardForExport(who, cardFor(client, who))))}
+            onExport={(who) =>
+                void vCardWithPhoto(client, cardForExport(who, cardFor(client, who))).then((text) =>
+                    shareVCard(`${who.name}.vcf`, text),
+                )
+            }
             onSend={(who) => {
-                const text = toVCard(cardForExport(who, cardFor(client, who)));
-                const file = new File([text], `${who.name}.vcf`, { type: "text/vcard" });
                 // Loaded when used: the uploader and the stores are large modules, and a card that is only
                 // being shown should not pull them in - nor sit in an import cycle with them at startup.
                 void Promise.all([
+                    vCardWithPhoto(client, cardForExport(who, cardFor(client, who))),
                     import("../../../ContentMessages"),
                     import("../../../contexts/SDKContextClass.ts"),
-                ]).then(([{ default: ContentMessages }, { SDKContextClass }]) => {
+                ]).then(([text, { default: ContentMessages }, { SDKContextClass }]) => {
                     const roomId = SDKContextClass.instance.roomViewStore.getRoomId();
                     if (!roomId) return;
+                    const file = new File([text], `${who.name}.vcf`, { type: "text/vcard" });
                     return ContentMessages.sharedInstance().sendContentToRoom(
                         file,
                         roomId,

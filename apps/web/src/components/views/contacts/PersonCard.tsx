@@ -23,9 +23,10 @@ import { splitName } from "../../../utils/contacts/names";
 import { publishedCardOf } from "../../../utils/contacts/publish";
 import { chosenColour, setColour } from "../../../utils/contacts/appearance";
 import { cardFor, saveCard } from "../../../utils/contacts/card";
-import { deleteRevision, forgetHistory, historyFor, recordRevision } from "../../../utils/contacts/history";
+import { type Revision, deleteRevision, forgetHistory, historyFor, loadHistory } from "../../../utils/contacts/history";
 import { ringtoneOf, setRingtone, setTextTone, textToneOf, uploadTone } from "../../../utils/contacts/tones";
-import { cardForExport, downloadVCard, toVCard } from "../../../utils/contacts/vcard";
+import { cardForExport, downloadVCard } from "../../../utils/contacts/vcard";
+import { vCardWithPhoto } from "../../../utils/contacts/photos";
 
 interface Props {
     client: MatrixClient;
@@ -125,6 +126,25 @@ export function PersonCard({
      * check is the crypto's answer about their cross-signing. Neither can be had synchronously, so the
      * card shows what there is and fills in when they answer.
      */
+    /*
+     * The earlier versions of their card, which are the address book room's own state changes and so are
+     * read from it (utils/contacts/history.ts) - again after anything here changed the card.
+     */
+    const [versions, setVersions] = useState<Revision[]>(() => historyFor(client, person));
+    const [historyAt, setHistoryAt] = useState(0);
+    useEffect(() => {
+        let alive = true;
+        loadHistory(client, person)
+            .then((found) => alive && setVersions(found))
+            .catch(() => undefined);
+        return () => {
+            alive = false;
+        };
+    }, [client, person, historyAt]);
+    const changedHistory = (): void => {
+        setHistoryAt((n) => n + 1);
+        onChanged();
+    };
     const [groups, setGroups] = useState<SharedRoom[]>([]);
     const [verification, setVerification] = useState<Verification>();
     const [week, setWeek] = useState<Week>();
@@ -204,10 +224,7 @@ export function PersonCard({
                  * after the write has nothing to record, and one taken and then not followed by a
                  * write claims a change that never happened.
                  */
-                const was = cardFor(client, person);
-                void recordRevision(client, person, was, "edit")
-                    .then(() => saveCard(client, person, next))
-                    .then(onChanged);
+                void saveCard(client, person, next, "edit").then(changedHistory);
             }}
             ringtone={ringtoneOf(client, person)}
             textTone={textToneOf(client, person)}
@@ -221,23 +238,20 @@ export function PersonCard({
                     .then((tone) => set(client, person, tone))
                     .then(onChanged);
             }}
-            history={historyFor(client, person)}
+            history={versions}
             /*
              * Restoring is itself a save: what the card says now is recorded first, so putting an
              * old version back can be put back too. The same thing a password manager does when
              * you restore an entry from its history, and for the same reason - a restore onto the
              * wrong contact is exactly the mistake the history exists to undo.
              */
-            onRestore={(revision) => {
-                const was = cardFor(client, person);
-                void recordRevision(client, person, was, "restore")
-                    .then(() => saveCard(client, person, revision.was))
-                    .then(onChanged);
-            }}
-            onDeleteRevision={(revision) => void deleteRevision(client, person, revision.ts).then(onChanged)}
-            onEmptyHistory={() => void forgetHistory(client, person).then(onChanged)}
+            onRestore={(revision) => void saveCard(client, person, revision.was, "restore").then(changedHistory)}
+            onDeleteRevision={(revision) => void deleteRevision(client, person, revision).then(changedHistory)}
+            onEmptyHistory={() => void forgetHistory(client, person).then(changedHistory)}
             onExport={() =>
-                downloadVCard(`${person.name}.vcf`, toVCard(cardForExport(person, cardFor(client, person))))
+                void vCardWithPhoto(client, cardForExport(person, cardFor(client, person))).then((text) =>
+                    downloadVCard(`${person.name}.vcf`, text),
+                )
             }
             onPhoto={(file) => {
                 /*
@@ -248,12 +262,8 @@ export function PersonCard({
                 const was = cardFor(client, person);
                 void client
                     .uploadContent(file, { type: file.type })
-                    .then(({ content_uri: photoUrl }) =>
-                        recordRevision(client, person, was, "edit").then(() =>
-                            saveCard(client, person, { ...was, photoUrl }),
-                        ),
-                    )
-                    .then(onChanged);
+                    .then(({ content_uri: photoUrl }) => saveCard(client, person, { ...was, photoUrl }, "edit"))
+                    .then(changedHistory);
             }}
         />
     );

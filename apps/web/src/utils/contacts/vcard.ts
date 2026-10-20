@@ -32,6 +32,7 @@ import {
     URL_LABELS,
     fullName,
 } from "./card";
+import { type InlinePhoto } from "./photos";
 
 /** Unfold the continuation lines vCard wraps long values onto (RFC 6350 §3.2). */
 function unfold(text: string): string[] {
@@ -378,7 +379,7 @@ function labelled(name: string, value: string, label: string, standard: string[]
  * 4.0 rather than 3.0 because it is the current standard, it is what iOS reads, and its date handling is
  * the one that can say "a birthday with no year" without an extension.
  */
-export function toVCard(card: ContactCard, extra: { photoUrl?: string } = {}): string {
+export function toVCard(card: ContactCard, extra: { photoUrl?: string; photo?: InlinePhoto } = {}): string {
     const out: string[] = ["BEGIN:VCARD", "VERSION:4.0"];
     const name = fullName(card) || card.nickname || "";
     if (name) out.push(line("FN", name));
@@ -440,7 +441,15 @@ export function toVCard(card: ContactCard, extra: { photoUrl?: string } = {}): s
         out.push(line("X-SOCIALPROFILE", profile.url ?? profile.handle, typeParam(profile.service)));
     }
     if (card.notes) out.push(line("NOTE", card.notes));
-    if (extra.photoUrl ?? card.photoUrl) out.push(line("PHOTO", (extra.photoUrl ?? card.photoUrl)!));
+    /*
+     * The picture itself when it was fetched for the export (photos.ts), in the form phones write: another
+     * address book cannot read an mxc: URI. Not escaped - base64 has nothing to escape - and folded below.
+     */
+    if (extra.photo) {
+        out.push(
+            `PHOTO;ENCODING=b;TYPE=${extra.photo.type.replace(/^image\//, "").toUpperCase()}:${extra.photo.base64}`,
+        );
+    } else if (extra.photoUrl ?? card.photoUrl) out.push(line("PHOTO", (extra.photoUrl ?? card.photoUrl)!));
     // Verbatim, and last, so nothing this client wrote can be confused with what it was merely carrying.
     for (const raw of card.extra ?? []) out.push(raw);
     out.push("END:VCARD");
@@ -460,9 +469,6 @@ function foldAll(lines: string[]): string[] {
     }
     return folded;
 }
-
-/** Several cards in one file, which is how a whole address book travels. */
-export const toVCards = (cards: ContactCard[]): string => cards.map((card) => toVCard(card)).join("");
 
 /**
  * A vCard built from everything known about a person: what the reader wrote, and what the networks say.

@@ -99,6 +99,7 @@ import { RoomResultContextMenus } from "./RoomResultContextMenus";
 import { RoomContextDetails } from "../../rooms/RoomContextDetails";
 import { TooltipOption } from "./TooltipOption";
 import { isLocalRoom } from "../../../../utils/localRoom/isLocalRoom";
+import { isAddressBookRoom } from "../../../../utils/contacts/bookRoom";
 import RoomAvatar from "../../avatars/RoomAvatar";
 import { useFeatureEnabled } from "../../../../hooks/useSettings";
 import { filterBoolean } from "../../../../utils/arrays";
@@ -280,6 +281,8 @@ const findVisibleRooms = (cli: MatrixClient, msc3946ProcessDynamicPredecessor: b
     return cli.getVisibleRooms(msc3946ProcessDynamicPredecessor).filter((room) => {
         // Do not show local rooms
         if (isLocalRoom(room)) return false;
+        // Nor the room the address book is kept in, which is not a chat
+        if (isAddressBookRoom(room)) return false;
 
         // TODO we may want to put invites in their own list
         return room.getMyMembership() === KnownMembership.Join || room.getMyMembership() == KnownMembership.Invite;

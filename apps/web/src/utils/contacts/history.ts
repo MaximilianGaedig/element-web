@@ -17,24 +17,32 @@ Please see LICENSE files in the repository root for full details.
  * Entry::truncateHistory, Entry::restoreFromHistoryItem in its src/core/Entry.cpp), because that is the same
  * problem solved for records that matter more:
  *
- *  - every save pushes the previous version onto a stack, so the record is of versions rather than of diffs;
- *  - restoring a version is itself a save, so it pushes the current one too and can be undone in turn;
- *  - the stack is bounded by *both* a count and a size, and trimming drops the oldest first;
+ *  - every save keeps the previous version, so the record is of versions rather than of diffs;
+ *  - restoring a version is itself a save, so it keeps the current one too and can be undone in turn;
  *  - a version can be read without being restored, thrown away one at a time, or the lot emptied at once.
  *
- * The size bound matters more here than it does there: this is account data, so every kilobyte is synced to
- * every device on every login. A card's whole past is worth a few kilobytes, not a few megabytes.
+ * The versions are the address book room's own state changes (addressBook.ts): every save of a card is a new
+ * state event under the card's id, so the earlier events with that id are its earlier versions - nothing is
+ * kept twice, and nothing here is synced to every device. Throwing a version away is redacting its event.
+ * Before the cards have moved to the room, the old account data event is read instead.
  */
 
 import { type MatrixClient } from "matrix-js-sdk/src/matrix";
 
-import { type ContactCard } from "./card";
+import { type ContactCard, cardIdsOf } from "./card";
 import { type Person } from "./people";
+import {
+    type EditSource,
+    bookRoomId,
+    canonicalOf,
+    cardTimeline,
+    legacyHistory,
+    loadAddressBook,
+    redactAll,
+    writableBook,
+} from "./addressBook";
 
-export const HISTORY_EVENT_TYPE = "im.mxg.contact_history";
-
-/** What changed a card, so the record says why it looks different rather than only that it does. */
-export type EditSource = "edit" | "import" | "merge" | "restore";
+export type { EditSource } from "./addressBook";
 
 export interface Revision {
     /** When the change was made. */
@@ -48,76 +56,63 @@ export interface Revision {
      * one before the one you picked, which is the sort of off-by-one that loses somebody's address.
      */
     was: ContactCard;
+    /** The state event that holds `was`, which is what deleting this version redacts. */
+    id?: string;
 }
 
-/** How many versions a person keeps. Enough to undo a bad afternoon, not enough to bloat every sync. */
+/** How many versions are shown, newest first. */
 export const KEEP = 20;
 
-/**
- * How much of one person's past is worth carrying, in bytes of JSON.
- *
- * A count alone is not a bound: twenty versions of a card with a note pasted into it is a different amount
- * of account data from twenty versions of a phone number, and the whole event has a server-side size limit
- * that a card with a long note can reach on its own. KeePassXC has the same pair of limits for the same
- * reason (its defaults are 10 items and 6 MiB); the size here is smaller because this is synced state, not a
- * file on a disk.
- */
-export const KEEP_BYTES = 64 * 1024;
+const same = (a: unknown, b: unknown): boolean => JSON.stringify(a) === JSON.stringify(b);
 
-/**
- * The oldest versions dropped until both bounds hold.
- *
- * The newest is kept whatever its size: a history holding nothing is worse than a history holding one
- * version that is bigger than we would like, and the alternative is that pasting a long note into a card
- * silently throws away the version that had the note the reader wanted back.
- */
-function trim(revisions: Revision[]): Revision[] {
-    const kept = revisions.slice(0, KEEP);
-    while (kept.length > 1 && JSON.stringify(kept).length > KEEP_BYTES) kept.pop();
-    return kept;
-}
-
-interface Stored {
-    /** Revisions per Matrix ID, newest first. */
-    history?: Record<string, Revision[]>;
-}
-
-const stored = (client: MatrixClient): Stored => client.getAccountData(HISTORY_EVENT_TYPE)?.getContent<Stored>() ?? {};
-
-/** Every one of their Matrix IDs, which is what the record is kept against. */
-const idsOf = (person: Person): string[] =>
-    person.accounts.map((account) => account.mxid).filter((mxid): mxid is string => !!mxid);
-
-/** What this person's card has said before now, newest first. */
-export function historyFor(client: MatrixClient, person: Person): Revision[] {
-    const history = stored(client).history ?? {};
-    for (const mxid of idsOf(person)) {
-        const found = history[mxid];
-        if (found?.length) return found;
+/** What the old account data event held for this person, before the cards moved to the room. */
+function legacyFor(client: MatrixClient, person: Person): Revision[] {
+    const history = legacyHistory(client);
+    for (const id of cardIdsOf(person)) {
+        const found = history[id];
+        if (found?.length) return found.slice(0, KEEP);
     }
     return [];
 }
 
 /**
- * Records what the card said before a change is written.
- *
- * Called with the *previous* card, before the new one is saved. A change that changes nothing is not
- * recorded: saving a form without touching it should not push the real history out of the window.
+ * What this person's card has said before now, newest first, as far as this client holds it without asking:
+ * the old account data before the move, and nothing after it - `loadHistory` reads the room.
  */
-export async function recordRevision(
-    client: MatrixClient,
-    person: Person,
-    was: ContactCard | undefined,
-    source: EditSource,
-): Promise<void> {
-    if (!was) return;
-    const history = { ...stored(client).history };
-    const ids = idsOf(person);
-    const current = ids.map((mxid) => history[mxid]).find((one) => one?.length) ?? [];
-    if (current[0] && JSON.stringify(current[0].was) === JSON.stringify(was)) return;
-    const next = trim([{ ts: Date.now(), source, was }, ...current]);
-    for (const mxid of ids) history[mxid] = next;
-    await client.setAccountData(HISTORY_EVENT_TYPE, { history });
+export function historyFor(client: MatrixClient, person: Person): Revision[] {
+    return bookRoomId(client) ? [] : legacyFor(client, person);
+}
+
+/** What this person's card has said before now, newest first, read from the room's state changes. */
+export async function loadHistory(client: MatrixClient, person: Person): Promise<Revision[]> {
+    const roomId = bookRoomId(client);
+    if (!roomId) return legacyFor(client, person);
+    const book = await loadAddressBook(client);
+    const id = book && canonicalOf(book, cardIdsOf(person));
+    if (!id) return [];
+    const events = (await cardTimeline(client, roomId)).get(id) ?? [];
+    const revisions: Revision[] = [];
+    for (let at = events.length - 1; at >= 1 && revisions.length < KEEP; at--) {
+        const before = events[at - 1];
+        const after = events[at];
+        // Nothing to go back to: a version thrown away (redacted), or a card that did not exist yet.
+        if (!before.content.card) continue;
+        // A save that changed nothing is not a version.
+        if (same(before.content.card, after.content.card)) continue;
+        revisions.push({
+            ts: after.ts,
+            source: after.content.source ?? "edit",
+            was: before.content.card,
+            id: before.eventId,
+        });
+    }
+    return revisions;
+}
+
+/** The history as the room holds it, moving the cards there first if they have not moved yet. */
+async function roomHistory(client: MatrixClient, person: Person): Promise<{ roomId: string; revisions: Revision[] }> {
+    const book = await writableBook(client);
+    return { roomId: book.roomId, revisions: await loadHistory(client, person) };
 }
 
 /**
@@ -127,24 +122,26 @@ export async function recordRevision(
  * an import that briefly wrote somebody's home address into the wrong card is the thing to remove, and
  * emptying the lot to get rid of it also removes the version you would have restored.
  */
-export async function deleteRevision(client: MatrixClient, person: Person, ts: number): Promise<void> {
-    const history = { ...stored(client).history };
-    const ids = idsOf(person);
-    const current = ids.map((mxid) => history[mxid]).find((one) => one?.length) ?? [];
-    const next = current.filter((revision) => revision.ts !== ts);
-    if (next.length === current.length) return;
-    for (const mxid of ids) {
-        if (next.length) history[mxid] = next;
-        else delete history[mxid];
-    }
-    await client.setAccountData(HISTORY_EVENT_TYPE, { history });
+export async function deleteRevision(client: MatrixClient, person: Person, revision: Revision): Promise<void> {
+    const { roomId, revisions } = await roomHistory(client, person);
+    // A version shown before the move has no event yet; after it, the same version is found by its time.
+    const id = revision.id ?? revisions.find((one) => one.ts === revision.ts)?.id;
+    if (id) await redactAll(client, roomId, [id]);
 }
 
 /** Forgets what this person's card used to say, for a reader who does not want it kept. */
 export async function forgetHistory(client: MatrixClient, person: Person): Promise<void> {
-    const history = { ...stored(client).history };
-    for (const mxid of idsOf(person)) delete history[mxid];
-    await client.setAccountData(HISTORY_EVENT_TYPE, { history });
+    const book = await writableBook(client);
+    const id = canonicalOf(book, cardIdsOf(person));
+    if (!id) return;
+    const events = (await cardTimeline(client, book.roomId)).get(id) ?? [];
+    // Every version but the one the card says now.
+    const earlier = events.slice(0, -1).filter((event) => event.content.card);
+    await redactAll(
+        client,
+        book.roomId,
+        earlier.map((event) => event.eventId),
+    );
 }
 
 /**

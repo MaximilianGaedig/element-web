@@ -20,10 +20,11 @@ Please see LICENSE files in the repository root for full details.
 
 import { type MatrixClient } from "matrix-js-sdk/src/matrix";
 
-import { CARD_EVENT_TYPE, type ContactCard, cardFor, cardLabel, fullName } from "./card";
-import { recordRevision } from "./history";
+import { type ContactCard, cardIdsOf, cardLabel, fullName } from "./card";
 import { readKey } from "./identity";
 import { type Person } from "./people";
+import { type Book, type Write, applyWrites, commit, planSave, writableBook } from "./addressBook";
+import { photosToMedia } from "./photos";
 
 /** A phone number or an address, in the form the matching uses. */
 function keysOf(card: ContactCard): string[] {
@@ -56,13 +57,22 @@ function contentHash(card: ContactCard): string {
 /**
  * Writes each card against whoever it turned out to be.
  *
- * One write for the lot rather than one per card: account data is a whole document, and saving it per
- * contact would mean an import of two hundred people making two hundred round trips, each overwriting the
- * last. Returns how many were taken in, which is what the reader is told.
+ * A state event per card in the address book room, planned all together first so each card's plan sees the
+ * ones before it, then sent a few at a time. A card landing on somebody who already had one keeps what it
+ * replaced as an earlier version marked "import", so a wrong match can be undone. Each card's photo goes to
+ * media on the way (photos.ts). Returns how many were taken in, which is what the reader is told.
  */
 export async function importCards(client: MatrixClient, cards: ContactCard[], people: Person[]): Promise<number> {
-    const held = client.getAccountData(CARD_EVENT_TYPE)?.getContent<{ cards?: Record<string, ContactCard> }>() ?? {};
-    const next: Record<string, ContactCard> = { ...held.cards };
+    const book = await writableBook(client);
+    // Planned against a copy, which takes each plan as it is made; the real book follows the sends.
+    const planned: Book = { ...book, cards: new Map(book.cards), aliases: new Map(book.aliases) };
+    const writes: Write[] = [];
+    const uploaded = new Map<string, Promise<string>>();
+    const plan = (ids: string[], card: ContactCard): void => {
+        const next = planSave(planned, ids, card, "import");
+        applyWrites(planned, next);
+        writes.push(...next);
+    };
 
     /* Everyone already here, by every identifier they publish, so a card can find them. */
     const byKey = new Map<string, Person>();
@@ -76,16 +86,12 @@ export async function importCards(client: MatrixClient, cards: ContactCard[], pe
         const match = keysOf(card)
             .map((key) => byKey.get(readKey(key).toLowerCase()))
             .find((person): person is Person => !!person);
-        if (match) {
-            // What the card said before the import landed on it, so a wrong match can be undone.
-            await recordRevision(client, match, cardFor(client, match), "import");
-            // Against every one of their accounts, as the reader's own edits are.
-            for (const account of match.accounts) if (account.mxid) next[account.mxid] = card;
-        } else {
-            next[unmatchedKey(card)] = card;
-        }
+        const stored = await photosToMedia(client, card, uploaded);
+        // Against every one of their accounts, as the reader's own edits are; keyed by what it says otherwise.
+        if (match && cardIdsOf(match).length) plan(cardIdsOf(match), stored);
+        else plan([unmatchedKey(card)], stored);
         taken++;
     }
-    await client.setAccountData(CARD_EVENT_TYPE, { cards: next });
+    await commit(client, book, writes);
     return taken;
 }

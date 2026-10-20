@@ -87,14 +87,8 @@ import { ContactEditor } from "./ContactEditor";
 import { type Discovered, type DiscoverProblem, discoverOnMatrix, lookupQuery } from "../../../utils/contacts/discover";
 import { setAddingContact, useAddingContact } from "../../../utils/contacts/adding";
 import { setBarActions } from "../../../utils/roomListBarActions";
-import {
-    cardForExport,
-    downloadVCard,
-    parseVCards,
-    shareVCard,
-    toVCard,
-    toVCards,
-} from "../../../utils/contacts/vcard";
+import { cardForExport, downloadVCard, parseVCards, shareVCard } from "../../../utils/contacts/vcard";
+import { vCardWithPhoto, vCardsWithPhotos } from "../../../utils/contacts/photos";
 import { importCards } from "../../../utils/contacts/importCards";
 import { addTag, contactTags, peopleTagged, removeTag, renameTag, setInTag } from "../../../utils/contacts/tags";
 import { PersonMenu } from "./PersonMenu";
@@ -986,11 +980,12 @@ export function ContactsView({ tab, onFinished }: Props): JSX.Element {
      */
     const sendPerson = useCallback(
         (person: Person): void => {
-            const text = toVCard(cardForExport(person, cardFor(client, person)));
-            const file = new File([text], `${person.name}.vcf`, { type: "text/vcard" });
             const roomId = SDKContextClass.instance.roomViewStore.getRoomId();
             if (!roomId) return;
-            void ContentMessages.sharedInstance().sendContentToRoom(file, roomId, undefined, client, undefined);
+            void vCardWithPhoto(client, cardForExport(person, cardFor(client, person))).then((text) => {
+                const file = new File([text], `${person.name}.vcf`, { type: "text/vcard" });
+                return ContentMessages.sharedInstance().sendContentToRoom(file, roomId, undefined, client, undefined);
+            });
         },
         [client],
     );
@@ -998,7 +993,9 @@ export function ContactsView({ tab, onFinished }: Props): JSX.Element {
     /* Out to another app, another phone or a file - whichever the platform can actually do. */
     const exportPerson = useCallback(
         (person: Person): void => {
-            void shareVCard(`${person.name}.vcf`, toVCard(cardForExport(person, cardFor(client, person))));
+            void vCardWithPhoto(client, cardForExport(person, cardFor(client, person))).then((text) =>
+                shareVCard(`${person.name}.vcf`, text),
+            );
         },
         [client],
     );
@@ -1254,7 +1251,7 @@ export function ContactsView({ tab, onFinished }: Props): JSX.Element {
 
     const exportAll = useCallback((): void => {
         const cards = (people ?? []).map((person) => cardForExport(person, cardFor(client, person)));
-        downloadVCard("contacts.vcf", toVCards(cards));
+        void vCardsWithPhotos(client, cards).then((text) => downloadVCard("contacts.vcf", text));
     }, [client, people]);
 
     /*

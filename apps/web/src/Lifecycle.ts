@@ -1093,6 +1093,12 @@ async function startMatrixClient(
     // A message just written is sent even when older ones in the room did not go out (unsentResender.ts).
     UnsentResender.start(client);
 
+    // The address book moves out of global account data into its own room, once, after the first sync
+    // (utils/contacts/moveAddressBook.ts). Loaded lazily: it is off the startup path.
+    void import("./utils/contacts/moveAddressBook")
+        .then(({ moveWhenReady }) => moveWhenReady(client))
+        .catch((error) => logger.warn("contacts: could not schedule the address book move", error));
+
     // Simplified sliding sync delivers no presence: run a presence-only /sync long-poll beside it,
     // falling back to polling /presence for DM partners while that keeps failing. The v2 sync delivers
     // only changes, so it gets everyone's current presence once instead.
