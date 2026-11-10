@@ -223,6 +223,7 @@ export default class HelpUserSettingsTab extends React.Component<EmptyObject, IS
             bugReportingSection = (
                 <SettingsSubsection
                     heading={_t("bug_reporting|title")}
+                    formWrap
                     description={
                         <>
                             <SettingsSubsectionText>{_t("bug_reporting|introduction")}</SettingsSubsectionText>
@@ -250,7 +251,7 @@ export default class HelpUserSettingsTab extends React.Component<EmptyObject, IS
         } else {
             // No bug report endpoint, but the logs can still be turned on and read from the console.
             bugReportingSection = (
-                <SettingsSubsection heading={_t("bug_reporting|title")}>
+                <SettingsSubsection heading={_t("bug_reporting|title")} formWrap>
                     <SettingsFlag name="diagnosticLogging" level={SettingLevel.DEVICE} />
                 </SettingsSubsection>
             );

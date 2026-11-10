@@ -11,7 +11,7 @@ Please see LICENSE files in the repository root for full details.
 */
 
 import React, { type JSX, type ReactNode } from "react";
-import { Link, Text } from "@vector-im/compound-web";
+import { Form, Link, Text } from "@vector-im/compound-web";
 
 import SdkConfig from "../../../SdkConfig";
 import Modal from "../../../Modal";
@@ -273,11 +273,18 @@ export default class BugReportDialog extends React.Component<BugReportDialogProp
                     {!SettingsStore.getValue("diagnosticLogging") && (
                         <Text weight="semibold">{_t("bug_reporting|logging_off")}</Text>
                     )}
-                    <SettingsFlag
-                        name="diagnosticLogging"
-                        level={SettingLevel.DEVICE}
-                        onChange={() => this.forceUpdate()}
-                    />
+                    <Form.Root
+                        onSubmit={(evt) => {
+                            evt.preventDefault();
+                            evt.stopPropagation();
+                        }}
+                    >
+                        <SettingsFlag
+                            name="diagnosticLogging"
+                            level={SettingLevel.DEVICE}
+                            onChange={() => this.forceUpdate()}
+                        />
+                    </Form.Root>
                     {this.isLocalOnly ? (
                         <>{this.state.downloadProgress && <span>{this.state.downloadProgress} ...</span>}</>
                     ) : (
