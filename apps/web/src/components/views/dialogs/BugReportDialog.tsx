@@ -28,6 +28,9 @@ import defaultDispatcher from "../../../dispatcher/dispatcher";
 import { Action } from "../../../dispatcher/actions";
 import { getBrowserSupport } from "../../../SupportedBrowser";
 import { BugReportEndpointURLLocal } from "../../../IConfigOptions";
+import SettingsStore from "../../../settings/SettingsStore";
+import { SettingLevel } from "../../../settings/SettingLevel";
+import SettingsFlag from "../elements/SettingsFlag";
 
 export interface BugReportDialogProps {
     onFinished: (success: boolean) => void;
@@ -267,6 +270,14 @@ export default class BugReportDialog extends React.Component<BugReportDialogProp
                 <div className="mx_Dialog_content" id="mx_Dialog_content">
                     {warning}
                     <Text>{_t("bug_reporting|description")}</Text>
+                    {!SettingsStore.getValue("diagnosticLogging") && (
+                        <Text weight="semibold">{_t("bug_reporting|logging_off")}</Text>
+                    )}
+                    <SettingsFlag
+                        name="diagnosticLogging"
+                        level={SettingLevel.DEVICE}
+                        onChange={() => this.forceUpdate()}
+                    />
                     {this.isLocalOnly ? (
                         <>{this.state.downloadProgress && <span>{this.state.downloadProgress} ...</span>}</>
                     ) : (

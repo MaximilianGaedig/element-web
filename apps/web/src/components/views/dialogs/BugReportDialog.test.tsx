@@ -28,7 +28,7 @@ describe("BugReportDialog", () => {
         return render(<BugReportDialog onFinished={onFinished} />);
     }
 
-    let prevLogger: ConsoleLogger;
+    let prevLogger: ConsoleLogger | undefined;
     beforeEach(() => {
         SdkConfig.put({
             bug_report_endpoint_url: BUG_REPORT_URL,

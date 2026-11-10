@@ -22,6 +22,8 @@ import { SettingsSubsection, SettingsSubsectionText } from "../../shared/Setting
 import ExternalLink from "../../../elements/ExternalLink";
 import MatrixClientContext from "../../../../../contexts/MatrixClientContext";
 import { BugReportDialogButton } from "../../../elements/BugReportDialogButton";
+import SettingsFlag from "../../../elements/SettingsFlag";
+import { SettingLevel } from "../../../../../settings/SettingLevel";
 
 interface IState {
     appVersion: string | null;
@@ -228,6 +230,7 @@ export default class HelpUserSettingsTab extends React.Component<EmptyObject, IS
                         </>
                     }
                 >
+                    <SettingsFlag name="diagnosticLogging" level={SettingLevel.DEVICE} />
                     <BugReportDialogButton />
                     <SettingsSubsectionText>
                         {_t(
@@ -242,6 +245,13 @@ export default class HelpUserSettingsTab extends React.Component<EmptyObject, IS
                             },
                         )}
                     </SettingsSubsectionText>
+                </SettingsSubsection>
+            );
+        } else {
+            // No bug report endpoint, but the logs can still be turned on and read from the console.
+            bugReportingSection = (
+                <SettingsSubsection heading={_t("bug_reporting|title")}>
+                    <SettingsFlag name="diagnosticLogging" level={SettingLevel.DEVICE} />
                 </SettingsSubsection>
             );
         }

@@ -43,6 +43,14 @@ const MAX_LOG_SIZE = 1024 * 1024 * 5; // 5 MB
 /** the length of log data we keep in indexeddb (and include in the reports), if there are less than 24 hours of logs */
 const MAX_LOG_SIZE_24H = 1024 * 1024 * 100; // 100 MB
 
+/**
+ * The most log text kept in memory. The buffer is trimmed back to this once it is twice as long, oldest lines first.
+ *
+ * Only a log store drains the buffer, and there is none without IndexedDB or while it is not set up: unbounded, the
+ * buffer once reached V8's maximum string length, after which every console call threw "Invalid string length".
+ */
+export const MAX_IN_MEMORY_LOG_SIZE = 1024 * 1024 * 5; // 5 MB
+
 type LogFunction = (...args: (Error | DOMException | object | string)[]) => void;
 const consoleFunctionsToLevels = {
     log: "I",
@@ -57,18 +65,41 @@ type LogFunctionName = keyof typeof consoleFunctionsToLevels;
 export class ConsoleLogger {
     private logs = "";
     private originalFunctions: { [key in LogFunctionName]?: LogFunction } = {};
+    /** The console's own functions, unbound, to put back as they were. */
+    private unpatchedFunctions: { [key in LogFunctionName]?: LogFunction } = {};
+    private patchedConsole?: Console;
 
     public monkeyPatch(consoleObj: Console): void {
         // Monkey-patch console logging
         (Object.keys(consoleFunctionsToLevels) as LogFunctionName[]).forEach((fnName: LogFunctionName) => {
             const level = consoleFunctionsToLevels[fnName];
+            this.unpatchedFunctions[fnName] = consoleObj[fnName];
             const originalFn = consoleObj[fnName].bind(consoleObj);
             this.originalFunctions[fnName] = originalFn;
             consoleObj[fnName] = (...args) => {
-                this.log(level, ...args);
+                try {
+                    this.log(level, ...args);
+                } catch {
+                    // Keeping a copy of a line must never break the code that logged it.
+                }
                 originalFn(...args);
             };
         });
+        this.patchedConsole = consoleObj;
+    }
+
+    /** Put back the console functions replaced by {@link monkeyPatch}, and drop what is buffered. */
+    public unpatch(): void {
+        const consoleObj = this.patchedConsole;
+        if (consoleObj) {
+            for (const [fnName, fn] of Object.entries(this.unpatchedFunctions) as [LogFunctionName, LogFunction][]) {
+                consoleObj[fnName] = fn;
+            }
+        }
+        this.patchedConsole = undefined;
+        this.originalFunctions = {};
+        this.unpatchedFunctions = {};
+        this.logs = "";
     }
 
     public bypassRageshake(fnName: LogFunctionName, ...args: (Error | DOMException | object | string)[]): void {
@@ -101,9 +132,32 @@ export class ConsoleLogger {
         let line = `${ts} ${level} ${args.join(" ")}\n`;
         // Do some cleanup
         line = line.replace(/token=[a-zA-Z0-9-]+/gm, "token=xxxxx");
+        if (line.length > MAX_IN_MEMORY_LOG_SIZE) {
+            line = line.slice(0, MAX_IN_MEMORY_LOG_SIZE) + "\n";
+        }
         // Using + really is the quickest way in JS
         // http://jsperf.com/concat-vs-plus-vs-join
         this.logs += line;
+        if (this.logs.length > 2 * MAX_IN_MEMORY_LOG_SIZE) {
+            this.trim();
+        }
+    }
+
+    /**
+     * Put lines taken by {@link flush} back in front of the buffer, when they could not be written.
+     */
+    public unflush(lines: string): void {
+        this.logs = lines + this.logs;
+        if (this.logs.length > 2 * MAX_IN_MEMORY_LOG_SIZE) {
+            this.trim();
+        }
+    }
+
+    /** Drop the oldest lines so that at most {@link MAX_IN_MEMORY_LOG_SIZE} is left, starting at a line. */
+    private trim(): void {
+        const cut = this.logs.length - MAX_IN_MEMORY_LOG_SIZE;
+        const lineStart = this.logs.indexOf("\n", cut);
+        this.logs = this.logs.slice(lineStart === -1 ? cut : lineStart + 1);
     }
 
     /**
@@ -130,6 +184,7 @@ export class IndexedDBLogStore {
     private db: IDBDatabase | null = null;
     private flushPromise: Promise<void> | null = null;
     private flushAgainPromise: Promise<void> | null = null;
+    private flushInterval?: number;
 
     public constructor(
         private indexedDB: IDBFactory,
@@ -146,8 +201,19 @@ export class IndexedDBLogStore {
         return new Promise((resolve, reject) => {
             req.onsuccess = () => {
                 this.db = req.result;
-                // Periodically flush logs to local storage / indexeddb
-                window.setInterval(this.flush.bind(this), FLUSH_RATE_MS);
+                // The browser may close the connection (storage pressure, the database being deleted).
+                this.db.onclose = () => {
+                    this.db = null;
+                };
+                this.db.onversionchange = () => {
+                    this.db?.close();
+                    this.db = null;
+                };
+                // Periodically flush logs to local storage / indexeddb. A failed flush has been reported already;
+                // the lines stay buffered (bounded) for the next one.
+                this.flushInterval = window.setInterval(() => {
+                    this.flush().catch(() => {});
+                }, FLUSH_RATE_MS);
                 resolve();
             };
 
@@ -204,45 +270,61 @@ export class IndexedDBLogStore {
                 // this is the 3rd+ time we've called flush() : return the same promise.
                 return this.flushAgainPromise;
             }
-            // queue up a flush to occur immediately after the pending one completes.
+            // queue up a flush to occur immediately after the pending one completes, whether or not that one worked.
             this.flushAgainPromise = this.flushPromise
-                .then(() => {
-                    return this.flush();
-                })
+                .catch(() => {})
                 .then(() => {
                     this.flushAgainPromise = null;
+                    return this.flush();
                 });
             return this.flushAgainPromise;
         }
         // there is no flush promise or there was but it has finished, so do
         // a brand new one, destroying the chain which may have been built up.
+        // A failed flush must not stay in `flushPromise`: every later flush would return it, and nothing would drain
+        // the buffer again.
         this.flushPromise = new Promise<void>((resolve, reject) => {
             if (!this.db) {
                 // not connected yet or user rejected access for us to r/w to the db.
                 reject(new Error("No connected database"));
                 return;
             }
-            const lines = this.logger.flush();
-            if (lines.length === 0) {
+            if (this.logger.flush(true).length === 0) {
                 resolve();
                 return;
             }
+            // Open the transaction before taking the lines: it throws if the connection is closing.
             const txn = this.db.transaction(["logs", "logslastmod"], "readwrite");
+            const lines = this.logger.flush();
             const objStore = txn.objectStore("logs");
-            txn.oncomplete = (event) => {
-                resolve();
-            };
-            txn.onerror = () => {
+            let failed = false;
+            const fail = (): void => {
+                if (failed) return;
+                failed = true;
+                this.logger.unflush(lines);
                 logger.error("Failed to flush logs : ", txn.error);
                 reject(new Error("Failed to write logs: " + txn.error?.message));
             };
+            txn.oncomplete = () => {
+                resolve();
+            };
+            txn.onerror = fail;
+            txn.onabort = fail;
             objStore.add(this.generateLogEntry(lines));
             const lastModStore = txn.objectStore("logslastmod");
             lastModStore.put(this.generateLastModifiedTime());
-        }).then(() => {
+        }).finally(() => {
             this.flushPromise = null;
         });
         return this.flushPromise;
+    }
+
+    /** Stop flushing and close the database. */
+    public close(): void {
+        window.clearInterval(this.flushInterval);
+        this.flushInterval = undefined;
+        this.db?.close();
+        this.db = null;
     }
 
     /**
@@ -482,6 +564,8 @@ function selectQuery<T>(
     });
 }
 
+let onUnhandledRejection: ((event: PromiseRejectionEvent) => void) | undefined;
+
 /**
  * Configure rage shaking support for sending bug reports.
  * Modifies globals.
@@ -493,20 +577,63 @@ export function init(setUpPersistence = true): Promise<void> {
     if (global.mx_rage_initPromise) {
         return global.mx_rage_initPromise;
     }
-    global.mx_rage_logger = new ConsoleLogger();
-    global.mx_rage_logger.monkeyPatch(window.console);
+    const consoleLogger = new ConsoleLogger();
+    global.mx_rage_logger = consoleLogger;
+    consoleLogger.monkeyPatch(window.console);
 
     // log unhandled rejections in the rageshake
-    window.addEventListener("unhandledrejection", (event) => {
-        global.mx_rage_logger.log("error", `Unhandled promise rejection: ${event.reason}`);
-    });
+    onUnhandledRejection = (event): void => {
+        consoleLogger.log("error", `Unhandled promise rejection: ${event.reason}`);
+    };
+    window.addEventListener("unhandledrejection", onUnhandledRejection);
 
     if (setUpPersistence) {
-        return tryInitStorage();
+        global.mx_rage_initPromise = tryInitStorage();
+        return global.mx_rage_initPromise;
     }
 
     global.mx_rage_initPromise = Promise.resolve();
     return global.mx_rage_initPromise;
+}
+
+/** Whether console output is being kept for bug reports. */
+export function isEnabled(): boolean {
+    return !!global.mx_rage_logger;
+}
+
+/**
+ * Stop keeping console output: put the console back, drop the in-memory logs and delete the stored ones.
+ */
+export async function disable(): Promise<void> {
+    const hadStore = !!global.mx_rage_store || !!global.mx_rage_initStoragePromise;
+    await global.mx_rage_initStoragePromise?.catch(() => {});
+    global.mx_rage_logger?.unpatch();
+    global.mx_rage_store?.close();
+    if (onUnhandledRejection) {
+        window.removeEventListener("unhandledrejection", onUnhandledRejection);
+        onUnhandledRejection = undefined;
+    }
+    global.mx_rage_logger = undefined;
+    global.mx_rage_store = undefined;
+    global.mx_rage_initPromise = undefined;
+    global.mx_rage_initStoragePromise = undefined;
+
+    if (hadStore) {
+        await deleteLogDatabase();
+    }
+}
+
+function deleteLogDatabase(): Promise<void> {
+    let indexedDB: IDBFactory | undefined;
+    try {
+        indexedDB = window.indexedDB;
+    } catch {}
+    if (!indexedDB) return Promise.resolve();
+    return new Promise((resolve) => {
+        const req = indexedDB.deleteDatabase("logs");
+        // Another tab may still hold it open: the deletion then waits for that tab, so do not wait here.
+        req.onsuccess = req.onerror = req.onblocked = (): void => resolve();
+    });
 }
 
 /**
@@ -517,6 +644,11 @@ export function init(setUpPersistence = true): Promise<void> {
 export function tryInitStorage(): Promise<void> {
     if (global.mx_rage_initStoragePromise) {
         return global.mx_rage_initStoragePromise;
+    }
+    const consoleLogger = global.mx_rage_logger;
+    if (!consoleLogger) {
+        // Logging is off: there is nothing to store.
+        return Promise.resolve();
     }
 
     logger.log("Configuring rageshake persistence...");
@@ -529,12 +661,13 @@ export function tryInitStorage(): Promise<void> {
     } catch {}
 
     if (indexedDB) {
-        global.mx_rage_store = new IndexedDBLogStore(indexedDB, global.mx_rage_logger);
-        global.mx_rage_initStoragePromise = global.mx_rage_store.connect();
+        const store = new IndexedDBLogStore(indexedDB, consoleLogger);
+        global.mx_rage_store = store;
+        global.mx_rage_initStoragePromise = store.connect();
 
         // Fire off a task in the background which will clean up old logs in the store
         void global.mx_rage_initStoragePromise.then(() => {
-            global.mx_rage_store.consume().catch((e) => {
+            store.consume().catch((e) => {
                 logger.error("Error cleaning up rageshake store", e);
             });
         });
@@ -549,7 +682,7 @@ export function flush(): void {
     if (!global.mx_rage_store) {
         return;
     }
-    void global.mx_rage_store.flush();
+    global.mx_rage_store.flush().catch(() => {});
 }
 
 /**
@@ -570,24 +703,28 @@ export async function cleanup(): Promise<void> {
 /**
  * Get a recent snapshot of the logs, ready for attaching to a bug report
  *
- * @returns {Array<{lines: string, id, string}>}  list of log data
+ * @returns {Array<{lines: string, id, string}>}  list of log data; empty while diagnostic logging is off
  */
 export async function getLogsForReport(): Promise<{ lines: string; id: string }[]> {
     if (!global.mx_rage_logger) {
-        throw new Error("No console logger, did you forget to call init()?");
+        // Diagnostic logging is off, so there are no logs to send.
+        return [];
     }
     // If in incognito mode, store is null, but we still want bug report
     // sending to work going off the in-memory console logs.
     if (global.mx_rage_store) {
         // flush most recent logs
-        await global.mx_rage_store.flush();
-        return global.mx_rage_store.consume();
-    } else {
-        return [
-            {
-                lines: global.mx_rage_logger.flush(true),
-                id: "-",
-            },
-        ];
+        try {
+            await global.mx_rage_store.flush();
+            return await global.mx_rage_store.consume();
+        } catch (e) {
+            logger.warn("rageshake: could not read the stored logs, sending the in-memory ones", e);
+        }
     }
+    return [
+        {
+            lines: global.mx_rage_logger.flush(true),
+            id: "-",
+        },
+    ];
 }

@@ -24,8 +24,45 @@ import * as rageshake from "../rageshake/rageshake";
 import SdkConfig from "../SdkConfig";
 import sendBugReport, { loadBugReport } from "../rageshake/submit-rageshake";
 import { BugReportEndpointURLLocal } from "../IConfigOptions";
+import SettingsStore from "../settings/SettingsStore";
 
+let watchingSetting = false;
+let flushOnUnload = false;
+
+function loggingWanted(): boolean {
+    return SettingsStore.getValue("diagnosticLogging");
+}
+
+/**
+ * Start keeping console output for bug reports (rageshake), if the `diagnosticLogging` setting is on, and follow
+ * the setting from now on.
+ *
+ * Diagnostic logging is opt-in: kept for every session, the in-memory buffer and the 30-second IndexedDB writes cost
+ * every user, and without a log store nothing drained the buffer at all.
+ */
 export function initRageshake(): Promise<void> {
+    if (!watchingSetting) {
+        watchingSetting = true;
+        SettingsStore.watchSetting("diagnosticLogging", null, () => {
+            void applyDiagnosticLoggingSetting();
+        });
+    }
+    if (!loggingWanted()) return Promise.resolve();
+    return startRageshake();
+}
+
+async function applyDiagnosticLoggingSetting(): Promise<void> {
+    if (loggingWanted()) {
+        if (rageshake.isEnabled()) return;
+        await startRageshake();
+        await initRageshakeStore();
+    } else if (rageshake.isEnabled()) {
+        logger.log("Diagnostic logging turned off");
+        await rageshake.disable();
+    }
+}
+
+function startRageshake(): Promise<void> {
     // we manually check persistence for rageshakes ourselves
     const prom = rageshake.init(/*setUpPersistence=*/ false);
     prom.then(
@@ -36,11 +73,15 @@ export function initRageshake(): Promise<void> {
                     "Meatball menu → Settings → Ignore list → Add /rageshake\\.ts & /logger\\.ts$",
             );
 
-            window.addEventListener("beforeunload", () => {
-                logger.log("element-web closing");
-                // try to flush the logs to indexeddb
-                rageshake.flush();
-            });
+            if (!flushOnUnload) {
+                flushOnUnload = true;
+                window.addEventListener("beforeunload", () => {
+                    if (!rageshake.isEnabled()) return;
+                    logger.log("element-web closing");
+                    // try to flush the logs to indexeddb
+                    rageshake.flush();
+                });
+            }
 
             await rageshake.cleanup();
         },
@@ -51,7 +92,13 @@ export function initRageshake(): Promise<void> {
     return prom;
 }
 
-export function initRageshakeStore(): Promise<void> {
+/**
+ * Persist the kept logs to IndexedDB, if diagnostic logging is on. Called once the config is loaded, so a
+ * deployment that defaults the setting on through `setting_defaults` starts here.
+ */
+export async function initRageshakeStore(): Promise<void> {
+    if (!loggingWanted()) return;
+    if (!rageshake.isEnabled()) await startRageshake();
     return rageshake.tryInitStorage();
 }
 

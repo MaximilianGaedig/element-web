@@ -579,8 +579,11 @@ export default class MatrixChat extends React.PureComponent<IProps, IState> {
         const scamText = _t("console_scam_warning");
         const devText = _t("console_dev_note");
 
-        global.mx_rage_logger.bypassRageshake(
-            "log",
+        // Straight to the console: not worth keeping in the diagnostic logs (and they may be off).
+        const log = global.mx_rage_logger
+            ? global.mx_rage_logger.bypassRageshake.bind(global.mx_rage_logger, "log")
+            : console.log.bind(console);
+        log(
             `%c${waitText}\n%c${scamText}\n%c${devText}`,
             `font-size:${largeFontSize}; color:blue;`,
             `font-size:${normalFontSize}; color:red;`,
