@@ -18,6 +18,7 @@ import SdkConfig from "../../../SdkConfig";
 import { type ConsoleLogger } from "../../../rageshake/rageshake";
 import SettingsStore from "../../../settings/SettingsStore";
 import { BugReportEndpointURLLocal } from "../../../IConfigOptions";
+import { SettingLevel } from "../../../settings/SettingLevel";
 
 const BUG_REPORT_URL = "https://example.org/submit";
 
@@ -28,7 +29,7 @@ describe("BugReportDialog", () => {
         return render(<BugReportDialog onFinished={onFinished} />);
     }
 
-    let prevLogger: ConsoleLogger;
+    let prevLogger: ConsoleLogger | undefined;
     beforeEach(() => {
         SdkConfig.put({
             bug_report_endpoint_url: BUG_REPORT_URL,
@@ -60,6 +61,15 @@ describe("BugReportDialog", () => {
         vi.resetAllMocks();
         vi.restoreAllMocks();
         SdkConfig.reset();
+    });
+
+    it("says when debug logs are off and lets the user turn them on", async () => {
+        const setValue = vi.spyOn(SettingsStore, "setValue").mockResolvedValue();
+        const { getByText, getByRole } = renderComponent();
+        expect(getByText(/Debug logs are off/)).toBeInTheDocument();
+
+        await userEvent.click(getByRole("switch", { name: "Keep debug logs" }));
+        expect(setValue).toHaveBeenCalledWith("diagnosticLogging", null, SettingLevel.DEVICE, true);
     });
 
     it("can close the bug reporter", async () => {

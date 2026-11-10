@@ -11,7 +11,7 @@ Please see LICENSE files in the repository root for full details.
 */
 
 import React, { type JSX, type ReactNode } from "react";
-import { Link, Text } from "@vector-im/compound-web";
+import { Form, Link, Text } from "@vector-im/compound-web";
 
 import SdkConfig from "../../../SdkConfig";
 import Modal from "../../../Modal";
@@ -28,6 +28,9 @@ import defaultDispatcher from "../../../dispatcher/dispatcher";
 import { Action } from "../../../dispatcher/actions";
 import { getBrowserSupport } from "../../../SupportedBrowser";
 import { BugReportEndpointURLLocal } from "../../../IConfigOptions";
+import SettingsStore from "../../../settings/SettingsStore";
+import { SettingLevel } from "../../../settings/SettingLevel";
+import SettingsFlag from "../elements/SettingsFlag";
 
 export interface BugReportDialogProps {
     onFinished: (success: boolean) => void;
@@ -267,6 +270,21 @@ export default class BugReportDialog extends React.Component<BugReportDialogProp
                 <div className="mx_Dialog_content" id="mx_Dialog_content">
                     {warning}
                     <Text>{_t("bug_reporting|description")}</Text>
+                    {!SettingsStore.getValue("diagnosticLogging") && (
+                        <Text weight="semibold">{_t("bug_reporting|logging_off")}</Text>
+                    )}
+                    <Form.Root
+                        onSubmit={(evt) => {
+                            evt.preventDefault();
+                            evt.stopPropagation();
+                        }}
+                    >
+                        <SettingsFlag
+                            name="diagnosticLogging"
+                            level={SettingLevel.DEVICE}
+                            onChange={() => this.forceUpdate()}
+                        />
+                    </Form.Root>
                     {this.isLocalOnly ? (
                         <>{this.state.downloadProgress && <span>{this.state.downloadProgress} ...</span>}</>
                     ) : (

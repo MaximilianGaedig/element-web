@@ -201,8 +201,9 @@ declare global {
               isReady: () => boolean;
           };
 
-    var mx_rage_logger: ConsoleLogger;
-    var mx_rage_initPromise: Promise<void>;
-    var mx_rage_initStoragePromise: Promise<void>;
-    var mx_rage_store: IndexedDBLogStore;
+    // Set only while diagnostic logging is on (the `diagnosticLogging` setting).
+    var mx_rage_logger: ConsoleLogger | undefined;
+    var mx_rage_initPromise: Promise<void> | undefined;
+    var mx_rage_initStoragePromise: Promise<void> | undefined;
+    var mx_rage_store: IndexedDBLogStore | undefined;
 }

@@ -83,12 +83,12 @@ export async function logAppVersion(): Promise<void> {
     }
 }
 
+/**
+ * Persist diagnostic logs if the user turned them on. They are stored whether or not a bug report endpoint is set:
+ * turning logging on is the user's choice, and the logs can still be downloaded or read from the console.
+ */
 export function setupLogStorage(): Promise<void> {
-    if (SdkConfig.get().bug_report_endpoint_url) {
-        return initRageshakeStore();
-    }
-    logger.warn("No bug report endpoint set - logs will not be persisted");
-    return Promise.resolve();
+    return initRageshakeStore();
 }
 
 export async function loadConfig(): Promise<void> {

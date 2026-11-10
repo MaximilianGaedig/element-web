@@ -10,15 +10,18 @@ Please see LICENSE files in the repository root for full details.
 import { vi, describe, it, expect, beforeEach, afterEach, type Mocked } from "vitest";
 import fetchMock from "@fetch-mock/vitest";
 
+import * as rageshake from "../rageshake/rageshake";
 import type { ConsoleLogger } from "../rageshake/rageshake";
 import SdkConfig from "../SdkConfig";
-import "./rageshakesetup";
+import SettingsStore from "../settings/SettingsStore";
+import { SettingLevel } from "../settings/SettingLevel";
+import { initRageshake, initRageshakeStore } from "./rageshakesetup";
 import { BugReportEndpointURLLocal } from "../IConfigOptions";
 
 const RAGESHAKE_URL = "https://logs.example.org/logtome";
 
 describe("mxSendRageshake", () => {
-    let prevLogger: ConsoleLogger;
+    let prevLogger: ConsoleLogger | undefined;
     beforeEach(() => {
         fetchMock.mockGlobal();
         SdkConfig.put({ bug_report_endpoint_url: RAGESHAKE_URL });
@@ -63,5 +66,49 @@ describe("mxSendRageshake", () => {
         await window.mxSendRageshake("Hello world");
         expect(fetchMock).not.toHaveFetched(RAGESHAKE_URL);
         expect(urlSpy).toHaveBeenCalledTimes(1);
+    });
+});
+
+describe("diagnostic logging", () => {
+    beforeEach(async () => {
+        await rageshake.disable();
+        await SettingsStore.setValue("diagnosticLogging", null, SettingLevel.DEVICE, null);
+    });
+
+    afterEach(async () => {
+        await SettingsStore.setValue("diagnosticLogging", null, SettingLevel.DEVICE, null);
+        await rageshake.disable();
+        SdkConfig.reset();
+    });
+
+    it("is off by default: console is not patched and nothing is kept", async () => {
+        const log = console.log;
+        await initRageshake();
+        await initRageshakeStore();
+
+        expect(global.mx_rage_logger).toBeUndefined();
+        expect(global.mx_rage_store).toBeUndefined();
+        expect(console.log).toBe(log);
+    });
+
+    it("starts when the setting is turned on and stops when it is turned off", async () => {
+        const log = console.log;
+        await initRageshake();
+
+        await SettingsStore.setValue("diagnosticLogging", null, SettingLevel.DEVICE, true);
+        await vi.waitFor(() => expect(global.mx_rage_logger).toBeDefined());
+        expect(console.log).not.toBe(log);
+        console.log("captured line");
+        expect(global.mx_rage_logger!.flush(true)).toContain("captured line");
+
+        await SettingsStore.setValue("diagnosticLogging", null, SettingLevel.DEVICE, false);
+        await vi.waitFor(() => expect(global.mx_rage_logger).toBeUndefined());
+        expect(console.log).toBe(log);
+    });
+
+    it("is on from startup when the setting is on", async () => {
+        await SettingsStore.setValue("diagnosticLogging", null, SettingLevel.DEVICE, true);
+        await initRageshake();
+        expect(global.mx_rage_logger).toBeDefined();
     });
 });

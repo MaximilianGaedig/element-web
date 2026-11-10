@@ -378,6 +378,7 @@ export interface Settings {
     "debug_timeline_panel": IBaseSetting<boolean>;
     "debug_registration": IBaseSetting<boolean>;
     "debug_animation": IBaseSetting<boolean>;
+    "diagnosticLogging": IBaseSetting<boolean>;
     "audioInputMuted": IBaseSetting<boolean>;
     "videoInputMuted": IBaseSetting<boolean>;
     "activeCallRoomIds": IBaseSetting<string[]>;
@@ -1573,6 +1574,14 @@ export const SETTINGS: Settings = {
     },
     "debug_animation": {
         supportedLevels: LEVELS_DEVICE_ONLY_SETTINGS,
+        default: false,
+    },
+    // Keep console output for bug reports (rageshake). Off unless the user turns it on: kept for every session it
+    // costs memory and an IndexedDB write every 30 seconds. A deployment can default it on with `setting_defaults`.
+    "diagnosticLogging": {
+        displayName: _td("bug_reporting|diagnostic_logging"),
+        description: _td("bug_reporting|diagnostic_logging_description"),
+        supportedLevels: LEVELS_DEVICE_ONLY_SETTINGS_WITH_CONFIG,
         default: false,
     },
     "audioInputMuted": {
